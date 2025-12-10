@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZedReq — AI-Powered Career Platform for Smarter Hiring & Growth</title>
+    <meta name="description" content="ZedReq matches talent to opportunity with intelligent job-matching, an AI career assistant, and real-time mock interviews. Minimal, secure, and privacy-first platform to accelerate your next career move.">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="ZedReq — AI-Powered Career Platform">
+    <meta property="og:description" content="Match with jobs, polish applications with an AI assistant, and practice interviews with instant feedback. Join ZedReq today.">
+    <meta property="og:type" content="website">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/first_page.css') }}">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-watermark">ZedReq</div>
+        <div class="hero-content">
+            <div class="logo-container">
+                <h1 class="main-logo">
+                    <span class="typewriter-text">ZedReq</span>
+                </h1>
+            </div>
+            <h2 class="hero-headline">Find the role that fits you — faster, smarter, with AI.</h2>
+            <p class="hero-subheadline">AI job matching • Intelligent career assistant • Realistic mock interviews</p>
+            <div class="hero-cta">
+                <a href="/landing" class="btn-primary" aria-label="Start ZedReq job matching">Get Matched — It's Free</a>
+                <a href="#platform-tour" class="btn-secondary">Explore Platform </a>
+            </div>
+            <p class="hero-microcopy">No résumé required — AI builds a smart profile in minutes.</p>
+            
+            <!-- Text Loop -->
+            <div class="text-loop">
+                <p class="loop-item active">Curated to your skills.</p>
+                <p class="loop-item">Optimized for hiring managers.</p>
+                <p class="loop-item">Practice until you ace it.</p>
+                <p class="loop-item">Private, secure, and bias-aware.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Cards -->
+    <section class="features-section">
+        <div class="feature-card scroll-reveal">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <circle cx="7" cy="7" r="1.5"/>
+                </svg>
+            </div>
+            <h3>AI Job Matching</h3>
+            <p class="feature-one-liner">Precision matches based on skills, goals, and culture fit.</p>
+            <ul class="feature-bullets">
+                <li>Smart skill parsing from CVs and profiles</li>
+                <li>Role-fit score and interview readiness indicator</li>
+                <li>Curated shortlists — apply faster</li>
+            </ul>
+            <a href="#" class="feature-cta">See Matches</a>
+        </div>
+        
+        <div class="feature-card scroll-reveal">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M13 8H7"/>
+                    <path d="M17 12H7"/>
+                    <circle cx="18" cy="5" r="3"/>
+                    <path d="M16 3v4M20 3v4M18 1v2M18 7v2"/>
+                </svg>
+            </div>
+            <h3>AI Career Assistant</h3>
+            <p class="feature-one-liner">Personalized coaching for résumés, cover letters, and applications.</p>
+            <ul class="feature-bullets">
+                <li>Interactive profile refinement</li>
+                <li>Custom application templates & ATS-friendly output</li>
+                <li>Instant answers to career queries</li>
+            </ul>
+            <a href="#" class="feature-cta">Talk to Assistant</a>
+        </div>
+        
+        <div class="feature-card scroll-reveal">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </div>
+            <h3>AI Mock Interviews</h3>
+            <p class="feature-one-liner">Practice with dynamic interviews and receive structured feedback.</p>
+            <ul class="feature-bullets">
+                <li>Role-specific question sets</li>
+                <li>Real-time scoring and tips</li>
+                <li>Playback + transcript for review</li>
+            </ul>
+            <a href="#" class="feature-cta">Start a Mock Interview</a>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        <div class="timeline">
+            <div class="timeline-step scroll-reveal">
+                <div class="step-number">1</div>
+                <h3>Create your AI profile</h3>
+                <p>Answer a few guided prompts. ZedReq extracts skills, projects and career goals automatically.</p>
+            </div>
+            <div class="timeline-step scroll-reveal">
+                <div class="step-number">2</div>
+                <h3>Get matched & recommended roles</h3>
+                <p>Receive prioritized matches with role-fit scores and a suggested application checklist.</p>
+            </div>
+            <div class="timeline-step scroll-reveal">
+                <div class="step-number">3</div>
+                <h3>Practice & apply confidently</h3>
+                <p>Polish your application with the AI assistant and rehearse interviews until you're interview-ready.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Metrics -->
+    <section class="metrics-section">
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <div class="metric-number" data-count="25000">0</div>
+                <p class="metric-label">matched roles</p>
+            </div>
+            <div class="metric-item">
+                <div class="metric-number" data-count="4.8">0</div>
+                <p class="metric-label">average candidate satisfaction</p>
+            </div>
+            <div class="metric-item">
+                <div class="metric-number" data-count="200">0</div>
+                <p class="metric-label">hiring partners</p>
+            </div>
+            <div class="metric-item">
+                <div class="metric-number">100%</div>
+                <p class="metric-label">privacy & compliance</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials-section">
+        <h2 class="section-title">What Candidates Say</h2>
+        <div class="testimonials-carousel" role="region" aria-label="testimonial carousel">
+            <div class="testimonial-card active">
+                <p class="testimonial-quote">"ZedReq helped me find the right role in two weeks — perfect fit and smooth process."</p>
+                <p class="testimonial-author">— Ayesha K., Data Analyst</p>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"The mock interviews made all the difference; the feedback was actionable and specific."</p>
+                <p class="testimonial-author">— Bilal R., Software Engineer</p>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"AI-powered matching saved me hours of searching — precise recommendations every time."</p>
+                <p class="testimonial-author">— Sarah M., Product Manager</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing-section">
+        <h2 class="section-title">Simple, Transparent Pricing</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>Starter</h3>
+                <div class="price">Free</div>
+                <p>Personal profile, basic matching, limited mock interviews.</p>
+                <a href="/landing" class="btn-primary">Create Free Account</a>
+            </div>
+            <div class="pricing-card featured">
+                <span class="badge">Most Popular</span>
+                <h3>Pro</h3>
+                <div class="price">For job seekers</div>
+                <p>Unlimited mock interviews, personalized coaching, priority matches.</p>
+                <a href="#" class="btn-primary">Upgrade to Pro</a>
+            </div>
+            <div class="pricing-card">
+                <h3>Enterprise</h3>
+                <div class="price">For teams</div>
+                <p>Custom integrations, bulk screening, privacy controls.</p>
+                <a href="#" class="btn-secondary">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Band -->
+    <section class="cta-band">
+        <div class="cta-content">
+            <h2>Ready to level up your career?</h2>
+            <p>Create your AI profile in minutes — get matched today.</p>
+            <div class="cta-buttons">
+                <a href="/landing" class="btn-primary large">Create Free Profile</a>
+                <a href="#" class="btn-secondary">Watch Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#">Features</a></li>
+                    <li><a href="#">Pricing</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Cookie Policy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 ZedReq — All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/first_page.js') }}"></script>
+</body>
+</html>

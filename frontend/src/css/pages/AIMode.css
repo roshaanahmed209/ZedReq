@@ -1,0 +1,10 @@
+.upload-text-small {
+  font-size: 0.8em;
+}
+
+.upload-text-tiny {
+  font-size: 0.75em;
+  margin-top: 8px;
+  color: var(--text-lighter);
+}
+

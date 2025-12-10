@@ -1,0 +1,33 @@
+.tab-container-padded {
+  padding: 24px 28px 0;
+}
+
+.dashboard-card-span-2 {
+  grid-column: span 2;
+}
+
+.trend-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.domain-percentage-due-soon {
+  color: #e74c3c;
+}
+
+.domain-percentage-due-medium {
+  color: #f39c12;
+}
+
+.domain-percentage-due-far {
+  color: #2ecc71;
+}
+
+.portal-course-info-text-large {
+  font-size: 1em;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+

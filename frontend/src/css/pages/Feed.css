@@ -1,0 +1,13 @@
+.search-input-wide {
+  width: 280px;
+}
+
+.search-results-positioned {
+  left: 120px;
+}
+
+.search-username {
+  font-size: 0.85em;
+  color: #999;
+}
+

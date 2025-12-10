@@ -1,0 +1,13 @@
+.banner-description-strong {
+  color: white;
+  font-weight: 500;
+}
+
+.job-header-content {
+  flex: 1;
+}
+
+.job-details-spaced {
+  margin-top: 8px;
+}
+

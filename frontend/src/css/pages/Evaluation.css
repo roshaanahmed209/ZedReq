@@ -1,0 +1,11 @@
+.analysis-list-spaced {
+  margin-top: 24px;
+}
+
+.trend-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
