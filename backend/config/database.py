@@ -1,5 +1,6 @@
-import psycopg2
-from psycopg2 import pool, extras
+import psycopg
+from psycopg import rows
+from psycopg_pool import ConnectionPool
 import logging
 import os
 from contextlib import contextmanager
@@ -8,25 +9,26 @@ from typing import Optional, List, Dict, Any
 logger = logging.getLogger(__name__)
 
 class Database:
-    """PostgreSQL database connection manager with connection pooling"""
+    """PostgreSQL database connection manager with connection pooling (psycopg3)"""
     
-    def __init__(self, connection_params: Dict[str, Any]):
-        self.connection_params = connection_params
-        self._pool: Optional[pool.ThreadedConnectionPool] = None
+    def __init__(self, conninfo: str):
+        self.conninfo = conninfo
+        self._pool: Optional[ConnectionPool] = None
         self._min_connections = int(os.environ.get('DB_POOL_MIN', 1))
         self._max_connections = int(os.environ.get('DB_POOL_SIZE', 5))
     
     def connect(self):
         """Create database connection pool"""
         try:
-            self._pool = pool.ThreadedConnectionPool(
-                self._min_connections,
-                self._max_connections,
-                **self.connection_params
+            self._pool = ConnectionPool(
+                self.conninfo,
+                min_size=self._min_connections,
+                max_size=self._max_connections,
+                open=True
             )
-            logger.info(f"Connected to PostgreSQL database: {self.connection_params.get('dbname')}")
+            logger.info(f"Connected to PostgreSQL database")
             return self._pool
-        except psycopg2.Error as e:
+        except psycopg.Error as e:
             logger.error(f"Database connection error: {e}")
             raise
     
@@ -36,31 +38,25 @@ class Database:
         if self._pool is None:
             self.connect()
         
-        conn = None
+        with self._pool.connection() as conn:
         try:
-            conn = self._pool.getconn()
-            yield conn
-        except psycopg2.Error as e:
+                yield conn
+            except psycopg.Error as e:
             logger.error(f"Database error: {e}")
-            if conn:
                 conn.rollback()
             raise
-        finally:
-            if conn:
-                self._pool.putconn(conn)
     
-    def execute(self, query: str, params: tuple = ()) -> psycopg2.extensions.cursor:
+    def execute(self, query: str, params: tuple = ()):
         """Execute a query and return cursor"""
         with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
-            cursor.execute(query, params)
+            cursor = conn.execute(query, params)
             conn.commit()
             return cursor
     
     def execute_returning(self, query: str, params: tuple = ()) -> Optional[Dict[str, Any]]:
         """Execute a query with RETURNING clause and fetch the result"""
         with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+            cursor = conn.cursor(row_factory=rows.dict_row)
             cursor.execute(query, params)
             conn.commit()
             row = cursor.fetchone()
@@ -69,7 +65,7 @@ class Database:
     def fetch_one(self, query: str, params: tuple = ()) -> Optional[Dict[str, Any]]:
         """Fetch one row"""
         with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+            cursor = conn.cursor(row_factory=rows.dict_row)
             cursor.execute(query, params)
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -77,10 +73,10 @@ class Database:
     def fetch_all(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Fetch all rows"""
         with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+            cursor = conn.cursor(row_factory=rows.dict_row)
             cursor.execute(query, params)
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+            rows_data = cursor.fetchall()
+            return [dict(row) for row in rows_data]
     
     def execute_many(self, query: str, params_list: List[tuple]):
         """Execute query with multiple parameter sets"""
@@ -92,34 +88,33 @@ class Database:
     def close(self):
         """Close all database connections in the pool"""
         if self._pool:
-            self._pool.closeall()
+            self._pool.close()
             self._pool = None
             logger.info("Database connection pool closed")
 
 
-def get_connection_params() -> Dict[str, Any]:
-    """Get PostgreSQL connection parameters from environment"""
+def get_connection_params() -> str:
+    """Get PostgreSQL connection string from environment"""
     # Check for DATABASE_URL first (common in production/cloud environments)
     database_url = os.environ.get('DATABASE_URL')
     
     if database_url:
-        # Parse DATABASE_URL if provided
-        return {'dsn': database_url}
+        return database_url
     
-    # Otherwise use individual parameters
-    return {
-        'host': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'port': int(os.environ.get('POSTGRES_PORT', 5432)),
-        'dbname': os.environ.get('POSTGRES_DB', 'zedreq'),
-        'user': os.environ.get('POSTGRES_USER', 'postgres'),
-        'password': os.environ.get('POSTGRES_PASSWORD', 'database'),
-    }
+    # Build connection string from individual parameters
+    host = os.environ.get('POSTGRES_HOST', 'localhost')
+    port = os.environ.get('POSTGRES_PORT', '5432')
+    dbname = os.environ.get('POSTGRES_DB', 'zedreq')
+    user = os.environ.get('POSTGRES_USER', 'postgres')
+    password = os.environ.get('POSTGRES_PASSWORD', 'database')
+    
+    return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
 
 
 def init_database() -> Database:
     """Initialize database and create schema"""
-    connection_params = get_connection_params()
-    db = Database(connection_params)
+    conninfo = get_connection_params()
+    db = Database(conninfo)
     
     with db.get_connection() as conn:
         cursor = conn.cursor()

@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any, List
-from psycopg2 import errors as pg_errors
+import psycopg
 from ..config.database import Database
 
 class Connection:
@@ -19,8 +19,10 @@ class Connection:
                    RETURNING *''',
                 (id1, id2, status)
             )
+        except psycopg.errors.UniqueViolation:
+            return None  # Connection already exists
         except Exception as e:
-            if isinstance(e.__cause__, pg_errors.UniqueViolation) or 'unique' in str(e).lower():
+            if 'unique' in str(e).lower():
                 return None  # Connection already exists
             raise
     

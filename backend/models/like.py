@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any, List
-from psycopg2 import errors as pg_errors
+import psycopg
 from ..config.database import Database
 
 class Like:
@@ -16,8 +16,10 @@ class Like:
                 (post_id, user_id)
             )
             return True
+        except psycopg.errors.UniqueViolation:
+            return False  # Already liked
         except Exception as e:
-            if isinstance(e.__cause__, pg_errors.UniqueViolation) or 'unique' in str(e).lower():
+            if 'unique' in str(e).lower():
                 return False  # Already liked
             raise
     

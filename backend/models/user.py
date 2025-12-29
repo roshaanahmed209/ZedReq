@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, List
 from werkzeug.security import generate_password_hash, check_password_hash
-from psycopg2 import errors as pg_errors
+import psycopg
 from ..config.database import Database
 
 class User:
@@ -20,8 +20,10 @@ class User:
                    RETURNING id, username, email, full_name, headline, bio, avatar, created_at, updated_at''',
                 (username, email, hashed_password, full_name)
             )
+        except psycopg.errors.UniqueViolation:
+            raise ValueError('Username or email already exists')
         except Exception as e:
-            if isinstance(e.__cause__, pg_errors.UniqueViolation) or 'unique' in str(e).lower():
+            if 'unique' in str(e).lower():
                 raise ValueError('Username or email already exists')
             raise
     
