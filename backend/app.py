@@ -19,8 +19,8 @@ def create_app(config_name=None):
     config_name = config_name or os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config[config_name])
     
-    # Initialize database
-    db = init_database(app.config['DATABASE_PATH'])
+    # Initialize PostgreSQL database
+    db = init_database()
     
     # Initialize extensions
     Session(app)

@@ -1,10 +1,23 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).parent.parent / '.env')
 
 class Config:
     """Base configuration"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(24)
-    DATABASE_PATH = os.environ.get('DATABASE_PATH') or str(Path(__file__).parent.parent.parent / 'social_network.db')
+    
+    # PostgreSQL Configuration
+    POSTGRES_HOST = os.environ.get('POSTGRES_HOST', 'localhost')
+    POSTGRES_PORT = int(os.environ.get('POSTGRES_PORT', 5432))
+    POSTGRES_DB = os.environ.get('POSTGRES_DB', 'zedreq')
+    POSTGRES_USER = os.environ.get('POSTGRES_USER', 'postgres')
+    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD', 'database')
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    
+    # Session Configuration
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.environ.get('SESSION_DIR') or str(Path(__file__).parent.parent.parent)
     SESSION_PERMANENT = False
@@ -12,7 +25,7 @@ class Config:
     SESSION_KEY_PREFIX = 'zedreq:'
     
     # CORS
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
     
     # Security
     BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', 12))
@@ -36,7 +49,7 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    DATABASE_PATH = ':memory:'
+    POSTGRES_DB = os.environ.get('POSTGRES_TEST_DB', 'zedreq_test')
 
 config = {
     'development': DevelopmentConfig,

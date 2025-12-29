@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any, List
+from psycopg2 import errors as pg_errors
 from ..config.database import Database
 
 class Like:
@@ -7,31 +8,31 @@ class Like:
     def __init__(self, db: Database):
         self.db = db
     
-    def create(self, post_id: int, user_id: int) -> bool:
+    def create(self, post_id: int, user_id: str) -> bool:
         """Create a like"""
         try:
             self.db.execute(
-                'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
+                'INSERT INTO likes (post_id, user_id) VALUES (%s, %s)',
                 (post_id, user_id)
             )
             return True
         except Exception as e:
-            if 'UNIQUE' in str(e):
+            if isinstance(e.__cause__, pg_errors.UniqueViolation) or 'unique' in str(e).lower():
                 return False  # Already liked
             raise
     
-    def delete(self, post_id: int, user_id: int) -> bool:
+    def delete(self, post_id: int, user_id: str) -> bool:
         """Delete a like"""
         cursor = self.db.execute(
-            'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
+            'DELETE FROM likes WHERE post_id = %s AND user_id = %s',
             (post_id, user_id)
         )
         return cursor.rowcount > 0
     
-    def toggle(self, post_id: int, user_id: int) -> bool:
+    def toggle(self, post_id: int, user_id: str) -> bool:
         """Toggle like status"""
         existing = self.db.fetch_one(
-            'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
+            'SELECT id FROM likes WHERE post_id = %s AND user_id = %s',
             (post_id, user_id)
         )
         
@@ -45,15 +46,15 @@ class Like:
     def get_count(self, post_id: int) -> int:
         """Get like count for a post"""
         result = self.db.fetch_one(
-            'SELECT COUNT(*) as count FROM likes WHERE post_id = ?',
+            'SELECT COUNT(*) as count FROM likes WHERE post_id = %s',
             (post_id,)
         )
         return result['count'] if result else 0
     
-    def exists(self, post_id: int, user_id: int) -> bool:
+    def exists(self, post_id: int, user_id: str) -> bool:
         """Check if like exists"""
         result = self.db.fetch_one(
-            'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
+            'SELECT id FROM likes WHERE post_id = %s AND user_id = %s',
             (post_id, user_id)
         )
         return result is not None
