@@ -1,62 +1,77 @@
-from typing import Optional, Dict, Any, List
-import psycopg
-from ..config.database import Database
+"""Like Model"""
+from typing import Optional, Dict, Any
+from .base import BaseModel
 
-class Like:
-    """Like model"""
+TABLE_SCHEMA = '''
+CREATE TABLE IF NOT EXISTS likes (
+    like_id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES post(post_id) ON DELETE CASCADE,
+    uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, uid)
+)
+'''
+
+INDEXES = [
+    'CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id)',
+    'CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(uid)'
+]
+
+
+class Like(BaseModel):
+    """Like model for post likes"""
+    table_name = 'likes'
     
-    def __init__(self, db: Database):
-        self.db = db
-    
-    def create(self, post_id: int, user_id: str) -> bool:
-        """Create a like"""
-        try:
-            self.db.execute(
-                'INSERT INTO likes (post_id, user_id) VALUES (%s, %s)',
-                (post_id, user_id)
-            )
-            return True
-        except psycopg.errors.UniqueViolation:
-            return False  # Already liked
-        except Exception as e:
-            if 'unique' in str(e).lower():
-                return False  # Already liked
-            raise
-    
-    def delete(self, post_id: int, user_id: str) -> bool:
-        """Delete a like"""
-        cursor = self.db.execute(
-            'DELETE FROM likes WHERE post_id = %s AND user_id = %s',
-            (post_id, user_id)
-        )
-        return cursor.rowcount > 0
-    
-    def toggle(self, post_id: int, user_id: str) -> bool:
-        """Toggle like status"""
+    def toggle(self, post_id: int, uid: int) -> bool:
+        """
+        Toggle like on a post
+        Returns True if liked, False if unliked
+        """
+        # Check if already liked
         existing = self.db.fetch_one(
-            'SELECT id FROM likes WHERE post_id = %s AND user_id = %s',
-            (post_id, user_id)
+            'SELECT like_id FROM likes WHERE post_id = %s AND uid = %s',
+            (post_id, uid)
         )
         
         if existing:
-            self.delete(post_id, user_id)
-            return False  # Unliked
+            # Unlike
+            self.db.execute(
+                'DELETE FROM likes WHERE post_id = %s AND uid = %s',
+                (post_id, uid)
+            )
+            return False
         else:
-            self.create(post_id, user_id)
-            return True  # Liked
+            # Like
+            self.db.execute_returning(
+                'INSERT INTO likes (post_id, uid) VALUES (%s, %s) RETURNING like_id',
+                (post_id, uid)
+            )
+            return True
     
     def get_count(self, post_id: int) -> int:
-        """Get like count for a post"""
+        """Get total likes for a post"""
         result = self.db.fetch_one(
             'SELECT COUNT(*) as count FROM likes WHERE post_id = %s',
             (post_id,)
         )
         return result['count'] if result else 0
     
-    def exists(self, post_id: int, user_id: str) -> bool:
-        """Check if like exists"""
+    def has_liked(self, post_id: int, uid: int) -> bool:
+        """Check if user has liked a post"""
         result = self.db.fetch_one(
-            'SELECT id FROM likes WHERE post_id = %s AND user_id = %s',
-            (post_id, user_id)
+            'SELECT 1 FROM likes WHERE post_id = %s AND uid = %s',
+            (post_id, uid)
         )
         return result is not None
+    
+    def get_likers(self, post_id: int, limit: int = 50) -> list:
+        """Get users who liked a post"""
+        return self.db.fetch_all(
+            '''SELECT u.uid, u.username, u.name 
+               FROM likes l
+               JOIN users u ON l.uid = u.uid
+               WHERE l.post_id = %s
+               ORDER BY l.created_at DESC
+               LIMIT %s''',
+            (post_id, limit)
+        )

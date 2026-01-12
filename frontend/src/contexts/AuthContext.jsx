@@ -21,12 +21,17 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await api.get('/api/user')
-      if (response.data && !response.data.error) {
-        setUser(response.data)
+      // Use the new session endpoint to check authentication
+      const response = await api.get('/session')
+      if (response.data && response.data.success && response.data.data) {
+        setUser(response.data.data)
+      } else {
+        setUser(null)
       }
     } catch (error) {
+      // Not authenticated or session expired
       console.log('Not authenticated')
+      setUser(null)
     } finally {
       setLoading(false)
     }
@@ -35,26 +40,50 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await api.post('/login', { username, password })
+      
       if (response.data.success) {
-        await checkAuthStatus()
-        return { success: true, message: response.data.message }
+        // Set user data from response
+        const userData = response.data.data
+        setUser(userData)
+        return { 
+          success: true, 
+          message: response.data.message || 'Login successful' 
+        }
       }
-      return { success: false, message: response.data.message }
+      
+      return { 
+        success: false, 
+        message: response.data.message || 'Login failed' 
+      }
     } catch (error) {
-      return { success: false, message: 'Network error. Please try again.' }
+      const errorMessage = error.response?.data?.message || 'Network error. Please try again.'
+      return { success: false, message: errorMessage }
     }
   }
 
   const register = async (userData) => {
     try {
       const response = await api.post('/register', userData)
+      
       if (response.data.success) {
-        await checkAuthStatus()
-        return { success: true, message: response.data.message }
+        // Set user data from response
+        const registeredUser = response.data.data
+        setUser(registeredUser)
+        return { 
+          success: true, 
+          message: response.data.message || 'Registration successful' 
+        }
       }
-      return { success: false, message: response.data.message }
+      
+      return { 
+        success: false, 
+        message: response.data.message || 'Registration failed',
+        errors: response.data.errors || []
+      }
     } catch (error) {
-      return { success: false, message: 'Network error. Please try again.' }
+      const errorMessage = error.response?.data?.message || 'Network error. Please try again.'
+      const errors = error.response?.data?.errors || []
+      return { success: false, message: errorMessage, errors }
     }
   }
 
@@ -68,12 +97,19 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const updateUser = (userData) => {
+    setUser(prev => ({ ...prev, ...userData }))
+  }
+
   const value = {
     user,
     login,
     register,
     logout,
-    loading
+    loading,
+    updateUser,
+    isAuthenticated: !!user,
+    checkAuthStatus
   }
 
   return (

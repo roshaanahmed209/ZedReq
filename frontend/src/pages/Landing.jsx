@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,12 +13,21 @@ const slideIn = keyframes`
   to { transform: translateY(0); opacity: 1; }
 `
 
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+`
+
 const Container = styled.div`
   display: grid;
   grid-template-columns: 1fr 1.5fr;
   min-height: 100vh;
   width: 100%;
   animation: ${fadeIn} 0.6s ease-in;
+  
+  @media (max-width: 968px) {
+    grid-template-columns: 1fr;
+  }
 `
 
 const LeftPanel = styled.div`
@@ -31,6 +40,11 @@ const LeftPanel = styled.div`
   align-items: center;
   border-right: 1px solid var(--border);
   position: relative;
+  
+  @media (max-width: 968px) {
+    padding: 40px 30px;
+    min-height: 100vh;
+  }
 `
 
 const BackArrow = styled(Link)`
@@ -100,8 +114,8 @@ const TabButton = styled.button`
 `
 
 const TabContent = styled.div`
-  display: ${props => props.active ? 'block' : 'none'};
-  animation: ${props => props.active ? slideIn : 'none'} 0.3s ease-out;
+  display: ${props => props.$active ? 'block' : 'none'};
+  animation: ${props => props.$active ? slideIn : 'none'} 0.3s ease-out;
 `
 
 const Form = styled.form`
@@ -123,7 +137,7 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 15px;
-  border: 1px solid var(--border);
+  border: 1px solid ${props => props.$hasError ? '#dc3545' : 'var(--border)'};
   border-radius: 8px;
   background: var(--bg-light);
   color: var(--text);
@@ -132,7 +146,7 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: ${props => props.$hasError ? '#dc3545' : 'var(--primary)'};
   }
   
   &::placeholder {
@@ -150,13 +164,15 @@ const Button = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
   
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--primary-dark);
     transform: translateY(-2px);
   }
   
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
   }
   
@@ -164,6 +180,11 @@ const Button = styled.button`
     opacity: 0.6;
     cursor: not-allowed;
   }
+`
+
+const LoadingSpinner = styled.span`
+  display: inline-block;
+  animation: ${pulse} 1s infinite;
 `
 
 const Message = styled.div`
@@ -193,6 +214,13 @@ const Message = styled.div`
   }
 `
 
+const ErrorList = styled.ul`
+  margin-top: 10px;
+  padding-left: 20px;
+  text-align: left;
+  font-size: 0.9em;
+`
+
 const RightPanel = styled.div`
   background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
   display: flex;
@@ -201,6 +229,10 @@ const RightPanel = styled.div`
   padding: 60px;
   position: relative;
   overflow: hidden;
+  
+  @media (max-width: 968px) {
+    display: none;
+  }
 `
 
 const VideoBackground = styled.video`
@@ -246,41 +278,58 @@ const WelcomeMessage = styled.p`
   line-height: 1.6;
 `
 
+const PasswordHint = styled.p`
+  font-size: 0.85em;
+  color: var(--text-lighter);
+  margin-top: 4px;
+`
+
 const Landing = () => {
   const [activeTab, setActiveTab] = useState('login')
   const [message, setMessage] = useState('')
+  const [errors, setErrors] = useState([])
   const [isError, setIsError] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login, register } = useAuth()
   const navigate = useNavigate()
 
-  const showMessage = (text, error = false) => {
+  const showMessage = (text, error = false, errorList = []) => {
     setMessage('')
+    setErrors([])
     setIsError(false)
     
     setTimeout(() => {
       setMessage(text)
       setIsError(error)
-    }, 300)
+      setErrors(errorList)
+    }, 100)
   }
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setMessage('')
+    setErrors([])
     
     const formData = new FormData(e.target)
-    const username = formData.get('username')
+    const username = formData.get('username')?.trim()
     const password = formData.get('password')
+    
+    if (!username || !password) {
+      showMessage('Please enter both username/email and password', true)
+      setLoading(false)
+      return
+    }
     
     const result = await login(username, password)
     
     if (result.success) {
-      showMessage(result.message)
+      showMessage(result.message || 'Login successful!')
       setTimeout(() => {
         navigate('/feed')
-      }, 1000)
+      }, 800)
     } else {
-      showMessage(result.message, true)
+      showMessage(result.message || 'Login failed', true)
     }
     
     setLoading(false)
@@ -289,24 +338,58 @@ const Landing = () => {
   const handleRegister = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setMessage('')
+    setErrors([])
     
     const formData = new FormData(e.target)
     const userData = {
-      full_name: formData.get('full_name'),
-      username: formData.get('username'),
-      email: formData.get('email'),
+      full_name: formData.get('full_name')?.trim(),
+      username: formData.get('username')?.trim(),
+      email: formData.get('email')?.trim(),
       password: formData.get('password')
+    }
+    
+    // Basic client-side validation
+    if (!userData.full_name || !userData.username || !userData.email || !userData.password) {
+      showMessage('Please fill in all fields', true)
+      setLoading(false)
+      return
+    }
+    
+    // Password requirements (must match backend)
+    if (userData.password.length < 8) {
+      showMessage('Password must be at least 8 characters long', true)
+      setLoading(false)
+      return
+    }
+    
+    if (!/[A-Z]/.test(userData.password)) {
+      showMessage('Password must contain at least one uppercase letter', true)
+      setLoading(false)
+      return
+    }
+    
+    if (!/[a-z]/.test(userData.password)) {
+      showMessage('Password must contain at least one lowercase letter', true)
+      setLoading(false)
+      return
+    }
+    
+    if (!/\d/.test(userData.password)) {
+      showMessage('Password must contain at least one digit', true)
+      setLoading(false)
+      return
     }
     
     const result = await register(userData)
     
     if (result.success) {
-      showMessage(result.message)
+      showMessage(result.message || 'Account created successfully!')
       setTimeout(() => {
         navigate('/feed')
-      }, 1000)
+      }, 800)
     } else {
-      showMessage(result.message, true)
+      showMessage(result.message || 'Registration failed', true, result.errors || [])
     }
     
     setLoading(false)
@@ -317,96 +400,124 @@ const Landing = () => {
       <LeftPanel>
         <BackArrow to="/">←</BackArrow>
         <Logo>ZedReq</Logo>
-        <PageTitle>Sign In</PageTitle>
+        <PageTitle>{activeTab === 'login' ? 'Welcome Back' : 'Join Us'}</PageTitle>
         
         <AuthContainer>
           <Tabs>
             <TabButton 
               className={activeTab === 'login' ? 'active' : ''}
-              onClick={() => setActiveTab('login')}
+              onClick={() => {
+                setActiveTab('login')
+                setMessage('')
+                setErrors([])
+              }}
             >
               Sign In
             </TabButton>
             <TabButton 
               className={activeTab === 'register' ? 'active' : ''}
-              onClick={() => setActiveTab('register')}
+              onClick={() => {
+                setActiveTab('register')
+                setMessage('')
+                setErrors([])
+              }}
             >
               Sign Up
             </TabButton>
           </Tabs>
           
-          <TabContent active={activeTab === 'login'}>
+          <TabContent $active={activeTab === 'login'}>
             <Form onSubmit={handleLogin}>
               <InputWrapper>
-                <Label>Username or Email</Label>
+                <Label htmlFor="login-username">Username or Email</Label>
                 <Input 
+                  id="login-username"
                   type="text" 
                   name="username" 
-                  placeholder="Username or Email" 
+                  placeholder="Enter your username or email" 
+                  autoComplete="username"
                   required 
                 />
               </InputWrapper>
               <InputWrapper>
-                <Label>Password</Label>
+                <Label htmlFor="login-password">Password</Label>
                 <Input 
+                  id="login-password"
                   type="password" 
                   name="password" 
-                  placeholder="Password" 
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
                   required 
                 />
               </InputWrapper>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Signing In...' : 'Sign In →'}
+                {loading ? <LoadingSpinner>Signing In...</LoadingSpinner> : 'Sign In →'}
               </Button>
             </Form>
           </TabContent>
           
-          <TabContent active={activeTab === 'register'}>
+          <TabContent $active={activeTab === 'register'}>
             <Form onSubmit={handleRegister}>
               <InputWrapper>
-                <Label>Full Name</Label>
+                <Label htmlFor="register-fullname">Full Name</Label>
                 <Input 
+                  id="register-fullname"
                   type="text" 
                   name="full_name" 
-                  placeholder="Full Name" 
+                  placeholder="Enter your full name"
+                  autoComplete="name"
                   required 
                 />
               </InputWrapper>
               <InputWrapper>
-                <Label>Username</Label>
+                <Label htmlFor="register-username">Username</Label>
                 <Input 
+                  id="register-username"
                   type="text" 
                   name="username" 
-                  placeholder="Username" 
+                  placeholder="Choose a username"
+                  autoComplete="username"
                   required 
                 />
               </InputWrapper>
               <InputWrapper>
-                <Label>Email</Label>
+                <Label htmlFor="register-email">Email</Label>
                 <Input 
+                  id="register-email"
                   type="email" 
                   name="email" 
-                  placeholder="Email" 
+                  placeholder="Enter your email"
+                  autoComplete="email"
                   required 
                 />
               </InputWrapper>
               <InputWrapper>
-                <Label>Password</Label>
+                <Label htmlFor="register-password">Password</Label>
                 <Input 
+                  id="register-password"
                   type="password" 
                   name="password" 
-                  placeholder="Password" 
+                  placeholder="Create a password"
+                  autoComplete="new-password"
                   required 
                 />
+                <PasswordHint>Min 8 characters, with uppercase, lowercase, and number</PasswordHint>
               </InputWrapper>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Sign Up →'}
+                {loading ? <LoadingSpinner>Creating Account...</LoadingSpinner> : 'Sign Up →'}
               </Button>
             </Form>
           </TabContent>
           
           <Message className={`${message ? 'show' : ''} ${isError ? 'error' : 'success'}`}>
             {message}
+            {errors.length > 0 && (
+              <ErrorList>
+                {errors.map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ErrorList>
+            )}
           </Message>
         </AuthContainer>
       </LeftPanel>

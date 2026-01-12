@@ -1,5 +1,5 @@
 """Post validators"""
-from ..utils.errors import ValidationError
+from utils.errors import ValidationError
 
 def validate_create_post(data: dict) -> dict:
     """Validate post creation data"""

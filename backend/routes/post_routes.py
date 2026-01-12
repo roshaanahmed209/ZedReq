@@ -1,10 +1,10 @@
 """Post routes"""
 from flask import Blueprint, request
-from ..controllers.post_controller import PostController
-from ..middleware.auth_middleware import require_auth
-from ..validators import validate_create_post, validate_update_post
-from ..utils.errors import ValidationError
-from ..utils.response import error_response
+from controllers.post_controller import PostController
+from middleware.auth_middleware import require_auth
+from validators import validate_create_post, validate_update_post
+from utils.errors import ValidationError
+from utils.response import error_response
 
 def create_post_blueprint(db):
     """Create post blueprint"""

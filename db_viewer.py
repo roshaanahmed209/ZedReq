@@ -181,6 +181,13 @@ def generate_html_content(tables, table_data, db_info):
     # Build sidebar navigation
     nav_items = "".join([f'<a href="#table-{table}" class="nav-item">{table}</a>' for table in tables])
     
+    # Calculate total rows (compute outside f-string to avoid issues)
+    total_rows = 0
+    for t in tables:
+        data = table_data.get(t, {})
+        if 'error' not in data:
+            total_rows += data.get('total_count', 0)
+    
     html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -531,7 +538,7 @@ def generate_html_content(tables, table_data, db_info):
                 <div class="label">Total Tables</div>
             </div>
             <div class="stat-card">
-                <div class="value">{sum(table_data.get(t, {{}}).get('total_count', 0) for t in tables if 'error' not in table_data.get(t, {{}}))}</div>
+                <div class="value">{total_rows}</div>
                 <div class="label">Total Rows</div>
             </div>
         </div>

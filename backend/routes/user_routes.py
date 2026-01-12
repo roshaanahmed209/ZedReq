@@ -1,10 +1,10 @@
 """User routes"""
 from flask import Blueprint, request
-from ..controllers.user_controller import UserController
-from ..middleware.auth_middleware import require_auth
-from ..validators import validate_user_search, validate_user_update
-from ..utils.errors import ValidationError
-from ..utils.response import error_response
+from controllers.user_controller import UserController
+from middleware.auth_middleware import require_auth
+from validators import validate_user_search, validate_user_update
+from utils.errors import ValidationError
+from utils.response import error_response
 
 def create_user_blueprint(db):
     """Create user blueprint"""

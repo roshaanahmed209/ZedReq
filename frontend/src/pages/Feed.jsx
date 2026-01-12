@@ -1005,7 +1005,10 @@ const Feed = () => {
   const loadUser = async () => {
     try {
       const response = await api.get('/api/user')
-      if (response.data && !response.data.error) {
+      if (response.data && response.data.data) {
+        setUser(response.data.data)
+      } else if (response.data && !response.data.error) {
+        // Fallback for direct user object response
         setUser(response.data)
       }
     } catch (error) {
@@ -1016,11 +1019,17 @@ const Feed = () => {
   const loadPosts = async () => {
     try {
       const response = await api.get('/api/posts')
-      if (response.data) {
+      if (response.data && response.data.data) {
+        setPosts(response.data.data)
+      } else if (Array.isArray(response.data)) {
+        // Fallback for direct array response
         setPosts(response.data)
+      } else {
+        setPosts([])
       }
     } catch (error) {
       console.error('Error loading posts:', error)
+      setPosts([])
     } finally {
       setLoading(false)
     }

@@ -1,8 +1,8 @@
 """User controller"""
 from flask import request, session
-from ..services.user_service import UserService
-from ..middleware.auth_middleware import get_current_user_id
-from ..utils.response import success_response
+from services.user_service import UserService
+from middleware.auth_middleware import get_current_user_id
+from utils.response import success_response
 
 class UserController:
     """User request handlers"""

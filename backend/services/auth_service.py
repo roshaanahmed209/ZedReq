@@ -1,9 +1,11 @@
 """Authentication service"""
-from ..models.user import User
-from ..utils.errors import AuthenticationError, ConflictError
-from ..utils.logger import setup_logger
+from models.user import User
+from utils.errors import AuthenticationError, ConflictError, ValidationError
+from utils.auth import hash_password, verify_password, validate_password_strength, validate_email, validate_username
+from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
 
 class AuthService:
     """Authentication business logic"""
@@ -12,75 +14,197 @@ class AuthService:
         self.user_model = User(db)
     
     def register(self, user_data: dict) -> dict:
-        """Register a new user"""
+        """
+        Register a new user
+        
+        Args:
+            user_data: Dict containing username, email, password, and optionally full_name
+        
+        Returns:
+            Dict with user info (id, username, email, full_name)
+        
+        Raises:
+            ValidationError: If validation fails
+            ConflictError: If username or email already exists
+        """
         try:
-            # Check if user already exists
-            existing = self.user_model.find_by_username_or_email(user_data['username'])
-            if existing:
-                raise ConflictError('Username or email already exists')
+            username = user_data.get('username', '').strip()
+            email = user_data.get('email', '').strip()
+            password = user_data.get('password', '')
+            full_name = user_data.get('full_name', '').strip() or username
             
-            # Check email separately
-            existing_email = self.user_model.find_by_email(user_data['email'])
-            if existing_email:
+            # Validate username
+            is_valid, error_msg = validate_username(username)
+            if not is_valid:
+                raise ValidationError(error_msg)
+            
+            # Validate email
+            if not validate_email(email):
+                raise ValidationError('Please provide a valid email address')
+            
+            # Validate password
+            is_valid, error_msg = validate_password_strength(password)
+            if not is_valid:
+                raise ValidationError(error_msg)
+            
+            # Check if username already exists
+            if self.user_model.username_exists(username):
+                raise ConflictError('Username already exists')
+            
+            # Check if email already exists
+            if self.user_model.email_exists(email):
                 raise ConflictError('Email already exists')
             
+            # Hash password
+            password_hash = hash_password(password)
+            
+            # Create user
             user = self.user_model.create(
-                username=user_data['username'],
-                email=user_data['email'],
-                password=user_data['password'],
-                full_name=user_data.get('full_name', '')
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                full_name=full_name
             )
             
-            logger.info(f"New user registered: {user['username']} (ID: {user['id']})")
+            if not user:
+                raise Exception('Failed to create user')
+            
+            logger.info(f"New user registered: {user['username']} (ID: {user['uid']})")
             
             return {
-                'id': user['id'],
+                'id': user['uid'],
                 'username': user['username'],
-                'email': user['email'],
-                'full_name': user['full_name']
+                'email': user['user_email'],
+                'full_name': user['name']
             }
-        except (ConflictError, ValueError) as e:
-            logger.error(f"Registration error: {e}")
+            
+        except (ConflictError, ValidationError) as e:
+            logger.warning(f"Registration error: {e.message}")
             raise
         except Exception as e:
             logger.error(f"Registration error: {e}")
-            raise
+            raise ValidationError('Registration failed. Please try again.')
     
-    def login(self, identifier: str, password: str, auto_create: bool = True) -> dict:
-        """Login user"""
+    def login(self, identifier: str, password: str) -> dict:
+        """
+        Login user with username or email
+        
+        Args:
+            identifier: Username or email
+            password: User's password
+        
+        Returns:
+            Dict with user info and success message
+        
+        Raises:
+            AuthenticationError: If credentials are invalid
+        """
         try:
-            user = self.user_model.find_by_username_or_email(identifier)
+            if not identifier or not password:
+                raise AuthenticationError('Username/email and password are required')
+            
+            # Find user by username or email
+            user = self.user_model.find_by_username_or_email(identifier.strip())
             
             if not user:
-                if auto_create:
-                    # Auto-create user if they don't exist (legacy behavior)
-                    logger.info(f"Auto-creating user: {identifier}")
-                    user = self.user_model.create(
-                        username=identifier,
-                        email=f"{identifier}@temp.com",
-                        password=password,
-                        full_name=identifier
-                    )
-                    return {
-                        'id': user['id'],
-                        'username': user['username'],
-                        'message': 'Account created and logged in'
-                    }
-                else:
-                    raise AuthenticationError('Invalid credentials')
+                logger.warning(f"Login attempt for non-existent user: {identifier}")
+                raise AuthenticationError('Invalid username or password')
             
-            # Note: Original code doesn't verify password - keeping that behavior
-            # In production, you should verify:
-            # if not self.user_model.verify_password(password, user['password']):
-            #     raise AuthenticationError('Invalid credentials')
+            # Verify password
+            if not verify_password(password, user['password_hash']):
+                logger.warning(f"Invalid password attempt for user: {user['username']}")
+                raise AuthenticationError('Invalid username or password')
+            
+            logger.info(f"User logged in: {user['username']} (ID: {user['uid']})")
             
             return {
-                'id': user['id'],
+                'id': user['uid'],
                 'username': user['username'],
+                'email': user['user_email'],
+                'full_name': user['name'],
                 'message': 'Login successful'
             }
+            
         except AuthenticationError:
             raise
         except Exception as e:
             logger.error(f"Login error: {e}")
-            raise AuthenticationError('Login failed')
+            raise AuthenticationError('Login failed. Please try again.')
+    
+    def get_user_by_id(self, user_id: int) -> dict:
+        """
+        Get user by ID
+        
+        Args:
+            user_id: User's database ID
+        
+        Returns:
+            Dict with user info
+        
+        Raises:
+            AuthenticationError: If user not found
+        """
+        try:
+            user = self.user_model.find_by_uid(user_id)
+            
+            if not user:
+                raise AuthenticationError('User not found')
+            
+            return {
+                'id': user['uid'],
+                'username': user['username'],
+                'email': user['user_email'],
+                'full_name': user['name'],
+                'created_at': str(user.get('created_at', ''))
+            }
+            
+        except AuthenticationError:
+            raise
+        except Exception as e:
+            logger.error(f"Get user error: {e}")
+            raise AuthenticationError('Failed to get user')
+    
+    def change_password(self, user_id: int, current_password: str, new_password: str) -> dict:
+        """
+        Change user's password
+        
+        Args:
+            user_id: User's database ID
+            current_password: Current password for verification
+            new_password: New password to set
+        
+        Returns:
+            Success message dict
+        
+        Raises:
+            AuthenticationError: If current password is wrong
+            ValidationError: If new password doesn't meet requirements
+        """
+        try:
+            user = self.user_model.find_by_uid(user_id)
+            
+            if not user:
+                raise AuthenticationError('User not found')
+            
+            # Verify current password
+            if not verify_password(current_password, user['password_hash']):
+                raise AuthenticationError('Current password is incorrect')
+            
+            # Validate new password
+            is_valid, error_msg = validate_password_strength(new_password)
+            if not is_valid:
+                raise ValidationError(error_msg)
+            
+            # Hash and update new password
+            password_hash = hash_password(new_password)
+            self.user_model.update_password(user_id, password_hash)
+            
+            logger.info(f"Password changed for user: {user['username']}")
+            
+            return {'message': 'Password changed successfully'}
+            
+        except (AuthenticationError, ValidationError):
+            raise
+        except Exception as e:
+            logger.error(f"Change password error: {e}")
+            raise AuthenticationError('Failed to change password')

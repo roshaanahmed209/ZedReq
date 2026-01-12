@@ -1,8 +1,8 @@
 """Authentication middleware"""
 from functools import wraps
 from flask import session, request
-from ..utils.response import error_response
-from ..utils.errors import AuthenticationError
+from utils.response import error_response
+from utils.errors import AuthenticationError
 
 def require_auth(f):
     """Decorator to require authentication"""

@@ -1,8 +1,8 @@
 """Error handling middleware"""
 from flask import jsonify
-from ..utils.errors import AppError
-from ..utils.response import error_response
-from ..utils.logger import setup_logger
+from utils.errors import AppError
+from utils.response import error_response
+from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 

@@ -1,9 +1,10 @@
 """User service"""
-from ..models.user import User
-from ..utils.errors import NotFoundError
-from ..utils.logger import setup_logger
+from models.user import User
+from utils.errors import NotFoundError
+from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
 
 class UserService:
     """User business logic"""
@@ -14,17 +15,16 @@ class UserService:
     def get_user_by_id(self, user_id: int) -> dict:
         """Get user by ID"""
         try:
-            user = self.user_model.find_by_id(user_id)
+            user = self.user_model.find_by_uid(user_id)
             if not user:
                 raise NotFoundError('User')
             
             return {
-                'id': user['id'],
-                'username': user['username'],
-                'full_name': user['full_name'],
-                'headline': user['headline'],
-                'bio': user['bio'],
-                'avatar': user['avatar']
+                'id': user['uid'],
+                'username': user.get('username', ''),
+                'full_name': user.get('name', ''),
+                'email': user.get('user_email', ''),
+                'created_at': str(user.get('created_at', ''))
             }
         except NotFoundError:
             raise
@@ -33,22 +33,29 @@ class UserService:
             raise
     
     def update_user(self, user_id: int, update_data: dict) -> dict:
-        """Update user"""
+        """Update user profile"""
         try:
-            user = self.user_model.find_by_id(user_id)
+            user = self.user_model.find_by_uid(user_id)
             if not user:
                 raise NotFoundError('User')
             
-            updated_user = self.user_model.update(user_id, **update_data)
+            # Update profile with provided data
+            updated_user = self.user_model.update_profile(
+                uid=user_id,
+                name=update_data.get('full_name'),
+                username=update_data.get('username')
+            )
+            
+            if not updated_user:
+                raise Exception('Failed to update user')
+            
             logger.info(f"User {user_id} updated")
             
             return {
-                'id': updated_user['id'],
-                'username': updated_user['username'],
-                'full_name': updated_user['full_name'],
-                'headline': updated_user['headline'],
-                'bio': updated_user['bio'],
-                'avatar': updated_user['avatar']
+                'id': updated_user['uid'],
+                'username': updated_user.get('username', ''),
+                'full_name': updated_user.get('name', ''),
+                'email': updated_user.get('user_email', '')
             }
         except NotFoundError:
             raise
@@ -57,20 +64,26 @@ class UserService:
             raise
     
     def search_users(self, query: str, exclude_user_id: int = None, limit: int = 10) -> list:
-        """Search users"""
+        """Search users by username or name"""
         try:
             if not query or not query.strip():
                 return []
             
-            users = self.user_model.search(query.strip(), exclude_user_id, limit)
+            users = self.user_model.search_users(query.strip(), limit)
             
-            return [{
-                'id': user['id'],
-                'username': user['username'],
-                'full_name': user['full_name'],
-                'headline': user['headline'],
-                'avatar': user['avatar']
-            } for user in users]
+            # Filter out the excluded user
+            result = []
+            for user in users:
+                if exclude_user_id and user['uid'] == exclude_user_id:
+                    continue
+                result.append({
+                    'id': user['uid'],
+                    'username': user.get('username', ''),
+                    'full_name': user.get('name', ''),
+                    'email': user.get('user_email', '')
+                })
+            
+            return result
         except Exception as e:
             logger.error(f"Search users error: {e}")
             raise

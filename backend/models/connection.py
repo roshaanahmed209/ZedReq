@@ -1,91 +1,63 @@
+"""Connections (Followers/Following) Model"""
 from typing import Optional, Dict, Any, List
-import psycopg
-from ..config.database import Database
+from .base import BaseModel
 
-class Connection:
-    """Connection model"""
+TABLE_SCHEMA = '''
+CREATE TABLE IF NOT EXISTS connections (
+    connection_id SERIAL PRIMARY KEY,
+    follower_uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
+    followed_uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
+    connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (follower_uid, followed_uid)
+)
+'''
+
+INDEXES = [
+    'CREATE INDEX IF NOT EXISTS idx_connections_follower ON connections(follower_uid)',
+    'CREATE INDEX IF NOT EXISTS idx_connections_followed ON connections(followed_uid)'
+]
+
+
+class Connection(BaseModel):
+    """Connection (follow) model"""
+    table_name = 'connections'
     
-    def __init__(self, db: Database):
-        self.db = db
-    
-    def create(self, user1_id: str, user2_id: str, status: str = 'pending') -> Optional[Dict[str, Any]]:
-        """Create a connection (user IDs are UUIDs)"""
-        # Ensure user1_id < user2_id for consistency (compare as strings for UUIDs)
-        id1, id2 = (user1_id, user2_id) if user1_id < user2_id else (user2_id, user1_id)
-        
-        try:
-            return self.db.execute_returning(
-                '''INSERT INTO connections (user1_id, user2_id, status) VALUES (%s, %s, %s)
-                   RETURNING *''',
-                (id1, id2, status)
-            )
-        except psycopg.errors.UniqueViolation:
-            return None  # Connection already exists
-        except Exception as e:
-            if 'unique' in str(e).lower():
-                return None  # Connection already exists
-            raise
-    
-    def find_by_id(self, connection_id: int) -> Optional[Dict[str, Any]]:
-        """Find connection by ID"""
-        return self.db.fetch_one(
-            'SELECT * FROM connections WHERE id = %s',
-            (connection_id,)
+    def follow(self, follower_uid: int, followed_uid: int) -> Optional[Dict[str, Any]]:
+        return self.db.execute_returning(
+            '''INSERT INTO connections (follower_uid, followed_uid)
+               VALUES (%s, %s)
+               ON CONFLICT (follower_uid, followed_uid) DO NOTHING
+               RETURNING *''',
+            (follower_uid, followed_uid)
         )
     
-    def find_connection(self, user1_id: str, user2_id: str) -> Optional[Dict[str, Any]]:
-        """Find connection between two users (user IDs are UUIDs)"""
-        id1, id2 = (user1_id, user2_id) if user1_id < user2_id else (user2_id, user1_id)
-        return self.db.fetch_one(
-            'SELECT * FROM connections WHERE user1_id = %s AND user2_id = %s',
-            (id1, id2)
-        )
-    
-    def update_status(self, user1_id: str, user2_id: str, status: str) -> bool:
-        """Update connection status (user IDs are UUIDs)"""
-        id1, id2 = (user1_id, user2_id) if user1_id < user2_id else (user2_id, user1_id)
+    def unfollow(self, follower_uid: int, followed_uid: int) -> bool:
         cursor = self.db.execute(
-            '''UPDATE connections SET status = %s, updated_at = CURRENT_TIMESTAMP 
-               WHERE user1_id = %s AND user2_id = %s''',
-            (status, id1, id2)
+            'DELETE FROM connections WHERE follower_uid = %s AND followed_uid = %s',
+            (follower_uid, followed_uid)
         )
         return cursor.rowcount > 0
     
-    def delete(self, user1_id: str, user2_id: str) -> bool:
-        """Delete connection (user IDs are UUIDs)"""
-        id1, id2 = (user1_id, user2_id) if user1_id < user2_id else (user2_id, user1_id)
-        cursor = self.db.execute(
-            'DELETE FROM connections WHERE user1_id = %s AND user2_id = %s',
-            (id1, id2)
+    def get_followers(self, uid: int) -> List[Dict[str, Any]]:
+        return self.db.fetch_all(
+            '''SELECT c.*, u.name, u.user_email FROM connections c
+               JOIN users u ON c.follower_uid = u.uid
+               WHERE c.followed_uid = %s''',
+            (uid,)
         )
-        return cursor.rowcount > 0
     
-    def get_connections(self, user_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get all connections for a user"""
-        query = '''
-            SELECT c.*, 
-                   CASE WHEN c.user1_id = %s THEN u2.id ELSE u1.id END as other_user_id,
-                   CASE WHEN c.user1_id = %s THEN u2.username ELSE u1.username END as other_username,
-                   CASE WHEN c.user1_id = %s THEN u2.full_name ELSE u1.full_name END as other_full_name
-            FROM connections c
-            JOIN users u1 ON c.user1_id = u1.id
-            JOIN users u2 ON c.user2_id = u2.id
-            WHERE (c.user1_id = %s OR c.user2_id = %s)
-        '''
-        params = [user_id, user_id, user_id, user_id, user_id]
-        
-        if status:
-            query += ' AND c.status = %s'
-            params.append(status)
-        
-        query += ' ORDER BY c.created_at DESC'
-        
-        return self.db.fetch_all(query, tuple(params))
+    def get_following(self, uid: int) -> List[Dict[str, Any]]:
+        return self.db.fetch_all(
+            '''SELECT c.*, u.name, u.user_email FROM connections c
+               JOIN users u ON c.followed_uid = u.uid
+               WHERE c.follower_uid = %s''',
+            (uid,)
+        )
     
-    def get_count(self, user_id: str, status: str = 'accepted') -> int:
-        """Get connection count"""
+    def is_following(self, follower_uid: int, followed_uid: int) -> bool:
         result = self.db.fetch_one(
-            'SELECT COUNT(*) as count FROM connections WHERE (user1_id = %s OR user2_id = %s) AND status = %s',
-            (user_id, user_id, status)
+            'SELECT 1 FROM connections WHERE follower_uid = %s AND followed_uid = %s',
+            (follower_uid, followed_uid)
         )
-        return result['count'] if result else 0
+        return result is not None
+

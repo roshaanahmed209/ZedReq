@@ -330,9 +330,9 @@
             <p><strong>Database:</strong> zedreq</p>
             <p><strong>User:</strong> postgres</p>
         </div>
-        <div class="nav-title">Tables (0)</div>
+        <div class="nav-title">Tables (22)</div>
         <nav>
-            
+            <a href="#table-connections" class="nav-item">connections</a><a href="#table-description" class="nav-item">description</a><a href="#table-job" class="nav-item">job</a><a href="#table-lms_activities" class="nav-item">lms_activities</a><a href="#table-lms_certificates" class="nav-item">lms_certificates</a><a href="#table-lms_course_resources" class="nav-item">lms_course_resources</a><a href="#table-lms_course_sections" class="nav-item">lms_course_sections</a><a href="#table-lms_courses" class="nav-item">lms_courses</a><a href="#table-lms_dashboard" class="nav-item">lms_dashboard</a><a href="#table-lms_deadlines" class="nav-item">lms_deadlines</a><a href="#table-lms_domains" class="nav-item">lms_domains</a><a href="#table-lms_questions" class="nav-item">lms_questions</a><a href="#table-lms_recommendations" class="nav-item">lms_recommendations</a><a href="#table-lms_user_answers" class="nav-item">lms_user_answers</a><a href="#table-lms_user_courses" class="nav-item">lms_user_courses</a><a href="#table-lms_user_domain_performance" class="nav-item">lms_user_domain_performance</a><a href="#table-lms_user_section_progress" class="nav-item">lms_user_section_progress</a><a href="#table-lms_weekly_performance" class="nav-item">lms_weekly_performance</a><a href="#table-network" class="nav-item">network</a><a href="#table-payment" class="nav-item">payment</a><a href="#table-post" class="nav-item">post</a><a href="#table-users" class="nav-item">users</a>
         </nav>
     </aside>
     
@@ -344,15 +344,323 @@
         
         <div class="stats">
             <div class="stat-card">
-                <div class="value">0</div>
+                <div class="value">22</div>
                 <div class="label">Total Tables</div>
             </div>
             <div class="stat-card">
-                <div class="value">0</div>
+                <div class="value">2</div>
                 <div class="label">Total Rows</div>
             </div>
         </div>
         
+        
+        <div class="table-card" id="table-connections">
+            <div class="table-header">
+                <h3>connections</h3>
+                <span class="row-count">0 rows • 4 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>connection_id<span class="col-type">integer</span></th><th>follower_uid<span class="col-type">integer</span></th><th>followed_uid<span class="col-type">integer</span></th><th>connected_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="4" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-description">
+            <div class="table-header">
+                <h3>description</h3>
+                <span class="row-count">0 rows • 11 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>desc_id<span class="col-type">integer</span></th><th>short_desc<span class="col-type">text</span></th><th>about<span class="col-type">text</span></th><th>certificates<span class="col-type">text</span></th><th>proj_id<span class="col-type">integer</span></th><th>skills<span class="col-type">text</span></th><th>current_status<span class="col-type">character varying</span></th><th>profile_pic<span class="col-type">text</span></th><th>cover_pic<span class="col-type">text</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="11" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-job">
+            <div class="table-header">
+                <h3>job</h3>
+                <span class="row-count">0 rows • 6 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>job_id<span class="col-type">integer</span></th><th>job_desc<span class="col-type">text</span></th><th>designation<span class="col-type">character varying</span></th><th>uid<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="6" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_activities">
+            <div class="table-header">
+                <h3>lms_activities</h3>
+                <span class="row-count">0 rows • 8 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>activity_type<span class="col-type">character varying</span></th><th>title<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>icon<span class="col-type">character varying</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="8" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_certificates">
+            <div class="table-header">
+                <h3>lms_certificates</h3>
+                <span class="row-count">0 rows • 8 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>certificate_number<span class="col-type">character varying</span></th><th>title<span class="col-type">character varying</span></th><th>issued_at<span class="col-type">timestamp without time zone</span></th><th>expiry_date<span class="col-type">timestamp without time zone</span></th><th>pdf_url<span class="col-type">character varying</span></th></tr></thead>
+                    <tbody><tr><td colspan="8" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_course_resources">
+            <div class="table-header">
+                <h3>lms_course_resources</h3>
+                <span class="row-count">0 rows • 8 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>title<span class="col-type">character varying</span></th><th>resource_type<span class="col-type">character varying</span></th><th>url<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>order_index<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="8" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_course_sections">
+            <div class="table-header">
+                <h3>lms_course_sections</h3>
+                <span class="row-count">0 rows • 7 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>title<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>order_index<span class="col-type">integer</span></th><th>total_items<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="7" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_courses">
+            <div class="table-header">
+                <h3>lms_courses</h3>
+                <span class="row-count">0 rows • 11 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>title<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>icon<span class="col-type">character varying</span></th><th>lessons<span class="col-type">integer</span></th><th>duration<span class="col-type">character varying</span></th><th>category<span class="col-type">character varying</span></th><th>difficulty<span class="col-type">character varying</span></th><th>is_active<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="11" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_dashboard">
+            <div class="table-header">
+                <h3>lms_dashboard</h3>
+                <span class="row-count">0 rows • 10 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>total_questions<span class="col-type">integer</span></th><th>correct_answers<span class="col-type">integer</span></th><th>wrong_answers<span class="col-type">integer</span></th><th>overall_accuracy<span class="col-type">numeric</span></th><th>day_streak<span class="col-type">integer</span></th><th>last_activity_date<span class="col-type">date</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="10" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_deadlines">
+            <div class="table-header">
+                <h3>lms_deadlines</h3>
+                <span class="row-count">0 rows • 10 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>title<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>due_date<span class="col-type">timestamp without time zone</span></th><th>is_completed<span class="col-type">boolean</span></th><th>completed_at<span class="col-type">timestamp without time zone</span></th><th>reminder_sent<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="10" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_domains">
+            <div class="table-header">
+                <h3>lms_domains</h3>
+                <span class="row-count">0 rows • 5 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>name<span class="col-type">character varying</span></th><th>description<span class="col-type">text</span></th><th>icon<span class="col-type">character varying</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="5" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_questions">
+            <div class="table-header">
+                <h3>lms_questions</h3>
+                <span class="row-count">0 rows • 10 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>section_id<span class="col-type">integer</span></th><th>question_text<span class="col-type">text</span></th><th>question_type<span class="col-type">character varying</span></th><th>options<span class="col-type">jsonb</span></th><th>correct_answer<span class="col-type">text</span></th><th>points<span class="col-type">integer</span></th><th>order_index<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="10" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_recommendations">
+            <div class="table-header">
+                <h3>lms_recommendations</h3>
+                <span class="row-count">0 rows • 7 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>reason<span class="col-type">text</span></th><th>priority<span class="col-type">integer</span></th><th>is_dismissed<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="7" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_user_answers">
+            <div class="table-header">
+                <h3>lms_user_answers</h3>
+                <span class="row-count">0 rows • 9 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>question_id<span class="col-type">integer</span></th><th>answer_text<span class="col-type">text</span></th><th>is_correct<span class="col-type">boolean</span></th><th>points_earned<span class="col-type">integer</span></th><th>submitted_at<span class="col-type">timestamp without time zone</span></th><th>evaluated_at<span class="col-type">timestamp without time zone</span></th><th>feedback<span class="col-type">text</span></th></tr></thead>
+                    <tbody><tr><td colspan="9" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_user_courses">
+            <div class="table-header">
+                <h3>lms_user_courses</h3>
+                <span class="row-count">0 rows • 10 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>course_id<span class="col-type">integer</span></th><th>progress<span class="col-type">integer</span></th><th>status<span class="col-type">character varying</span></th><th>started_at<span class="col-type">timestamp without time zone</span></th><th>completed_at<span class="col-type">timestamp without time zone</span></th><th>last_accessed_at<span class="col-type">timestamp without time zone</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="10" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_user_domain_performance">
+            <div class="table-header">
+                <h3>lms_user_domain_performance</h3>
+                <span class="row-count">0 rows • 8 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>domain_id<span class="col-type">integer</span></th><th>questions_answered<span class="col-type">integer</span></th><th>correct_answers<span class="col-type">integer</span></th><th>accuracy_percentage<span class="col-type">numeric</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="8" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_user_section_progress">
+            <div class="table-header">
+                <h3>lms_user_section_progress</h3>
+                <span class="row-count">0 rows • 7 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>section_id<span class="col-type">integer</span></th><th>completed_items<span class="col-type">integer</span></th><th>is_completed<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="7" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-lms_weekly_performance">
+            <div class="table-header">
+                <h3>lms_weekly_performance</h3>
+                <span class="row-count">0 rows • 8 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>id<span class="col-type">integer</span></th><th>user_id<span class="col-type">integer</span></th><th>date<span class="col-type">date</span></th><th>questions_answered<span class="col-type">integer</span></th><th>correct_answers<span class="col-type">integer</span></th><th>wrong_answers<span class="col-type">integer</span></th><th>study_time_minutes<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="8" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-network">
+            <div class="table-header">
+                <h3>network</h3>
+                <span class="row-count">0 rows • 5 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>network_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>num_connections<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="5" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-payment">
+            <div class="table-header">
+                <h3>payment</h3>
+                <span class="row-count">0 rows • 19 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>pay_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>payment_provider<span class="col-type">character varying</span></th><th>provider_customer_id<span class="col-type">character varying</span></th><th>provider_payment_method_id<span class="col-type">character varying</span></th><th>card_last_four<span class="col-type">character</span></th><th>card_brand<span class="col-type">character varying</span></th><th>card_exp_month<span class="col-type">integer</span></th><th>card_exp_year<span class="col-type">integer</span></th><th>billing_name<span class="col-type">character varying</span></th><th>billing_email<span class="col-type">character varying</span></th><th>subscription_status<span class="col-type">character varying</span></th><th>subscription_plan<span class="col-type">character varying</span></th><th>subscription_start<span class="col-type">timestamp without time zone</span></th><th>subscription_end<span class="col-type">timestamp without time zone</span></th><th>trial_taken<span class="col-type">boolean</span></th><th>trial_end<span class="col-type">timestamp without time zone</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="19" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-post">
+            <div class="table-header">
+                <h3>post</h3>
+                <span class="row-count">0 rows • 9 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>post_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>likes<span class="col-type">integer</span></th><th>comments<span class="col-type">integer</span></th><th>media_ref_id<span class="col-type">integer</span></th><th>post_desc<span class="col-type">text</span></th><th>is_deleted<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="9" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-users">
+            <div class="table-header">
+                <h3>users</h3>
+                <span class="row-count">2 rows • 13 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>uid<span class="col-type">integer</span></th><th>username<span class="col-type">character varying</span></th><th>name<span class="col-type">character varying</span></th><th>user_email<span class="col-type">character varying</span></th><th>password_hash<span class="col-type">text</span></th><th>email_verified<span class="col-type">boolean</span></th><th>verification_token<span class="col-type">character varying</span></th><th>description_id<span class="col-type">integer</span></th><th>pay_id<span class="col-type">integer</span></th><th>job_id<span class="col-type">integer</span></th><th>last_login<span class="col-type">timestamp without time zone</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td>1</td><td>roshaan</td><td>Roshaan Admin</td><td>admin@roshaan.com</td><td>pbkdf2:sha256:600000$cHcpO2s16OBtNe4V$6bc22cb438ab487714197c008ccc5697a7bf47b656fd8e0214084e7090deec...</td><td>True</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td>2026-01-11 19:53:10.950435</td><td>2026-01-11 19:53:10.950435</td></tr><tr><td>2</td><td>roshaan1</td><td>roshaan</td><td>roshaan@admin.com</td><td>pbkdf2:sha256:600000$6W7CGEa3fmwSF8Hb$f67d6ee99ef0b637c3f4a5ca03573a3fc7e65d5f62507dc19193649ef9db4e...</td><td>False</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td class="null">NULL</td><td>2026-01-11 21:05:13.795478</td><td>2026-01-11 21:05:13.795478</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
         
     </main>
     

@@ -7,25 +7,51 @@ import os
 import sys
 import random
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.database import get_connection_params, Database
+from utils.auth import hash_password
 
 # Sample data constants
 SAMPLE_USERS = [
-    ("john_doe", "john@example.com", "password123", "John Doe", "Software Engineer", "Full-stack developer with 5 years of experience"),
-    ("jane_smith", "jane@example.com", "password123", "Jane Smith", "Data Scientist", "ML enthusiast and Python expert"),
-    ("bob_wilson", "bob@example.com", "password123", "Bob Wilson", "DevOps Engineer", "Cloud infrastructure specialist"),
-    ("alice_johnson", "alice@example.com", "password123", "Alice Johnson", "Frontend Developer", "React and Vue.js developer"),
-    ("charlie_brown", "charlie@example.com", "password123", "Charlie Brown", "Backend Developer", "Node.js and Python backend expert"),
-    ("diana_ross", "diana@example.com", "password123", "Diana Ross", "UI/UX Designer", "Creating beautiful user experiences"),
-    ("edward_chen", "edward@example.com", "password123", "Edward Chen", "Mobile Developer", "iOS and Android specialist"),
-    ("fiona_green", "fiona@example.com", "password123", "Fiona Green", "Product Manager", "Turning ideas into products"),
-    ("george_kim", "george@example.com", "password123", "George Kim", "Security Engineer", "Cybersecurity and penetration testing"),
-    ("hannah_lee", "hannah@example.com", "password123", "Hannah Lee", "QA Engineer", "Quality assurance and test automation"),
+    ("john_doe", "john@example.com", "Password123", "John Doe"),
+    ("jane_smith", "jane@example.com", "Password123", "Jane Smith"),
+    ("bob_wilson", "bob@example.com", "Password123", "Bob Wilson"),
+    ("alice_johnson", "alice@example.com", "Password123", "Alice Johnson"),
+    ("charlie_brown", "charlie@example.com", "Password123", "Charlie Brown"),
+    ("diana_ross", "diana@example.com", "Password123", "Diana Ross"),
+    ("edward_chen", "edward@example.com", "Password123", "Edward Chen"),
+    ("fiona_green", "fiona@example.com", "Password123", "Fiona Green"),
+    ("george_kim", "george@example.com", "Password123", "George Kim"),
+    ("hannah_lee", "hannah@example.com", "Password123", "Hannah Lee"),
+]
+
+SAMPLE_DESCRIPTIONS = [
+    ("Software Engineer", "Full-stack developer with 5 years of experience in Python and JavaScript", "AWS Certified, Google Cloud Professional", "Python, JavaScript, React, Node.js", "Available for work"),
+    ("Data Scientist", "ML enthusiast and Python expert working on predictive analytics", "TensorFlow Certified, Coursera ML Specialization", "Python, TensorFlow, PyTorch, SQL", "Open to opportunities"),
+    ("DevOps Engineer", "Cloud infrastructure specialist with expertise in Kubernetes", "CKA, AWS Solutions Architect", "Docker, Kubernetes, AWS, Terraform", "Currently employed"),
+    ("Frontend Developer", "React and Vue.js developer passionate about UI/UX", "Meta Frontend Certified", "React, Vue.js, TypeScript, CSS", "Freelancing"),
+    ("Backend Developer", "Node.js and Python backend expert focused on scalability", "MongoDB Certified", "Node.js, Python, PostgreSQL, Redis", "Looking for remote work"),
+    ("UI/UX Designer", "Creating beautiful user experiences with Figma and Adobe XD", "Google UX Design Certificate", "Figma, Sketch, Adobe XD, CSS", "Available for projects"),
+    ("Mobile Developer", "iOS and Android specialist with React Native expertise", "Apple Developer Certified", "Swift, Kotlin, React Native, Flutter", "Open to hybrid roles"),
+    ("Product Manager", "Turning ideas into products with agile methodologies", "PMP, Scrum Master", "Agile, Scrum, JIRA, Analytics", "Currently employed"),
+    ("Security Engineer", "Cybersecurity and penetration testing professional", "CISSP, CEH", "Python, Network Security, Penetration Testing", "Consulting"),
+    ("QA Engineer", "Quality assurance and test automation specialist", "ISTQB Certified", "Selenium, Cypress, Python, Postman", "Full-time"),
+]
+
+SAMPLE_JOBS = [
+    ("Developing and maintaining web applications using React and Node.js", "Senior Software Engineer"),
+    ("Building ML models for customer behavior prediction", "Data Scientist"),
+    ("Managing CI/CD pipelines and cloud infrastructure", "DevOps Lead"),
+    ("Creating responsive UI components with React", "Frontend Developer"),
+    ("Designing RESTful APIs and microservices", "Backend Engineer"),
+    ("Designing user interfaces for mobile applications", "UI/UX Designer"),
+    ("Developing cross-platform mobile applications", "Mobile Developer"),
+    ("Leading product development initiatives", "Product Manager"),
+    ("Conducting security audits and vulnerability assessments", "Security Analyst"),
+    ("Writing and maintaining automated test suites", "QA Lead"),
 ]
 
 SAMPLE_COURSES = [
@@ -71,34 +97,184 @@ def get_db():
     return Database(params)
 
 
-def seed_users(db: Database) -> list:
-    """Seed users table and return list of created user IDs (UUIDs)"""
+def seed_descriptions(db: Database) -> list:
+    """Seed description table and return list of desc_ids"""
+    print("Seeding descriptions...")
+    desc_ids = []
+    
+    for short_desc, about, certs, skills, status in SAMPLE_DESCRIPTIONS:
+        try:
+            result = db.execute_returning(
+                '''INSERT INTO description (short_desc, about, certificates, skills, current_status)
+                   VALUES (%s, %s, %s, %s, %s)
+                   RETURNING desc_id''',
+                (short_desc, about, certs, skills, status)
+            )
+            if result:
+                desc_ids.append(result['desc_id'])
+                print(f"  Created description: {short_desc}")
+        except Exception as e:
+            print(f"  Error creating description: {e}")
+    
+    print(f"Total descriptions: {len(desc_ids)}")
+    return desc_ids
+
+
+def seed_users(db: Database, desc_ids: list) -> list:
+    """Seed users table and return list of created user IDs"""
     print("Seeding users...")
     user_ids = []
     
-    for username, email, password, full_name, headline, bio in SAMPLE_USERS:
+    for i, (username, email, password, full_name) in enumerate(SAMPLE_USERS):
         try:
+            desc_id = desc_ids[i] if i < len(desc_ids) else None
             result = db.execute_returning(
-                '''INSERT INTO users (username, email, password, full_name, headline, bio)
+                '''INSERT INTO users (username, name, user_email, password_hash, email_verified, description_id)
                    VALUES (%s, %s, %s, %s, %s, %s)
                    ON CONFLICT (username) DO NOTHING
-                   RETURNING id''',
-                (username, email, generate_password_hash(password), full_name, headline, bio)
+                   RETURNING uid''',
+                (username, full_name, email, hash_password(password), True, desc_id)
             )
             if result:
-                user_ids.append(str(result['id']))
-                print(f"  Created user: {username} ({result['id']})")
+                user_ids.append(result['uid'])
+                print(f"  Created user: {username} (uid: {result['uid']})")
         except Exception as e:
             print(f"  Error creating user {username}: {e}")
     
     # If no new users created, fetch existing ones
     if not user_ids:
-        existing = db.fetch_all("SELECT id FROM users LIMIT 10")
-        user_ids = [str(u['id']) for u in existing]
+        existing = db.fetch_all("SELECT uid FROM users LIMIT 10")
+        user_ids = [u['uid'] for u in existing]
         print(f"  Using {len(user_ids)} existing users")
     
     print(f"Total users: {len(user_ids)}")
     return user_ids
+
+
+def seed_jobs(db: Database, user_ids: list) -> list:
+    """Seed jobs table"""
+    print("Seeding jobs...")
+    job_ids = []
+    
+    for i, (job_desc, designation) in enumerate(SAMPLE_JOBS):
+        if i >= len(user_ids):
+            break
+        user_id = user_ids[i]
+        try:
+            result = db.execute_returning(
+                '''INSERT INTO job (uid, job_desc, designation)
+                   VALUES (%s, %s, %s)
+                   RETURNING job_id''',
+                (user_id, job_desc, designation)
+            )
+            if result:
+                job_ids.append(result['job_id'])
+                # Update user with job_id
+                db.execute(
+                    'UPDATE users SET job_id = %s WHERE uid = %s',
+                    (result['job_id'], user_id)
+                )
+                print(f"  Created job: {designation}")
+        except Exception as e:
+            print(f"  Error creating job: {e}")
+    
+    print(f"Total jobs: {len(job_ids)}")
+    return job_ids
+
+
+def seed_payment(db: Database, user_ids: list):
+    """Seed payment table with PCI-compliant mock data"""
+    print("Seeding payment records...")
+    
+    plans = ['free', 'basic', 'premium', 'enterprise']
+    card_brands = ['visa', 'mastercard', 'amex']
+    
+    for i, user_id in enumerate(user_ids[:5]):  # Only first 5 users have payment
+        try:
+            result = db.execute_returning(
+                '''INSERT INTO payment (uid, payment_provider, provider_customer_id, 
+                   card_last_four, card_brand, billing_name, subscription_status, subscription_plan)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING pay_id''',
+                (user_id, 'stripe', f'cus_mock_{user_id}',
+                 str(random.randint(1000, 9999)), random.choice(card_brands),
+                 SAMPLE_USERS[i][3], 'active', random.choice(plans))
+            )
+            if result:
+                # Update user with pay_id
+                db.execute(
+                    'UPDATE users SET pay_id = %s WHERE uid = %s',
+                    (result['pay_id'], user_id)
+                )
+                print(f"  Created payment for user {user_id}")
+        except Exception as e:
+            print(f"  Error creating payment: {e}")
+    
+    print("Payment records seeded")
+
+
+def seed_posts(db: Database, user_ids: list) -> list:
+    """Seed posts table"""
+    print("Seeding posts...")
+    post_ids = []
+    
+    for content in SAMPLE_POSTS:
+        user_id = random.choice(user_ids)
+        try:
+            result = db.execute_returning(
+                '''INSERT INTO post (uid, post_desc)
+                   VALUES (%s, %s)
+                   RETURNING post_id''',
+                (user_id, content)
+            )
+            if result:
+                post_ids.append(result['post_id'])
+                print(f"  Created post #{result['post_id']}")
+        except Exception as e:
+            print(f"  Error creating post: {e}")
+    
+    print(f"Total posts: {len(post_ids)}")
+    return post_ids
+
+
+def seed_network_and_connections(db: Database, user_ids: list):
+    """Seed network and connections tables"""
+    print("Seeding networks and connections...")
+    
+    # Create network for each user
+    for user_id in user_ids:
+        try:
+            db.execute(
+                '''INSERT INTO network (uid, num_connections)
+                   VALUES (%s, 0)
+                   ON CONFLICT DO NOTHING''',
+                (user_id,)
+            )
+        except Exception as e:
+            print(f"  Error creating network: {e}")
+    
+    # Create some random connections
+    for user_id in user_ids:
+        # Each user follows 2-5 other users
+        to_follow = random.sample([u for u in user_ids if u != user_id], 
+                                  min(random.randint(2, 5), len(user_ids) - 1))
+        for followed_id in to_follow:
+            try:
+                db.execute(
+                    '''INSERT INTO connections (follower_uid, followed_uid)
+                       VALUES (%s, %s)
+                       ON CONFLICT DO NOTHING''',
+                    (user_id, followed_id)
+                )
+                # Update connection counts
+                db.execute(
+                    'UPDATE network SET num_connections = num_connections + 1 WHERE uid = %s',
+                    (followed_id,)
+                )
+            except Exception as e:
+                pass
+    
+    print("Networks and connections seeded")
 
 
 def seed_courses(db: Database) -> list:
@@ -158,30 +334,6 @@ def seed_domains(db: Database) -> list:
     return domain_ids
 
 
-def seed_posts(db: Database, user_ids: list) -> list:
-    """Seed posts table"""
-    print("Seeding posts...")
-    post_ids = []
-    
-    for i, content in enumerate(SAMPLE_POSTS):
-        user_id = random.choice(user_ids)
-        try:
-            result = db.execute_returning(
-                '''INSERT INTO posts (user_id, content)
-                   VALUES (%s, %s)
-                   RETURNING id''',
-                (user_id, content)
-            )
-            if result:
-                post_ids.append(result['id'])
-                print(f"  Created post #{result['id']}")
-        except Exception as e:
-            print(f"  Error creating post: {e}")
-    
-    print(f"Total posts: {len(post_ids)}")
-    return post_ids
-
-
 def seed_lms_dashboard(db: Database, user_ids: list):
     """Seed LMS dashboard for each user"""
     print("Seeding LMS dashboards...")
@@ -203,7 +355,7 @@ def seed_lms_dashboard(db: Database, user_ids: list):
                    updated_at = CURRENT_TIMESTAMP''',
                 (user_id, total_q, correct, wrong, accuracy, streak, datetime.now().date())
             )
-            print(f"  Dashboard for user {user_id[:8]}... - {accuracy}% accuracy")
+            print(f"  Dashboard for user {user_id} - {accuracy}% accuracy")
         except Exception as e:
             print(f"  Error: {e}")
     
@@ -213,7 +365,6 @@ def seed_lms_dashboard(db: Database, user_ids: list):
 def seed_user_courses(db: Database, user_ids: list, course_ids: list):
     """Seed user course enrollments"""
     print("Seeding user course enrollments...")
-    statuses = ['not_started', 'in_progress', 'completed']
     
     for user_id in user_ids:
         enrolled = random.sample(course_ids, min(random.randint(3, 7), len(course_ids)))
@@ -345,19 +496,23 @@ def seed_all():
     db = get_db()
     
     try:
-        # Core data
-        user_ids = seed_users(db)
-        course_ids = seed_courses(db)
-        domain_ids = seed_domains(db)
+        # Core data - order matters for foreign keys
+        desc_ids = seed_descriptions(db)
+        user_ids = seed_users(db, desc_ids)
         
         if not user_ids:
             print("ERROR: No users created/found. Aborting.")
             return
         
-        # Posts
-        post_ids = seed_posts(db, user_ids)
+        seed_jobs(db, user_ids)
+        seed_payment(db, user_ids)
+        seed_posts(db, user_ids)
+        seed_network_and_connections(db, user_ids)
         
         # LMS data
+        course_ids = seed_courses(db)
+        domain_ids = seed_domains(db)
+        
         seed_lms_dashboard(db, user_ids)
         seed_user_courses(db, user_ids, course_ids)
         seed_weekly_performance(db, user_ids)
@@ -371,6 +526,8 @@ def seed_all():
         
     except Exception as e:
         print(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         db.close()
 
@@ -391,10 +548,10 @@ if __name__ == "__main__":
     else:
         db = get_db()
         if args.users:
-            seed_users(db)
+            desc_ids = seed_descriptions(db)
+            seed_users(db, desc_ids)
         if args.courses:
             seed_courses(db)
         if args.domains:
             seed_domains(db)
         db.close()
-

@@ -1,5 +1,5 @@
 """User validators"""
-from ..utils.errors import ValidationError
+from utils.errors import ValidationError
 
 def validate_user_search(query: str) -> str:
     """Validate user search query"""

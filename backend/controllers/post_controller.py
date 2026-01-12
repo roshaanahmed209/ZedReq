@@ -1,8 +1,8 @@
 """Post controller"""
 from flask import request, session
-from ..services.post_service import PostService
-from ..middleware.auth_middleware import get_current_user_id
-from ..utils.response import success_response
+from services.post_service import PostService
+from middleware.auth_middleware import get_current_user_id
+from utils.response import success_response
 
 class PostController:
     """Post request handlers"""
