@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import DarkVeil from '../components/DarkVeil'
+import Beams from '../components/Beams'
 import '../css/pages/FirstPage.css'
 
 const FirstPage = () => {
@@ -281,27 +282,42 @@ const FirstPage = () => {
       </section>
 
       {/* Pricing */}
-      <section className="pricing-section">
-        <h2 className="section-title scroll-reveal">Simple, Transparent Pricing</h2>
-        <div className="pricing-grid">
-          <div className="pricing-card scroll-reveal">
-            <h3>Starter</h3>
-            <div className="price">Free</div>
-            <p>Personal profile, basic matching, limited mock interviews.</p>
-            <Link to="/landing" className="btn-primary">Create Free Account</Link>
-          </div>
-          <div className="pricing-card featured scroll-reveal">
-            <span className="badge">Most Popular</span>
-            <h3>Pro</h3>
-            <div className="price">For job seekers</div>
-            <p>Unlimited mock interviews, personalized coaching, priority matches.</p>
-            <a href="#" className="btn-primary">Upgrade to Pro</a>
-          </div>
-          <div className="pricing-card scroll-reveal">
-            <h3>Enterprise</h3>
-            <div className="price">For teams</div>
-            <p>Custom integrations, bulk screening, privacy controls.</p>
-            <a href="#" className="btn-secondary">Contact Sales</a>
+      <section className="pricing-section" style={{ position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, opacity: 0.6 }}>
+          <Beams
+            beamWidth={1.5}
+            beamHeight={25}
+            beamNumber={40}
+            speed={3.1}
+            noiseIntensity={2.4}
+            scale={0.29}
+            rotation={45}
+            lightColor="#00b4d8"
+          />
+        </div>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(13, 13, 13, 0.3)', zIndex: 1, pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <h2 className="section-title scroll-reveal">Simple, Transparent Pricing</h2>
+          <div className="pricing-grid">
+            <div className="pricing-card scroll-reveal">
+              <h3>Starter</h3>
+              <div className="price">Free</div>
+              <p>Personal profile, basic matching, limited mock interviews.</p>
+              <Link to="/landing" className="btn-primary">Create Free Account</Link>
+            </div>
+            <div className="pricing-card featured scroll-reveal">
+              <span className="badge">Most Popular</span>
+              <h3>Pro</h3>
+              <div className="price">For job seekers</div>
+              <p>Unlimited mock interviews, personalized coaching, priority matches.</p>
+              <a href="#" className="btn-primary">Upgrade to Pro</a>
+            </div>
+            <div className="pricing-card scroll-reveal">
+              <h3>Enterprise</h3>
+              <div className="price">For teams</div>
+              <p>Custom integrations, bulk screening, privacy controls.</p>
+              <a href="#" className="btn-secondary">Contact Sales</a>
+            </div>
           </div>
         </div>
       </section>
