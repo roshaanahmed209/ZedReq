@@ -29,6 +29,17 @@ env/
 .venv/
 .env
 
+firebase/
+firebase_config.txt
+
+
+flask_session/
+
+
+env.example
+
+
+creds.txt
 # PyInstaller
 *.manifest
 *.spec

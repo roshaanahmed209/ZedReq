@@ -38,6 +38,17 @@ class Config:
     # Pagination
     DEFAULT_PAGE_SIZE = int(os.environ.get('DEFAULT_PAGE_SIZE', 20))
     MAX_PAGE_SIZE = int(os.environ.get('MAX_PAGE_SIZE', 100))
+    
+    # Redis Configuration (disabled by default for local dev - set REDIS_ENABLED=true to enable)
+    REDIS_ENABLED = os.environ.get('REDIS_ENABLED', 'false').lower() == 'true'
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    REDIS_CACHE_TTL = int(os.environ.get('REDIS_CACHE_TTL', 300))  # 5 minutes default
+    
+    # Cloudinary Configuration
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '')
+    CLOUDINARY_UPLOAD_PRESET = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '')
 
 
 class DevelopmentConfig(Config):

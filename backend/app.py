@@ -5,7 +5,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from config import config
 from config.database import init_database
-from routes import create_auth_blueprint, create_user_blueprint, create_post_blueprint
+from routes import create_auth_blueprint, create_user_blueprint, create_post_blueprint, create_feed_blueprint
 from utils.logger import setup_logger
 from utils.errors import AppError
 import os
@@ -121,6 +121,7 @@ def create_app(config_name=None):
     app.register_blueprint(create_auth_blueprint(db, limiter))
     app.register_blueprint(create_user_blueprint(db))
     app.register_blueprint(create_post_blueprint(db))
+    app.register_blueprint(create_feed_blueprint(db, limiter))
     
     # Health check route
     @app.route('/')

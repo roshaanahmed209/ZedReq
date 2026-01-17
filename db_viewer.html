@@ -330,9 +330,9 @@
             <p><strong>Database:</strong> zedreq</p>
             <p><strong>User:</strong> postgres</p>
         </div>
-        <div class="nav-title">Tables (22)</div>
+        <div class="nav-title">Tables (23)</div>
         <nav>
-            <a href="#table-connections" class="nav-item">connections</a><a href="#table-description" class="nav-item">description</a><a href="#table-job" class="nav-item">job</a><a href="#table-lms_activities" class="nav-item">lms_activities</a><a href="#table-lms_certificates" class="nav-item">lms_certificates</a><a href="#table-lms_course_resources" class="nav-item">lms_course_resources</a><a href="#table-lms_course_sections" class="nav-item">lms_course_sections</a><a href="#table-lms_courses" class="nav-item">lms_courses</a><a href="#table-lms_dashboard" class="nav-item">lms_dashboard</a><a href="#table-lms_deadlines" class="nav-item">lms_deadlines</a><a href="#table-lms_domains" class="nav-item">lms_domains</a><a href="#table-lms_questions" class="nav-item">lms_questions</a><a href="#table-lms_recommendations" class="nav-item">lms_recommendations</a><a href="#table-lms_user_answers" class="nav-item">lms_user_answers</a><a href="#table-lms_user_courses" class="nav-item">lms_user_courses</a><a href="#table-lms_user_domain_performance" class="nav-item">lms_user_domain_performance</a><a href="#table-lms_user_section_progress" class="nav-item">lms_user_section_progress</a><a href="#table-lms_weekly_performance" class="nav-item">lms_weekly_performance</a><a href="#table-network" class="nav-item">network</a><a href="#table-payment" class="nav-item">payment</a><a href="#table-post" class="nav-item">post</a><a href="#table-users" class="nav-item">users</a>
+            <a href="#table-connections" class="nav-item">connections</a><a href="#table-description" class="nav-item">description</a><a href="#table-job" class="nav-item">job</a><a href="#table-likes" class="nav-item">likes</a><a href="#table-lms_activities" class="nav-item">lms_activities</a><a href="#table-lms_certificates" class="nav-item">lms_certificates</a><a href="#table-lms_course_resources" class="nav-item">lms_course_resources</a><a href="#table-lms_course_sections" class="nav-item">lms_course_sections</a><a href="#table-lms_courses" class="nav-item">lms_courses</a><a href="#table-lms_dashboard" class="nav-item">lms_dashboard</a><a href="#table-lms_deadlines" class="nav-item">lms_deadlines</a><a href="#table-lms_domains" class="nav-item">lms_domains</a><a href="#table-lms_questions" class="nav-item">lms_questions</a><a href="#table-lms_recommendations" class="nav-item">lms_recommendations</a><a href="#table-lms_user_answers" class="nav-item">lms_user_answers</a><a href="#table-lms_user_courses" class="nav-item">lms_user_courses</a><a href="#table-lms_user_domain_performance" class="nav-item">lms_user_domain_performance</a><a href="#table-lms_user_section_progress" class="nav-item">lms_user_section_progress</a><a href="#table-lms_weekly_performance" class="nav-item">lms_weekly_performance</a><a href="#table-network" class="nav-item">network</a><a href="#table-payment" class="nav-item">payment</a><a href="#table-post" class="nav-item">post</a><a href="#table-users" class="nav-item">users</a>
         </nav>
     </aside>
     
@@ -344,11 +344,11 @@
         
         <div class="stats">
             <div class="stat-card">
-                <div class="value">22</div>
+                <div class="value">23</div>
                 <div class="label">Total Tables</div>
             </div>
             <div class="stat-card">
-                <div class="value">2</div>
+                <div class="value">6</div>
                 <div class="label">Total Rows</div>
             </div>
         </div>
@@ -391,6 +391,20 @@
                 <table>
                     <thead><tr><th>job_id<span class="col-type">integer</span></th><th>job_desc<span class="col-type">text</span></th><th>designation<span class="col-type">character varying</span></th><th>uid<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
                     <tbody><tr><td colspan="6" class="empty">No data</td></tr></tbody>
+                </table>
+            </div>
+            
+        </div>
+        
+        <div class="table-card" id="table-likes">
+            <div class="table-header">
+                <h3>likes</h3>
+                <span class="row-count">0 rows • 4 columns</span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>like_id<span class="col-type">integer</span></th><th>post_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
+                    <tbody><tr><td colspan="4" class="empty">No data</td></tr></tbody>
                 </table>
             </div>
             
@@ -637,12 +651,12 @@
         <div class="table-card" id="table-post">
             <div class="table-header">
                 <h3>post</h3>
-                <span class="row-count">0 rows • 9 columns</span>
+                <span class="row-count">4 rows • 11 columns</span>
             </div>
             <div class="table-wrapper">
                 <table>
-                    <thead><tr><th>post_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>likes<span class="col-type">integer</span></th><th>comments<span class="col-type">integer</span></th><th>media_ref_id<span class="col-type">integer</span></th><th>post_desc<span class="col-type">text</span></th><th>is_deleted<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th></tr></thead>
-                    <tbody><tr><td colspan="9" class="empty">No data</td></tr></tbody>
+                    <thead><tr><th>post_id<span class="col-type">integer</span></th><th>uid<span class="col-type">integer</span></th><th>likes<span class="col-type">integer</span></th><th>comments<span class="col-type">integer</span></th><th>media_ref_id<span class="col-type">integer</span></th><th>post_desc<span class="col-type">text</span></th><th>is_deleted<span class="col-type">boolean</span></th><th>created_at<span class="col-type">timestamp without time zone</span></th><th>updated_at<span class="col-type">timestamp without time zone</span></th><th>media_url<span class="col-type">text</span></th><th>media_type<span class="col-type">character varying</span></th></tr></thead>
+                    <tbody><tr><td>1</td><td>1</td><td>0</td><td>0</td><td class="null">NULL</td><td>dhinka chika</td><td>False</td><td>2026-01-18 02:07:39.382801</td><td>2026-01-18 02:07:39.382801</td><td class="null">NULL</td><td class="null">NULL</td></tr><tr><td>2</td><td>1</td><td>0</td><td>0</td><td class="null">NULL</td><td>pls work</td><td>False</td><td>2026-01-18 02:13:05.974084</td><td>2026-01-18 02:13:05.974084</td><td class="null">NULL</td><td class="null">NULL</td></tr><tr><td>3</td><td>1</td><td>0</td><td>0</td><td class="null">NULL</td><td>nice</td><td>False</td><td>2026-01-18 02:23:48.214181</td><td>2026-01-18 02:23:48.214181</td><td class="null">NULL</td><td class="null">NULL</td></tr><tr><td>4</td><td>1</td><td>0</td><td>0</td><td class="null">NULL</td><td>test</td><td>False</td><td>2026-01-18 02:53:36.399597</td><td>2026-01-18 02:53:36.399597</td><td>https://res.cloudinary.com/dyo30bhyw/image/upload/v1768686814/rqqlmczxysydblnqgyjx.png</td><td>image</td></tr></tbody>
                 </table>
             </div>
             

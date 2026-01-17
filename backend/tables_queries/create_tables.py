@@ -81,7 +81,8 @@ CREATE TABLE IF NOT EXISTS post (
     uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
     likes INTEGER DEFAULT 0,
     comments INTEGER DEFAULT 0,
-    media_ref_id INTEGER,
+    media_url TEXT,
+    media_type VARCHAR(20),
     post_desc TEXT,
     is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,6 +98,16 @@ CREATE TABLE IF NOT EXISTS job (
     uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+LIKES_TABLE = '''
+CREATE TABLE IF NOT EXISTS likes (
+    like_id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES post(post_id) ON DELETE CASCADE,
+    uid INTEGER REFERENCES users(uid) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, uid)
 );
 '''
 
@@ -354,9 +365,17 @@ INDEXES = [
     # Post indexes
     'CREATE INDEX IF NOT EXISTS idx_post_uid ON post(uid)',
     'CREATE INDEX IF NOT EXISTS idx_post_created ON post(created_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_post_uid_created_deleted ON post(uid, created_at DESC, is_deleted)',
+    'CREATE INDEX IF NOT EXISTS idx_post_feed ON post(created_at DESC, post_id DESC) WHERE is_deleted = FALSE',
+    'CREATE INDEX IF NOT EXISTS idx_post_media ON post(media_url) WHERE media_url IS NOT NULL',
     
     # Job indexes
     'CREATE INDEX IF NOT EXISTS idx_job_uid ON job(uid)',
+    
+    # Likes indexes
+    'CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id)',
+    'CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(uid)',
+    'CREATE INDEX IF NOT EXISTS idx_likes_post_user ON likes(post_id, uid)',
     
     # Connections indexes
     'CREATE INDEX IF NOT EXISTS idx_connections_follower ON connections(follower_uid)',
@@ -419,6 +438,7 @@ TABLES_IN_ORDER = [
     # Level 1: Depends on users
     ("post", POST_TABLE),
     ("job", JOB_TABLE),
+    ("likes", LIKES_TABLE),  # Depends on post
     ("connections", CONNECTIONS_TABLE),
     ("network", NETWORK_TABLE),
     ("payment", PAYMENT_TABLE),

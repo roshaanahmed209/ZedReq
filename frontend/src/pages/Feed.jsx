@@ -553,6 +553,83 @@ const PostContent = styled.div`
   color: var(--text);
 `
 
+const PostMedia = styled.div`
+  margin-bottom: 15px;
+  border-radius: 12px;
+  overflow: hidden;
+  
+  img, video {
+    display: block;
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+  }
+`
+
+const MediaPreviewContainer = styled.div`
+  position: relative;
+  margin-top: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 300px;
+  
+  img, video {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+  }
+`
+
+const MediaRemoveButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+  }
+`
+
+const MediaUploadButton = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--hover-bg);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-lighter);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--accent);
+    color: white;
+  }
+  
+  input {
+    display: none;
+  }
+`
+
+const LoadMoreSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  color: var(--text-lighter);
+`
+
 const PostActions = styled.div`
   display: flex;
   gap: 20px;
@@ -941,7 +1018,13 @@ const Feed = () => {
   const [user, setUser] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [postContent, setPostContent] = useState('')
+  const [mediaFile, setMediaFile] = useState(null)
+  const [mediaPreview, setMediaPreview] = useState(null)
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [cursor, setCursor] = useState(null)
+  const [hasMore, setHasMore] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchTimeout, setSearchTimeout] = useState(null)
@@ -1016,54 +1099,193 @@ const Feed = () => {
     }
   }
 
-  const loadPosts = async () => {
+  const loadPosts = async (loadMore = false) => {
     try {
-      const response = await api.get('/api/posts')
+      if (loadMore) {
+        setLoadingMore(true)
+      }
+      
+      const params = new URLSearchParams()
+      if (loadMore && cursor) {
+        params.append('cursor', cursor)
+      }
+      params.append('limit', '20')
+      
+      const response = await api.get(`/api/feed?${params.toString()}`)
+      
       if (response.data && response.data.data) {
-        setPosts(response.data.data)
+        const feedData = response.data.data
+        const newPosts = feedData.posts || []
+        
+        if (loadMore) {
+          setPosts(prev => [...prev, ...newPosts])
+        } else {
+          setPosts(newPosts)
+        }
+        
+        // Update pagination state
+        if (feedData.pagination) {
+          setCursor(feedData.pagination.next_cursor)
+          setHasMore(feedData.pagination.has_more)
+        }
       } else if (Array.isArray(response.data)) {
-        // Fallback for direct array response
-        setPosts(response.data)
+        setPosts(loadMore ? prev => [...prev, ...response.data] : response.data)
       } else {
-        setPosts([])
+        if (!loadMore) setPosts([])
       }
     } catch (error) {
       console.error('Error loading posts:', error)
-      setPosts([])
+      if (!loadMore) setPosts([])
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  // Infinite scroll handler
+  const handleScroll = () => {
+    if (loadingMore || !hasMore) return
+    
+    const scrollTop = window.scrollY
+    const scrollHeight = document.documentElement.scrollHeight
+    const clientHeight = window.innerHeight
+    
+    // Load more when user is 200px from bottom
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      loadPosts(true)
+    }
+  }
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [cursor, hasMore, loadingMore])
+
+  // Media upload to Cloudinary
+  const handleMediaSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm']
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image or video file')
+      return
+    }
+    
+    // Validate file size (max 50MB for videos, 10MB for images)
+    const maxSize = file.type.startsWith('video') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      alert(`File too large. Max size: ${file.type.startsWith('video') ? '50MB' : '10MB'}`)
+      return
+    }
+    
+    setMediaFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setMediaPreview({
+        url: reader.result,
+        type: file.type.startsWith('video') ? 'video' : 'image'
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const clearMedia = () => {
+    setMediaFile(null)
+    setMediaPreview(null)
+  }
+
+  const uploadToCloudinary = async (file) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+    
+    if (!cloudName || !uploadPreset) {
+      console.error('Cloudinary config missing')
+      return null
+    }
+    
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', uploadPreset)
+    
+    const resourceType = file.type.startsWith('video') ? 'video' : 'image'
+    
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+        { method: 'POST', body: formData }
+      )
+      const data = await response.json()
+      return {
+        url: data.secure_url,
+        type: resourceType
+      }
+    } catch (error) {
+      console.error('Cloudinary upload error:', error)
+      return null
     }
   }
 
   const createPost = async () => {
-    if (!postContent.trim()) {
-      alert('Please enter some content')
+    if (!postContent.trim() && !mediaFile) {
+      alert('Please enter some content or add media')
       return
     }
     
     try {
-      const response = await api.post('/api/posts', { content: postContent })
+      let mediaData = null
+      
+      // Upload media to Cloudinary if present
+      if (mediaFile) {
+        setUploadingMedia(true)
+        mediaData = await uploadToCloudinary(mediaFile)
+        setUploadingMedia(false)
+        
+        if (!mediaData) {
+          alert('Failed to upload media. Please try again.')
+          return
+        }
+      }
+      
+      // Create post with optional media
+      const postData = {
+        content: postContent,
+        ...(mediaData && {
+          media_url: mediaData.url,
+          media_type: mediaData.type
+        })
+      }
+      
+      const response = await api.post('/api/feed/posts', postData)
       if (response.data.success) {
         setPostContent('')
+        clearMedia()
+        // Reset pagination and reload feed
+        setCursor(null)
+        setHasMore(true)
         loadPosts()
       }
     } catch (error) {
       console.error('Error creating post:', error)
       alert('Failed to create post')
+      setUploadingMedia(false)
     }
   }
 
   const handleLike = async (postId) => {
     try {
       const response = await api.post(`/api/posts/${postId}/like`)
-      if (response.data) {
+      if (response.data && response.data.data) {
         // Update the specific post's like count
         setPosts(posts.map(post => 
           post.id === postId 
             ? { 
                 ...post, 
-                like_count: response.data.like_count,
-                is_liked: !post.is_liked 
+                like_count: response.data.data.like_count,
+                is_liked: response.data.data.is_liked 
               }
             : post
         ))
@@ -1425,7 +1647,39 @@ const Feed = () => {
                 placeholder="What's on your mind? Share something with your network..."
                 rows="3"
               />
-              <PostButton onClick={createPost}>Post</PostButton>
+              {mediaPreview && (
+                <MediaPreviewContainer>
+                  {mediaPreview.type === 'video' ? (
+                    <video src={mediaPreview.url} controls />
+                  ) : (
+                    <img src={mediaPreview.url} alt="Preview" />
+                  )}
+                  <MediaRemoveButton onClick={clearMedia}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </MediaRemoveButton>
+                </MediaPreviewContainer>
+              )}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '10px' }}>
+                <MediaUploadButton>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21,15 16,10 5,21" />
+                  </svg>
+                  Photo/Video
+                  <input 
+                    type="file" 
+                    accept="image/*,video/*" 
+                    onChange={handleMediaSelect}
+                  />
+                </MediaUploadButton>
+                <PostButton onClick={createPost} disabled={uploadingMedia}>
+                  {uploadingMedia ? 'Uploading...' : 'Post'}
+                </PostButton>
+              </div>
             </PostInputContainer>
           </PostCreator>
 
@@ -1448,6 +1702,25 @@ const Feed = () => {
                     </PostInfo>
                   </PostHeader>
                   <PostContent dangerouslySetInnerHTML={{ __html: escapeHtml(post.content) }} />
+                  {post.media_url && (
+                    <PostMedia>
+                      {post.media_type === 'video' ? (
+                        <video 
+                          src={post.media_url} 
+                          controls 
+                          preload="metadata"
+                          style={{ maxWidth: '100%', maxHeight: '500px', borderRadius: '12px' }}
+                        />
+                      ) : (
+                        <img 
+                          src={post.media_url} 
+                          alt="Post media" 
+                          loading="lazy"
+                          style={{ maxWidth: '100%', maxHeight: '500px', borderRadius: '12px', objectFit: 'cover' }}
+                        />
+                      )}
+                    </PostMedia>
+                  )}
                   <PostActions>
                     <PostAction 
                       className={post.is_liked ? 'liked' : ''}
@@ -1461,6 +1734,12 @@ const Feed = () => {
                   </PostActions>
                 </Post>
               ))
+            )}
+            {loadingMore && (
+              <LoadMoreSpinner>Loading more posts...</LoadMoreSpinner>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <LoadMoreSpinner>You've reached the end!</LoadMoreSpinner>
             )}
           </PostsContainer>
         </FeedContainer>
