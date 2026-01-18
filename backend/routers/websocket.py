@@ -37,7 +37,7 @@ async def websocket_notifications(
             
             # Handle ping/pong for keepalive
             if data == "ping":
-                await websocket.send_text("pong")
+                await websocket.send_json({"type": "pong"})
             
     except WebSocketDisconnect:
         connection_manager.disconnect(user_id)

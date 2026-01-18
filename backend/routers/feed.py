@@ -42,13 +42,19 @@ async def get_feed(
         except (ValueError, AttributeError):
             pass
     
-    # Get posts from feed (own posts + followed users)
-    posts = post_model.get_feed_with_connections(
-        user_id=user_id,
-        following_uids=following_uids,
-        cursor=parsed_cursor,
-        limit=limit + 1  # Fetch one extra to check for more
-    )
+    # Get posts from feed
+    # If user has connections, show personalized feed (own posts + followed users)
+    # Otherwise, show global feed (all posts) so new users see content
+    if following_uids:
+        posts = post_model.get_feed_with_connections(
+            user_id=user_id,
+            following_uids=following_uids,
+            cursor=parsed_cursor,
+            limit=limit + 1  # Fetch one extra to check for more
+        )
+    else:
+        # No connections yet - show global feed
+        posts = post_model.get_feed(limit=limit + 1, offset=0)
     
     # Check if there are more posts
     has_more = len(posts) > limit
