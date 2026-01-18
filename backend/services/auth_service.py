@@ -1,210 +1,293 @@
-"""Authentication service"""
-from models.user import User
-from utils.errors import AuthenticationError, ConflictError, ValidationError
-from utils.auth import hash_password, verify_password, validate_password_strength, validate_email, validate_username
-from utils.logger import setup_logger
+"""Authentication Service with JWT"""
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+import hashlib
+import hmac
+import re
 
-logger = setup_logger(__name__)
+from models.user import User
+from config.settings import settings
+
+# Use bcrypt for NEW passwords (more secure than pbkdf2)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt (recommended, more secure)"""
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a password against its hash.
+    Supports:
+    - bcrypt (new passwords, more secure)
+    - pbkdf2:sha256 (existing Werkzeug passwords, for backward compatibility)
+    """
+    if not hashed_password:
+        return False
+    
+    try:
+        # Check if it's a bcrypt hash (starts with $2b$, $2a$, or $2y$)
+        if hashed_password.startswith('$2'):
+            return pwd_context.verify(plain_password, hashed_password)
+        
+        # Werkzeug pbkdf2 format: pbkdf2:sha256:iterations$salt$hash
+        if hashed_password.startswith('pbkdf2:'):
+            method_part, rest = hashed_password.split('$', 1)
+            salt, hash_value = rest.rsplit('$', 1)
+            
+            # Parse iterations from method (pbkdf2:sha256:iterations)
+            parts = method_part.split(':')
+            iterations = int(parts[2]) if len(parts) >= 3 else 260000
+            
+            # Compute and compare hash
+            computed = hashlib.pbkdf2_hmac('sha256', plain_password.encode('utf-8'), salt.encode('utf-8'), iterations)
+            return hmac.compare_digest(computed.hex(), hash_value)
+        
+        # Werkzeug scrypt format: scrypt:n:r:p$salt$hash
+        if hashed_password.startswith('scrypt:'):
+            method_part, salt, hash_value = hashed_password.split('$')
+            parts = method_part.split(':')
+            n, r, p = int(parts[1]), int(parts[2]), int(parts[3])
+            computed = hashlib.scrypt(plain_password.encode('utf-8'), salt=salt.encode('utf-8'), n=n, r=r, p=p)
+            return hmac.compare_digest(computed.hex(), hash_value)
+        
+        return False
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
+
+
+def needs_rehash(hashed_password: str) -> bool:
+    """Check if password should be rehashed to bcrypt (for migration)"""
+    if not hashed_password:
+        return False
+    # If it's not bcrypt, it should be rehashed
+    return not hashed_password.startswith('$2')
+
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """Validate password meets requirements"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r"\d", password):
+        return False, "Password must contain at least one number"
+    return True, ""
+
+
+def validate_email(email: str) -> bool:
+    """Validate email format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+
+def validate_username(username: str) -> tuple[bool, str]:
+    """Validate username format"""
+    if len(username) < 3:
+        return False, "Username must be at least 3 characters long"
+    if len(username) > 50:
+        return False, "Username must be less than 50 characters"
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return False, "Username can only contain letters, numbers, and underscores"
+    return True, ""
 
 
 class AuthService:
-    """Authentication business logic"""
+    """Authentication business logic with JWT"""
     
     def __init__(self, db):
         self.user_model = User(db)
     
-    def register(self, user_data: dict) -> dict:
-        """
-        Register a new user
+    def _create_access_token(self, user_id: str, username: str) -> str:
+        """Create JWT access token"""
+        expire = datetime.utcnow() + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        payload = {
+            "sub": user_id,
+            "username": username,
+            "type": "access",
+            "exp": expire,
+            "iat": datetime.utcnow()
+        }
+        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
+    def _create_refresh_token(self, user_id: str) -> str:
+        """Create JWT refresh token"""
+        expire = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        payload = {
+            "sub": user_id,
+            "type": "refresh",
+            "exp": expire,
+            "iat": datetime.utcnow()
+        }
+        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
+    def _create_tokens(self, user: dict) -> dict:
+        """Create both access and refresh tokens"""
+        user_id = str(user["id"])
+        access_token = self._create_access_token(user_id, user["username"])
+        refresh_token = self._create_refresh_token(user_id)
         
-        Args:
-            user_data: Dict containing username, email, password, and optionally full_name
-        
-        Returns:
-            Dict with user info (id, username, email, full_name)
-        
-        Raises:
-            ValidationError: If validation fails
-            ConflictError: If username or email already exists
-        """
-        try:
-            username = user_data.get('username', '').strip()
-            email = user_data.get('email', '').strip()
-            password = user_data.get('password', '')
-            full_name = user_data.get('full_name', '').strip() or username
-            
-            # Validate username
-            is_valid, error_msg = validate_username(username)
-            if not is_valid:
-                raise ValidationError(error_msg)
-            
-            # Validate email
-            if not validate_email(email):
-                raise ValidationError('Please provide a valid email address')
-            
-            # Validate password
-            is_valid, error_msg = validate_password_strength(password)
-            if not is_valid:
-                raise ValidationError(error_msg)
-            
-            # Check if username already exists
-            if self.user_model.username_exists(username):
-                raise ConflictError('Username already exists')
-            
-            # Check if email already exists
-            if self.user_model.email_exists(email):
-                raise ConflictError('Email already exists')
-            
-            # Hash password
-            password_hash = hash_password(password)
-            
-            # Create user
-            user = self.user_model.create(
-                username=username,
-                email=email,
-                password_hash=password_hash,
-                full_name=full_name
-            )
-            
-            if not user:
-                raise Exception('Failed to create user')
-            
-            logger.info(f"New user registered: {user['username']} (ID: {user['uid']})")
-            
-            return {
-                'id': user['uid'],
-                'username': user['username'],
-                'email': user['user_email'],
-                'full_name': user['name']
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user["id"],
+                "username": user["username"],
+                "email": user["email"],
+                "name": user["name"],
+                "profile_pic": user.get("profile_pic"),
+                "bio": user.get("bio"),
+                "job_title": user.get("job_title"),
+                "company": user.get("company"),
+                "created_at": user.get("created_at")
             }
-            
-        except (ConflictError, ValidationError) as e:
-            logger.warning(f"Registration error: {e.message}")
-            raise
-        except Exception as e:
-            logger.error(f"Registration error: {e}")
-            raise ValidationError('Registration failed. Please try again.')
+        }
+    
+    def register(self, user_data: dict) -> dict:
+        """Register a new user and return tokens"""
+        username = user_data.get('username', '').strip()
+        email = user_data.get('email', '').strip()
+        password = user_data.get('password', '')
+        full_name = user_data.get('full_name', '').strip() or username
+        
+        # Validate username
+        is_valid, error_msg = validate_username(username)
+        if not is_valid:
+            raise ValueError(error_msg)
+        
+        # Validate email
+        if not validate_email(email):
+            raise ValueError('Please provide a valid email address')
+        
+        # Validate password
+        is_valid, error_msg = validate_password_strength(password)
+        if not is_valid:
+            raise ValueError(error_msg)
+        
+        # Check if username already exists
+        if self.user_model.username_exists(username):
+            raise ValueError('Username already exists')
+        
+        # Check if email already exists
+        if self.user_model.email_exists(email):
+            raise ValueError('Email already exists')
+        
+        # Hash password and create user
+        password_hash = hash_password(password)
+        user = self.user_model.create(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            full_name=full_name
+        )
+        
+        if not user:
+            raise Exception('Failed to create user')
+        
+        # Return tokens
+        return self._create_tokens(user)
     
     def login(self, identifier: str, password: str) -> dict:
-        """
-        Login user with username or email
+        """Login user and return tokens"""
+        if not identifier or not password:
+            raise ValueError('Username/email and password are required')
         
-        Args:
-            identifier: Username or email
-            password: User's password
+        # Find user by username or email
+        user = self.user_model.find_by_username_or_email(identifier.strip())
         
-        Returns:
-            Dict with user info and success message
+        if not user:
+            raise ValueError('Invalid username or password')
         
-        Raises:
-            AuthenticationError: If credentials are invalid
-        """
+        # Verify password
+        if not verify_password(password, user['password_hash']):
+            raise ValueError('Invalid username or password')
+        
+        # Update last login
+        self.user_model.update_last_login(user['id'])
+        
+        # Return tokens
+        return self._create_tokens(user)
+    
+    def refresh_token(self, refresh_token: str) -> dict:
+        """Refresh access token using refresh token"""
         try:
-            if not identifier or not password:
-                raise AuthenticationError('Username/email and password are required')
+            payload = jwt.decode(
+                refresh_token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
+            )
             
-            # Find user by username or email
-            user = self.user_model.find_by_username_or_email(identifier.strip())
+            if payload.get("type") != "refresh":
+                raise ValueError("Invalid token type")
             
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Invalid token")
+            
+            # Get user
+            user = self.user_model.find_by_id(int(user_id))
             if not user:
-                logger.warning(f"Login attempt for non-existent user: {identifier}")
-                raise AuthenticationError('Invalid username or password')
+                raise ValueError("User not found")
             
-            # Verify password
-            if not verify_password(password, user['password_hash']):
-                logger.warning(f"Invalid password attempt for user: {user['username']}")
-                raise AuthenticationError('Invalid username or password')
+            # Create new tokens
+            return self._create_tokens(user)
             
-            logger.info(f"User logged in: {user['username']} (ID: {user['uid']})")
+        except JWTError as e:
+            raise ValueError(f"Invalid refresh token: {str(e)}")
+    
+    def verify_token(self, token: str) -> dict:
+        """Verify access token and return user info"""
+        try:
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
+            )
+            
+            if payload.get("type") != "access":
+                raise ValueError("Invalid token type")
+            
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Invalid token")
+            
+            # Get user
+            user = self.user_model.find_by_id(int(user_id))
+            if not user:
+                raise ValueError("User not found")
             
             return {
-                'id': user['uid'],
-                'username': user['username'],
-                'email': user['user_email'],
-                'full_name': user['name'],
-                'message': 'Login successful'
+                "id": user["id"],
+                "username": user["username"],
+                "email": user["email"],
+                "name": user["name"]
             }
             
-        except AuthenticationError:
-            raise
-        except Exception as e:
-            logger.error(f"Login error: {e}")
-            raise AuthenticationError('Login failed. Please try again.')
+        except JWTError as e:
+            raise ValueError(f"Invalid token: {str(e)}")
     
-    def get_user_by_id(self, user_id: int) -> dict:
-        """
-        Get user by ID
+    def get_user_by_id(self, user_id: int) -> Optional[dict]:
+        """Get user by ID"""
+        user = self.user_model.find_by_id(user_id)
+        if not user:
+            return None
         
-        Args:
-            user_id: User's database ID
-        
-        Returns:
-            Dict with user info
-        
-        Raises:
-            AuthenticationError: If user not found
-        """
-        try:
-            user = self.user_model.find_by_uid(user_id)
-            
-            if not user:
-                raise AuthenticationError('User not found')
-            
-            return {
-                'id': user['uid'],
-                'username': user['username'],
-                'email': user['user_email'],
-                'full_name': user['name'],
-                'created_at': str(user.get('created_at', ''))
-            }
-            
-        except AuthenticationError:
-            raise
-        except Exception as e:
-            logger.error(f"Get user error: {e}")
-            raise AuthenticationError('Failed to get user')
-    
-    def change_password(self, user_id: int, current_password: str, new_password: str) -> dict:
-        """
-        Change user's password
-        
-        Args:
-            user_id: User's database ID
-            current_password: Current password for verification
-            new_password: New password to set
-        
-        Returns:
-            Success message dict
-        
-        Raises:
-            AuthenticationError: If current password is wrong
-            ValidationError: If new password doesn't meet requirements
-        """
-        try:
-            user = self.user_model.find_by_uid(user_id)
-            
-            if not user:
-                raise AuthenticationError('User not found')
-            
-            # Verify current password
-            if not verify_password(current_password, user['password_hash']):
-                raise AuthenticationError('Current password is incorrect')
-            
-            # Validate new password
-            is_valid, error_msg = validate_password_strength(new_password)
-            if not is_valid:
-                raise ValidationError(error_msg)
-            
-            # Hash and update new password
-            password_hash = hash_password(new_password)
-            self.user_model.update_password(user_id, password_hash)
-            
-            logger.info(f"Password changed for user: {user['username']}")
-            
-            return {'message': 'Password changed successfully'}
-            
-        except (AuthenticationError, ValidationError):
-            raise
-        except Exception as e:
-            logger.error(f"Change password error: {e}")
-            raise AuthenticationError('Failed to change password')
+        return {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "name": user["name"],
+            "profile_pic": user.get("profile_pic"),
+            "bio": user.get("bio"),
+            "job_title": user.get("job_title"),
+            "company": user.get("company"),
+            "created_at": user.get("created_at")
+        }

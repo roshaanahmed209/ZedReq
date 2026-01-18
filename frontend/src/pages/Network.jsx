@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { motion, useInView } from 'framer-motion'
+import { networkAPI, connectionAPI, notificationAPI } from '../services/api'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -12,6 +13,12 @@ const fadeIn = keyframes`
 const slideUp = keyframes`
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+`
+
+const pulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 `
 
 const Container = styled.div`
@@ -41,22 +48,12 @@ const NavContainer = styled.div`
   justify-content: space-between;
   padding: 12px 0;
   gap: 30px;
-
-  @media (max-width: 600px) {
-    gap: 15px;
-    padding: 10px 0;
-  }
-
-  @media (max-width: 480px) {
-    gap: 10px;
-  }
 `
 
 const NavLeft = styled.div`
   display: flex;
   align-items: center;
   gap: 20px;
-  position: relative;
 `
 
 const Logo = styled.h1`
@@ -70,14 +67,6 @@ const Logo = styled.h1`
   &:hover {
     transform: scale(1.05);
   }
-
-  @media (max-width: 600px) {
-    font-size: 1.5em;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 1.3em;
-  }
 `
 
 const NavRight = styled.div`
@@ -86,7 +75,20 @@ const NavRight = styled.div`
   gap: 20px;
 `
 
-const BackButton = styled.button`
+const NotificationBadge = styled.span`
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+`
+
+const IconButton = styled.button`
+  position: relative;
   padding: 10px;
   background: transparent;
   color: var(--text);
@@ -102,37 +104,17 @@ const BackButton = styled.button`
     background: var(--hover-bg);
     border-color: var(--primary);
   }
-
-  @media (max-width: 600px) {
-    padding: 8px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 8px;
-  }
 `
 
 const MainContainer = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   padding: 30px 20px;
-
-  @media (max-width: 768px) {
-    padding: 20px 15px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 15px 12px;
-  }
 `
 
 const Header = styled.div`
   margin-bottom: 30px;
   animation: ${slideUp} 0.4s ease-out;
-
-  @media (max-width: 768px) {
-    margin-bottom: 20px;
-  }
 `
 
 const PageTitle = styled.h1`
@@ -140,63 +122,85 @@ const PageTitle = styled.h1`
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 300;
-
-  @media (max-width: 768px) {
-    font-size: 1.7em;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 1.5em;
-  }
 `
 
 const PageSubtitle = styled.p`
   font-size: 1em;
   color: var(--text-light);
-
-  @media (max-width: 480px) {
-    font-size: 0.9em;
-  }
 `
 
-const FilterContainer = styled.div`
+const TabContainer = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 0;
   margin-bottom: 30px;
-  flex-wrap: wrap;
-  animation: ${slideUp} 0.5s ease-out;
-
-  @media (max-width: 768px) {
-    margin-bottom: 20px;
-    gap: 10px;
-  }
+  border-bottom: 2px solid var(--border);
 `
 
-const FilterButton = styled.button`
-  padding: 10px 18px;
-  background: ${props => props.active ? 'var(--primary)' : 'var(--bg-white)'};
-  color: ${props => props.active ? 'white' : 'var(--text)'};
-  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
-  border-radius: 20px;
+const Tab = styled.button`
+  padding: 14px 24px;
+  background: transparent;
+  color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
+  border: none;
+  border-bottom: 2px solid ${props => props.active ? 'var(--primary)' : 'transparent'};
+  margin-bottom: -2px;
   cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 400;
+  font-size: 1em;
+  font-weight: ${props => props.active ? '500' : '400'};
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
   &:hover {
-    background: ${props => props.active ? 'var(--primary)' : 'rgba(10, 102, 194, 0.1)'};
-    border-color: var(--primary);
-    color: ${props => props.active ? 'white' : 'var(--primary)'};
-    transform: translateY(-2px);
+    color: var(--primary);
   }
+`
 
-  &:active {
-    transform: translateY(0);
+const TabBadge = styled.span`
+  background: ${props => props.highlight ? '#ef4444' : 'var(--bg-light)'};
+  color: ${props => props.highlight ? 'white' : 'var(--text-light)'};
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.85em;
+`
+
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px;
+  
+  &::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`
 
-  @media (max-width: 480px) {
-    padding: 8px 14px;
-    font-size: 0.85em;
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+  
+  svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  
+  h3 {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+    color: var(--text);
   }
 `
 
@@ -204,16 +208,6 @@ const PeopleGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
 `
 
 const PersonCard = styled.div`
@@ -222,7 +216,6 @@ const PersonCard = styled.div`
   border: 1px solid var(--border);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: ${slideUp} 0.4s ease-out;
 
   &:hover {
     transform: translateY(-4px);
@@ -246,7 +239,7 @@ const PersonAvatar = styled.div`
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background: var(--primary);
+  background: ${props => props.src ? `url(${props.src}) center/cover` : 'var(--primary)'};
   border: 4px solid var(--bg-white);
   display: flex;
   align-items: center;
@@ -289,11 +282,6 @@ const PersonCompany = styled.p`
   align-items: center;
   justify-content: center;
   gap: 4px;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
 `
 
 const PersonBio = styled.p`
@@ -306,6 +294,16 @@ const PersonBio = styled.p`
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+`
+
+const MutualConnections = styled.div`
+  font-size: 0.85em;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: rgba(10, 102, 194, 0.1);
+  border-radius: 8px;
 `
 
 const PersonSkills = styled.div`
@@ -323,77 +321,109 @@ const SkillTag = styled.span`
   color: var(--primary);
   border-radius: 12px;
   font-weight: 400;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: var(--primary);
-    color: white;
-    transform: scale(1.05);
-  }
 `
 
-const PersonStats = styled.div`
+const ButtonGroup = styled.div`
   display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
-  margin-bottom: 16px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-`
-
-const StatItem = styled.div`
-  text-align: center;
-`
-
-const StatValue = styled.div`
-  font-size: 1.1em;
-  font-weight: 500;
-  color: var(--primary);
-`
-
-const StatLabel = styled.div`
-  font-size: 0.75em;
-  color: var(--text-lighter);
-  margin-top: 2px;
+  gap: 10px;
 `
 
 const ConnectButton = styled.button`
-  width: 100%;
+  flex: 1;
   padding: 12px 20px;
-  background: ${props => props.connected ? 'transparent' : 'linear-gradient(135deg, var(--primary), var(--secondary))'};
-  color: ${props => props.connected ? 'var(--primary)' : 'white'};
+  background: ${props => {
+    if (props.pending) return 'var(--bg-light)'
+    if (props.connected) return 'transparent'
+    return 'linear-gradient(135deg, var(--primary), var(--secondary))'
+  }};
+  color: ${props => {
+    if (props.pending) return 'var(--text-light)'
+    if (props.connected) return 'var(--primary)'
+    return 'white'
+  }};
   border: ${props => props.connected ? '2px solid var(--primary)' : 'none'};
   border-radius: 8px;
   font-size: 0.95em;
   font-weight: 500;
-  cursor: pointer;
+  cursor: ${props => props.pending ? 'default' : 'pointer'};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 
-  svg {
-    width: 18px;
-    height: 18px;
-    transition: transform 0.3s ease;
-  }
-
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
-
-    svg {
-      transform: scale(1.2);
-    }
+    ${props => !props.pending && `
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
+    `}
   }
 
-  &:active {
-    transform: translateY(0);
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `
 
-const AnimatedPersonCard = ({ person, index, onConnect, isConnected }) => {
+const AcceptButton = styled(ConnectButton)`
+  background: linear-gradient(135deg, #10b981, #059669);
+`
+
+const RejectButton = styled(ConnectButton)`
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  
+  &:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+`
+
+// Request Card Component
+const RequestCard = ({ request, onAccept, onReject, loading }) => {
+  const user = request.sender || request.receiver
+  const isReceived = !!request.sender
+  
+  return (
+    <PersonCard>
+      <PersonHeader />
+      <PersonContent>
+        <PersonAvatar src={user?.profile_pic}>
+          {!user?.profile_pic && user?.name?.charAt(0).toUpperCase()}
+        </PersonAvatar>
+        <PersonName>{user?.name}</PersonName>
+        <PersonTitle>@{user?.username}</PersonTitle>
+        {request.message && (
+          <PersonBio>"{request.message}"</PersonBio>
+        )}
+        {isReceived ? (
+          <ButtonGroup>
+            <AcceptButton 
+              onClick={() => onAccept(request.id)}
+              disabled={loading}
+            >
+              Accept
+            </AcceptButton>
+            <RejectButton 
+              onClick={() => onReject(request.id)}
+              disabled={loading}
+            >
+              Ignore
+            </RejectButton>
+          </ButtonGroup>
+        ) : (
+          <ConnectButton pending disabled>
+            Pending...
+          </ConnectButton>
+        )}
+      </PersonContent>
+    </PersonCard>
+  )
+}
+
+// User Card Component
+const UserCard = ({ user, onConnect, isPending, isConnected, loading }) => {
   const ref = useRef(null)
   const inView = useInView(ref, { amount: 0.3, triggerOnce: true })
   
@@ -402,56 +432,60 @@ const AnimatedPersonCard = ({ person, index, onConnect, isConnected }) => {
       ref={ref}
       initial={{ scale: 0.9, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.9, opacity: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.4 }}
     >
       <PersonCard>
         <PersonHeader />
         <PersonContent>
-          <PersonAvatar>{person.avatar}</PersonAvatar>
-          <PersonName>{person.name}</PersonName>
-          <PersonTitle>{person.title}</PersonTitle>
-          <PersonCompany>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-            </svg>
-            {person.company}
-          </PersonCompany>
-          <PersonBio>{person.bio}</PersonBio>
-          <PersonSkills>
-            {person.skills.map((skill, idx) => (
-              <SkillTag key={idx}>{skill}</SkillTag>
-            ))}
-          </PersonSkills>
-          <PersonStats>
-            <StatItem>
-              <StatValue>{person.connections}</StatValue>
-              <StatLabel>Connections</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>{person.posts}</StatValue>
-              <StatLabel>Posts</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>{person.followers}</StatValue>
-              <StatLabel>Followers</StatLabel>
-            </StatItem>
-          </PersonStats>
+          <PersonAvatar src={user.profile_pic}>
+            {!user.profile_pic && user.name?.charAt(0).toUpperCase()}
+          </PersonAvatar>
+          <PersonName>{user.name}</PersonName>
+          <PersonTitle>@{user.username}</PersonTitle>
+          {user.job_title && user.company && (
+            <PersonCompany>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+              </svg>
+              {user.job_title} at {user.company}
+            </PersonCompany>
+          )}
+          {user.bio && <PersonBio>{user.bio}</PersonBio>}
+          {user.mutual_connections > 0 && (
+            <MutualConnections>
+              {user.mutual_connections} mutual connection{user.mutual_connections > 1 ? 's' : ''}
+              {user.mutual_connection_names?.length > 0 && (
+                <> including {user.mutual_connection_names.join(', ')}</>
+              )}
+            </MutualConnections>
+          )}
+          {user.skills?.length > 0 && (
+            <PersonSkills>
+              {user.skills.slice(0, 3).map((skill, idx) => (
+                <SkillTag key={idx}>{skill}</SkillTag>
+              ))}
+            </PersonSkills>
+          )}
           <ConnectButton 
+            onClick={() => onConnect(user.id)}
+            pending={isPending}
             connected={isConnected}
-            onClick={() => onConnect(person.id)}
+            disabled={loading || isPending || isConnected}
           >
             {isConnected ? (
               <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
                 Connected
               </>
+            ) : isPending ? (
+              'Pending...'
             ) : (
               <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                   <circle cx="8.5" cy="7" r="4"></circle>
                   <line x1="20" y1="8" x2="20" y2="14"></line>
@@ -468,211 +502,253 @@ const AnimatedPersonCard = ({ person, index, onConnect, isConnected }) => {
 }
 
 const Network = () => {
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [connectedPeople, setConnectedPeople] = useState([])
+  const [activeTab, setActiveTab] = useState('discover')
+  const [discoverUsers, setDiscoverUsers] = useState([])
+  const [suggestions, setSuggestions] = useState([])
+  const [connections, setConnections] = useState([])
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [sentRequests, setSentRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [pendingUserIds, setPendingUserIds] = useState(new Set())
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, unreadNotifications } = useAuth()
 
-  const people = [
-    {
-      id: 1,
-      name: 'Sarah Mitchell',
-      avatar: 'SM',
-      title: 'Senior Product Manager',
-      company: 'TechCorp',
-      bio: 'Passionate about building products that solve real problems. 10+ years in tech product management.',
-      skills: ['Product Strategy', 'Agile', 'UX Design'],
-      connections: 1240,
-      posts: 87,
-      followers: 2150
-    },
-    {
-      id: 2,
-      name: 'David Chen',
-      avatar: 'DC',
-      title: 'Full Stack Developer',
-      company: 'InnovateLabs',
-      bio: 'Building scalable web applications with modern technologies. Open source contributor.',
-      skills: ['React', 'Node.js', 'AWS'],
-      connections: 856,
-      posts: 142,
-      followers: 1320
-    },
-    {
-      id: 3,
-      name: 'Emily Rodriguez',
-      avatar: 'ER',
-      title: 'UX/UI Designer',
-      company: 'DesignStudio',
-      bio: 'Creating beautiful and intuitive user experiences. Advocate for accessible design.',
-      skills: ['Figma', 'User Research', 'Prototyping'],
-      connections: 2100,
-      posts: 205,
-      followers: 3420
-    },
-    {
-      id: 4,
-      name: 'Michael Park',
-      avatar: 'MP',
-      title: 'DevOps Engineer',
-      company: 'CloudSystems',
-      bio: 'Automating infrastructure and improving deployment pipelines. Cloud architecture enthusiast.',
-      skills: ['Docker', 'Kubernetes', 'CI/CD'],
-      connections: 678,
-      posts: 54,
-      followers: 890
-    },
-    {
-      id: 5,
-      name: 'Jennifer Liu',
-      avatar: 'JL',
-      title: 'Data Scientist',
-      company: 'Analytics Pro',
-      bio: 'Turning data into actionable insights. Machine learning and AI researcher.',
-      skills: ['Python', 'TensorFlow', 'SQL'],
-      connections: 1450,
-      posts: 98,
-      followers: 2680
-    },
-    {
-      id: 6,
-      name: 'Alex Thompson',
-      avatar: 'AT',
-      title: 'Marketing Director',
-      company: 'BrandCo',
-      bio: 'Digital marketing strategist with a focus on growth and customer engagement.',
-      skills: ['SEO', 'Content Strategy', 'Analytics'],
-      connections: 3200,
-      posts: 312,
-      followers: 5100
-    },
-    {
-      id: 7,
-      name: 'Priya Sharma',
-      avatar: 'PS',
-      title: 'Backend Engineer',
-      company: 'DataFlow',
-      bio: 'Specializing in microservices and distributed systems. Performance optimization expert.',
-      skills: ['Java', 'Spring Boot', 'Kafka'],
-      connections: 920,
-      posts: 76,
-      followers: 1540
-    },
-    {
-      id: 8,
-      name: 'James Wilson',
-      avatar: 'JW',
-      title: 'Tech Lead',
-      company: 'StartupHub',
-      bio: 'Leading engineering teams to build innovative solutions. Mentor and public speaker.',
-      skills: ['Leadership', 'System Design', 'Mentoring'],
-      connections: 1680,
-      posts: 134,
-      followers: 2890
-    },
-    {
-      id: 9,
-      name: 'Rachel Green',
-      avatar: 'RG',
-      title: 'Frontend Developer',
-      company: 'WebWorks',
-      bio: 'Crafting responsive and performant web interfaces. Animation and interaction specialist.',
-      skills: ['React', 'CSS', 'JavaScript'],
-      connections: 745,
-      posts: 89,
-      followers: 1120
-    },
-    {
-      id: 10,
-      name: 'Omar Hassan',
-      avatar: 'OH',
-      title: 'Mobile Developer',
-      company: 'AppLabs',
-      bio: 'Building native and cross-platform mobile apps. iOS and Android development expert.',
-      skills: ['React Native', 'Swift', 'Kotlin'],
-      connections: 1030,
-      posts: 67,
-      followers: 1650
-    },
-    {
-      id: 11,
-      name: 'Sophie Anderson',
-      avatar: 'SA',
-      title: 'Product Designer',
-      company: 'CreativeMinds',
-      bio: 'Designing user-centered products that delight. Passionate about design systems.',
-      skills: ['Sketch', 'Design Systems', 'Branding'],
-      connections: 1890,
-      posts: 156,
-      followers: 2940
-    },
-    {
-      id: 12,
-      name: 'Daniel Kim',
-      avatar: 'DK',
-      title: 'Security Engineer',
-      company: 'SecureNet',
-      bio: 'Protecting applications and infrastructure from security threats. Cybersecurity advocate.',
-      skills: ['Security', 'Penetration Testing', 'Compliance'],
-      connections: 560,
-      posts: 45,
-      followers: 780
-    },
-    {
-      id: 13,
-      name: 'Maria Garcia',
-      avatar: 'MG',
-      title: 'Business Analyst',
-      company: 'ConsultPro',
-      bio: 'Bridging the gap between business and technology. Data-driven decision maker.',
-      skills: ['Business Intelligence', 'SQL', 'Tableau'],
-      connections: 1340,
-      posts: 112,
-      followers: 1890
-    },
-    {
-      id: 14,
-      name: 'Kevin Brown',
-      avatar: 'KB',
-      title: 'Software Architect',
-      company: 'EnterpriseIT',
-      bio: 'Designing scalable system architectures. Expert in distributed systems and cloud.',
-      skills: ['Architecture', 'Microservices', 'Cloud'],
-      connections: 2450,
-      posts: 189,
-      followers: 4120
-    },
-    {
-      id: 15,
-      name: 'Lisa Wang',
-      avatar: 'LW',
-      title: 'HR Manager',
-      company: 'TalentFirst',
-      bio: 'Building great teams and fostering inclusive workplace cultures. People-first approach.',
-      skills: ['Recruitment', 'Talent Development', 'Culture'],
-      connections: 2890,
-      posts: 245,
-      followers: 3650
+  useEffect(() => {
+    loadData()
+  }, [activeTab])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      switch (activeTab) {
+        case 'discover':
+          const discoverRes = await networkAPI.discoverUsers(20)
+          setDiscoverUsers(discoverRes.data)
+          break
+        case 'suggestions':
+          const suggestRes = await networkAPI.getSuggestions(20)
+          setSuggestions(suggestRes.data)
+          break
+        case 'connections':
+          const connRes = await networkAPI.getConnections()
+          setConnections(connRes.data)
+          break
+        case 'requests':
+          const [pendingRes, sentRes] = await Promise.all([
+            connectionAPI.getPendingRequests(),
+            connectionAPI.getSentRequests()
+          ])
+          setPendingRequests(pendingRes.data)
+          setSentRequests(sentRes.data)
+          // Track sent request user IDs
+          setPendingUserIds(new Set(sentRes.data.map(r => r.receiver_id)))
+          break
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
-  const filteredPeople = people.filter(person => {
-    if (activeFilter === 'all') return true
-    if (activeFilter === 'connected') return connectedPeople.includes(person.id)
-    if (activeFilter === 'suggested') return !connectedPeople.includes(person.id)
-    return true
-  })
+  const handleConnect = async (userId) => {
+    setActionLoading(true)
+    try {
+      await connectionAPI.sendRequest(userId)
+      setPendingUserIds(prev => new Set([...prev, userId]))
+      // Refresh discover list
+      if (activeTab === 'discover') {
+        const res = await networkAPI.discoverUsers(20)
+        setDiscoverUsers(res.data)
+      } else if (activeTab === 'suggestions') {
+        const res = await networkAPI.getSuggestions(20)
+        setSuggestions(res.data)
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error)
+      alert(error.response?.data?.detail || 'Failed to send connection request')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
-  const handleConnect = (personId) => {
-    if (connectedPeople.includes(personId)) {
-      setConnectedPeople(connectedPeople.filter(id => id !== personId))
-    } else {
-      setConnectedPeople([...connectedPeople, personId])
+  const handleAccept = async (requestId) => {
+    setActionLoading(true)
+    try {
+      await connectionAPI.acceptRequest(requestId)
+      // Refresh requests
+      const [pendingRes, sentRes] = await Promise.all([
+        connectionAPI.getPendingRequests(),
+        connectionAPI.getSentRequests()
+      ])
+      setPendingRequests(pendingRes.data)
+      setSentRequests(sentRes.data)
+    } catch (error) {
+      console.error('Error accepting request:', error)
+      alert(error.response?.data?.detail || 'Failed to accept request')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleReject = async (requestId) => {
+    setActionLoading(true)
+    try {
+      await connectionAPI.rejectRequest(requestId)
+      // Remove from list
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId))
+    } catch (error) {
+      console.error('Error rejecting request:', error)
+      alert(error.response?.data?.detail || 'Failed to reject request')
+    } finally {
+      setActionLoading(false)
     }
   }
 
   const handleBackToFeed = () => {
     navigate('/feed')
+  }
+
+  const renderContent = () => {
+    if (loading) {
+      return <LoadingSpinner />
+    }
+
+    switch (activeTab) {
+      case 'discover':
+        return discoverUsers.length === 0 ? (
+          <EmptyState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <h3>No users to discover</h3>
+            <p>You've seen everyone! Check back later for new users.</p>
+          </EmptyState>
+        ) : (
+          <PeopleGrid>
+            {discoverUsers.map(user => (
+              <UserCard
+                key={user.id}
+                user={user}
+                onConnect={handleConnect}
+                isPending={pendingUserIds.has(user.id)}
+                isConnected={false}
+                loading={actionLoading}
+              />
+            ))}
+          </PeopleGrid>
+        )
+      
+      case 'suggestions':
+        return suggestions.length === 0 ? (
+          <EmptyState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <h3>No suggestions yet</h3>
+            <p>Connect with more people to get friend-of-friend suggestions.</p>
+          </EmptyState>
+        ) : (
+          <PeopleGrid>
+            {suggestions.map(user => (
+              <UserCard
+                key={user.id}
+                user={user}
+                onConnect={handleConnect}
+                isPending={pendingUserIds.has(user.id)}
+                isConnected={false}
+                loading={actionLoading}
+              />
+            ))}
+          </PeopleGrid>
+        )
+      
+      case 'connections':
+        return connections.length === 0 ? (
+          <EmptyState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+            </svg>
+            <h3>No connections yet</h3>
+            <p>Start connecting with people to grow your network.</p>
+          </EmptyState>
+        ) : (
+          <PeopleGrid>
+            {connections.map(user => (
+              <UserCard
+                key={user.id}
+                user={user}
+                onConnect={() => {}}
+                isPending={false}
+                isConnected={true}
+                loading={false}
+              />
+            ))}
+          </PeopleGrid>
+        )
+      
+      case 'requests':
+        const totalRequests = pendingRequests.length + sentRequests.length
+        return totalRequests === 0 ? (
+          <EmptyState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+            <h3>No pending requests</h3>
+            <p>When someone wants to connect, you'll see it here.</p>
+          </EmptyState>
+        ) : (
+          <>
+            {pendingRequests.length > 0 && (
+              <>
+                <PageSubtitle style={{ marginBottom: '16px' }}>
+                  Received ({pendingRequests.length})
+                </PageSubtitle>
+                <PeopleGrid style={{ marginBottom: '30px' }}>
+                  {pendingRequests.map(request => (
+                    <RequestCard
+                      key={request.id}
+                      request={request}
+                      onAccept={handleAccept}
+                      onReject={handleReject}
+                      loading={actionLoading}
+                    />
+                  ))}
+                </PeopleGrid>
+              </>
+            )}
+            {sentRequests.length > 0 && (
+              <>
+                <PageSubtitle style={{ marginBottom: '16px' }}>
+                  Sent ({sentRequests.length})
+                </PageSubtitle>
+                <PeopleGrid>
+                  {sentRequests.map(request => (
+                    <RequestCard
+                      key={request.id}
+                      request={request}
+                      onAccept={() => {}}
+                      onReject={() => {}}
+                      loading={false}
+                    />
+                  ))}
+                </PeopleGrid>
+              </>
+            )}
+          </>
+        )
+      
+      default:
+        return null
+    }
   }
 
   return (
@@ -683,12 +759,21 @@ const Network = () => {
             <Logo onClick={handleBackToFeed}>ZedReq</Logo>
           </NavLeft>
           <NavRight>
-            <BackButton onClick={handleBackToFeed}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <IconButton onClick={() => navigate('/notifications')}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              {unreadNotifications > 0 && (
+                <NotificationBadge>{unreadNotifications}</NotificationBadge>
+              )}
+            </IconButton>
+            <IconButton onClick={handleBackToFeed}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
-            </BackButton>
+            </IconButton>
           </NavRight>
         </NavContainer>
       </Navbar>
@@ -699,42 +784,41 @@ const Network = () => {
           <PageSubtitle>Grow your professional network and discover new opportunities</PageSubtitle>
         </Header>
 
-        <FilterContainer>
-          <FilterButton 
-            active={activeFilter === 'all'} 
-            onClick={() => setActiveFilter('all')}
+        <TabContainer>
+          <Tab 
+            active={activeTab === 'discover'} 
+            onClick={() => setActiveTab('discover')}
           >
-            All People ({people.length})
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'suggested'} 
-            onClick={() => setActiveFilter('suggested')}
+            Discover
+          </Tab>
+          <Tab 
+            active={activeTab === 'suggestions'} 
+            onClick={() => setActiveTab('suggestions')}
           >
-            Suggested ({people.length - connectedPeople.length})
-          </FilterButton>
-          <FilterButton 
-            active={activeFilter === 'connected'} 
-            onClick={() => setActiveFilter('connected')}
+            Suggestions
+          </Tab>
+          <Tab 
+            active={activeTab === 'connections'} 
+            onClick={() => setActiveTab('connections')}
           >
-            My Connections ({connectedPeople.length})
-          </FilterButton>
-        </FilterContainer>
+            My Connections
+            <TabBadge>{connections.length}</TabBadge>
+          </Tab>
+          <Tab 
+            active={activeTab === 'requests'} 
+            onClick={() => setActiveTab('requests')}
+          >
+            Requests
+            {pendingRequests.length > 0 && (
+              <TabBadge highlight>{pendingRequests.length}</TabBadge>
+            )}
+          </Tab>
+        </TabContainer>
 
-        <PeopleGrid>
-          {filteredPeople.map((person, index) => (
-            <AnimatedPersonCard
-              key={person.id}
-              person={person}
-              index={index}
-              onConnect={handleConnect}
-              isConnected={connectedPeople.includes(person.id)}
-            />
-          ))}
-        </PeopleGrid>
+        {renderContent()}
       </MainContainer>
     </Container>
   )
 }
 
 export default Network
-

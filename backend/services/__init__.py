@@ -1,5 +1,12 @@
+"""Services Module"""
 from .auth_service import AuthService
-from .user_service import UserService
-from .post_service import PostService
+from .network_service import NetworkService
+from .connection_service import ConnectionService
+from .notification_service import NotificationService
 
-__all__ = ['AuthService', 'UserService', 'PostService']
+__all__ = [
+    'AuthService',
+    'NetworkService', 
+    'ConnectionService',
+    'NotificationService'
+]

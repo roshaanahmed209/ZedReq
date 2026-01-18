@@ -1,0 +1,20 @@
+"""FastAPI Routers"""
+from .auth import router as auth_router
+from .network import router as network_router
+from .connections import router as connections_router
+from .notifications import router as notifications_router
+from .websocket import router as websocket_router
+from .user import router as user_router
+from .feed import router as feed_router
+from .posts import router as posts_router
+
+__all__ = [
+    "auth_router",
+    "network_router", 
+    "connections_router",
+    "notifications_router",
+    "websocket_router",
+    "user_router",
+    "feed_router",
+    "posts_router"
+]

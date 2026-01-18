@@ -1,10 +1,36 @@
-Flask==3.0.0
-Flask-Session==0.5.0
-Flask-CORS==4.0.0
-Flask-Limiter==3.5.0
-Werkzeug==3.0.1
-psycopg[binary]==3.2.3
-psycopg-pool==3.2.4
-python-dotenv==1.0.0
-redis==5.0.1
-cloudinary==1.36.0
+# ===========================================
+# FastAPI and ASGI Server
+# ===========================================
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# ===========================================
+# Authentication & Security
+# ===========================================
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# ===========================================
+# Database
+# ===========================================
+psycopg[binary]>=3.2.3
+psycopg-pool>=3.2.4
+
+# ===========================================
+# Configuration & Validation
+# ===========================================
+python-dotenv>=1.0.0
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+email-validator>=2.1.0
+
+# ===========================================
+# WebSocket Support
+# ===========================================
+websockets>=12.0
+
+# ===========================================
+# Utilities
+# ===========================================
+redis>=5.0.1
+cloudinary>=1.36.0

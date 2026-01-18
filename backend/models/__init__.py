@@ -1,12 +1,17 @@
 # Core models
-from . import user
+from .user import User
+from .connection import Connection
+from .connection_request import ConnectionRequest
+from .notification import Notification
+from .base import BaseModel
+
+# Legacy models (for backwards compatibility)
 from . import payment
 from . import description
 from . import job
 from . import post
 from . import like
 from . import network
-from . import connection
 
 # LMS models
 from . import lms_dashboard
@@ -27,7 +32,8 @@ from . import lms_course_resource
 
 __all__ = [
     # Core
-    'user', 'payment', 'description', 'job', 'post', 'like', 'network', 'connection',
+    'User', 'Connection', 'ConnectionRequest', 'Notification', 'BaseModel',
+    'payment', 'description', 'job', 'post', 'like', 'network',
     # LMS
     'lms_dashboard', 'lms_course', 'lms_user_course', 'lms_course_section',
     'lms_user_section_progress', 'lms_weekly_performance', 'lms_domain',
