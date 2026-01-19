@@ -363,20 +363,14 @@ const Landing = () => {
       return
     }
     
+    if (userData.password.length > 25) {
+      showMessage('Password must not exceed 25 characters', true)
+      setLoading(false)
+      return
+    }
+    
     if (!/[A-Z]/.test(userData.password)) {
       showMessage('Password must contain at least one uppercase letter', true)
-      setLoading(false)
-      return
-    }
-    
-    if (!/[a-z]/.test(userData.password)) {
-      showMessage('Password must contain at least one lowercase letter', true)
-      setLoading(false)
-      return
-    }
-    
-    if (!/\d/.test(userData.password)) {
-      showMessage('Password must contain at least one digit', true)
       setLoading(false)
       return
     }
@@ -501,7 +495,7 @@ const Landing = () => {
                   autoComplete="new-password"
                   required 
                 />
-                <PasswordHint>Min 8 characters, with uppercase, lowercase, and number</PasswordHint>
+                <PasswordHint>8-25 characters, at least one uppercase</PasswordHint>
               </InputWrapper>
               <Button type="submit" disabled={loading}>
                 {loading ? <LoadingSpinner>Creating Account...</LoadingSpinner> : 'Sign Up →'}

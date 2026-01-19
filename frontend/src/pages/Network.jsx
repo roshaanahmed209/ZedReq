@@ -179,7 +179,7 @@ const LoadingSpinner = styled.div`
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
-  
+
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
@@ -354,8 +354,8 @@ const ConnectButton = styled.button`
 
   &:hover {
     ${props => !props.pending && `
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
     `}
   }
 
@@ -443,13 +443,13 @@ const UserCard = ({ user, onConnect, isPending, isConnected, loading }) => {
           <PersonName>{user.name}</PersonName>
           <PersonTitle>@{user.username}</PersonTitle>
           {user.job_title && user.company && (
-            <PersonCompany>
+          <PersonCompany>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-              </svg>
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
               {user.job_title} at {user.company}
-            </PersonCompany>
+          </PersonCompany>
           )}
           {user.bio && <PersonBio>{user.bio}</PersonBio>}
           {user.mutual_connections > 0 && (
@@ -461,11 +461,11 @@ const UserCard = ({ user, onConnect, isPending, isConnected, loading }) => {
             </MutualConnections>
           )}
           {user.skills?.length > 0 && (
-            <PersonSkills>
+          <PersonSkills>
               {user.skills.slice(0, 3).map((skill, idx) => (
-                <SkillTag key={idx}>{skill}</SkillTag>
-              ))}
-            </PersonSkills>
+              <SkillTag key={idx}>{skill}</SkillTag>
+            ))}
+          </PersonSkills>
           )}
           <ConnectButton 
             onClick={() => onConnect(user.id)}

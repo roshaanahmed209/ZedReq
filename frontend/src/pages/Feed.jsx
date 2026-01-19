@@ -691,6 +691,7 @@ const MessagesPanel = styled.aside`
   overflow: hidden;
   z-index: 200;
   opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
   transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 
   @media (max-width: 768px) {
@@ -1088,11 +1089,22 @@ const Feed = () => {
   const loadUser = async () => {
     try {
       const response = await api.get('/api/user')
-      if (response.data && response.data.data) {
-        setUser(response.data.data)
-      } else if (response.data && !response.data.error) {
-        // Fallback for direct user object response
-        setUser(response.data)
+      let userData = response.data
+      
+      // If wrapped in 'data' object, unwrap it
+      if (userData && userData.data) {
+        userData = userData.data
+      }
+      
+      if (userData && !userData.error) {
+        // Normalize field names between Flask and FastAPI formats
+        setUser({
+          ...userData,
+          full_name: userData.full_name || userData.name || userData.username,
+          headline: userData.headline || userData.short_desc || '',
+          bio: userData.bio || userData.about || '',
+          id: userData.id || userData.uid
+        })
       }
     } catch (error) {
       console.error('Error loading user:', error)
@@ -1113,8 +1125,16 @@ const Feed = () => {
       
       const response = await api.get(`/api/feed?${params.toString()}`)
       
-      if (response.data && response.data.data) {
-        const feedData = response.data.data
+      // Handle FastAPI response format: {posts: [...], pagination: {...}}
+      // Also handle Flask format: {data: {posts: [...], pagination: {...}}}
+      let feedData = response.data
+      
+      // If wrapped in 'data' object (Flask format), unwrap it
+      if (feedData && feedData.data) {
+        feedData = feedData.data
+      }
+      
+      if (feedData && feedData.posts) {
         const newPosts = feedData.posts || []
         
         if (loadMore) {
@@ -1128,9 +1148,11 @@ const Feed = () => {
           setCursor(feedData.pagination.next_cursor)
           setHasMore(feedData.pagination.has_more)
         }
-      } else if (Array.isArray(response.data)) {
-        setPosts(loadMore ? prev => [...prev, ...response.data] : response.data)
+      } else if (Array.isArray(feedData)) {
+        // Direct array response
+        setPosts(loadMore ? prev => [...prev, ...feedData] : feedData)
       } else {
+        console.log('Unexpected feed response format:', response.data)
         if (!loadMore) setPosts([])
       }
     } catch (error) {
@@ -1259,8 +1281,8 @@ const Feed = () => {
         })
       }
       
-      const response = await api.post('/api/feed/posts', postData)
-      if (response.data.success) {
+      const response = await api.post('/api/posts', postData)
+      if (response.data.id) {
         setPostContent('')
         clearMedia()
         // Reset pagination and reload feed
@@ -1278,14 +1300,16 @@ const Feed = () => {
   const handleLike = async (postId) => {
     try {
       const response = await api.post(`/api/posts/${postId}/like`)
-      if (response.data && response.data.data) {
+      // Handle FastAPI response (direct) or Flask response (wrapped in data)
+      const data = response.data?.data || response.data
+      if (data) {
         // Update the specific post's like count
         setPosts(posts.map(post => 
           post.id === postId 
             ? { 
                 ...post, 
-                like_count: response.data.data.like_count,
-                is_liked: response.data.data.is_liked 
+                like_count: data.like_count,
+                is_liked: data.is_liked 
               }
             : post
         ))
@@ -1295,6 +1319,8 @@ const Feed = () => {
     }
   }
 
+
+  
   const searchUsers = async (query) => {
     if (!query.trim()) {
       setSearchResults([])
@@ -1302,8 +1328,14 @@ const Feed = () => {
     }
     
     try {
-      const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}`)
-      setSearchResults(response.data)
+      const response = await api.get(`/api/user/search?q=${encodeURIComponent(query)}`)
+      // Normalize user data to have consistent field names
+      const users = (response.data || []).map(u => ({
+        ...u,
+        id: u.id || u.uid,
+        full_name: u.full_name || u.name || u.username
+      }))
+      setSearchResults(users)
     } catch (error) {
       console.error('Error searching users:', error)
     }
@@ -1482,7 +1514,7 @@ const Feed = () => {
                 <span>Messages</span>
               </NavMenuItem>
               
-              <NavMenuItem>
+              <NavMenuItem onClick={() => navigate('/notifications')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>

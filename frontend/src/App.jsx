@@ -10,6 +10,7 @@ import LMS from './pages/LMS'
 import Evaluation from './pages/Evaluation'
 import AIMode from './pages/AIMode'
 import AIInterviews from './pages/AIInterviews'
+import Notifications from './pages/Notifications'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AIInterviews />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             } 
           />

@@ -139,9 +139,28 @@ export const authAPI = {
 
 // User API methods
 export const userAPI = {
-  getCurrentUser: () => api.get('/api/auth/me'),
+  getCurrentUser: () => api.get('/api/user'),
   updateProfile: (data) => api.put('/api/user', data),
-  searchUsers: (query) => api.get('/api/users/search', { params: { q: query } }),
+  searchUsers: (query) => api.get('/api/user/search', { params: { q: query } }),
+}
+
+// Post API methods
+export const postAPI = {
+  createPost: (data) => api.post('/api/posts', data),
+  getPost: (postId) => api.get(`/api/posts/${postId}`),
+  updatePost: (postId, data) => api.put(`/api/posts/${postId}`, data),
+  deletePost: (postId) => api.delete(`/api/posts/${postId}`),
+  toggleLike: (postId) => api.post(`/api/posts/${postId}/like`),
+  getLikes: (postId) => api.get(`/api/posts/${postId}/likes`),
+}
+
+// Feed API methods
+export const feedAPI = {
+  getFeed: (limit = 20, cursor = null) => {
+    const params = { limit }
+    if (cursor) params.cursor = cursor
+    return api.get('/api/feed', { params })
+  },
 }
 
 // Network API methods
@@ -237,11 +256,18 @@ export class NotificationWebSocket {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
+        // Ignore pong messages (keepalive responses)
+        if (data.type === 'pong') {
+          return
+        }
         if (data.type === 'notification' && this.onNotification) {
           this.onNotification(data)
         }
       } catch (e) {
-        console.error('Failed to parse WebSocket message:', e)
+        // Ignore non-JSON messages (legacy pong, etc.)
+        if (event.data !== 'pong') {
+          console.error('Failed to parse WebSocket message:', e)
+        }
       }
     }
     
