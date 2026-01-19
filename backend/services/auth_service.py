@@ -2,37 +2,43 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
-from passlib.context import CryptContext
 import hashlib
 import hmac
+import secrets
 import re
 
 from models.user import User
 from config.settings import settings
 
-# Use bcrypt for NEW passwords (more secure than pbkdf2)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt (recommended, more secure)"""
-    return pwd_context.hash(password)
+    """Hash a password using SHA-256 with salt"""
+    # Generate a random salt
+    salt = secrets.token_hex(16)
+    # Hash password with salt
+    password_hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
+    # Store as salt$hash format
+    return f"sha256${salt}${password_hash}"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against its hash.
     Supports:
-    - bcrypt (new passwords, more secure)
+    - sha256 (new passwords)
     - pbkdf2:sha256 (existing Werkzeug passwords, for backward compatibility)
     """
     if not hashed_password:
         return False
     
     try:
-        # Check if it's a bcrypt hash (starts with $2b$, $2a$, or $2y$)
-        if hashed_password.startswith('$2'):
-            return pwd_context.verify(plain_password, hashed_password)
+        # Check if it's our new SHA-256 format: sha256$salt$hash
+        if hashed_password.startswith('sha256$'):
+            parts = hashed_password.split('$')
+            if len(parts) == 3:
+                _, salt, stored_hash = parts
+                computed_hash = hashlib.sha256((salt + plain_password).encode('utf-8')).hexdigest()
+                return hmac.compare_digest(computed_hash, stored_hash)
         
         # Werkzeug pbkdf2 format: pbkdf2:sha256:iterations$salt$hash
         if hashed_password.startswith('pbkdf2:'):
@@ -61,24 +67,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def needs_rehash(hashed_password: str) -> bool:
-    """Check if password should be rehashed to bcrypt (for migration)"""
-    if not hashed_password:
-        return False
-    # If it's not bcrypt, it should be rehashed
-    return not hashed_password.startswith('$2')
-
-
 def validate_password_strength(password: str) -> tuple[bool, str]:
-    """Validate password meets requirements"""
+    """Validate password meets requirements: 8-25 chars, at least one uppercase"""
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
+    if len(password) > 25:
+        return False, "Password must not exceed 25 characters"
     if not re.search(r"[A-Z]", password):
         return False, "Password must contain at least one uppercase letter"
-    if not re.search(r"[a-z]", password):
-        return False, "Password must contain at least one lowercase letter"
-    if not re.search(r"\d", password):
-        return False, "Password must contain at least one number"
     return True, ""
 
 

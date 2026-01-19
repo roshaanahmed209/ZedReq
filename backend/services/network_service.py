@@ -80,7 +80,7 @@ class NetworkService:
     def get_user_connections(self, user_id: int) -> List[Dict[str, Any]]:
         """Get user's accepted connections"""
         results = self.db.fetch_all(
-            '''SELECT u.uid, u.username, u.name, d.profile_pic, d.short_desc,
+            '''SELECT DISTINCT ON (u.uid) u.uid, u.username, u.name, d.profile_pic, d.short_desc,
                       d.skills, d.current_status, c.connected_at
                FROM connections c
                INNER JOIN users u ON (
@@ -89,7 +89,7 @@ class NetworkService:
                )
                LEFT JOIN description d ON u.description_id = d.desc_id
                WHERE u.uid != %s
-               ORDER BY c.connected_at DESC''',
+               ORDER BY u.uid, c.connected_at DESC''',
             (user_id, user_id, user_id)
         )
         return [self._format_user(conn) for conn in results]
