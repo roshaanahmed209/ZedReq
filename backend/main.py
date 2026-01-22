@@ -13,7 +13,8 @@ from routers import (
     websocket_router,
     user_router,
     feed_router,
-    posts_router
+    posts_router,
+    jobs_router
 )
 
 
@@ -58,6 +59,7 @@ app.include_router(websocket_router, prefix="/ws", tags=["WebSocket"])
 app.include_router(user_router, prefix="/api/user", tags=["User"])
 app.include_router(feed_router, prefix="/api/feed", tags=["Feed"])
 app.include_router(posts_router, prefix="/api/posts", tags=["Posts"])
+app.include_router(jobs_router, prefix="/api/jobs", tags=["Jobs"])
 
 
 @app.get("/")

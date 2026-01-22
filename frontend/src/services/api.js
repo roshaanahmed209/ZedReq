@@ -205,6 +205,73 @@ export const connectionAPI = {
     api.get('/api/connections/sent'),
 }
 
+// Job API methods
+export const jobAPI = {
+  // Get all jobs (with optional filters)
+  getJobs: (params = {}) =>
+    api.get('/api/jobs', { params }),
+  
+  // Get remote jobs
+  getRemoteJobs: (limit = 50, offset = 0) =>
+    api.get('/api/jobs/remote', { params: { limit, offset } }),
+  
+  // Get jobs posted by current user
+  getMyPostedJobs: (limit = 50, offset = 0) =>
+    api.get('/api/jobs/my-posts', { params: { limit, offset } }),
+  
+  // Get saved/bookmarked jobs
+  getSavedJobs: (limit = 50, offset = 0) =>
+    api.get('/api/jobs/saved', { params: { limit, offset } }),
+  
+  // Get user's job applications
+  getMyApplications: (limit = 50, offset = 0) =>
+    api.get('/api/jobs/applications', { params: { limit, offset } }),
+  
+  // Get a specific job by ID
+  getJob: (jobId) =>
+    api.get(`/api/jobs/${jobId}`),
+  
+  // Create a new job posting
+  createJob: (jobData) =>
+    api.post('/api/jobs', jobData),
+  
+  // Update a job posting
+  updateJob: (jobId, jobData) =>
+    api.put(`/api/jobs/${jobId}`, jobData),
+  
+  // Close a job posting
+  closeJob: (jobId) =>
+    api.post(`/api/jobs/${jobId}/close`),
+  
+  // Delete a job posting
+  deleteJob: (jobId) =>
+    api.delete(`/api/jobs/${jobId}`),
+  
+  // Apply to a job
+  applyToJob: (jobId, applicationData = {}) =>
+    api.post(`/api/jobs/${jobId}/apply`, { job_id: jobId, ...applicationData }),
+  
+  // Get applicants for a job (poster only)
+  getJobApplicants: (jobId, limit = 100, offset = 0) =>
+    api.get(`/api/jobs/${jobId}/applicants`, { params: { limit, offset } }),
+  
+  // Update application status (poster only)
+  updateApplicationStatus: (applicationId, status) =>
+    api.put(`/api/jobs/applications/${applicationId}/status`, { status }),
+  
+  // Withdraw application
+  withdrawApplication: (applicationId) =>
+    api.delete(`/api/jobs/applications/${applicationId}`),
+  
+  // Toggle save/bookmark job
+  toggleSaveJob: (jobId) =>
+    api.post(`/api/jobs/${jobId}/save`),
+  
+  // Search jobs
+  searchJobs: (query, filters = {}) =>
+    api.get('/api/jobs', { params: { query, ...filters } }),
+}
+
 // Notification API methods
 export const notificationAPI = {
   // Get all notifications

@@ -7,6 +7,7 @@ from .websocket import router as websocket_router
 from .user import router as user_router
 from .feed import router as feed_router
 from .posts import router as posts_router
+from .jobs import router as jobs_router
 
 __all__ = [
     "auth_router",
@@ -16,5 +17,6 @@ __all__ = [
     "websocket_router",
     "user_router",
     "feed_router",
-    "posts_router"
+    "posts_router",
+    "jobs_router"
 ]

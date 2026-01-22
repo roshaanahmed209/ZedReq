@@ -5,6 +5,9 @@ from .connection_request import ConnectionRequest
 from .notification import Notification
 from .base import BaseModel
 
+# Job Portal ORM models (SQLAlchemy)
+from .orm import JobPosting, JobApplication, JobSaved
+
 # Legacy models (for backwards compatibility)
 from . import payment
 from . import description
@@ -33,6 +36,9 @@ from . import lms_course_resource
 __all__ = [
     # Core
     'User', 'Connection', 'ConnectionRequest', 'Notification', 'BaseModel',
+    # Job Portal
+    'JobPosting', 'JobApplication', 'JobSaved',
+    # Legacy
     'payment', 'description', 'job', 'post', 'like', 'network',
     # LMS
     'lms_dashboard', 'lms_course', 'lms_user_course', 'lms_course_section',
