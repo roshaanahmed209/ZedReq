@@ -1,18 +1,18 @@
-"""Network Router - User discovery and suggestions"""
+"""Network Router - User discovery and suggestions using ORM"""
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 from typing import List
 
 from schemas.network import NetworkUserResponse, SuggestedUserResponse
 from services.network_service import NetworkService
 from dependencies.auth import get_current_user
-from config.database import get_database
+from config.database_orm import get_db
 
 router = APIRouter()
 
 
-def get_network_service() -> NetworkService:
-    """Dependency to get network service"""
-    db = get_database()
+def get_network_service(db: Session = Depends(get_db)) -> NetworkService:
+    """Dependency to get network service with ORM session"""
     return NetworkService(db)
 
 

@@ -679,18 +679,23 @@ const Network = () => {
             <p>Start connecting with people to grow your network.</p>
           </EmptyState>
         ) : (
-          <PeopleGrid>
-            {connections.map(user => (
-              <UserCard
-                key={user.id}
-                user={user}
-                onConnect={() => {}}
-                isPending={false}
-                isConnected={true}
-                loading={false}
-              />
-            ))}
-          </PeopleGrid>
+          <>
+            <PageSubtitle style={{ marginBottom: '16px' }}>
+              My Connections ({connections.length})
+            </PageSubtitle>
+            <PeopleGrid>
+              {connections.map(user => (
+                <UserCard
+                  key={user.id}
+                  user={user}
+                  onConnect={() => {}}
+                  isPending={false}
+                  isConnected={true}
+                  loading={false}
+                />
+              ))}
+            </PeopleGrid>
+          </>
         )
       
       case 'requests':
@@ -802,16 +807,12 @@ const Network = () => {
             onClick={() => setActiveTab('connections')}
           >
             My Connections
-            <TabBadge>{connections.length}</TabBadge>
           </Tab>
           <Tab 
             active={activeTab === 'requests'} 
             onClick={() => setActiveTab('requests')}
           >
             Requests
-            {pendingRequests.length > 0 && (
-              <TabBadge highlight>{pendingRequests.length}</TabBadge>
-            )}
           </Tab>
         </TabContainer>
 

@@ -1,0 +1,70 @@
+"""Post ORM Model"""
+from typing import TYPE_CHECKING
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index
+from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.sql import func
+
+from config.database_orm import Base
+
+if TYPE_CHECKING:
+    from .user import User
+
+
+class Post(Base):
+    """SQLAlchemy ORM model for post table"""
+    __tablename__ = 'post'
+    
+    post_id = Column(Integer, primary_key=True, autoincrement=True)
+    uid = Column(
+        Integer,
+        ForeignKey('users.uid', ondelete='CASCADE'),
+        nullable=True,
+        index=True
+    )
+    likes = Column(Integer, default=0)
+    comments = Column(Integer, default=0)
+    media_url = Column(Text)
+    media_type = Column(String(20))
+    post_desc = Column(Text)
+    is_deleted = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[uid],
+        backref="posts"
+    )
+    
+    # Table indexes
+    __table_args__ = (
+        Index('idx_post_uid', 'uid'),
+        Index('idx_post_created', created_at.desc()),
+        Index('idx_post_uid_created_deleted', 'uid', created_at.desc(), 'is_deleted'),
+    )
+    
+    def __repr__(self):
+        return f"<Post(post_id={self.post_id}, uid={self.uid}, is_deleted={self.is_deleted})>"
+    
+    def to_dict(self, include_user_info=False):
+        """Convert to dictionary"""
+        data = {
+            'post_id': self.post_id,
+            'id': self.post_id,
+            'uid': self.uid,
+            'likes': self.likes,
+            'comments': self.comments,
+            'media_url': self.media_url,
+            'media_type': self.media_type,
+            'post_desc': self.post_desc,
+            'is_deleted': self.is_deleted,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+        
+        if include_user_info and self.user:
+            data['username'] = self.user.username
+            data['name'] = self.user.name
+        
+        return data

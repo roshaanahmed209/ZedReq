@@ -1,5 +1,6 @@
-"""Connections Router - Connection requests management"""
+"""Connections Router - Connection requests management using ORM"""
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 from typing import List
 
 from schemas.connection import (
@@ -9,14 +10,13 @@ from schemas.connection import (
 )
 from services.connection_service import ConnectionService
 from dependencies.auth import get_current_user
-from config.database import get_database
+from config.database_orm import get_db
 
 router = APIRouter()
 
 
-def get_connection_service() -> ConnectionService:
-    """Dependency to get connection service"""
-    db = get_database()
+def get_connection_service(db: Session = Depends(get_db)) -> ConnectionService:
+    """Dependency to get connection service with ORM session"""
     return ConnectionService(db)
 
 

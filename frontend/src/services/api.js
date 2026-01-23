@@ -316,7 +316,7 @@ export class NotificationWebSocket {
     this.ws = new WebSocket(`${wsUrl}/ws/notifications?token=${token}`)
     
     this.ws.onopen = () => {
-      console.log('WebSocket connected')
+      console.log('WebSocket connected successfully to:', this.ws.url)
       this.reconnectAttempts = 0
     }
     
@@ -340,15 +340,29 @@ export class NotificationWebSocket {
     
     this.ws.onerror = (error) => {
       console.error('WebSocket error:', error)
+      console.error('WebSocket URL:', this.ws?.url)
+      console.error('WebSocket readyState:', this.ws?.readyState)
       if (this.onError) this.onError(error)
     }
     
     this.ws.onclose = (event) => {
-      console.log('WebSocket closed:', event.code)
+      console.log('WebSocket closed:', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+        url: this.ws?.url
+      })
+      
+      // Don't reconnect if it was an authentication error (4001)
+      if (event.code === 4001) {
+        console.error('WebSocket authentication failed - not reconnecting')
+        return
+      }
       
       // Attempt to reconnect if not intentionally closed
       if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++
+        console.log(`Attempting to reconnect WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
         setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts)
       }
     }

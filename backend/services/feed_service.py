@@ -1,45 +1,47 @@
-"""Feed Service - Production-grade feed with Redis caching and cursor pagination"""
+"""Feed Service - Production-grade feed with Redis caching and cursor pagination using ORM"""
 import json
 import redis
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
+from sqlalchemy import and_, or_, desc, func
+from sqlalchemy.orm import Session
 
-from models.post import Post
-from models.like import Like
-from models.connection import Connection
-from config import Config
+from models.orm import Post, Like, Connection, User, Description
+from services.post_service import PostService
 from utils.logger import setup_logger
+import os
 
 logger = setup_logger(__name__)
 
 
 class FeedService:
     """
-    Feed service with Redis caching and cursor-based pagination.
+    Feed service with Redis caching and cursor-based pagination using ORM.
     Designed for scalability with 1000+ users.
     """
     
     CACHE_PREFIX = "feed:user:"
-    CACHE_TTL = Config.REDIS_CACHE_TTL  # 5 minutes default
+    CACHE_TTL = int(os.environ.get('REDIS_CACHE_TTL', 300))  # 5 minutes default
     
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
-        self.post_model = Post(db)
-        self.like_model = Like(db)
-        self.connection_model = Connection(db)
+        self.post_service = PostService(db)
         self._redis = None
     
     @property
     def redis(self):
         """Lazy Redis connection with fallback for development"""
         # Skip Redis entirely if disabled in config
-        if not Config.REDIS_ENABLED:
+        redis_enabled = os.environ.get('REDIS_ENABLED', 'false').lower() == 'true'
+        if not redis_enabled:
             return None
+        
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
             
         if self._redis is None:
             try:
                 self._redis = redis.from_url(
-                    Config.REDIS_URL,
+                    redis_url,
                     decode_responses=True,
                     socket_connect_timeout=1,
                     socket_timeout=1
@@ -82,12 +84,11 @@ class FeedService:
         # Parse cursor
         parsed_cursor = self._parse_cursor(cursor) if cursor else None
         
-        # Get user's following list
-        following = self.connection_model.get_following(user_id)
-        following_uids = [f['followed_uid'] for f in following]
+        # Get user's following list using ORM
+        following_uids = self._get_following_uids(user_id)
         
-        # Fetch posts
-        posts = self.post_model.get_feed_with_connections(
+        # Fetch posts using ORM
+        posts = self._get_feed_posts(
             user_id=user_id,
             following_uids=following_uids,
             cursor=parsed_cursor,
@@ -127,13 +128,110 @@ class FeedService:
         
         return result
     
+    def _get_following_uids(self, user_id: int) -> List[int]:
+        """Get list of user IDs that the user follows"""
+        connections = (
+            self.db.query(Connection)
+            .filter(Connection.follower_uid == user_id)
+            .all()
+        )
+        return [conn.followed_uid for conn in connections]
+    
+    def _get_feed_posts(
+        self,
+        user_id: int,
+        following_uids: List[int],
+        cursor: Optional[Tuple[str, int]] = None,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Get posts for feed using ORM"""
+        # Include current user in the feed
+        all_uids = list(set(following_uids + [user_id]))
+        
+        query = (
+            self.db.query(Post)
+            .join(User, Post.uid == User.uid)
+            .outerjoin(Description, User.description_id == Description.desc_id)
+            .filter(
+                and_(
+                    Post.uid.in_(all_uids),
+                    Post.is_deleted == False
+                )
+            )
+        )
+        
+        # Apply cursor if provided
+        if cursor:
+            cursor_time, cursor_id = cursor
+            # Parse timestamp string to datetime if needed
+            try:
+                if isinstance(cursor_time, str):
+                    cursor_dt = datetime.fromisoformat(cursor_time.replace('Z', '+00:00'))
+                else:
+                    cursor_dt = cursor_time
+                
+                query = query.filter(
+                    or_(
+                        Post.created_at < cursor_dt,
+                        and_(
+                            Post.created_at == cursor_dt,
+                            Post.post_id < cursor_id
+                        )
+                    )
+                )
+            except (ValueError, AttributeError):
+                logger.warning(f"Invalid cursor timestamp: {cursor_time}")
+        
+        posts = (
+            query
+            .order_by(desc(Post.created_at), desc(Post.post_id))
+            .limit(limit)
+            .all()
+        )
+        
+        # Format posts
+        result = []
+        for post in posts:
+            # Get profile pic
+            profile_pic = None
+            if post.user and post.user.description_id:
+                desc = (
+                    self.db.query(Description)
+                    .filter(Description.desc_id == post.user.description_id)
+                    .first()
+                )
+                if desc:
+                    profile_pic = desc.profile_pic
+            
+            result.append({
+                'post_id': post.post_id,
+                'uid': post.uid,
+                'post_desc': post.post_desc,
+                'media_url': post.media_url,
+                'media_type': post.media_type,
+                'likes': post.likes,
+                'comments': post.comments,
+                'created_at': post.created_at,
+                'username': post.user.username if post.user else None,
+                'name': post.user.name if post.user else None,
+                'profile_pic': profile_pic
+            })
+        
+        return result
+    
     def _enrich_posts(self, posts: List[Dict], user_id: int) -> List[Dict[str, Any]]:
         """Enrich posts with like status and format for API response"""
         enriched = []
         
         for post in posts:
-            # Check if user liked this post
-            is_liked = self.like_model.has_liked(post['post_id'], user_id)
+            # Check if user liked this post using ORM
+            is_liked = self._has_liked(post['post_id'], user_id)
+            
+            created_at = post['created_at']
+            if hasattr(created_at, 'isoformat'):
+                created_str = created_at.isoformat()
+            else:
+                created_str = str(created_at)
             
             enriched.append({
                 'id': post['post_id'],
@@ -141,7 +239,7 @@ class FeedService:
                 'content': post['post_desc'],
                 'media_url': post.get('media_url'),
                 'media_type': post.get('media_type'),
-                'created_at': post['created_at'].isoformat() if hasattr(post['created_at'], 'isoformat') else str(post['created_at']),
+                'created_at': created_str,
                 'username': post.get('username', ''),
                 'full_name': post.get('name', ''),
                 'profile_pic': post.get('profile_pic'),
@@ -151,6 +249,20 @@ class FeedService:
             })
         
         return enriched
+    
+    def _has_liked(self, post_id: int, user_id: int) -> bool:
+        """Check if user has liked a post using ORM"""
+        like = (
+            self.db.query(Like)
+            .filter(
+                and_(
+                    Like.post_id == post_id,
+                    Like.uid == user_id
+                )
+            )
+            .first()
+        )
+        return like is not None
     
     def _parse_cursor(self, cursor: str) -> Optional[Tuple[str, int]]:
         """Parse cursor string into (timestamp, post_id) tuple"""
@@ -232,12 +344,16 @@ class FeedService:
             if not self.redis:
                 return False
             
-            # Get all followers
-            followers = self.connection_model.get_followers(user_id)
+            # Get all followers using ORM
+            followers = (
+                self.db.query(Connection)
+                .filter(Connection.followed_uid == user_id)
+                .all()
+            )
             
             # Invalidate each follower's cache
             for follower in followers:
-                cache_key = self._get_cache_key(follower['follower_uid'])
+                cache_key = self._get_cache_key(follower.follower_uid)
                 self.redis.delete(cache_key)
             
             logger.debug(f"Invalidated feed cache for {len(followers)} followers of user {user_id}")
@@ -245,43 +361,3 @@ class FeedService:
         except Exception as e:
             logger.error(f"Redis bulk delete error: {e}")
             return False
-
-
-class PostServiceWithCache:
-    """Extended post service with cache invalidation"""
-    
-    def __init__(self, db):
-        self.db = db
-        self.post_model = Post(db)
-        self.like_model = Like(db)
-        self.feed_service = FeedService(db)
-    
-    def create_post(
-        self, 
-        user_id: int, 
-        content: str, 
-        media_url: Optional[str] = None,
-        media_type: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Create a new post and invalidate relevant caches"""
-        # Create the post
-        post = self.post_model.create(user_id, content, media_url, media_type)
-        
-        if post:
-            # Invalidate user's own feed cache
-            self.feed_service.invalidate_user_feed(user_id)
-            
-            # Invalidate followers' feed caches
-            self.feed_service.invalidate_followers_feed(user_id)
-            
-            logger.info(f"Post created: {post['post_id']} by user {user_id}")
-            
-            return {
-                'id': post['post_id'],
-                'content': post['post_desc'],
-                'media_url': post.get('media_url'),
-                'media_type': post.get('media_type'),
-                'created_at': str(post['created_at'])
-            }
-        
-        raise Exception("Failed to create post")

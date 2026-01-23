@@ -3,9 +3,8 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy import or_, and_, desc
 from sqlalchemy.orm import Session, joinedload
 
-from models.orm.job_posting import JobPosting
-from models.orm.job_application import JobApplication
-from models.orm.job_saved import JobSaved
+# Import all ORM models - User must be imported first
+from models.orm import User, JobPosting, JobApplication, JobSaved
 
 
 class JobService:

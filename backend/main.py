@@ -3,8 +3,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from config.settings import settings
+# Import settings with error handling
+try:
+    from config.settings import settings
+    _settings_loaded = True
+except Exception as e:
+    print(f"Warning: Could not load settings: {e}")
+    print("Using default configuration...")
+    _settings_loaded = False
+    settings = None
+
 from config.database import init_database, get_database
+import os
 from routers import (
     auth_router,
     network_router,
@@ -41,10 +51,22 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS with fallback
+if _settings_loaded and settings:
+    try:
+        cors_origins = settings.get_cors_origins()
+    except Exception as e:
+        print(f"Warning: Could not get CORS origins from settings: {e}")
+        cors_origins = ["http://localhost:3000", "http://localhost:5173"]
+else:
+    # Default CORS origins if settings not loaded
+    cors_origins = ["http://localhost:3000", "http://localhost:5173"]
+
+print(f"CORS configured with origins: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,9 +106,17 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    if _settings_loaded and settings:
+        try:
+            debug_mode = settings.DEBUG
+        except:
+            debug_mode = True
+    else:
+        debug_mode = True  # Default to debug mode if settings can't be loaded
+    
     uvicorn.run(
         "main:app",
         host="127.0.0.1",
         port=5000,
-        reload=settings.DEBUG
+        reload=debug_mode
     )

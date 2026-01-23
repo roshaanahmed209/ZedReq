@@ -1,6 +1,7 @@
-"""Authentication Router - JWT based authentication"""
+"""Authentication Router - JWT based authentication using ORM"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
+from sqlalchemy.orm import Session
 
 from schemas.auth import (
     UserRegister,
@@ -11,15 +12,14 @@ from schemas.auth import (
 )
 from services.auth_service import AuthService
 from dependencies.auth import get_current_user
-from config.database import get_database
+from config.database_orm import get_db
 
 router = APIRouter()
 security = HTTPBearer()
 
 
-def get_auth_service() -> AuthService:
-    """Dependency to get auth service"""
-    db = get_database()
+def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
+    """Dependency to get auth service with ORM session"""
     return AuthService(db)
 
 

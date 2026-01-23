@@ -1,4 +1,4 @@
-"""Authentication Service with JWT"""
+"""Authentication Service with JWT using ORM"""
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
@@ -6,8 +6,11 @@ import hashlib
 import hmac
 import secrets
 import re
+from sqlalchemy import or_, func
+from sqlalchemy.orm import Session
 
-from models.user import User
+from models.orm import User
+from services.user_service import UserService
 from config.settings import settings
 
 
@@ -96,10 +99,11 @@ def validate_username(username: str) -> tuple[bool, str]:
 
 
 class AuthService:
-    """Authentication business logic with JWT"""
+    """Authentication business logic with JWT using ORM"""
     
-    def __init__(self, db):
-        self.user_model = User(db)
+    def __init__(self, db: Session):
+        self.db = db
+        self.user_service = UserService(db)
     
     def _create_access_token(self, user_id: str, username: str) -> str:
         """Create JWT access token"""
@@ -126,8 +130,9 @@ class AuthService:
     
     def _create_tokens(self, user: dict) -> dict:
         """Create both access and refresh tokens"""
-        user_id = str(user["id"])
-        access_token = self._create_access_token(user_id, user["username"])
+        user_id = str(user.get("id") or user.get("uid"))
+        username = user.get("username", "")
+        access_token = self._create_access_token(user_id, username)
         refresh_token = self._create_refresh_token(user_id)
         
         return {
@@ -135,10 +140,10 @@ class AuthService:
             "refresh_token": refresh_token,
             "token_type": "bearer",
             "user": {
-                "id": user["id"],
-                "username": user["username"],
-                "email": user["email"],
-                "name": user["name"],
+                "id": user.get("id") or user.get("uid"),
+                "username": user.get("username", ""),
+                "email": user.get("email") or user.get("user_email", ""),
+                "name": user.get("name", ""),
                 "profile_pic": user.get("profile_pic"),
                 "bio": user.get("bio"),
                 "job_title": user.get("job_title"),
@@ -168,49 +173,93 @@ class AuthService:
         if not is_valid:
             raise ValueError(error_msg)
         
-        # Check if username already exists
-        if self.user_model.username_exists(username):
+        # Check if username already exists using ORM
+        existing_user = (
+            self.db.query(User)
+            .filter(func.lower(User.username) == func.lower(username))
+            .first()
+        )
+        if existing_user:
             raise ValueError('Username already exists')
         
-        # Check if email already exists
-        if self.user_model.email_exists(email):
+        # Check if email already exists using ORM
+        existing_email = (
+            self.db.query(User)
+            .filter(func.lower(User.user_email) == func.lower(email))
+            .first()
+        )
+        if existing_email:
             raise ValueError('Email already exists')
         
-        # Hash password and create user
+        # Hash password and create user using ORM
         password_hash = hash_password(password)
-        user = self.user_model.create(
+        user = User(
             username=username,
-            email=email,
+            user_email=email,
             password_hash=password_hash,
-            full_name=full_name
+            name=full_name,
+            email_verified=False
         )
         
-        if not user:
-            raise Exception('Failed to create user')
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        
+        # Format user for token creation
+        user_dict = {
+            "id": user.uid,
+            "uid": user.uid,
+            "username": user.username,
+            "email": user.user_email,
+            "user_email": user.user_email,
+            "name": user.name,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
         
         # Return tokens
-        return self._create_tokens(user)
+        return self._create_tokens(user_dict)
     
     def login(self, identifier: str, password: str) -> dict:
         """Login user and return tokens"""
         if not identifier or not password:
             raise ValueError('Username/email and password are required')
         
-        # Find user by username or email
-        user = self.user_model.find_by_username_or_email(identifier.strip())
+        # Find user by username or email using ORM
+        user = (
+            self.db.query(User)
+            .filter(
+                or_(
+                    func.lower(User.username) == func.lower(identifier.strip()),
+                    func.lower(User.user_email) == func.lower(identifier.strip())
+                )
+            )
+            .first()
+        )
         
         if not user:
             raise ValueError('Invalid username or password')
         
         # Verify password
-        if not verify_password(password, user['password_hash']):
+        if not verify_password(password, user.password_hash):
             raise ValueError('Invalid username or password')
         
-        # Update last login
-        self.user_model.update_last_login(user['id'])
+        # Update last login using ORM
+        user.last_login = datetime.utcnow()
+        self.db.commit()
+        
+        # Format user for token creation
+        user_dict = {
+            "id": user.uid,
+            "uid": user.uid,
+            "username": user.username,
+            "email": user.user_email,
+            "user_email": user.user_email,
+            "name": user.name,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
         
         # Return tokens
-        return self._create_tokens(user)
+        return self._create_tokens(user_dict)
     
     def refresh_token(self, refresh_token: str) -> dict:
         """Refresh access token using refresh token"""
@@ -228,8 +277,8 @@ class AuthService:
             if not user_id:
                 raise ValueError("Invalid token")
             
-            # Get user
-            user = self.user_model.find_by_id(int(user_id))
+            # Get user using ORM
+            user = self.user_service.get_user_by_id(int(user_id))
             if not user:
                 raise ValueError("User not found")
             
@@ -255,16 +304,16 @@ class AuthService:
             if not user_id:
                 raise ValueError("Invalid token")
             
-            # Get user
-            user = self.user_model.find_by_id(int(user_id))
+            # Get user using ORM
+            user = self.user_service.get_user_by_id(int(user_id))
             if not user:
                 raise ValueError("User not found")
             
             return {
-                "id": user["id"],
-                "username": user["username"],
-                "email": user["email"],
-                "name": user["name"]
+                "id": user.get("id") or user.get("uid"),
+                "username": user.get("username", ""),
+                "email": user.get("email") or user.get("user_email", ""),
+                "name": user.get("name", "")
             }
             
         except JWTError as e:
@@ -272,15 +321,15 @@ class AuthService:
     
     def get_user_by_id(self, user_id: int) -> Optional[dict]:
         """Get user by ID"""
-        user = self.user_model.find_by_id(user_id)
+        user = self.user_service.get_user_by_id(user_id)
         if not user:
             return None
         
         return {
-            "id": user["id"],
-            "username": user["username"],
-            "email": user["email"],
-            "name": user["name"],
+            "id": user.get("id") or user.get("uid"),
+            "username": user.get("username", ""),
+            "email": user.get("email") or user.get("user_email", ""),
+            "name": user.get("name", ""),
             "profile_pic": user.get("profile_pic"),
             "bio": user.get("bio"),
             "job_title": user.get("job_title"),
