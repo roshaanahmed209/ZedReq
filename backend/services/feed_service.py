@@ -195,13 +195,13 @@ class FeedService:
             # Get profile pic
             profile_pic = None
             if post.user and post.user.description_id:
-                desc = (
+                user_desc = (
                     self.db.query(Description)
                     .filter(Description.desc_id == post.user.description_id)
                     .first()
                 )
-                if desc:
-                    profile_pic = desc.profile_pic
+                if user_desc:
+                    profile_pic = user_desc.profile_pic
             
             result.append({
                 'post_id': post.post_id,

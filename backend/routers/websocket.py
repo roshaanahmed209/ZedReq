@@ -33,13 +33,21 @@ async def websocket_notifications(
                 raise ValueError("User ID not found in token")
             user_id = int(user_id)  # Ensure it's an integer
             logger.info(f"WebSocket authentication successful for user {user_id}")
-        finally:
+        except Exception as auth_error:
+            logger.error(f"WebSocket authentication error: {auth_error}", exc_info=True)
             db.close()
+            raise
+        finally:
+            if db:
+                db.close()
     except Exception as e:
-        logger.error(f"WebSocket authentication failed: {e}")
-        # Accept connection first, then close with error
-        await websocket.accept()
-        await websocket.close(code=4001, reason="Invalid authentication token")
+        logger.error(f"WebSocket authentication failed: {e}", exc_info=True)
+        try:
+            # Accept connection first, then close with error
+            await websocket.accept()
+            await websocket.close(code=4001, reason=f"Invalid authentication token: {str(e)}")
+        except Exception as close_error:
+            logger.error(f"Error closing WebSocket: {close_error}")
         return
     
     # Accept connection and register with manager

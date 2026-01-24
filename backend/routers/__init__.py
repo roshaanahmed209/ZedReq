@@ -8,6 +8,7 @@ from .user import router as user_router
 from .feed import router as feed_router
 from .posts import router as posts_router
 from .jobs import router as jobs_router
+from .messaging import router as messaging_router
 
 __all__ = [
     "auth_router",
@@ -18,5 +19,6 @@ __all__ = [
     "user_router",
     "feed_router",
     "posts_router",
-    "jobs_router"
+    "jobs_router",
+    "messaging_router"
 ]

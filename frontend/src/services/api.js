@@ -309,39 +309,55 @@ export class NotificationWebSocket {
       return
     }
     
-    const wsUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000')
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    const wsUrl = apiUrl
       .replace('http://', 'ws://')
       .replace('https://', 'wss://')
     
-    this.ws = new WebSocket(`${wsUrl}/ws/notifications?token=${token}`)
+    const fullWsUrl = `${wsUrl}/ws/notifications?token=${token}`
+    console.log('Connecting to WebSocket:', fullWsUrl)
     
-    this.ws.onopen = () => {
-      console.log('WebSocket connected successfully to:', this.ws.url)
-      this.reconnectAttempts = 0
-    }
-    
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        // Ignore pong messages (keepalive responses)
-        if (data.type === 'pong') {
-          return
-        }
-        if (data.type === 'notification' && this.onNotification) {
-          this.onNotification(data)
-        }
-      } catch (e) {
-        // Ignore non-JSON messages (legacy pong, etc.)
-        if (event.data !== 'pong') {
-          console.error('Failed to parse WebSocket message:', e)
+    try {
+      this.ws = new WebSocket(fullWsUrl)
+      
+      this.ws.onopen = () => {
+        console.log('WebSocket connected successfully to:', this.ws?.url || fullWsUrl)
+        this.reconnectAttempts = 0
+      }
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          // Ignore pong messages (keepalive responses)
+          if (data.type === 'pong') {
+            return
+          }
+          if (data.type === 'notification' && this.onNotification) {
+            this.onNotification(data)
+          }
+        } catch (e) {
+          // Ignore non-JSON messages (legacy pong, etc.)
+          if (event.data !== 'pong') {
+            console.error('Failed to parse WebSocket message:', e)
+          }
         }
       }
-    }
-    
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      console.error('WebSocket URL:', this.ws?.url)
-      console.error('WebSocket readyState:', this.ws?.readyState)
+      
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
+        console.error('WebSocket readyState:', this.ws?.readyState)
+        console.error('WebSocket state:', this.ws ? {
+          CONNECTING: this.ws.CONNECTING,
+          OPEN: this.ws.OPEN,
+          CLOSING: this.ws.CLOSING,
+          CLOSED: this.ws.CLOSED,
+          current: this.ws.readyState
+        } : 'WebSocket is null')
+        if (this.onError) this.onError(error)
+      }
+    } catch (error) {
+      console.error('Failed to create WebSocket:', error)
       if (this.onError) this.onError(error)
     }
     

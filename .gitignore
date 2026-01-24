@@ -31,6 +31,10 @@ env/
 
 firebase/
 firebase_config.txt
+# Firebase credentials (keep these secure!)
+**/credentials.json
+**/firebase-credentials.json
+**/*-firebase-adminsdk-*.json
 
 
 flask_session/
