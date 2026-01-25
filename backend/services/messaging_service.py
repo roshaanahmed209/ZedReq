@@ -16,8 +16,19 @@ class MessagingService:
     """Service for handling messages with Firebase Realtime Database"""
     
     def __init__(self):
-        self.db_ref = get_firebase_db()
-        self.database_url = get_database_url()
+        try:
+            self.db_ref = get_firebase_db()
+        except Exception as e:
+            logger.warning(f"Could not initialize Firebase Admin SDK: {e}")
+            logger.warning("Will use REST API fallback")
+            self.db_ref = None
+        
+        try:
+            self.database_url = get_database_url()
+        except Exception as e:
+            logger.error(f"Could not get database URL: {e}")
+            raise
+        
         self.api_key = get_api_key() or ""
         
     def _get_rest_url(self, path: str = "") -> str:
@@ -218,12 +229,18 @@ class MessagingService:
             logger.error(f"Error getting messages: {e}", exc_info=True)
             return []
     
-    async def get_conversations(self, user_id: int) -> List[Dict[str, Any]]:
+    async def get_conversations(
+        self, 
+        user_id: int, 
+        connected_user_ids: List[int] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get all conversations for a user
         
         Args:
             user_id: ID of the user
+            connected_user_ids: Optional list of connected user IDs to filter by.
+                              If provided, only conversations with these users will be returned.
         
         Returns:
             List of conversation dictionaries
@@ -243,9 +260,16 @@ class MessagingService:
                             # Get the other participant
                             other_id = [p for p in participants if p != user_id]
                             if other_id:
+                                other_user_id = other_id[0]
+                                
+                                # Filter by connections if provided
+                                if connected_user_ids is not None:
+                                    if other_user_id not in connected_user_ids:
+                                        continue  # Skip if not connected
+                                
                                 conversations.append({
                                     "conversation_id": conv_key,
-                                    "other_user_id": other_id[0],
+                                    "other_user_id": other_user_id,
                                     "last_message": conv_data.get("last_message"),
                                     "updated_at": conv_data.get("updated_at")
                                 })
@@ -259,9 +283,16 @@ class MessagingService:
                         if user_id in participants:
                             other_id = [p for p in participants if p != user_id]
                             if other_id:
+                                other_user_id = other_id[0]
+                                
+                                # Filter by connections if provided
+                                if connected_user_ids is not None:
+                                    if other_user_id not in connected_user_ids:
+                                        continue  # Skip if not connected
+                                
                                 conversations.append({
                                     "conversation_id": conv_key,
-                                    "other_user_id": other_id[0],
+                                    "other_user_id": other_user_id,
                                     "last_message": conv_data.get("last_message"),
                                     "updated_at": conv_data.get("updated_at")
                                 })

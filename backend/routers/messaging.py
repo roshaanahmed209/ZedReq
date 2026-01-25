@@ -9,6 +9,7 @@ import json
 from websocket.manager import connection_manager
 from services.auth_service import AuthService
 from services.messaging_service import MessagingService
+from services.network_service import NetworkService
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 
@@ -62,6 +63,15 @@ async def websocket_messages(
         # Initialize messaging service
         messaging_service = MessagingService()
         
+        # Get connected user IDs for validation (load once at connection start)
+        db_session = next(get_db())
+        try:
+            network_service = NetworkService(db_session)
+            connected_users = network_service.get_user_connections(user_id)
+            connected_user_ids = {user["id"] for user in connected_users}
+        finally:
+            db_session.close()
+        
         # Send welcome message
         await websocket.send_json({
             "type": "connected",
@@ -94,10 +104,20 @@ async def websocket_messages(
                         })
                         continue
                     
+                    recipient_id = int(recipient_id)
+                    
+                    # Check if users are connected
+                    if recipient_id not in connected_user_ids:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "You can only message users you are connected with"
+                        })
+                        continue
+                    
                     # Send message via messaging service
                     sent_message = await messaging_service.send_message(
                         sender_id=user_id,
-                        recipient_id=int(recipient_id),
+                        recipient_id=recipient_id,
                         content=content,
                         message_type=msg_type
                     )
@@ -135,9 +155,19 @@ async def websocket_messages(
                         })
                         continue
                     
+                    recipient_id = int(recipient_id)
+                    
+                    # Check if users are connected
+                    if recipient_id not in connected_user_ids:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "You can only view messages with users you are connected with"
+                        })
+                        continue
+                    
                     messages = await messaging_service.get_messages(
                         user1_id=user_id,
-                        user2_id=int(recipient_id),
+                        user2_id=recipient_id,
                         limit=limit
                     )
                     
@@ -211,15 +241,46 @@ class SendMessageRequest(BaseModel):
 
 @router.get("/conversations")
 async def get_conversations(
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Get all conversations for the current user"""
+    """Get all conversations for the current user (only with connected users)"""
     try:
+        # Get user's connected users with full info
+        network_service = NetworkService(db)
+        connected_users = network_service.get_user_connections(current_user["id"])
+        connected_user_ids = [user["id"] for user in connected_users]
+        
+        # Create a map of user_id -> user_info for quick lookup
+        connected_users_map = {user["id"]: user for user in connected_users}
+        
+        # Get conversations filtered by connections
         messaging_service = MessagingService()
-        conversations = await messaging_service.get_conversations(current_user["id"])
+        conversations = await messaging_service.get_conversations(
+            current_user["id"],
+            connected_user_ids=connected_user_ids
+        )
+        
+        # Enrich conversations with user information
+        enriched_conversations = []
+        for conv in conversations:
+            other_user_id = conv["other_user_id"]
+            user_info = connected_users_map.get(other_user_id)
+            
+            enriched_conv = {
+                **conv,
+                "other_user": user_info if user_info else {
+                    "id": other_user_id,
+                    "name": f"User {other_user_id}",
+                    "username": f"user_{other_user_id}",
+                    "profile_pic": None
+                }
+            }
+            enriched_conversations.append(enriched_conv)
+        
         return {
             "success": True,
-            "conversations": conversations
+            "conversations": enriched_conversations
         }
     except Exception as e:
         logger.error(f"Error getting conversations: {e}", exc_info=True)
@@ -259,10 +320,22 @@ async def get_messages(
 @router.post("/messages", status_code=status.HTTP_201_CREATED)
 async def send_message(
     message_data: SendMessageRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Send a message to another user"""
+    """Send a message to another user (only if connected)"""
     try:
+        # Check if users are connected
+        network_service = NetworkService(db)
+        connected_users = network_service.get_user_connections(current_user["id"])
+        connected_user_ids = [user["id"] for user in connected_users]
+        
+        if message_data.recipient_id not in connected_user_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only message users you are connected with"
+            )
+        
         messaging_service = MessagingService()
         sent_message = await messaging_service.send_message(
             sender_id=current_user["id"],

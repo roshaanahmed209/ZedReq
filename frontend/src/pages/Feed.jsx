@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
+import Messages from './Messages'
 import '../css/pages/Feed.css'
 
 const fadeIn = keyframes`
@@ -1030,61 +1031,14 @@ const Feed = () => {
   const [searchResults, setSearchResults] = useState([])
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [messagesOpen, setMessagesOpen] = useState(false)
-  const [selectedContact, setSelectedContact] = useState(null)
-  const [chatMessages, setChatMessages] = useState({})
-  const [messageInput, setMessageInput] = useState('')
   const { logout } = useAuth()
   const navigate = useNavigate()
-
-  const contacts = [
-    {
-      id: 0,
-      name: 'AI Assistant',
-      status: 'Always available',
-      isBot: true,
-      avatar: 'AI'
-    },
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'SJ'
-    },
-    {
-      id: 2,
-      name: 'Mike Chen',
-      status: 'Active 2h ago',
-      isBot: false,
-      avatar: 'MC'
-    },
-    {
-      id: 3,
-      name: 'Emma Davis',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'ED'
-    },
-    {
-      id: 4,
-      name: 'Alex Rodriguez',
-      status: 'Active 1d ago',
-      isBot: false,
-      avatar: 'AR'
-    },
-    {
-      id: 5,
-      name: 'Lisa Wang',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'LW'
-    }
-  ]
 
   useEffect(() => {
     loadUser()
     loadPosts()
   }, [])
+
 
   const loadUser = async () => {
     try {
@@ -1383,71 +1337,10 @@ const Feed = () => {
   }
 
   const handleMessagesClick = () => {
+    // Toggle messages overlay panel
     setMessagesOpen(!messagesOpen)
-    setSelectedContact(null)
   }
 
-  const handleContactSelect = (contact) => {
-    setSelectedContact(contact)
-    // Initialize chat if it doesn't exist
-    if (!chatMessages[contact.id]) {
-      setChatMessages(prev => ({
-        ...prev,
-        [contact.id]: contact.isBot ? [
-          {
-            id: 1,
-            text: "Hello! I'm your AI assistant. How can I help you today?",
-            isUser: false,
-            timestamp: new Date()
-          }
-        ] : []
-      }))
-    }
-  }
-
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedContact) return
-
-    const newMessage = {
-      id: Date.now(),
-      text: messageInput,
-      isUser: true,
-      timestamp: new Date()
-    }
-
-    setChatMessages(prev => ({
-      ...prev,
-      [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage]
-    }))
-
-    setMessageInput('')
-
-    // Simulate AI response for bot
-    if (selectedContact.isBot) {
-      setTimeout(() => {
-        const aiResponse = {
-          id: Date.now() + 1,
-          text: "I understand. Let me help you with that. This is a prototype, so I'll provide a generic response. In a real implementation, I would analyze your message and provide relevant assistance.",
-          isUser: false,
-          timestamp: new Date()
-        }
-        setChatMessages(prev => ({
-          ...prev,
-          [selectedContact.id]: [...(prev[selectedContact.id] || []), aiResponse]
-        }))
-      }, 1000)
-    }
-  }
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage()
-    }
-  }
-
-  const handleBackToContacts = () => {
-    setSelectedContact(null)
-  }
 
   return (
     <Container>
@@ -1777,102 +1670,7 @@ const Feed = () => {
         </FeedContainer>
 
         <MessagesPanel isOpen={messagesOpen}>
-            <MessagesPanelHeader>
-              <MessagesPanelTitle>Messages</MessagesPanelTitle>
-              <CloseButton onClick={() => setMessagesOpen(false)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </CloseButton>
-            </MessagesPanelHeader>
-
-            {!selectedContact ? (
-              <ContactsList>
-                {contacts.map(contact => (
-                  <ContactItem key={contact.id} onClick={() => handleContactSelect(contact)}>
-                    <ContactAvatar isBot={contact.isBot}>
-                      {contact.isBot ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v3"></path>
-                          <path d="M12 18v3"></path>
-                          <path d="M5.5 5.5l2.1 2.1"></path>
-                          <path d="M16.4 16.4l2.1 2.1"></path>
-                          <path d="M3 12h3"></path>
-                          <path d="M18 12h3"></path>
-                          <path d="M5.5 18.5l2.1-2.1"></path>
-                          <path d="M16.4 7.6l2.1-2.1"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      ) : (
-                        contact.avatar
-                      )}
-                    </ContactAvatar>
-                    <ContactInfo>
-                      <ContactName>{contact.name}</ContactName>
-                      <ContactStatus>{contact.status}</ContactStatus>
-                    </ContactInfo>
-                  </ContactItem>
-                ))}
-              </ContactsList>
-            ) : (
-              <ChatView>
-                <ChatHeader>
-                  <ChatHeaderLeft>
-                    <ContactAvatar isBot={selectedContact.isBot}>
-                      {selectedContact.isBot ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v3"></path>
-                          <path d="M12 18v3"></path>
-                          <path d="M5.5 5.5l2.1 2.1"></path>
-                          <path d="M16.4 16.4l2.1 2.1"></path>
-                          <path d="M3 12h3"></path>
-                          <path d="M18 12h3"></path>
-                          <path d="M5.5 18.5l2.1-2.1"></path>
-                          <path d="M16.4 7.6l2.1-2.1"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      ) : (
-                        selectedContact.avatar
-                      )}
-                    </ContactAvatar>
-                    <ChatHeaderName>{selectedContact.name}</ChatHeaderName>
-                  </ChatHeaderLeft>
-                  <BackIconButton onClick={handleBackToContacts}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="19" y1="12" x2="5" y2="12"></line>
-                      <polyline points="12 19 5 12 12 5"></polyline>
-                    </svg>
-                  </BackIconButton>
-                </ChatHeader>
-
-                <ChatMessages>
-                  {(chatMessages[selectedContact.id] || []).map(msg => (
-                    <ChatMessage key={msg.id} isUser={msg.isUser}>
-                      <MessageBubble isUser={msg.isUser}>
-                        {msg.text}
-                      </MessageBubble>
-                    </ChatMessage>
-                  ))}
-                </ChatMessages>
-
-                <ChatInputContainer>
-                  <ChatInput
-                    type="text"
-                    placeholder="Type a message..."
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                  />
-                  <SendButton onClick={handleSendMessage}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </SendButton>
-                </ChatInputContainer>
-              </ChatView>
-            )}
+          <Messages overlay={true} onClose={() => setMessagesOpen(false)} />
         </MessagesPanel>
       </MainContainer>
     </Container>

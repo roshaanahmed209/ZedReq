@@ -291,6 +291,29 @@ export const notificationAPI = {
     api.put('/api/notifications/read-all'),
 }
 
+// Messaging API methods
+export const messagingAPI = {
+  // Get all conversations for current user
+  getConversations: () => 
+    api.get('/api/messaging/conversations'),
+  
+  // Get messages with a specific user
+  getMessages: (recipientId, limit = 50) => 
+    api.get(`/api/messaging/messages/${recipientId}`, { params: { limit } }),
+  
+  // Send a message
+  sendMessage: (recipientId, content, messageType = 'text') => 
+    api.post('/api/messaging/messages', {
+      recipient_id: recipientId,
+      content,
+      message_type: messageType
+    }),
+  
+  // Mark conversation as read
+  markConversationRead: (recipientId) => 
+    api.post(`/api/messaging/messages/${recipientId}/read`),
+}
+
 // WebSocket connection for real-time notifications
 export class NotificationWebSocket {
   constructor(onNotification, onError = null) {
@@ -395,6 +418,210 @@ export class NotificationWebSocket {
   ping() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send('ping')
+    }
+  }
+}
+
+// WebSocket connection for real-time messaging
+export class MessagingWebSocket {
+  constructor(onMessage, onError = null) {
+    this.ws = null
+    this.onMessage = onMessage
+    this.onError = onError
+    this.reconnectAttempts = 0
+    this.maxReconnectAttempts = 5
+    this.reconnectDelay = 1000
+    this.pingInterval = null
+  }
+  
+  connect() {
+    const token = tokenService.getAccessToken()
+    if (!token) {
+      console.error('No token available for messaging WebSocket connection')
+      return
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    const wsUrl = apiUrl
+      .replace('http://', 'ws://')
+      .replace('https://', 'wss://')
+    
+    const fullWsUrl = `${wsUrl}/api/messaging/messages?token=${token}`
+    console.log('Connecting to Messaging WebSocket:', fullWsUrl)
+    
+    try {
+      this.ws = new WebSocket(fullWsUrl)
+      
+      this.ws.onopen = () => {
+        console.log('Messaging WebSocket connected successfully')
+        this.reconnectAttempts = 0
+        
+        // Start ping interval to keep connection alive
+        this.pingInterval = setInterval(() => this.ping(), 30000)
+      }
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          
+          // Handle pong responses
+          if (data.type === 'pong') {
+            return
+          }
+          
+          // Handle connection confirmation
+          if (data.type === 'connected') {
+            console.log('Messaging WebSocket connected:', data.message)
+            return
+          }
+          
+          // Handle new messages
+          if (data.type === 'new_message' && this.onMessage) {
+            this.onMessage(data.message)
+          }
+          
+          // Handle message sent confirmation
+          if (data.type === 'message_sent' && this.onMessage) {
+            this.onMessage(data.message)
+          }
+          
+          // Handle messages list
+          if (data.type === 'messages' && this.onMessage) {
+            this.onMessage({ type: 'messages_list', ...data })
+          }
+          
+          // Handle errors
+          if (data.type === 'error') {
+            console.error('Messaging WebSocket error:', data.message)
+            if (this.onError) this.onError(new Error(data.message))
+          }
+        } catch (e) {
+          if (event.data !== 'pong') {
+            console.error('Failed to parse messaging WebSocket message:', e)
+          }
+        }
+      }
+      
+      this.ws.onerror = (error) => {
+        console.error('Messaging WebSocket error:', error)
+        console.error('WebSocket state:', this.ws?.readyState)
+        console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
+        
+        // Provide more helpful error message based on readyState
+        let errorMessage = 'WebSocket connection failed'
+        if (this.ws?.readyState === WebSocket.CLOSED) {
+          errorMessage = 'WebSocket connection was closed. Check if the backend server is running at ' + apiUrl
+        } else if (this.ws?.readyState === WebSocket.CONNECTING) {
+          errorMessage = 'WebSocket connection is still connecting...'
+        }
+        
+        if (this.onError) {
+          this.onError(new Error(errorMessage))
+        }
+      }
+      
+      this.ws.onclose = (event) => {
+        console.log('Messaging WebSocket closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          url: this.ws?.url
+        })
+        
+        // Clear ping interval
+        if (this.pingInterval) {
+          clearInterval(this.pingInterval)
+          this.pingInterval = null
+        }
+        
+        // Don't reconnect if authentication error
+        if (event.code === 4001) {
+          console.error('Messaging WebSocket authentication failed - not reconnecting')
+          if (this.onError) {
+            this.onError(new Error('Authentication failed. Please log in again.'))
+          }
+          return
+        }
+        
+        // Don't reconnect if manually closed
+        if (event.code === 1000) {
+          console.log('Messaging WebSocket closed normally')
+          return
+        }
+        
+        // Attempt to reconnect
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++
+          console.log(`Attempting to reconnect Messaging WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
+          setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts)
+        } else {
+          console.error('Max reconnection attempts reached for Messaging WebSocket')
+          if (this.onError) {
+            this.onError(new Error('Failed to connect to messaging server after multiple attempts. Please check if the backend is running.'))
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create Messaging WebSocket:', error)
+      if (this.onError) this.onError(error)
+    }
+  }
+  
+  disconnect() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval)
+      this.pingInterval = null
+    }
+    if (this.ws) {
+      this.ws.close(1000) // Normal closure
+      this.ws = null
+    }
+  }
+  
+  // Send ping to keep connection alive
+  ping() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'ping' }))
+    }
+  }
+  
+  // Send a message
+  sendMessage(recipientId, content, messageType = 'text') {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'send_message',
+        recipient_id: recipientId,
+        content,
+        message_type: messageType
+      }))
+    } else {
+      console.error('WebSocket is not open. Cannot send message.')
+    }
+  }
+  
+  // Get messages for a conversation
+  getMessages(recipientId, limit = 50) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'get_messages',
+        recipient_id: recipientId,
+        limit
+      }))
+    } else {
+      console.error('WebSocket is not open. Cannot get messages.')
+    }
+  }
+  
+  // Mark conversation as read
+  markRead(recipientId, messageId = null) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'mark_read',
+        recipient_id: recipientId,
+        message_id: messageId
+      }))
+    } else {
+      console.error('WebSocket is not open. Cannot mark as read.')
     }
   }
 }

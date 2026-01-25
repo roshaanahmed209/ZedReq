@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { motion, useInView } from 'framer-motion'
 import { networkAPI, connectionAPI, notificationAPI } from '../services/api'
+import Messages from './Messages'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -328,6 +329,72 @@ const ButtonGroup = styled.div`
   gap: 10px;
 `
 
+const MessageButton = styled.button`
+  padding: 12px 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
+    background: var(--primary-dark);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`
+
+const MessagesPanel = styled.aside`
+  position: fixed;
+  top: 100px;
+  right: ${props => props.isOpen ? '20px' : '-400px'};
+  width: 380px;
+  height: 500px;
+  max-height: calc(100vh - 140px);
+  background: var(--bg-white);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 200;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+
+  @media (max-width: 768px) {
+    width: 350px;
+    top: 80px;
+    height: 480px;
+    max-height: calc(100vh - 120px);
+    right: ${props => props.isOpen ? '20px' : '-380px'};
+  }
+
+  @media (max-width: 480px) {
+    width: calc(100vw - 40px);
+    height: 450px;
+    max-height: calc(100vh - 100px);
+    right: ${props => props.isOpen ? '20px' : 'calc(-100vw)'};
+  }
+`
+
 const ConnectButton = styled.button`
   flex: 1;
   padding: 12px 20px;
@@ -423,7 +490,7 @@ const RequestCard = ({ request, onAccept, onReject, loading }) => {
 }
 
 // User Card Component
-const UserCard = ({ user, onConnect, isPending, isConnected, loading }) => {
+const UserCard = ({ user, onConnect, isPending, isConnected, loading, onMessage }) => {
   const ref = useRef(null)
   const inView = useInView(ref, { amount: 0.3, triggerOnce: true })
   
@@ -467,34 +534,46 @@ const UserCard = ({ user, onConnect, isPending, isConnected, loading }) => {
             ))}
           </PersonSkills>
           )}
-          <ConnectButton 
-            onClick={() => onConnect(user.id)}
-            pending={isPending}
-            connected={isConnected}
-            disabled={loading || isPending || isConnected}
-          >
-            {isConnected ? (
-              <>
+          {isConnected ? (
+            <ButtonGroup>
+              <ConnectButton 
+                connected={true}
+                disabled={true}
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
                 Connected
-              </>
-            ) : isPending ? (
-              'Pending...'
-            ) : (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="8.5" cy="7" r="4"></circle>
-                  <line x1="20" y1="8" x2="20" y2="14"></line>
-                  <line x1="23" y1="11" x2="17" y2="11"></line>
+              </ConnectButton>
+              <MessageButton onClick={() => onMessage && onMessage(user.id)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
-                Connect
-              </>
-            )}
-          </ConnectButton>
+                Message
+              </MessageButton>
+            </ButtonGroup>
+          ) : (
+            <ConnectButton 
+              onClick={() => onConnect(user.id)}
+              pending={isPending}
+              disabled={loading || isPending}
+            >
+              {isPending ? (
+                'Pending...'
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                  </svg>
+                  Connect
+                </>
+              )}
+            </ConnectButton>
+          )}
         </PersonContent>
       </PersonCard>
     </motion.div>
@@ -511,6 +590,9 @@ const Network = () => {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [pendingUserIds, setPendingUserIds] = useState(new Set())
+  const [messagesOpen, setMessagesOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState(null)
+  const [selectedUser, setSelectedUser] = useState(null)
   const navigate = useNavigate()
   const { logout, unreadNotifications } = useAuth()
 
@@ -610,6 +692,18 @@ const Network = () => {
     navigate('/feed')
   }
 
+  const handleMessageClick = (userId, userData = null) => {
+    setSelectedUserId(userId)
+    setSelectedUser(userData)
+    setMessagesOpen(true)
+  }
+
+  const handleCloseMessages = () => {
+    setMessagesOpen(false)
+    setSelectedUserId(null)
+    setSelectedUser(null)
+  }
+
   const renderContent = () => {
     if (loading) {
       return <LoadingSpinner />
@@ -692,6 +786,7 @@ const Network = () => {
                   isPending={false}
                   isConnected={true}
                   loading={false}
+                  onMessage={(userId) => handleMessageClick(userId, user)}
                 />
               ))}
             </PeopleGrid>
@@ -818,6 +913,15 @@ const Network = () => {
 
         {renderContent()}
       </MainContainer>
+
+      <MessagesPanel isOpen={messagesOpen}>
+        <Messages 
+          overlay={true} 
+          onClose={handleCloseMessages}
+          initialRecipientId={selectedUserId}
+          initialRecipient={selectedUser}
+        />
+      </MessagesPanel>
     </Container>
   )
 }
