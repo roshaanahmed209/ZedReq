@@ -86,9 +86,10 @@ class JobService:
         self, 
         poster_id: int, 
         limit: int = 50, 
-        offset: int = 0
+        offset: int = 0,
+        user_id: int = None
     ) -> List[Dict[str, Any]]:
-        """Get jobs posted by current user"""
+        """Get jobs posted by current user with enriched data"""
         jobs = (
             self.db.query(JobPosting)
             .filter(JobPosting.poster_id == poster_id)
@@ -98,10 +99,8 @@ class JobService:
             .all()
         )
         
-        return [
-            {**job.to_dict(include_relations=True)}
-            for job in jobs
-        ]
+        # Use the same enrichment method as other endpoints for consistency
+        return self._enrich_jobs(jobs, user_id)
     
     def search_jobs(
         self,
@@ -238,6 +237,14 @@ class JobService:
         return (
             self.db.query(JobPosting)
             .filter(JobPosting.status == 'active')
+            .count()
+        )
+    
+    def get_my_posted_jobs_count(self, poster_id: int) -> int:
+        """Get total count of jobs posted by user"""
+        return (
+            self.db.query(JobPosting)
+            .filter(JobPosting.poster_id == poster_id)
             .count()
         )
     
@@ -530,13 +537,14 @@ class JobService:
         jobs: List[JobPosting], 
         user_id: int = None
     ) -> List[Dict[str, Any]]:
-        """Enrich job data with poster info and user-specific flags"""
+        """Enrich job data with poster info, user-specific flags, and counts"""
         from config.database import get_database
         db_raw = get_database()
         
         results = []
         for job in jobs:
-            data = job.to_dict()
+            # Get base job data with relations (application_count, save_count)
+            data = job.to_dict(include_relations=True)
             
             # Get poster info
             poster = db_raw.fetch_one(

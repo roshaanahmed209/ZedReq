@@ -120,7 +120,7 @@ def get_connection():
     params = {
         'host': os.environ.get('POSTGRES_HOST', 'localhost'),
         'port': int(os.environ.get('POSTGRES_PORT', 5432)),
-        'dbname': os.environ.get('POSTGRES_DB', 'zedreq'),
+        'dbname': os.environ.get('POSTGRES_DB', 'ZedReq'),
         'user': os.environ.get('POSTGRES_USER', 'postgres'),
         'password': os.environ.get('POSTGRES_PASSWORD', ''),
     }

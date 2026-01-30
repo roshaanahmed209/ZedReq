@@ -23,7 +23,7 @@ def create_database_if_not_exists():
     # Get database connection parameters (without database name)
     host = os.environ.get('POSTGRES_HOST', 'localhost')
     port = int(os.environ.get('POSTGRES_PORT', 5432))
-    dbname = os.environ.get('POSTGRES_DB', 'zedreq')
+    dbname = os.environ.get('POSTGRES_DB', 'ZedReq')
     user = os.environ.get('POSTGRES_USER', 'postgres')
     password = os.environ.get('POSTGRES_PASSWORD', '')
     
@@ -646,7 +646,7 @@ def create_all_tables(db=None):
         close_db = True
     
     print("=" * 60)
-    print("Creating all tables for ZedRec database...")
+    print("Creating all tables for ZedReq database...")
     print("=" * 60)
     
     success_count = 0
@@ -692,7 +692,7 @@ def create_all_tables(db=None):
 def init_database():
     """Initialize database and create all tables"""
     print("=" * 60)
-    print("ZedRec Database Initialization")
+    print("ZedReq Database Initialization")
     print("=" * 60)
     print()
     

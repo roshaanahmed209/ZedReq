@@ -34,6 +34,7 @@ class ApplicationStatus(str, Enum):
     PENDING = "pending"
     REVIEWED = "reviewed"
     SHORTLISTED = "shortlisted"
+    ACCEPTED = "accepted"
     REJECTED = "rejected"
     HIRED = "hired"
 

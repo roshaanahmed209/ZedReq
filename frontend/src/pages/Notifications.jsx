@@ -141,7 +141,7 @@ const Notifications = () => {
       <nav className="notifications-navbar">
         <div className="notifications-nav-container">
           <div className="notifications-nav-left">
-            <h1 className="notifications-logo" onClick={() => navigate('/feed')}>ZedRec</h1>
+            <h1 className="notifications-logo" onClick={() => navigate('/feed')}>ZedReq</h1>
           </div>
           
           <div className="notifications-nav-links">

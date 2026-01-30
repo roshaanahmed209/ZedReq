@@ -1,6 +1,6 @@
 """
 Database Seed Data Generator
-Generates sample data for all tables in the ZedRec database
+Generates sample data for all tables in the ZedReq database
 """
 
 import os

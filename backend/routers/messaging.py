@@ -24,7 +24,7 @@ async def websocket_messages(
 ):
     """
     WebSocket endpoint for real-time messaging.
-    Connect with: ws://host/ws/messages?token=<jwt_token>
+    Connect with: ws://host/api/messaging/messages?token=<jwt_token>
     """
     # Validate token and get user BEFORE accepting connection
     user_id = None
@@ -49,7 +49,12 @@ async def websocket_messages(
     except Exception as e:
         logger.error(f"WebSocket authentication failed: {e}", exc_info=True)
         try:
+            # Accept connection first, then close with error
             await websocket.accept()
+            await websocket.send_json({
+                "type": "error",
+                "message": f"Authentication failed: {str(e)}"
+            })
             await websocket.close(code=4001, reason=f"Invalid authentication token: {str(e)}")
         except Exception as close_error:
             logger.error(f"Error closing WebSocket: {close_error}")
@@ -58,6 +63,7 @@ async def websocket_messages(
     # Accept connection and register with manager
     try:
         await connection_manager.connect(websocket, user_id)
+        logger.info(f"WebSocket messaging connected: User {user_id}")
         logger.info(f"WebSocket messaging connected: User {user_id}")
         
         # Initialize messaging service
@@ -226,10 +232,12 @@ async def websocket_messages(
             
     except WebSocketDisconnect:
         logger.info(f"WebSocket messaging disconnected normally for user {user_id}")
-        connection_manager.disconnect(user_id, websocket)
+        if user_id:
+            connection_manager.disconnect(user_id, websocket)
     except Exception as e:
         logger.error(f"WebSocket messaging error for user {user_id}: {e}", exc_info=True)
-        connection_manager.disconnect(user_id, websocket)
+        if user_id:
+            connection_manager.disconnect(user_id, websocket)
 
 
 class SendMessageRequest(BaseModel):

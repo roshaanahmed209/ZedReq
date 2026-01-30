@@ -1,5 +1,5 @@
 """
-Create All Tables for ZedRec Database
+Create All Tables for ZedReq Database
 Generates SQL for creating all tables and indexes in the correct order (respecting foreign keys)
 """
 
@@ -481,7 +481,7 @@ def create_all_tables(db=None):
         close_db = True
     
     print("=" * 60)
-    print("Creating all tables for ZedRec database...")
+    print("Creating all tables for ZedReq database...")
     print("=" * 60)
     
     success_count = 0
@@ -520,7 +520,7 @@ def create_all_tables(db=None):
 
 def get_create_sql():
     """Get all CREATE TABLE SQL as a single string"""
-    sql_parts = ["-- ZedRec Database Schema", "-- Generated table creation script\n"]
+    sql_parts = ["-- ZedReq Database Schema", "-- Generated table creation script\n"]
     
     for table_name, sql in TABLES_IN_ORDER:
         sql_parts.append(f"-- Table: {table_name}")

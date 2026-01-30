@@ -112,7 +112,7 @@ async def get_remote_jobs(
     }
 
 
-@router.get("/my-posts")
+@router.get("/my-posts", response_model=JobPostingListResponse)
 async def get_my_posted_jobs(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -120,11 +120,21 @@ async def get_my_posted_jobs(
     service: JobService = Depends(get_job_service)
 ):
     """Get jobs posted by current user"""
-    jobs = service.get_my_posted_jobs(current_user["id"], limit, offset)
+    jobs = service.get_my_posted_jobs(
+        poster_id=current_user["id"], 
+        limit=limit, 
+        offset=offset,
+        user_id=current_user["id"]  # Pass user_id for enrichment
+    )
+    
+    # Get total count for pagination
+    total = service.get_my_posted_jobs_count(current_user["id"])
     
     return {
         "jobs": jobs,
-        "total": len(jobs)
+        "total": total,
+        "limit": limit,
+        "offset": offset
     }
 
 

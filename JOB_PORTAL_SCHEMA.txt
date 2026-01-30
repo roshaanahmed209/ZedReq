@@ -1,5 +1,5 @@
 ================================================================================
-                    ZEDREC JOB PORTAL - DATABASE SCHEMA
+                    ZedReq JOB PORTAL - DATABASE SCHEMA
                          Discussion Summary
                          Date: January 21, 2025
 ================================================================================
