@@ -9,6 +9,7 @@ from .feed import router as feed_router
 from .posts import router as posts_router
 from .jobs import router as jobs_router
 from .messaging import router as messaging_router
+from .lms import router as lms_router
 
 __all__ = [
     "auth_router",
@@ -20,5 +21,6 @@ __all__ = [
     "feed_router",
     "posts_router",
     "jobs_router",
-    "messaging_router"
+    "messaging_router",
+    "lms_router"
 ]

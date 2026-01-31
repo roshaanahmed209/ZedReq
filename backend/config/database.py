@@ -1,11 +1,14 @@
 """Database connection and utilities for PostgreSQL"""
 import os
 from typing import Dict, Any, Optional, List
+from pathlib import Path
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load .env from project root
+_project_root = Path(__file__).parent.parent.parent
+_env_file = _project_root / ".env"
+load_dotenv(_env_file)
 
 # Try psycopg3 first, fall back to psycopg2
 try:

@@ -1,11 +1,15 @@
 """FastAPI Application Entry Point"""
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 import traceback
+import subprocess
+import sys
+from pathlib import Path
 
 # Import settings with error handling
 try:
@@ -29,8 +33,76 @@ from routers import (
     feed_router,
     posts_router,
     jobs_router,
-    messaging_router
+    messaging_router,
+    lms_router
 )
+
+
+def build_frontend():
+    """Build the React frontend application"""
+    # Get the project root directory (parent of backend)
+    project_root = Path(__file__).parent.parent
+    frontend_dir = project_root / "frontend"
+    dist_dir = frontend_dir / "dist"
+    
+    # Check if frontend directory exists
+    if not frontend_dir.exists():
+        print(f"Warning: Frontend directory not found at {frontend_dir}")
+        return False
+    
+    # Check if dist directory already exists and contains index.html
+    if dist_dir.exists() and (dist_dir / "index.html").exists():
+        print(f"Frontend build already exists at {dist_dir}. Skipping build.")
+        return True
+    
+    print("Building React frontend...")
+    try:
+        # Check if node_modules exists, if not, install dependencies first
+        node_modules = frontend_dir / "node_modules"
+        if not node_modules.exists():
+            print("Installing frontend dependencies...")
+            install_result = subprocess.run(
+                ["npm", "install"],
+                cwd=str(frontend_dir),
+                capture_output=True,
+                text=True,
+                shell=True if sys.platform == "win32" else False
+            )
+            if install_result.returncode != 0:
+                print(f"Error installing dependencies:")
+                print(f"STDOUT: {install_result.stdout}")
+                print(f"STDERR: {install_result.stderr}")
+                return False
+            print("Dependencies installed successfully")
+        
+        # Build the frontend
+        print(f"Running 'npm run build' in {frontend_dir}...")
+        build_result = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+            shell=True if sys.platform == "win32" else False
+        )
+        
+        if build_result.returncode != 0:
+            print(f"Error building frontend:")
+            print(f"STDOUT: {build_result.stdout}")
+            print(f"STDERR: {build_result.stderr}")
+            return False
+        
+        # Verify dist directory was created
+        if not dist_dir.exists():
+            print(f"Warning: Build completed but dist directory not found at {dist_dir}")
+            return False
+        
+        print(f"Frontend built successfully! Dist directory: {dist_dir}")
+        return True
+    except Exception as e:
+        print(f"Error building frontend: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
 @asynccontextmanager
@@ -38,6 +110,17 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown events"""
     # Startup
     print("Starting up FastAPI application...")
+    
+    # Build frontend before starting
+    build_success = build_frontend()
+    
+    # Setup frontend routes after build
+    if build_success:
+        setup_frontend_routes()
+        print("Frontend routes configured")
+    else:
+        print("Warning: Frontend build failed or skipped. Frontend routes may not work.")
+    
     init_database()
     print("Database initialized")
     yield
@@ -56,28 +139,41 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS with fallback
+# Configure CORS from environment variables
+cors_origins = None
+
+# Try to get from settings first
 if _settings_loaded and settings:
     try:
         cors_origins = settings.get_cors_origins()
     except Exception as e:
         print(f"Warning: Could not get CORS origins from settings: {e}")
-        cors_origins = ["http://localhost:3000", "http://localhost:5173"]
-else:
-    # Default CORS origins if settings not loaded
+
+# Fallback: Try reading directly from environment variable
+if not cors_origins:
+    cors_origins_str = os.environ.get("CORS_ORIGINS")
+    if cors_origins_str:
+        cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+
+# Final fallback: Use defaults
+if not cors_origins:
     cors_origins = ["http://localhost:3000", "http://localhost:5173"]
+    print("Warning: Using default CORS origins. Set CORS_ORIGINS in .env file to configure.")
 
 print(f"CORS configured with origins: {cors_origins}")
+print("Note: Make sure CORS_ORIGINS in .env includes the server's own origin (e.g., http://localhost:5000) if frontend is served from the same server")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
-
+server_origins = cors_origins + ["http://localhost:5000", "http://localhost:5173"]
 # Global exception handlers to ensure CORS headers are always included
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -165,18 +261,15 @@ app.include_router(feed_router, prefix="/api/feed", tags=["Feed"])
 app.include_router(posts_router, prefix="/api/posts", tags=["Posts"])
 app.include_router(jobs_router, prefix="/api/jobs", tags=["Jobs"])
 app.include_router(messaging_router, prefix="/api/messaging", tags=["Messaging"])
+app.include_router(lms_router, prefix="/api/lms", tags=["LMS"])
 
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "message": "ZedReq API Server",
-        "version": "2.0.0",
-        "status": "running"
-    }
+# Get paths for static files
+project_root = Path(__file__).parent.parent
+frontend_dist = project_root / "frontend" / "dist"
+frontend_static = project_root / "frontend" / "static"
 
-
+# Health check endpoint (must be before catch-all)
 @app.get("/health")
 async def health_check():
     """Detailed health check"""
@@ -185,6 +278,114 @@ async def health_check():
         "database": "connected",
         "version": "2.0.0"
     }
+
+# Track if assets are mounted
+_assets_mounted = False
+_static_mounted = False
+
+# Mount static directory (for videos, images, etc. from frontend/static/)
+if frontend_static.exists():
+    try:
+        app.mount("/static", StaticFiles(directory=str(frontend_static)), name="static")
+        _static_mounted = True
+        print(f"Static files mounted from {frontend_static}")
+    except Exception as e:
+        print(f"Warning: Could not mount static files at startup: {e}")
+
+# Mount assets directory if it exists at startup (mounts take precedence over routes)
+if frontend_dist.exists() and (frontend_dist / "assets").exists():
+    try:
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+        _assets_mounted = True
+        print(f"Assets mounted from {frontend_dist / 'assets'}")
+    except Exception as e:
+        print(f"Warning: Could not mount assets at startup: {e}")
+
+# Function to setup frontend serving routes (called after build)
+def setup_frontend_routes():
+    """Setup routes for serving the frontend after build"""
+    global _assets_mounted, _static_mounted
+    
+    if not frontend_dist.exists():
+        return False
+    
+    # Mount static directory if not already mounted
+    if frontend_static.exists() and not _static_mounted:
+        try:
+            app.mount("/static", StaticFiles(directory=str(frontend_static)), name="static")
+            _static_mounted = True
+            print(f"Static files mounted from {frontend_static}")
+        except Exception as e:
+            print(f"Warning: Could not mount static files: {e}")
+    
+    # Mount assets directory for JS, CSS, and other assets if not already mounted
+    if (frontend_dist / "assets").exists() and not _assets_mounted:
+        try:
+            app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+            _assets_mounted = True
+            print(f"Assets mounted from {frontend_dist / 'assets'}")
+        except Exception as e:
+            print(f"Warning: Could not mount assets: {e}")
+    
+    return True
+
+# Serve root path - dynamically checks if frontend is built
+@app.get("/")
+async def serve_root():
+    """Serve React app index.html for root path or fallback message"""
+    if frontend_dist.exists():
+        index_file = frontend_dist / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+    
+    # Fallback if frontend not built
+    return {
+        "message": "ZedReq API Server",
+        "version": "2.0.0",
+        "status": "running",
+        "note": "Frontend not built. Building now or check build logs."
+    }
+
+# Serve static files from dist root and handle React Router client-side routes
+@app.get("/{file_path:path}")
+async def serve_frontend(request: Request, file_path: str):
+    """Serve frontend files or index.html for React Router"""
+    # Exclude API routes, WebSocket routes, health endpoint, assets, and static
+    # Assets and static are handled by mounts, but if mounts don't exist yet, we'll handle them here
+    if (file_path.startswith("api/") or 
+        file_path.startswith("ws/") or 
+        file_path == "health"):
+        raise StarletteHTTPException(status_code=404, detail="Not found")
+    
+    # Only serve if dist exists
+    if not frontend_dist.exists():
+        raise StarletteHTTPException(status_code=404, detail="Frontend not built")
+    
+    # Handle static files if mount doesn't exist (fallback)
+    if file_path.startswith("static/"):
+        static_file = frontend_static / file_path.replace("static/", "", 1)
+        if static_file.exists() and static_file.is_file():
+            return FileResponse(str(static_file))
+        raise StarletteHTTPException(status_code=404, detail="Static file not found")
+    
+    # Handle assets if mount doesn't exist (fallback)
+    if file_path.startswith("assets/"):
+        assets_file = frontend_dist / file_path
+        if assets_file.exists() and assets_file.is_file():
+            return FileResponse(str(assets_file))
+        raise StarletteHTTPException(status_code=404, detail="Asset not found")
+    
+    # Check if it's a static file request (like logo.svg, favicon, etc.) from dist root
+    file_path_obj = frontend_dist / file_path
+    if file_path_obj.exists() and file_path_obj.is_file():
+        return FileResponse(str(file_path_obj))
+    
+    # For all other routes (React Router client-side routes), serve index.html
+    index_file = frontend_dist / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    
+    raise StarletteHTTPException(status_code=404, detail="Not found")
 
 
 if __name__ == "__main__":

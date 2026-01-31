@@ -5,10 +5,13 @@ It reads environment variables directly using dotenv.
 """
 import os
 import sys
+from pathlib import Path
 
-# Load environment variables
+# Load .env from project root
 from dotenv import load_dotenv
-load_dotenv()
+_project_root = Path(__file__).parent.parent.parent
+_env_file = _project_root / ".env"
+load_dotenv(_env_file)
 
 # Try psycopg3 first, fall back to psycopg2
 try:

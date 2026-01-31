@@ -7,11 +7,12 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Get the backend directory path
+# Get the project root directory path (parent of backend)
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(backend_dir)
 
-# Load environment variables from backend/.env before importing config
-env_path = Path(backend_dir) / '.env'
+# Load environment variables from project root .env
+env_path = Path(project_root) / '.env'
 if env_path.exists():
     load_dotenv(env_path)
 else:

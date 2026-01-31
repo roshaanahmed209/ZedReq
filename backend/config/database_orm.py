@@ -1,11 +1,15 @@
 """SQLAlchemy ORM Database Configuration"""
 import os
 from typing import Generator
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from project root
+_project_root = Path(__file__).parent.parent.parent
+_env_file = _project_root / ".env"
+load_dotenv(_env_file)
 
 # Build database URL
 def get_database_url() -> str:
@@ -31,8 +35,10 @@ DATABASE_URL = get_database_url()
 
 engine = create_engine(
     DATABASE_URL,
-    pool_size=5,
-    max_overflow=10,
+    pool_size=int(os.environ.get('DB_POOL_SIZE', 50)),
+    max_overflow=int(os.environ.get('DB_POOL_MAX_OVERFLOW', 100)),
+    pool_timeout=30,
+    pool_recycle=3600,
     pool_pre_ping=True,  # Verify connections before using
     echo=os.environ.get('SQL_ECHO', 'false').lower() == 'true'
 )

@@ -18,7 +18,13 @@ sys.path.insert(0, backend_dir)
 def create_database_if_not_exists():
     """Create the database if it doesn't exist"""
     from dotenv import load_dotenv
-    load_dotenv()
+    from pathlib import Path
+    
+    # Load .env from project root
+    # File is at backend/db/init_database.py, so go up 3 levels to project root
+    project_root = Path(__file__).parent.parent.parent
+    env_file = project_root / ".env"
+    load_dotenv(env_file)
     
     # Get database connection parameters (without database name)
     host = os.environ.get('POSTGRES_HOST', 'localhost')

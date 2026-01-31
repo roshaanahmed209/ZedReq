@@ -2,6 +2,11 @@
 from pydantic_settings import BaseSettings
 from typing import List
 from functools import lru_cache
+from pathlib import Path
+
+# Get project root directory (parent of backend)
+_project_root = Path(__file__).parent.parent.parent
+_env_file = _project_root / ".env"
 
 
 class Settings(BaseSettings):
@@ -32,7 +37,7 @@ class Settings(BaseSettings):
     DEBUG: bool
     
     class Config:
-        env_file = ".env"
+        env_file = str(_env_file)
         env_file_encoding = "utf-8"
         extra = "ignore"
     

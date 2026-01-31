@@ -16,22 +16,13 @@ from . import post
 from . import like
 from . import network
 
-# LMS models
-from . import lms_dashboard
-from . import lms_course
-from . import lms_user_course
-from . import lms_course_section
-from . import lms_user_section_progress
-from . import lms_weekly_performance
-from . import lms_domain
-from . import lms_user_domain_performance
-from . import lms_activity
-from . import lms_question
-from . import lms_user_answer
-from . import lms_recommendation
-from . import lms_deadline
-from . import lms_certificate
-from . import lms_course_resource
+# LMS ORM models (SQLAlchemy)
+from .orm import (
+    LMSCourse, LMSDomain, LMSCourseSection, LMSCourseResource,
+    LMSQuestion, LMSUserCourse, LMSUserSectionProgress, LMSUserAnswer,
+    LMSUserDomainPerformance, LMSDashboard, LMSWeeklyPerformance,
+    LMSActivity, LMSRecommendation, LMSDeadline, LMSCertificate
+)
 
 __all__ = [
     # Core
@@ -40,10 +31,9 @@ __all__ = [
     'JobPosting', 'JobApplication', 'JobSaved',
     # Legacy
     'payment', 'description', 'job', 'post', 'like', 'network',
-    # LMS
-    'lms_dashboard', 'lms_course', 'lms_user_course', 'lms_course_section',
-    'lms_user_section_progress', 'lms_weekly_performance', 'lms_domain',
-    'lms_user_domain_performance', 'lms_activity', 'lms_question',
-    'lms_user_answer', 'lms_recommendation', 'lms_deadline', 'lms_certificate',
-    'lms_course_resource'
+    # LMS ORM Models
+    'LMSCourse', 'LMSDomain', 'LMSCourseSection', 'LMSCourseResource',
+    'LMSQuestion', 'LMSUserCourse', 'LMSUserSectionProgress', 'LMSUserAnswer',
+    'LMSUserDomainPerformance', 'LMSDashboard', 'LMSWeeklyPerformance',
+    'LMSActivity', 'LMSRecommendation', 'LMSDeadline', 'LMSCertificate',
 ]

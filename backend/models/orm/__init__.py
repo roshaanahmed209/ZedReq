@@ -11,6 +11,23 @@ from .job_posting import JobPosting
 from .job_application import JobApplication
 from .job_saved import JobSaved
 
+# LMS ORM Models
+from .lms_course import LMSCourse
+from .lms_domain import LMSDomain
+from .lms_course_section import LMSCourseSection
+from .lms_course_resource import LMSCourseResource
+from .lms_question import LMSQuestion
+from .lms_user_course import LMSUserCourse
+from .lms_user_section_progress import LMSUserSectionProgress
+from .lms_user_answer import LMSUserAnswer
+from .lms_user_domain_performance import LMSUserDomainPerformance
+from .lms_dashboard import LMSDashboard
+from .lms_weekly_performance import LMSWeeklyPerformance
+from .lms_activity import LMSActivity
+from .lms_recommendation import LMSRecommendation
+from .lms_deadline import LMSDeadline
+from .lms_certificate import LMSCertificate
+
 __all__ = [
     'User',
     'Connection',
@@ -21,5 +38,21 @@ __all__ = [
     'Description',
     'JobPosting',
     'JobApplication', 
-    'JobSaved'
+    'JobSaved',
+    # LMS Models
+    'LMSCourse',
+    'LMSDomain',
+    'LMSCourseSection',
+    'LMSCourseResource',
+    'LMSQuestion',
+    'LMSUserCourse',
+    'LMSUserSectionProgress',
+    'LMSUserAnswer',
+    'LMSUserDomainPerformance',
+    'LMSDashboard',
+    'LMSWeeklyPerformance',
+    'LMSActivity',
+    'LMSRecommendation',
+    'LMSDeadline',
+    'LMSCertificate',
 ]
