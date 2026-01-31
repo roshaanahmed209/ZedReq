@@ -314,6 +314,110 @@ export const messagingAPI = {
     api.post(`/api/messaging/messages/${recipientId}/read`),
 }
 
+// LMS API methods
+export const lmsAPI = {
+  // Course endpoints
+  getCourses: (params = {}) =>
+    api.get('/api/lms/courses', { params }),
+  
+  getCourse: (courseId) =>
+    api.get(`/api/lms/courses/${courseId}`),
+  
+  createCourse: (courseData) =>
+    api.post('/api/lms/courses', courseData),
+  
+  updateCourse: (courseId, courseData) =>
+    api.put(`/api/lms/courses/${courseId}`, courseData),
+  
+  getCourseSections: (courseId) =>
+    api.get(`/api/lms/courses/${courseId}/sections`),
+  
+  getCourseResources: (courseId) =>
+    api.get(`/api/lms/courses/${courseId}/resources`),
+  
+  // User course endpoints
+  enrollInCourse: (courseId) =>
+    api.post(`/api/lms/courses/${courseId}/enroll`),
+  
+  getMyCourses: (params = {}) =>
+    api.get('/api/lms/my-courses', { params }),
+  
+  getMyCourse: (courseId) =>
+    api.get(`/api/lms/my-courses/${courseId}`),
+  
+  updateCourseProgress: (courseId, progress) =>
+    api.put(`/api/lms/my-courses/${courseId}/progress`, { progress }),
+  
+  // Dashboard endpoints
+  getDashboard: () =>
+    api.get('/api/lms/dashboard'),
+  
+  getWeeklyPerformance: (days = 7) =>
+    api.get('/api/lms/dashboard/weekly', { params: { days } }),
+  
+  getDomainPerformance: () =>
+    api.get('/api/lms/dashboard/domains'),
+  
+  // Question/Answer endpoints
+  getCourseQuestions: (courseId, sectionId = null) => {
+    const params = sectionId ? { section_id: sectionId } : {}
+    return api.get(`/api/lms/courses/${courseId}/questions`, { params })
+  },
+  
+  getQuestion: (questionId) =>
+    api.get(`/api/lms/questions/${questionId}`),
+  
+  createQuestion: (questionData) =>
+    api.post('/api/lms/questions', questionData),
+  
+  submitAnswer: (questionId, answerText) =>
+    api.post(`/api/lms/questions/${questionId}/answer`, {
+      question_id: questionId,
+      answer_text: answerText
+    }),
+  
+  evaluateAnswer: (answerId, evaluation) =>
+    api.put(`/api/lms/answers/${answerId}/evaluate`, evaluation),
+  
+  getMyAnswers: (params = {}) =>
+    api.get('/api/lms/my-answers', { params }),
+  
+  // Activity endpoints
+  getActivities: (limit = 10) =>
+    api.get('/api/lms/activities', { params: { limit } }),
+  
+  // Recommendation endpoints
+  getRecommendations: (limit = 5) =>
+    api.get('/api/lms/recommendations', { params: { limit } }),
+  
+  dismissRecommendation: (recommendationId) =>
+    api.post(`/api/lms/recommendations/${recommendationId}/dismiss`),
+  
+  // Deadline endpoints
+  getDeadlines: (limit = 10) =>
+    api.get('/api/lms/deadlines', { params: { limit } }),
+  
+  createDeadline: (deadlineData) =>
+    api.post('/api/lms/deadlines', deadlineData),
+  
+  completeDeadline: (deadlineId) =>
+    api.put(`/api/lms/deadlines/${deadlineId}/complete`),
+  
+  // Certificate endpoints
+  getCertificates: () =>
+    api.get('/api/lms/certificates'),
+  
+  getCertificateByNumber: (certificateNumber) =>
+    api.get(`/api/lms/certificates/${certificateNumber}`),
+  
+  // Section progress endpoints
+  getSectionProgress: (sectionId) =>
+    api.get(`/api/lms/sections/${sectionId}/progress`),
+  
+  updateSectionProgress: (sectionId, progressData) =>
+    api.put(`/api/lms/sections/${sectionId}/progress`, progressData),
+}
+
 // WebSocket connection for real-time notifications
 export class NotificationWebSocket {
   constructor(onNotification, onError = null) {

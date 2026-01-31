@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { motion, useInView } from 'framer-motion'
+import { lmsAPI } from '../services/api'
 import '../css/pages/LMS.css'
 
 const fadeIn = keyframes`
@@ -1358,232 +1359,189 @@ const LMS = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
-  const courses = [
-    {
-      id: 1,
-      title: 'Introduction to React',
-      description: 'Learn the fundamentals of React and build modern web applications',
-      icon: 'RC',
-      lessons: 24,
-      duration: '6h 30m',
-      progress: 65
-    },
-    {
-      id: 2,
-      title: 'Advanced JavaScript',
-      description: 'Master advanced JavaScript concepts and ES6+ features',
-      icon: 'JS',
-      lessons: 32,
-      duration: '8h 15m',
-      progress: 40
-    },
-    {
-      id: 3,
-      title: 'Node.js Backend Development',
-      description: 'Build scalable backend applications with Node.js and Express',
-      icon: 'ND',
-      lessons: 28,
-      duration: '7h 45m',
-      progress: 20
-    },
-    {
-      id: 4,
-      title: 'Database Design',
-      description: 'Learn SQL, NoSQL databases and database optimization techniques',
-      icon: 'DB',
-      lessons: 20,
-      duration: '5h 20m',
-      progress: 0
-    },
-    {
-      id: 5,
-      title: 'UI/UX Design Principles',
-      description: 'Create beautiful and user-friendly interfaces',
-      icon: 'UI',
-      lessons: 18,
-      duration: '4h 30m',
-      progress: 100
-    },
-    {
-      id: 6,
-      title: 'Python for Data Science',
-      description: 'Data analysis and visualization with Python libraries',
-      icon: 'PY',
-      lessons: 30,
-      duration: '9h 00m',
-      progress: 15
-    },
-    {
-      id: 7,
-      title: 'TypeScript Fundamentals',
-      description: 'Learn TypeScript and build type-safe applications',
-      icon: 'TS',
-      lessons: 26,
-      duration: '7h 00m',
-      progress: 85
-    },
-    {
-      id: 8,
-      title: 'Docker & Containerization',
-      description: 'Master containerization and deployment with Docker',
-      icon: 'DK',
-      lessons: 22,
-      duration: '6h 15m',
-      progress: 0
-    },
-    {
-      id: 9,
-      title: 'GraphQL API Development',
-      description: 'Build modern APIs with GraphQL and Apollo',
-      icon: 'GQ',
-      lessons: 25,
-      duration: '6h 45m',
-      progress: 50
-    },
-    {
-      id: 10,
-      title: 'AWS Cloud Services',
-      description: 'Deploy and manage applications on Amazon Web Services',
-      icon: 'AWS',
-      lessons: 35,
-      duration: '10h 30m',
-      progress: 0
-    },
-    {
-      id: 11,
-      title: 'Redux State Management',
-      description: 'Manage complex application state with Redux and Redux Toolkit',
-      icon: 'RX',
-      lessons: 20,
-      duration: '5h 45m',
-      progress: 100
-    },
-    {
-      id: 12,
-      title: 'Testing with Jest',
-      description: 'Write comprehensive tests for JavaScript applications',
-      icon: 'JT',
-      lessons: 18,
-      duration: '4h 50m',
-      progress: 75
-    },
-    {
-      id: 13,
-      title: 'Next.js Full Stack',
-      description: 'Build server-side rendered React applications with Next.js',
-      icon: 'NX',
-      lessons: 30,
-      duration: '8h 30m',
-      progress: 30
-    },
-    {
-      id: 14,
-      title: 'MongoDB Mastery',
-      description: 'Master NoSQL database design and operations with MongoDB',
-      icon: 'MG',
-      lessons: 24,
-      duration: '6h 20m',
-      progress: 0
-    },
-    {
-      id: 15,
-      title: 'Git Version Control',
-      description: 'Professional Git workflows and collaboration techniques',
-      icon: 'GT',
-      lessons: 15,
-      duration: '3h 40m',
-      progress: 100
-    },
-    {
-      id: 16,
-      title: 'CSS Grid & Flexbox',
-      description: 'Modern CSS layouts and responsive design techniques',
-      icon: 'CS',
-      lessons: 22,
-      duration: '5h 30m',
-      progress: 95
-    },
-    {
-      id: 17,
-      title: 'REST API Best Practices',
-      description: 'Design and build robust RESTful APIs',
-      icon: 'API',
-      lessons: 20,
-      duration: '5h 15m',
-      progress: 0
-    },
-    {
-      id: 18,
-      title: 'Webpack & Build Tools',
-      description: 'Optimize and bundle modern web applications',
-      icon: 'WP',
-      lessons: 16,
-      duration: '4h 25m',
-      progress: 45
-    },
-    {
-      id: 19,
-      title: 'Web Security Essentials',
-      description: 'Protect applications from common security vulnerabilities',
-      icon: 'SEC',
-      lessons: 28,
-      duration: '7h 50m',
-      progress: 60
-    },
-    {
-      id: 20,
-      title: 'Microservices Architecture',
-      description: 'Design and implement scalable microservices systems',
-      icon: 'MS',
-      lessons: 32,
-      duration: '9h 15m',
-      progress: 0
-    },
-    {
-      id: 21,
-      title: 'Tailwind CSS',
-      description: 'Rapidly build modern websites with utility-first CSS',
-      icon: 'TW',
-      lessons: 18,
-      duration: '4h 35m',
-      progress: 100
-    },
-    {
-      id: 22,
-      title: 'Vue.js Essentials',
-      description: 'Build interactive user interfaces with Vue.js framework',
-      icon: 'VU',
-      lessons: 26,
-      duration: '7h 10m',
-      progress: 25
-    },
-    {
-      id: 23,
-      title: 'PostgreSQL Database',
-      description: 'Advanced relational database management with PostgreSQL',
-      icon: 'PG',
-      lessons: 24,
-      duration: '6h 40m',
-      progress: 0
-    },
-    {
-      id: 24,
-      title: 'Agile & Scrum',
-      description: 'Modern project management and agile methodologies',
-      icon: 'AG',
-      lessons: 12,
-      duration: '3h 20m',
-      progress: 100
+  // State for API data
+  const [courses, setCourses] = useState([])
+  const [dashboard, setDashboard] = useState(null)
+  const [weeklyPerformance, setWeeklyPerformance] = useState([])
+  const [domainPerformance, setDomainPerformance] = useState([])
+  const [activities, setActivities] = useState([])
+  const [recommendations, setRecommendations] = useState([])
+  const [deadlines, setDeadlines] = useState([])
+  const [certificates, setCertificates] = useState([])
+  const [courseQuestions, setCourseQuestions] = useState([])
+  const [courseSections, setCourseSections] = useState([])
+  const [courseResources, setCourseResources] = useState([])
+  const [answers, setAnswers] = useState({}) // questionId -> answer text
+
+  // Loading and error states
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+
+  // Fetch all data on component mount
+  useEffect(() => {
+    fetchAllData()
+  }, [])
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch all data in parallel
+      const [
+        coursesRes,
+        dashboardRes,
+        weeklyRes,
+        domainRes,
+        activitiesRes,
+        recommendationsRes,
+        deadlinesRes,
+        certificatesRes
+      ] = await Promise.all([
+        lmsAPI.getMyCourses({ limit: 100 }),
+        lmsAPI.getDashboard(),
+        lmsAPI.getWeeklyPerformance(7),
+        lmsAPI.getDomainPerformance(),
+        lmsAPI.getActivities(10),
+        lmsAPI.getRecommendations(5),
+        lmsAPI.getDeadlines(10),
+        lmsAPI.getCertificates()
+      ])
+
+      // Set courses
+      if (coursesRes.data && coursesRes.data.courses) {
+        setCourses(coursesRes.data.courses.map(course => ({
+          id: course.id,
+          title: course.title,
+          description: course.description || '',
+          icon: course.icon || course.title.substring(0, 2).toUpperCase(),
+          lessons: course.lessons || 0,
+          duration: course.duration || 'N/A',
+          progress: course.progress || 0,
+          status: course.status || 'not_started',
+          category: course.category,
+          difficulty: course.difficulty
+        })))
+      }
+
+      // Set dashboard
+      if (dashboardRes.data) {
+        setDashboard(dashboardRes.data)
+      }
+
+      // Set weekly performance
+      if (weeklyRes.data && weeklyRes.data.performance) {
+        setWeeklyPerformance(weeklyRes.data.performance)
+      }
+
+      // Set domain performance
+      if (domainRes.data && domainRes.data.performance) {
+        setDomainPerformance(domainRes.data.performance)
+      }
+
+      // Set activities
+      if (activitiesRes.data && activitiesRes.data.activities) {
+        setActivities(activitiesRes.data.activities)
+      }
+
+      // Set recommendations
+      if (recommendationsRes.data && recommendationsRes.data.recommendations) {
+        setRecommendations(recommendationsRes.data.recommendations)
+      }
+
+      // Set deadlines
+      if (deadlinesRes.data && deadlinesRes.data.deadlines) {
+        setDeadlines(deadlinesRes.data.deadlines)
+      }
+
+      // Set certificates
+      if (certificatesRes.data && certificatesRes.data.certificates) {
+        setCertificates(certificatesRes.data.certificates)
+      }
+
+    } catch (err) {
+      console.error('Error fetching LMS data:', err)
+      setError(err.response?.data?.detail || err.message || 'Failed to load LMS data')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  // Fetch course details when portal opens
+  useEffect(() => {
+    if (selectedCourse && isPortalOpen) {
+      fetchCourseDetails(selectedCourse.id)
+    }
+  }, [selectedCourse, isPortalOpen])
+
+  const fetchCourseDetails = async (courseId) => {
+    try {
+      setQuestionsLoading(true)
+      
+      const [questionsRes, sectionsRes, resourcesRes] = await Promise.all([
+        lmsAPI.getCourseQuestions(courseId),
+        lmsAPI.getCourseSections(courseId),
+        lmsAPI.getCourseResources(courseId)
+      ])
+
+      if (questionsRes.data && questionsRes.data.questions) {
+        setCourseQuestions(questionsRes.data.questions)
+      }
+
+      if (sectionsRes.data && sectionsRes.data.sections) {
+        setCourseSections(sectionsRes.data.sections)
+      }
+
+      if (resourcesRes.data && resourcesRes.data.resources) {
+        setCourseResources(resourcesRes.data.resources)
+      }
+
+    } catch (err) {
+      console.error('Error fetching course details:', err)
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
 
   const filteredCourses = courses.filter(course => {
     if (activeTab === 'all') return true
     if (activeTab === 'inProgress') return course.progress > 0 && course.progress < 100
-    if (activeTab === 'completed') return course.progress === 100
-    if (activeTab === 'notStarted') return course.progress === 0
+    if (activeTab === 'completed') return course.progress === 100 || course.status === 'completed'
+    if (activeTab === 'notStarted') return course.progress === 0 || course.status === 'not_started'
     return true
   })
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now - date)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return date.toLocaleDateString()
+  }
+
+  // Format deadline date
+  const formatDeadline = (deadlineDate) => {
+    if (!deadlineDate) return ''
+    const date = new Date(deadlineDate)
+    const now = new Date()
+    const diffTime = date - now
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays < 0) return 'Overdue'
+    if (diffDays === 0) return 'Due today'
+    if (diffDays === 1) return 'Due tomorrow'
+    if (diffDays < 7) return `Due in ${diffDays} days`
+    if (diffDays < 30) return `Due in ${Math.floor(diffDays / 7)} weeks`
+    return `Due in ${Math.floor(diffDays / 30)} months`
+  }
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target
@@ -1608,30 +1566,51 @@ const LMS = () => {
     }, 400)
   }
 
-  const handleSubmitAnswers = () => {
-    // Handle answer submission
-    alert('Answers submitted successfully!')
-    handleClosePortal()
+  const handleAnswerChange = (questionId, answerText) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answerText
+    }))
   }
 
-  const courseQuestions = [
-    {
-      id: 1,
-      question: "What are the key concepts you've learned from this course so far?"
-    },
-    {
-      id: 2,
-      question: "Describe a practical application where you can use the skills from this course."
-    },
-    {
-      id: 3,
-      question: "What challenges did you face while learning this topic, and how did you overcome them?"
-    },
-    {
-      id: 4,
-      question: "How would you explain the core concepts of this course to a beginner?"
+  const handleSubmitAnswers = async () => {
+    if (!selectedCourse) return
+
+    try {
+      // Submit all answers
+      const submitPromises = Object.entries(answers)
+        .filter(([_, answer]) => answer && answer.trim())
+        .map(([questionId, answerText]) =>
+          lmsAPI.submitAnswer(parseInt(questionId), answerText)
+        )
+
+      await Promise.all(submitPromises)
+      
+      alert('Answers submitted successfully!')
+      setAnswers({})
+      handleClosePortal()
+      
+      // Refresh dashboard to update stats
+      fetchAllData()
+    } catch (err) {
+      console.error('Error submitting answers:', err)
+      alert('Failed to submit answers. Please try again.')
     }
-  ]
+  }
+
+  const handleGenerateQuestions = async () => {
+    if (!selectedCourse) return
+
+    try {
+      // This would call the agent to generate questions
+      // For now, we'll just show an alert
+      alert('Question generation feature coming soon!')
+      // TODO: Integrate with LMS agent when ready
+    } catch (err) {
+      console.error('Error generating questions:', err)
+      alert('Failed to generate questions. Please try again.')
+    }
+  }
 
   return (
     <Container>
@@ -1676,7 +1655,15 @@ const LMS = () => {
           <PanelContent>
             <ScrollGradientTop opacity={topGradientOpacity} />
             <ScrollableContent ref={scrollRef} onScroll={handleScroll}>
-              {filteredCourses.length > 0 ? (
+              {loading ? (
+                <EmptyState>
+                  <EmptyText>Loading courses...</EmptyText>
+                </EmptyState>
+              ) : error ? (
+                <EmptyState>
+                  <EmptyText>Error: {error}</EmptyText>
+                </EmptyState>
+              ) : filteredCourses.length > 0 ? (
                 <CoursesGrid>
                   {filteredCourses.map((course, index) => (
                     <AnimatedCourseCard key={course.id} course={course} index={index} onCourseClick={handleCourseClick} />
@@ -1727,47 +1714,64 @@ const LMS = () => {
             </TopBanner>
             
             {/* Stats Overview */}
-            <StatCard>
-              <div>
-                <StatValue>847</StatValue>
-                <StatLabel>Total Questions</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-                +12% from last week
-              </StatChange>
-            </StatCard>
+            {loading ? (
+              <StatCard>
+                <div>
+                  <StatValue>...</StatValue>
+                  <StatLabel>Loading...</StatLabel>
+                </div>
+              </StatCard>
+            ) : dashboard ? (
+              <>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.total_questions || 0}</StatValue>
+                    <StatLabel>Total Questions</StatLabel>
+                  </div>
+                  {dashboard.questions_change && (
+                    <StatChange positive={dashboard.questions_change > 0}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                      </svg>
+                      {dashboard.questions_change > 0 ? '+' : ''}{dashboard.questions_change}% from last week
+                    </StatChange>
+                  )}
+                </StatCard>
 
-            <StatCard>
-              <div>
-                <StatValue>682</StatValue>
-                <StatLabel>Correct Answers</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-                +8% improvement
-              </StatChange>
-            </StatCard>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.correct_answers || 0}</StatValue>
+                    <StatLabel>Correct Answers</StatLabel>
+                  </div>
+                  {dashboard.correct_change && (
+                    <StatChange positive={dashboard.correct_change > 0}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                      </svg>
+                      {dashboard.correct_change > 0 ? '+' : ''}{dashboard.correct_change}% improvement
+                    </StatChange>
+                  )}
+                </StatCard>
 
-            <StatCard>
-              <div>
-                <StatValue>165</StatValue>
-                <StatLabel>Wrong Answers</StatLabel>
-              </div>
-              <StatChange>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                  <polyline points="17 18 23 18 23 12"></polyline>
-                </svg>
-                -5% from last week
-              </StatChange>
-            </StatCard>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.wrong_answers || 0}</StatValue>
+                    <StatLabel>Wrong Answers</StatLabel>
+                  </div>
+                  {dashboard.wrong_change && (
+                    <StatChange positive={dashboard.wrong_change > 0}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                        <polyline points="17 18 23 18 23 12"></polyline>
+                      </svg>
+                      {dashboard.wrong_change > 0 ? '+' : ''}{dashboard.wrong_change}% from last week
+                    </StatChange>
+                  )}
+                </StatCard>
+              </>
+            ) : null}
 
             {/* Overall Accuracy Circle */}
             <DashboardCard>
@@ -1778,28 +1782,32 @@ const LMS = () => {
                 </svg>
                 Overall Accuracy
               </CardTitle>
-              <ProgressCircle>
-                <svg width="150" height="150">
-                  <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="var(--primary)" />
-                      <stop offset="100%" stopColor="var(--secondary)" />
-                    </linearGradient>
-                  </defs>
-                  <CircleBackground cx="75" cy="75" r="60" />
-                  <CircleProgress 
-                    cx="75" 
-                    cy="75" 
-                    r="60" 
-                    circumference={2 * Math.PI * 60}
-                    offset={2 * Math.PI * 60 * (1 - 0.805)}
-                  />
-                </svg>
-                <CircleText>
-                  <CircleValue>80.5%</CircleValue>
-                  <CircleLabel>Accuracy</CircleLabel>
-                </CircleText>
-              </ProgressCircle>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : dashboard ? (
+                <ProgressCircle>
+                  <svg width="150" height="150">
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--primary)" />
+                        <stop offset="100%" stopColor="var(--secondary)" />
+                      </linearGradient>
+                    </defs>
+                    <CircleBackground cx="75" cy="75" r="60" />
+                    <CircleProgress 
+                      cx="75" 
+                      cy="75" 
+                      r="60" 
+                      circumference={2 * Math.PI * 60}
+                      offset={2 * Math.PI * 60 * (1 - (dashboard.accuracy || 0) / 100)}
+                    />
+                  </svg>
+                  <CircleText>
+                    <CircleValue>{(dashboard.accuracy || 0).toFixed(1)}%</CircleValue>
+                    <CircleLabel>Accuracy</CircleLabel>
+                  </CircleText>
+                </ProgressCircle>
+              ) : null}
             </DashboardCard>
 
             {/* Weekly Performance */}
@@ -1812,50 +1820,31 @@ const LMS = () => {
                 </svg>
                 Weekly Performance
               </CardTitle>
-              <BarChart>
-                <div className="trend-bar-wrapper">
-                  <Bar height={68}>
-                    <BarValue>52</BarValue>
-                  </Bar>
-                  <BarLabel>Mon</BarLabel>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : weeklyPerformance.length > 0 ? (
+                <BarChart>
+                  {weeklyPerformance.map((day, index) => {
+                    const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
+                    const height = ((day.questions_answered || 0) / maxValue) * 100
+                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                    const dayName = day.day_name || dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
+                    
+                    return (
+                      <div key={day.date || index} className="trend-bar-wrapper">
+                        <Bar height={height}>
+                          <BarValue>{day.questions_answered || 0}</BarValue>
+                        </Bar>
+                        <BarLabel>{dayName}</BarLabel>
+                      </div>
+                    )
+                  })}
+                </BarChart>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                  No performance data available
                 </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={84}>
-                    <BarValue>64</BarValue>
-                  </Bar>
-                  <BarLabel>Tue</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={95}>
-                    <BarValue>72</BarValue>
-                  </Bar>
-                  <BarLabel>Wed</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={79}>
-                    <BarValue>60</BarValue>
-                  </Bar>
-                  <BarLabel>Thu</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={100}>
-                    <BarValue>76</BarValue>
-                  </Bar>
-                  <BarLabel>Fri</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={58}>
-                    <BarValue>44</BarValue>
-                  </Bar>
-                  <BarLabel>Sat</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={74}>
-                    <BarValue>56</BarValue>
-                  </Bar>
-                  <BarLabel>Sun</BarLabel>
-                </div>
-              </BarChart>
+              )}
             </DashboardCard>
 
             {/* Domain-Specific Performance */}
@@ -1867,53 +1856,27 @@ const LMS = () => {
                 </svg>
                 Domain-Specific Performance
               </CardTitle>
-              <DomainList>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>React & Frontend</DomainName>
-                    <DomainPercentage>87%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={87} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>JavaScript ES6+</DomainName>
-                    <DomainPercentage>92%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={92} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>Node.js & Backend</DomainName>
-                    <DomainPercentage>75%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={75} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>Database & SQL</DomainName>
-                    <DomainPercentage>68%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={68} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>UI/UX Design</DomainName>
-                    <DomainPercentage>95%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={95} />
-                  </DomainProgressBar>
-                </DomainItem>
-              </DomainList>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : domainPerformance.length > 0 ? (
+                <DomainList>
+                  {domainPerformance.map((domain) => (
+                    <DomainItem key={domain.domain_id || domain.domain_name}>
+                      <DomainHeader>
+                        <DomainName>{domain.domain_name || 'Unknown Domain'}</DomainName>
+                        <DomainPercentage>{domain.accuracy || 0}%</DomainPercentage>
+                      </DomainHeader>
+                      <DomainProgressBar>
+                        <DomainProgressFill width={domain.accuracy || 0} />
+                      </DomainProgressBar>
+                    </DomainItem>
+                  ))}
+                </DomainList>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                  No domain performance data available
+                </div>
+              )}
             </DashboardCard>
 
             {/* Recent Learning Activity */}
@@ -1925,34 +1888,25 @@ const LMS = () => {
                 </svg>
                 Recent Activity
               </CardTitle>
-              <ActivityItem>
-                <ActivityIcon>RC</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Completed React Hooks Module</ActivityTitle>
-                  <ActivityTime>2 hours ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>JS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Mastered Async/Await Patterns</ActivityTitle>
-                  <ActivityTime>5 hours ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>ND</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Started Express.js Basics</ActivityTitle>
-                  <ActivityTime>Yesterday</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>DB</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>SQL Joins Practice</ActivityTitle>
-                  <ActivityTime>2 days ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+              ) : activities.length > 0 ? (
+                activities.map((activity) => (
+                  <ActivityItem key={activity.id}>
+                    <ActivityIcon>
+                      {activity.course_icon || activity.activity_type?.substring(0, 2).toUpperCase() || 'AC'}
+                    </ActivityIcon>
+                    <ActivityContent>
+                      <ActivityTitle>{activity.description || activity.activity_type || 'Activity'}</ActivityTitle>
+                      <ActivityTime>{formatDate(activity.created_at)}</ActivityTime>
+                    </ActivityContent>
+                  </ActivityItem>
+                ))
+              ) : (
+                <EmptyState>
+                  <EmptyText>No recent activity</EmptyText>
+                </EmptyState>
+              )}
             </DashboardCard>
 
             {/* AI Recommendations */}
@@ -1971,56 +1925,58 @@ const LMS = () => {
                 </svg>
                 AI Recommendations
               </CardTitle>
-              <ActivityItem>
-                <ActivityIcon>TS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Complete TypeScript Fundamentals</ActivityTitle>
-                  <ActivityTime>85% progress - almost done!</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>DK</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Start Docker & Containerization</ActivityTitle>
-                  <ActivityTime>Based on your backend skills</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>AWS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>AWS Cloud Services</ActivityTitle>
-                  <ActivityTime>Recommended for your career path</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+              ) : recommendations.length > 0 ? (
+                recommendations.map((rec) => (
+                  <ActivityItem key={rec.id}>
+                    <ActivityIcon>
+                      {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
+                    </ActivityIcon>
+                    <ActivityContent>
+                      <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
+                      <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
+                    </ActivityContent>
+                  </ActivityItem>
+                ))
+              ) : (
+                <EmptyState>
+                  <EmptyText>No recommendations available</EmptyText>
+                </EmptyState>
+              )}
             </DashboardCard>
 
             {/* Learning Streak */}
             <StatCard>
               <div>
-                <StatValue>15</StatValue>
+                <StatValue>{dashboard?.day_streak || 0}</StatValue>
                 <StatLabel>Day Streak</StatLabel>
               </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                Keep it up!
-              </StatChange>
+              {(dashboard?.day_streak || 0) > 0 && (
+                <StatChange positive>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Keep it up!
+                </StatChange>
+              )}
             </StatCard>
 
             {/* Certificates Earned */}
             <StatCard>
               <div>
-                <StatValue>8</StatValue>
+                <StatValue>{certificates.length || 0}</StatValue>
                 <StatLabel>Certificates</StatLabel>
               </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                2 new this month
-              </StatChange>
+              {certificates.length > 0 && (
+                <StatChange positive>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  {certificates.length} earned
+                </StatChange>
+              )}
             </StatCard>
 
             {/* Upcoming Deadlines */}
@@ -2034,26 +1990,34 @@ const LMS = () => {
                 </svg>
                 Upcoming Deadlines
               </CardTitle>
-              <DomainList>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>TypeScript Final Project</DomainName>
-                    <DomainPercentage className="domain-percentage-due-soon">Due in 2 days</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>React Quiz - Advanced Concepts</DomainName>
-                    <DomainPercentage className="domain-percentage-due-medium">Due in 5 days</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>GraphQL Assignment Submission</DomainName>
-                    <DomainPercentage className="domain-percentage-due-far">Due in 1 week</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-              </DomainList>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : deadlines.length > 0 ? (
+                <DomainList>
+                  {deadlines.map((deadline) => {
+                    const dueText = formatDeadline(deadline.deadline_date)
+                    const isOverdue = dueText === 'Overdue'
+                    const isDueSoon = dueText.includes('today') || dueText.includes('tomorrow') || dueText.includes('in 1 days') || dueText.includes('in 2 days')
+                    
+                    return (
+                      <DomainItem key={deadline.id}>
+                        <DomainHeader>
+                          <DomainName>{deadline.title || deadline.course_title || 'Deadline'}</DomainName>
+                          <DomainPercentage 
+                            className={isOverdue ? 'domain-percentage-due-soon' : isDueSoon ? 'domain-percentage-due-soon' : 'domain-percentage-due-medium'}
+                          >
+                            {dueText}
+                          </DomainPercentage>
+                        </DomainHeader>
+                      </DomainItem>
+                    )
+                  })}
+                </DomainList>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                  No upcoming deadlines
+                </div>
+              )}
             </DashboardCard>
           </DashboardContainer>
         </MainContent>
@@ -2103,54 +2067,36 @@ const LMS = () => {
 
                 <SidePanelSection>
                   <SidePanelTitle>Sections</SidePanelTitle>
-                  <SidePanelItem active>
-                    Introduction
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Core Concepts
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Advanced Topics
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Practice & Projects
-                    <ProgressIndicator>
-                      <ProgressDot />
-                      <ProgressDot />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
+                  {courseSections.length > 0 ? (
+                    courseSections.map((section, index) => (
+                      <SidePanelItem key={section.id} active={index === 0}>
+                        {section.title || `Section ${section.order_index || index + 1}`}
+                        <ProgressIndicator>
+                          <ProgressDot completed={section.completed || false} />
+                          <ProgressDot completed={section.completed || false} />
+                          <ProgressDot completed={section.completed || false} />
+                        </ProgressIndicator>
+                      </SidePanelItem>
+                    ))
+                  ) : (
+                    <SidePanelItem>No sections available</SidePanelItem>
+                  )}
                 </SidePanelSection>
 
                 <SidePanelSection>
                   <SidePanelTitle>Resources</SidePanelTitle>
-                  <SidePanelItem>
-                    📚 Course Materials
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    💻 Code Examples
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    🎥 Video Lectures
-                  </SidePanelItem>
+                  {courseResources.length > 0 ? (
+                    courseResources.map((resource) => (
+                      <SidePanelItem key={resource.id}>
+                        {resource.resource_type === 'material' ? '📚' : resource.resource_type === 'code' ? '💻' : '🎥'} {resource.title || resource.resource_type}
+                      </SidePanelItem>
+                    ))
+                  ) : (
+                    <SidePanelItem>No resources available</SidePanelItem>
+                  )}
                 </SidePanelSection>
 
-                <GenerateQuestionsButton onClick={() => alert('Generating AI questions...')}>
+                <GenerateQuestionsButton onClick={handleGenerateQuestions}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 3v3"></path>
                     <path d="M12 18v3"></path>
@@ -2176,25 +2122,51 @@ const LMS = () => {
                   </PortalCourseInfoText>
                 </PortalCourseInfo>
 
-                {courseQuestions.map((q) => (
-                  <QuestionSection key={q.id}>
-                    <QuestionLabel>
-                      <QuestionNumber>Question {q.id}:</QuestionNumber>
-                      {q.question}
-                    </QuestionLabel>
-                    <AnswerInput 
-                      placeholder="Type your answer here..."
-                      rows="4"
-                    />
-                  </QuestionSection>
-                ))}
+                {questionsLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px' }}>Loading questions...</div>
+                ) : courseQuestions.length > 0 ? (
+                  courseQuestions.map((q) => (
+                    <QuestionSection key={q.id}>
+                      <QuestionLabel>
+                        <QuestionNumber>Question {q.order_index || q.id}:</QuestionNumber>
+                        {q.question_text || q.question || 'No question text available'}
+                      </QuestionLabel>
+                      {q.question_type === 'multiple_choice' && q.options ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                          {Object.entries(q.options).map(([key, value]) => (
+                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name={`question-${q.id}`}
+                                value={key}
+                                onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                              />
+                              <span>{key}: {value}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <AnswerInput 
+                          placeholder="Type your answer here..."
+                          rows="4"
+                          value={answers[q.id] || ''}
+                          onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                        />
+                      )}
+                    </QuestionSection>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                    No questions available for this course
+                  </div>
+                )}
 
                 <ButtonContainer>
                   <SubmitButton onClick={handleSubmitAnswers}>
                     Submit Answers
                   </SubmitButton>
-                  <EvaluateButton onClick={() => navigate('/evaluation')}>
-                    Evaluate
+                  <EvaluateButton onClick={handleSubmitAnswers} disabled={Object.keys(answers).length === 0}>
+                    Submit & Evaluate
                   </EvaluateButton>
                 </ButtonContainer>
               </PortalMainContent>
