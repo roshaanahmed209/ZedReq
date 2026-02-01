@@ -12,8 +12,8 @@ from pathlib import Path
 
 # Load environment variables from backend/.env
 def load_env():
-    env_path = Path(__file__).parent / 'backend' / '.env'
-    if not env_path.exists():
+    env_path = "E:\professional\ZedRec\.env"
+    if not env_path != None:
         print(f"Error: .env file not found at {env_path}")
         print("Please create backend/.env file based on backend/env.example")
         sys.exit(1)

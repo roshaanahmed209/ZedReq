@@ -1,4 +1,5 @@
-"""LMS Agent - AI-powered question generation using LangGraph, Qdrant and OpenAI"""
+"""  LMS Agent - AI-powered question generation using LangGraph, Qdrant and OpenAI  """
+"""   Helper agent for Lemzy  """
 import os
 import logging
 from typing import Optional, List, Dict, Any, TypedDict, Annotated, Literal
