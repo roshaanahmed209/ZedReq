@@ -352,6 +352,22 @@ CREATE TABLE IF NOT EXISTS lms_user_answers (
 );
 '''
 
+# Azel agent tables (depends on users and lms_courses)
+AZEL_SEARCH_URLS_TABLE = '''
+CREATE TABLE IF NOT EXISTS azel_search_urls (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES lms_courses(id) ON DELETE CASCADE,
+    url_id VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    title VARCHAR(500),
+    snippet TEXT,
+    search_query TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, course_id, url_id)
+);
+'''
+
 # ============================================================================
 # INDEX CREATION SQL
 # ============================================================================
@@ -422,6 +438,10 @@ INDEXES = [
     # LMS User Answers indexes
     'CREATE INDEX IF NOT EXISTS idx_lms_user_answers_user ON lms_user_answers(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_lms_user_answers_question ON lms_user_answers(question_id)',
+    
+    # Azel Search URLs indexes
+    'CREATE INDEX IF NOT EXISTS idx_azel_search_urls_user_course ON azel_search_urls(user_id, course_id)',
+    'CREATE INDEX IF NOT EXISTS idx_azel_search_urls_created ON azel_search_urls(created_at DESC)',
 ]
 
 # ============================================================================
@@ -452,6 +472,7 @@ TABLES_IN_ORDER = [
     ("lms_recommendations", LMS_RECOMMENDATIONS_TABLE),
     ("lms_course_sections", LMS_COURSE_SECTIONS_TABLE),
     ("lms_course_resources", LMS_COURSE_RESOURCES_TABLE),
+    ("azel_search_urls", AZEL_SEARCH_URLS_TABLE),
     
     # Level 3: Depends on users and lms_domains
     ("lms_user_domain_performance", LMS_USER_DOMAIN_PERFORMANCE_TABLE),

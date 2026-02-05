@@ -444,6 +444,22 @@ CREATE TABLE IF NOT EXISTS lms_user_answers (
 );
 '''
 
+# Azel agent tables (depends on users and lms_courses)
+AZEL_SEARCH_URLS_TABLE = '''
+CREATE TABLE IF NOT EXISTS azel_search_urls (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES lms_courses(id) ON DELETE CASCADE,
+    url_id VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    title VARCHAR(500),
+    snippet TEXT,
+    search_query TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, course_id, url_id)
+);
+'''
+
 # ORM Job Tables (using SQLAlchemy models)
 JOB_POSTINGS_TABLE = '''
 CREATE TABLE IF NOT EXISTS job_postings (

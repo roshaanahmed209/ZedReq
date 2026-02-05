@@ -27,6 +27,7 @@ from .lms_activity import LMSActivity
 from .lms_recommendation import LMSRecommendation
 from .lms_deadline import LMSDeadline
 from .lms_certificate import LMSCertificate
+from .azel_search_url import AzelSearchUrl
 
 __all__ = [
     'User',

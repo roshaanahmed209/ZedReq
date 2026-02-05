@@ -15,6 +15,44 @@ ZedRec provides a LinkedIn-like experience with enhanced AI capabilities for car
 - **Real-time Communication**: Direct messaging and real-time notifications
 - **Career Development**: Track skills, progress, and receive personalized recommendations
 
+## Architecture
+
+### Architecture Type
+
+ZedRec follows a **monolithic architecture** pattern with a modular, layered design. All backend services are integrated into a single FastAPI application, organized into distinct modules (routers, services, models) for maintainability and future scalability.
+
+### Architecture Layers
+
+- **Presentation Layer**: React frontend with component-based UI
+- **Application Layer**: FastAPI backend with RESTful APIs and WebSocket support
+- **Data Layer**: PostgreSQL for structured data, Qdrant for vector embeddings
+
+### Scalability
+
+The platform is designed with scalability in mind:
+
+- **Horizontal Scaling**: Stateless API design allows running multiple FastAPI instances behind a load balancer
+- **Database Connection Pooling**: Efficient connection management for high concurrency
+- **Stateless Authentication**: JWT-based authentication enables distributed deployment
+- **Modular Service Layer**: Business logic separated into independent service classes for easy refactoring
+- **WebSocket Management**: Connection manager supports multi-instance deployment with proper connection handling
+
+### Scaling Approach
+
+**Current Implementation:**
+- Horizontal scaling of FastAPI application instances
+- Database read replicas for read-heavy operations
+- Connection pooling for optimal database resource usage
+- Caching strategies for frequently accessed data (e.g., LMS dashboard)
+
+**Future Scalability Path:**
+- Migration to microservices architecture for independent scaling of features
+- Event-driven architecture for asynchronous processing
+- CQRS (Command Query Responsibility Segregation) pattern for read/write optimization
+- Distributed database architecture for high availability
+- Separate WebSocket service for real-time features
+- Message queue integration for background job processing
+
 ## Technology Stack
 
 - **Backend**: FastAPI (Python)
