@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from models.orm import (
     LMSCourse, LMSDomain, LMSCourseSection, LMSCourseResource,
     LMSQuestion, LMSUserCourse, LMSUserSectionProgress, LMSUserAnswer,
-    LMSUserDomainPerformance, LMSDashboard, LMSWeeklyPerformance,
+    LMSUserDomainPerformance, LMSUserCoursePerformance, LMSDashboard, LMSWeeklyPerformance,
     LMSActivity, LMSRecommendation, LMSDeadline, LMSCertificate
 )
 
@@ -560,6 +560,24 @@ class LMSService:
         
         return [p.to_dict(include_relations=True) for p in performances]
     
+    def get_course_performance(self, user_id: int, course_id: int) -> Optional[Dict[str, Any]]:
+        """Get course-specific performance stats"""
+        performance = (
+            self.db.query(LMSUserCoursePerformance)
+            .filter(
+                and_(
+                    LMSUserCoursePerformance.user_id == user_id,
+                    LMSUserCoursePerformance.course_id == course_id
+                )
+            )
+            .first()
+        )
+        
+        if not performance:
+            return None
+        
+        return performance.to_dict(include_relations=True)
+    
     # ========================================================================
     # Question/Answer Operations
     # ========================================================================
@@ -676,9 +694,12 @@ class LMSService:
         # Update dashboard stats
         self._recalculate_dashboard_stats(answer.user_id)
         
-        # Update domain performance if question has domain
+        # Update course performance
         question = self.db.query(LMSQuestion).filter(LMSQuestion.id == answer.question_id).first()
         if question:
+            # Update course-specific performance
+            self._update_course_performance(answer.user_id, question.course_id, is_correct, points)
+            
             # Get course category as domain (or implement proper domain mapping)
             course = self.db.query(LMSCourse).filter(LMSCourse.id == question.course_id).first()
             if course and course.category:
@@ -703,6 +724,52 @@ class LMSService:
         )
         
         return answer
+    
+    def _update_course_performance(self, user_id: int, course_id: int, is_correct: bool, points: int = 0):
+        """Update course performance after answer evaluation"""
+        performance = (
+            self.db.query(LMSUserCoursePerformance)
+            .filter(
+                and_(
+                    LMSUserCoursePerformance.user_id == user_id,
+                    LMSUserCoursePerformance.course_id == course_id
+                )
+            )
+            .first()
+        )
+        
+        if performance:
+            # Update existing
+            performance.questions_answered += 1
+            if is_correct:
+                performance.correct_answers += 1
+                performance.total_points_earned += points
+            else:
+                performance.wrong_answers += 1
+            
+            # Recalculate accuracy
+            if performance.questions_answered > 0:
+                performance.accuracy_percentage = round(
+                    (performance.correct_answers / performance.questions_answered) * 100,
+                    2
+                )
+            performance.last_activity_date = date.today()
+        else:
+            # Create new
+            accuracy = 100.0 if is_correct else 0.0
+            performance = LMSUserCoursePerformance(
+                user_id=user_id,
+                course_id=course_id,
+                questions_answered=1,
+                correct_answers=1 if is_correct else 0,
+                wrong_answers=0 if is_correct else 1,
+                accuracy_percentage=accuracy,
+                total_points_earned=points if is_correct else 0,
+                last_activity_date=date.today()
+            )
+            self.db.add(performance)
+        
+        self.db.commit()
     
     def _update_domain_performance(self, user_id: int, domain_id: int, is_correct: bool):
         """Update domain performance after answer evaluation"""

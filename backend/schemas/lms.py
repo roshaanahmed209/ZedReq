@@ -216,6 +216,27 @@ class DomainPerformanceListResponse(BaseModel):
     domains: List[DomainPerformanceResponse]
 
 
+class CoursePerformanceResponse(BaseModel):
+    """Schema for course-specific performance"""
+    id: int
+    user_id: int
+    course_id: int
+    questions_answered: int = 0
+    correct_answers: int = 0
+    wrong_answers: int = 0
+    accuracy_percentage: float = 0.0
+    total_points_earned: int = 0
+    last_activity_date: Optional[date] = None
+    course_title: Optional[str] = None
+    course_icon: Optional[str] = None
+    course_category: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ============================================================================
 # Activity Schemas
 # ============================================================================

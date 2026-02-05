@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .lms_course_resource import LMSCourseResource
     from .lms_question import LMSQuestion
     from .lms_user_course import LMSUserCourse
+    from .lms_user_course_performance import LMSUserCoursePerformance
 
 
 class LMSCourse(Base):
@@ -60,6 +61,13 @@ class LMSCourse(Base):
     
     user_courses: Mapped[list["LMSUserCourse"]] = relationship(
         "LMSUserCourse",
+        back_populates="course",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+    
+    user_performances: Mapped[list["LMSUserCoursePerformance"]] = relationship(
+        "LMSUserCoursePerformance",
         back_populates="course",
         cascade="all, delete-orphan",
         lazy="dynamic"

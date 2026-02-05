@@ -306,6 +306,23 @@ CREATE TABLE IF NOT EXISTS lms_user_domain_performance (
 );
 '''
 
+LMS_USER_COURSE_PERFORMANCE_TABLE = '''
+CREATE TABLE IF NOT EXISTS lms_user_course_performance (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES lms_courses(id) ON DELETE CASCADE,
+    questions_answered INTEGER DEFAULT 0,
+    correct_answers INTEGER DEFAULT 0,
+    wrong_answers INTEGER DEFAULT 0,
+    accuracy_percentage DECIMAL(5,2) DEFAULT 0.00,
+    total_points_earned INTEGER DEFAULT 0,
+    last_activity_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, course_id)
+);
+'''
+
 LMS_WEEKLY_PERFORMANCE_TABLE = '''
 CREATE TABLE IF NOT EXISTS lms_weekly_performance (
     id SERIAL PRIMARY KEY,
@@ -561,6 +578,11 @@ INDEXES = [
     # LMS User Domain Performance indexes
     'CREATE INDEX IF NOT EXISTS idx_lms_domain_perf_user ON lms_user_domain_performance(user_id)',
     
+    # LMS User Course Performance indexes
+    'CREATE INDEX IF NOT EXISTS idx_lms_course_perf_user ON lms_user_course_performance(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_lms_course_perf_course ON lms_user_course_performance(course_id)',
+    'CREATE INDEX IF NOT EXISTS idx_lms_course_perf_user_course ON lms_user_course_performance(user_id, course_id)',
+    
     # LMS Weekly Performance indexes
     'CREATE INDEX IF NOT EXISTS idx_lms_weekly_perf_user_date ON lms_weekly_performance(user_id, date DESC)',
     
@@ -631,10 +653,12 @@ TABLES_IN_ORDER = [
     ("lms_recommendations", LMS_RECOMMENDATIONS_TABLE),
     ("lms_course_sections", LMS_COURSE_SECTIONS_TABLE),
     ("lms_course_resources", LMS_COURSE_RESOURCES_TABLE),
+    ("azel_search_urls", AZEL_SEARCH_URLS_TABLE),
     
     # Level 3: Depends on users and lms_domains
     ("lms_user_domain_performance", LMS_USER_DOMAIN_PERFORMANCE_TABLE),
     ("lms_weekly_performance", LMS_WEEKLY_PERFORMANCE_TABLE),
+    ("lms_user_course_performance", LMS_USER_COURSE_PERFORMANCE_TABLE),
     
     # Level 4: Depends on lms_course_sections
     ("lms_questions", LMS_QUESTIONS_TABLE),

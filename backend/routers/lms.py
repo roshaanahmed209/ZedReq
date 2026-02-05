@@ -1,18 +1,25 @@
 """LMS Router - Learning Management System endpoints using SQLAlchemy ORM"""
+import logging
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.lms_service import LMSService
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer
+from agents.Azel_agent import get_azel_agent
+from agents.Seez_agent import get_seez_agent
 from schemas.lms import (
     CourseCreate, CourseUpdate, CourseResponse, CourseListResponse,
     UserCourseEnroll, UserCourseResponse, UserCourseListResponse, CourseProgressUpdate,
     DashboardResponse,
     WeeklyPerformanceResponse, WeeklyPerformanceListResponse,
     DomainPerformanceResponse, DomainPerformanceListResponse,
+    CoursePerformanceResponse,
     ActivityResponse, ActivityListResponse,
     QuestionCreate, QuestionResponse, QuestionListResponse,
     AnswerSubmit, AnswerResponse, AnswerListResponse, AnswerEvaluate,
@@ -279,6 +286,37 @@ async def get_domain_performance(
     return {
         "domains": domains
     }
+
+
+@router.get("/dashboard/courses/{course_id}", response_model=CoursePerformanceResponse)
+async def get_course_performance(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: LMSService = Depends(get_lms_service)
+):
+    """Get course-specific performance stats"""
+    performance = service.get_course_performance(current_user["id"], course_id)
+    
+    if not performance:
+        # Return empty stats if no performance record exists
+        return {
+            "id": 0,
+            "user_id": current_user["id"],
+            "course_id": course_id,
+            "questions_answered": 0,
+            "correct_answers": 0,
+            "wrong_answers": 0,
+            "accuracy_percentage": 0.0,
+            "total_points_earned": 0,
+            "last_activity_date": None,
+            "course_title": None,
+            "course_icon": None,
+            "course_category": None,
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        }
+    
+    return performance
 
 
 # ============================================================================
@@ -588,3 +626,197 @@ async def update_section_progress(
     )
     
     return progress.to_dict(include_relations=True)
+
+
+# ============================================================================
+# Azel Agent Endpoints
+# ============================================================================
+
+@router.post("/azel/process-course/{course_id}")
+async def trigger_azel_agent(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger Azel agent to process course context and generate questions
+    
+    This endpoint:
+    1. Retrieves Zed context for the user
+    2. Extracts highlighted topics of interest
+    3. Performs Google searches
+    4. Saves URLs to database
+    5. Creates Qdrant knowledge base (30-minute TTL)
+    6. Generates questions with detailed answers
+    7. Saves questions to database
+    """
+    try:
+        # Verify course exists
+        course = db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+        
+        # Get Azel agent and process
+        azel_agent = get_azel_agent()
+        
+        if not azel_agent.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Azel agent is not available. Please check Qdrant and OpenAI configuration."
+            )
+        
+        # Process course context - use 'id' to match other endpoints
+        user_id = current_user.get('id') or current_user.get('uid')
+        result = azel_agent.process_course_context(
+            user_id=user_id,
+            course_id=course_id
+        )
+        
+        if not result.get('success'):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get('error', 'Failed to process course context')
+            )
+        
+        return {
+            "message": "Course context processed successfully",
+            "result": result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in trigger_azel_agent: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+# ============================================================================
+# Seez Agent Endpoints
+# ============================================================================
+
+@router.post("/seez/evaluate-course/{course_id}")
+async def trigger_seez_agent_course(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger Seez agent to evaluate all unevaluated answers for a course
+    
+    This endpoint:
+    1. Retrieves all unevaluated answers for the user in the specified course
+    2. Evaluates each answer leniently (0-10 score)
+    3. Updates all answers in database
+    4. Calculates average score using simple averaging
+    5. Updates course performance stats
+    """
+    try:
+        # Verify course exists
+        course = db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+        
+        # Get Seez agent
+        seez_agent = get_seez_agent()
+        
+        if not seez_agent.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Seez agent is not available. Please check OpenAI configuration."
+            )
+        
+        # Get user ID
+        user_id = current_user.get('id') or current_user.get('uid')
+        
+        # Evaluate all course answers
+        result = seez_agent.evaluate_course_answers(
+            user_id=user_id,
+            course_id=course_id,
+            db_session=db
+        )
+        
+        if not result.get('success'):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get('error', 'Failed to evaluate answers')
+            )
+        
+        return {
+            "message": "Answers evaluated successfully",
+            "result": result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in trigger_seez_agent_course: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/seez/evaluate-answers")
+async def trigger_seez_agent_batch(
+    answer_ids: List[int],
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger Seez agent to evaluate specific answers by IDs
+    
+    This endpoint:
+    1. Evaluates specified answers leniently (0-10 score)
+    2. Updates all answers in database
+    3. Calculates average score using simple averaging
+    """
+    try:
+        if not answer_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No answer IDs provided"
+            )
+        
+        # Get Seez agent
+        seez_agent = get_seez_agent()
+        
+        if not seez_agent.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Seez agent is not available. Please check OpenAI configuration."
+            )
+        
+        # Evaluate answers batch
+        result = seez_agent.evaluate_answers_batch(
+            answer_ids=answer_ids,
+            db_session=db
+        )
+        
+        if not result.get('success'):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get('error', 'Failed to evaluate answers')
+            )
+        
+        return {
+            "message": "Answers evaluated successfully",
+            "result": result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in trigger_seez_agent_batch: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )

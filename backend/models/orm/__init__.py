@@ -21,6 +21,7 @@ from .lms_user_course import LMSUserCourse
 from .lms_user_section_progress import LMSUserSectionProgress
 from .lms_user_answer import LMSUserAnswer
 from .lms_user_domain_performance import LMSUserDomainPerformance
+from .lms_user_course_performance import LMSUserCoursePerformance
 from .lms_dashboard import LMSDashboard
 from .lms_weekly_performance import LMSWeeklyPerformance
 from .lms_activity import LMSActivity
@@ -50,10 +51,12 @@ __all__ = [
     'LMSUserSectionProgress',
     'LMSUserAnswer',
     'LMSUserDomainPerformance',
+    'LMSUserCoursePerformance',
     'LMSDashboard',
     'LMSWeeklyPerformance',
     'LMSActivity',
     'LMSRecommendation',
     'LMSDeadline',
     'LMSCertificate',
+    'AzelSearchUrl',
 ]
