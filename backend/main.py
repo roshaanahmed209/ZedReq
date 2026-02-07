@@ -37,7 +37,8 @@ from routers import (
     messaging_router,
     lms_router,
     nemz_router,
-    vec_router
+    vec_router,
+    interviews_router
 )
 
 
@@ -283,6 +284,7 @@ app.include_router(messaging_router, prefix="/api/messaging", tags=["Messaging"]
 app.include_router(lms_router, prefix="/api/lms", tags=["LMS"])
 app.include_router(nemz_router, prefix="/api/nemz", tags=["Nemz Agent"])
 app.include_router(vec_router, prefix="/api/vec", tags=["Vec Agent"])
+app.include_router(interviews_router, prefix="/api/interviews", tags=["Interviews"])
 
 
 # Get paths for static files

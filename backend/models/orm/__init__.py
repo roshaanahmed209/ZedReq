@@ -10,6 +10,7 @@ from .description import Description
 from .job_posting import JobPosting
 from .job_application import JobApplication
 from .job_saved import JobSaved
+from .live_interview import LiveInterview
 
 # LMS ORM Models
 from .lms_course import LMSCourse
@@ -41,6 +42,7 @@ __all__ = [
     'JobPosting',
     'JobApplication', 
     'JobSaved',
+    'LiveInterview',
     # LMS Models
     'LMSCourse',
     'LMSDomain',

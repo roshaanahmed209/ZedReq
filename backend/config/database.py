@@ -120,8 +120,8 @@ def get_pool() -> ConnectionPool:
     global _pool
     if _pool is None:
         params = get_connection_params()
-        min_size = int(os.environ.get('DB_POOL_MIN', 1))
-        max_size = int(os.environ.get('DB_POOL_SIZE', 5))
+        min_size = int(os.environ.get('DB_POOL_MIN', 10))
+        max_size = int(os.environ.get('DB_POOL_SIZE', 100))
         
         if 'conninfo' in params:
             conninfo = params['conninfo']

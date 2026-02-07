@@ -3,12 +3,20 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, 
-    ForeignKey, DateTime, Index
+    ForeignKey, DateTime, Index, TypeDecorator
 )
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.orm import relationship, Mapped, deferred
 from sqlalchemy.sql import func
 
 from config.database_orm import Base
+
+
+# Custom type for pgvector - just passes through as text for ORM purposes
+class VectorType(TypeDecorator):
+    """Pass-through type for pgvector - actual vector operations use raw SQL"""
+    impl = Text
+    cache_ok = True
+
 
 if TYPE_CHECKING:
     from .job_application import JobApplication
@@ -53,6 +61,11 @@ class JobPosting(Base):
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Embedding (pgvector) - deferred to avoid loading in regular queries
+    # This column is managed via raw SQL, not through SQLAlchemy ORM
+    # Using VectorType as a pass-through - actual vector operations use raw SQL
+    embedding = deferred(Column('embedding', VectorType, nullable=True))
     
     # Relationships
     applications: Mapped[list["JobApplication"]] = relationship(

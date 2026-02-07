@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Server
     DEBUG: bool
     
+    # Tavus AI Configuration (optional)
+    TAVUS_API_KEY: str | None = None
+    TAVUS_REPLICA_ID: str | None = None
+    TAVUS_API_URL: str = "https://api.tavus.ai/v2"
+    
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"
