@@ -6,6 +6,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -21,6 +24,32 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Environment
+.env
+.venv
+
+# Database
+*.db
+*.db-journal
+sessions.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
 
 # Virtual environments
 venv/
@@ -166,4 +195,4 @@ zedrec_documentation.css
 prompt_in_chat.txt
 
 
-env_for_zed.txt
+env_for_zedreq.txt
