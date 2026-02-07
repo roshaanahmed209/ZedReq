@@ -23,6 +23,7 @@ except Exception as e:
 
 from config.database import init_database, get_database
 import os
+from utils.scheduler import start_scheduler, stop_scheduler
 from routers import (
     auth_router,
     network_router,
@@ -34,7 +35,9 @@ from routers import (
     posts_router,
     jobs_router,
     messaging_router,
-    lms_router
+    lms_router,
+    nemz_router,
+    vec_router
 )
 
 
@@ -123,9 +126,25 @@ async def lifespan(app: FastAPI):
     
     init_database()
     print("Database initialized")
+    
+    # Start Vec agent scheduler
+    try:
+        start_scheduler()
+        print("Vec agent scheduler started")
+    except Exception as e:
+        print(f"Warning: Failed to start Vec agent scheduler: {e}")
+    
     yield
     # Shutdown
     print("Shutting down FastAPI application...")
+    
+    # Stop Vec agent scheduler
+    try:
+        stop_scheduler()
+        print("Vec agent scheduler stopped")
+    except Exception as e:
+        print(f"Warning: Failed to stop Vec agent scheduler: {e}")
+    
     db = get_database()
     if db:
         db.close()
@@ -262,6 +281,8 @@ app.include_router(posts_router, prefix="/api/posts", tags=["Posts"])
 app.include_router(jobs_router, prefix="/api/jobs", tags=["Jobs"])
 app.include_router(messaging_router, prefix="/api/messaging", tags=["Messaging"])
 app.include_router(lms_router, prefix="/api/lms", tags=["LMS"])
+app.include_router(nemz_router, prefix="/api/nemz", tags=["Nemz Agent"])
+app.include_router(vec_router, prefix="/api/vec", tags=["Vec Agent"])
 
 
 # Get paths for static files

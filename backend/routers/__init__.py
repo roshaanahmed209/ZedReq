@@ -10,6 +10,8 @@ from .posts import router as posts_router
 from .jobs import router as jobs_router
 from .messaging import router as messaging_router
 from .lms import router as lms_router
+from .nemz import router as nemz_router
+from .vec import router as vec_router
 
 __all__ = [
     "auth_router",
@@ -22,5 +24,7 @@ __all__ = [
     "posts_router",
     "jobs_router",
     "messaging_router",
-    "lms_router"
+    "lms_router",
+    "nemz_router",
+    "vec_router"
 ]

@@ -9,3 +9,5 @@ now here is what will happen once the context is updated from zed it will inform
 2- use google search and find relevenat data which aligns with the context 
 3- since we will be using free acounts for now i want that for each search it also keeps the URLS saved in the DB for that course, like for example the agent analyzed the context and triggers the  google search now for return of search there will be URLS so for that course use the UUID(user id), Course id, URL id and URL to save in the DB.
 4- use those URLS to create TTL based knowledge base here is a description of how  i plan to use the knowledge base: since there will be many users and each user can have max 5 courses and we cannot afford to maintain all the knowledge bases considering a large user base so i plan that we will use the URLS to create knowledge base on qdrant and after the questions and answers(detailed answers) are created just save those questions in the DB 
+
+

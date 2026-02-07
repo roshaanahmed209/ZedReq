@@ -35,6 +35,7 @@ class JobPosting(Base):
     description = Column(Text, nullable=False)
     company_name = Column(String(150))
     location = Column(String(150), index=True)
+    job_link = Column(Text)  # Job link/reference within ZedRec domain
     
     # Type & Requirements
     job_type = Column(String(50), default='full-time', index=True)
@@ -86,6 +87,7 @@ class JobPosting(Base):
             'description': self.description,
             'company_name': self.company_name,
             'location': self.location,
+            'job_link': self.job_link,
             'job_type': self.job_type,
             'is_remote': self.is_remote,
             'experience_level': self.experience_level,

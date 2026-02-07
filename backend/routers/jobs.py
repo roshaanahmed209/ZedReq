@@ -6,6 +6,7 @@ from typing import Optional
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.job_service import JobService
+from services.recommendation_service import RecommendationService
 from schemas.job import (
     JobPostingCreate,
     JobPostingUpdate,
@@ -16,6 +17,7 @@ from schemas.job import (
     JobApplicationResponse,
     JobApplicationListResponse,
     JobSavedToggleResponse,
+    JobRecommendationListResponse,
     JobType,
     ExperienceLevel
 )
@@ -26,6 +28,11 @@ router = APIRouter()
 def get_job_service(db: Session = Depends(get_db)) -> JobService:
     """Dependency to get JobService with database session"""
     return JobService(db)
+
+
+def get_recommendation_service(db: Session = Depends(get_db)) -> RecommendationService:
+    """Dependency to get RecommendationService with database session"""
+    return RecommendationService(db)
 
 
 # ============================================================================
@@ -373,3 +380,41 @@ async def toggle_save_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+
+# ============================================================================
+# Job Recommendations Endpoints
+# ============================================================================
+
+@router.get("/recommendations/{user_id}", response_model=JobRecommendationListResponse)
+async def get_recommendations(
+    user_id: int,
+    limit: int = Query(10, ge=1, le=50, description="Number of recommendations to return"),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    service: RecommendationService = Depends(get_recommendation_service)
+):
+    """
+    Get personalized job recommendations for a user.
+    
+    Returns top N job recommendations based on:
+    - Semantic similarity (vector search)
+    - Skill overlap
+    - Salary match
+    - Job recency
+    
+    Users can only view their own recommendations.
+    """
+    # Verify user can only see their own recommendations
+    if current_user["id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot view other user's recommendations"
+        )
+    
+    recommendations = service.get_recommendations(user_id, limit=limit)
+    
+    return {
+        "recommendations": recommendations,
+        "total": len(recommendations)
+    }

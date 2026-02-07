@@ -37,6 +37,19 @@ class JobService:
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
+        
+        # Generate and store embedding asynchronously (non-blocking)
+        try:
+            from utils.job_embeddings import generate_job_embedding, store_job_embedding
+            embedding = generate_job_embedding(job)
+            if embedding:
+                store_job_embedding(job.job_id, embedding, self.db)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to generate embedding for job {job.job_id}: {e}")
+            # Don't fail job creation if embedding fails
+        
         return job
     
     def get_job(self, job_id: int, user_id: int = None) -> Optional[Dict[str, Any]]:
@@ -186,6 +199,12 @@ class JobService:
         if not job:
             return None
         
+        # Track if content fields changed (these affect embeddings)
+        content_fields = {'title', 'description', 'company_name', 'location', 
+                         'job_type', 'is_remote', 'experience_level', 'skills_required',
+                         'salary_min', 'salary_max'}
+        content_changed = any(key in content_fields for key in job_data.keys())
+        
         # Update fields
         for key, value in job_data.items():
             if value is not None and hasattr(job, key):
@@ -193,6 +212,20 @@ class JobService:
         
         self.db.commit()
         self.db.refresh(job)
+        
+        # Regenerate embedding if content fields changed
+        if content_changed:
+            try:
+                from utils.job_embeddings import generate_job_embedding, store_job_embedding
+                embedding = generate_job_embedding(job)
+                if embedding:
+                    store_job_embedding(job.job_id, embedding, self.db)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to regenerate embedding for job {job.job_id}: {e}")
+                # Don't fail job update if embedding fails
+        
         return job
     
     def close_job(self, job_id: int, poster_id: int) -> Optional[JobPosting]:

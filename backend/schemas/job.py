@@ -201,3 +201,48 @@ class JobSearchParams(BaseModel):
     experience_level: Optional[ExperienceLevel] = None
     limit: Optional[int] = Field(50, ge=1, le=100)
     offset: Optional[int] = Field(0, ge=0)
+
+
+# ============================================================================
+# Job Recommendation Schemas
+# ============================================================================
+
+class JobRecommendationResponse(BaseModel):
+    """Schema for job recommendation response with scores"""
+    # Job data (from JobPostingResponse)
+    job_id: int
+    poster_id: int
+    title: str
+    description: str
+    company_name: Optional[str] = None
+    location: Optional[str] = None
+    job_type: Optional[str] = None
+    is_remote: bool = False
+    experience_level: Optional[str] = None
+    skills_required: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    status: str = "active"
+    created_at: datetime
+    updated_at: datetime
+    poster_username: Optional[str] = None
+    poster_name: Optional[str] = None
+    application_count: Optional[int] = None
+    is_saved: Optional[bool] = None
+    has_applied: Optional[bool] = None
+    
+    # Recommendation scores
+    similarity_score: float = Field(..., ge=0.0, le=1.0, description="Semantic similarity score")
+    skill_match_score: float = Field(..., ge=0.0, le=1.0, description="Skill overlap score")
+    salary_match_score: float = Field(..., ge=0.0, le=1.0, description="Salary match score")
+    recency_score: float = Field(..., ge=0.0, le=1.0, description="Job recency score")
+    composite_score: float = Field(..., ge=0.0, le=1.0, description="Overall composite recommendation score")
+    
+    class Config:
+        from_attributes = True
+
+
+class JobRecommendationListResponse(BaseModel):
+    """Schema for paginated job recommendations list"""
+    recommendations: List[JobRecommendationResponse]
+    total: int
