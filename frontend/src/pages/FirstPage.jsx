@@ -116,6 +116,62 @@ const FirstPage = () => {
     }
   }, [])
 
+  // Special observer for the how-it-works grid with dust particle effect
+  useEffect(() => {
+    const gridObserverOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    }
+
+    const gridObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // Add grid-revealed class to make grid visible
+          entry.target.classList.add('grid-revealed')
+          
+          // Add visible class to individual items with staggered delay
+          const items = entry.target.querySelectorAll('.work-card, .work-stats')
+          items.forEach((item, index) => {
+            setTimeout(() => {
+              item.classList.add('particle-reveal')
+            }, 300 + (index * 100)) // Start after grid starts revealing
+          })
+          
+          gridObserver.unobserve(entry.target)
+        }
+      })
+    }, gridObserverOptions)
+
+    // Use setTimeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const gridSection = document.querySelector('.how-it-works-grid')
+      if (gridSection) {
+        gridObserver.observe(gridSection)
+        
+        // Check if already in view (for initial load)
+        const rect = gridSection.getBoundingClientRect()
+        const isInView = rect.top < window.innerHeight && rect.bottom > 0
+        if (isInView) {
+          gridSection.classList.add('grid-revealed')
+          const items = gridSection.querySelectorAll('.work-card, .work-stats')
+          items.forEach((item, index) => {
+            setTimeout(() => {
+              item.classList.add('particle-reveal')
+            }, 300 + (index * 100))
+          })
+        }
+      }
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+      const gridSection = document.querySelector('.how-it-works-grid')
+      if (gridSection) {
+        gridObserver.unobserve(gridSection)
+      }
+    }
+  }, [])
+
 
   return (
     <div className="first-page-container">
@@ -193,7 +249,7 @@ const FirstPage = () => {
               height={500}
               cardDistance={65}
               verticalDistance={85}
-              delay={6500}
+              delay={3500}
               skewAmount={9}
               pauseOnHover={true}
             >
@@ -266,7 +322,7 @@ const FirstPage = () => {
       {/* How It Works */}
       <section className="how-it-works" id="how-it-works">
         <div className="how-it-works-container">
-          <div className="how-it-works-grid">
+          <div className="how-it-works-grid dust-particle-grid">
             <div className="work-card work-card-1 scroll-reveal">
               <div className="work-card-number">01</div>
               <div className="work-card-content">
