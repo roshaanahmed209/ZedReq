@@ -374,15 +374,61 @@ class NemzAgent:
             'total_results': 0
         }
         
-        # Search based on determined type
+        # Determine which searches to perform
+        search_types = []
         if search_type in ['jobs', 'all']:
-            results['jobs'] = self.search_jobs(user_query, limit=limit)
-        
+            search_types.append('jobs')
         if search_type in ['profiles', 'all']:
-            results['profiles'] = self.search_profiles(user_query, limit=limit)
-        
+            search_types.append('profiles')
         if search_type in ['posts', 'all']:
-            results['posts'] = self.search_posts(user_query, limit=limit)
+            search_types.append('posts')
+        
+        # If multiple search types, parallelize them
+        if len(search_types) > 1:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            import os
+            
+            max_workers = int(os.environ.get('NEMZ_SEARCH_MAX_WORKERS', 3))
+            
+            def search_jobs_wrapper():
+                return self.search_jobs(user_query, limit=limit)
+            
+            def search_profiles_wrapper():
+                return self.search_profiles(user_query, limit=limit)
+            
+            def search_posts_wrapper():
+                return self.search_posts(user_query, limit=limit)
+            
+            # Map search types to functions
+            search_functions = {
+                'jobs': search_jobs_wrapper,
+                'profiles': search_profiles_wrapper,
+                'posts': search_posts_wrapper
+            }
+            
+            # Execute searches in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_type = {
+                    executor.submit(search_functions[st]): st
+                    for st in search_types
+                }
+                
+                for future in as_completed(future_to_type):
+                    search_type_name = future_to_type[future]
+                    try:
+                        search_results = future.result()
+                        results[search_type_name] = search_results
+                    except Exception as e:
+                        logger.error(f"Error in {search_type_name} search: {e}")
+                        results[search_type_name] = []
+        else:
+            # Single search type, execute sequentially
+            if 'jobs' in search_types:
+                results['jobs'] = self.search_jobs(user_query, limit=limit)
+            if 'profiles' in search_types:
+                results['profiles'] = self.search_profiles(user_query, limit=limit)
+            if 'posts' in search_types:
+                results['posts'] = self.search_posts(user_query, limit=limit)
         
         results['total_results'] = (
             len(results['jobs']) +

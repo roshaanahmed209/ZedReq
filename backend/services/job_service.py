@@ -570,26 +570,76 @@ class JobService:
         jobs: List[JobPosting], 
         user_id: int = None
     ) -> List[Dict[str, Any]]:
-        """Enrich job data with poster info, user-specific flags, and counts"""
+        """Enrich job data with poster info, user-specific flags, and counts (optimized with batch queries)"""
         from config.database import get_database
         db_raw = get_database()
         
+        if not jobs:
+            return []
+        
+        # Batch query: Get all poster info in a single query
+        poster_ids = list(set([job.poster_id for job in jobs]))
+        poster_info_map = {}
+        
+        if poster_ids:
+            # Build query with IN clause for all poster IDs
+            placeholders = ','.join(['%s'] * len(poster_ids))
+            query = f'SELECT uid, username, name FROM users WHERE uid IN ({placeholders})'
+            posters = db_raw.fetch_all(query, tuple(poster_ids))
+            
+            for poster in posters:
+                poster_info_map[poster['uid']] = {
+                    'username': poster.get('username'),
+                    'name': poster.get('name')
+                }
+        
+        # Batch query: Get user-specific flags if user_id provided
+        saved_job_ids = set()
+        applied_job_ids = set()
+        
+        if user_id:
+            job_ids = [job.job_id for job in jobs]
+            
+            # Batch query for saved jobs
+            saved_jobs = (
+                self.db.query(JobSaved.job_id)
+                .filter(
+                    and_(
+                        JobSaved.job_id.in_(job_ids),
+                        JobSaved.user_id == user_id
+                    )
+                )
+                .all()
+            )
+            saved_job_ids = {job_id for (job_id,) in saved_jobs}
+            
+            # Batch query for applied jobs
+            applied_jobs = (
+                self.db.query(JobApplication.job_id)
+                .filter(
+                    and_(
+                        JobApplication.job_id.in_(job_ids),
+                        JobApplication.applicant_id == user_id
+                    )
+                )
+                .all()
+            )
+            applied_job_ids = {job_id for (job_id,) in applied_jobs}
+        
+        # Build results
         results = []
         for job in jobs:
             # Get base job data with relations (application_count, save_count)
             data = job.to_dict(include_relations=True)
             
-            # Get poster info
-            poster = db_raw.fetch_one(
-                'SELECT username, name FROM users WHERE uid = %s',
-                (job.poster_id,)
-            )
-            data['poster_username'] = poster['username'] if poster else None
-            data['poster_name'] = poster['name'] if poster else None
+            # Get poster info from batch query result
+            poster_info = poster_info_map.get(job.poster_id, {})
+            data['poster_username'] = poster_info.get('username')
+            data['poster_name'] = poster_info.get('name')
             
             if user_id:
-                data['is_saved'] = self._is_job_saved(job.job_id, user_id)
-                data['has_applied'] = self._has_applied(job.job_id, user_id)
+                data['is_saved'] = job.job_id in saved_job_ids
+                data['has_applied'] = job.job_id in applied_job_ids
             
             results.append(data)
         

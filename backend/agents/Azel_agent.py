@@ -463,7 +463,7 @@ Return a JSON array of topic strings."""
     
     def _extract_content_from_urls(self, urls: List[Dict[str, Any]]) -> str:
         """
-        Extract content from multiple URLs and combine
+        Extract content from multiple URLs and combine (parallelized)
         
         Args:
             urls: List of URL dictionaries
@@ -471,13 +471,48 @@ Return a JSON array of topic strings."""
         Returns:
             Combined text content
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from utils.api_security import sanitize_url
+        import threading
+        
+        if not urls:
+            return ""
+        
         contents = []
-        for url_data in urls:
+        lock = threading.Lock()
+        max_workers = int(os.environ.get('AZEL_WEB_MAX_WORKERS', 3))
+        
+        def extract_single_url(url_data):
+            """Extract content from a single URL with error handling"""
             url = url_data.get('url', '')
-            content = self._extract_content_from_url(url)
-            if content:
-                contents.append(content)
-            time.sleep(0.5)  # Rate limiting
+            if not url:
+                return None
+            
+            try:
+                # Sanitize URL
+                sanitized_url = sanitize_url(url)
+                content = self._extract_content_from_url(sanitized_url)
+                return content
+            except Exception as e:
+                logger.warning(f"Failed to extract content from URL {url[:50]}: {e}")
+                return None
+        
+        # Extract content from URLs in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_url = {
+                executor.submit(extract_single_url, url_data): url_data
+                for url_data in urls
+            }
+            
+            for future in as_completed(future_to_url):
+                url_data = future_to_url[future]
+                try:
+                    content = future.result()
+                    if content:
+                        with lock:
+                            contents.append(content)
+                except Exception as e:
+                    logger.error(f"Error extracting content from URL: {e}")
         
         return "\n\n".join(contents)
     
@@ -647,15 +682,62 @@ Return a JSON array of question objects."""
                 logger.warning(f"No highlighted topics extracted for user_id={user_id}, course_id={course_id}")
                 return result
             
-            # Step 3: Perform Google searches for each topic
+            # Step 3: Perform Google searches for each topic (parallelized)
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from utils.rate_limiter import get_google_search_limiter
+            from utils.api_retry import retry_with_backoff
+            from utils.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+            from utils.api_security import sanitize_search_query
+            
             all_urls = []
-            for topic in highlighted_topics[:3]:  # Limit to top 3 topics to avoid too many searches
-                search_query = f"{topic} tutorial course educational"
-                urls = self._perform_google_search(search_query, num_results=self.max_search_results)
-                for url_data in urls:
-                    url_data['search_query'] = search_query
-                all_urls.extend(urls)
-                time.sleep(2)  # Rate limiting between searches
+            topics_to_search = highlighted_topics[:3]  # Limit to top 3 topics
+            
+            # Get rate limiter and circuit breaker
+            rate_limiter = get_google_search_limiter()
+            circuit_breaker = get_circuit_breaker('google_search')
+            max_workers = int(os.environ.get('AZEL_WEB_MAX_WORKERS', 3))
+            
+            def perform_search_with_protection(topic):
+                """Perform Google search with rate limiting and error handling"""
+                search_query = f"{sanitize_search_query(topic)} tutorial course educational"
+                
+                try:
+                    with rate_limiter.acquire():
+                        @retry_with_backoff(max_retries=int(os.environ.get('GOOGLE_SEARCH_MAX_RETRIES', 3)))
+                        def search():
+                            return circuit_breaker.call(
+                                self._perform_google_search,
+                                search_query,
+                                num_results=self.max_search_results
+                            )
+                        
+                        urls = search()
+                        for url_data in urls:
+                            url_data['search_query'] = search_query
+                        return urls
+                
+                except CircuitBreakerOpenError as e:
+                    logger.error(f"Circuit breaker open for Google search '{topic}': {e}")
+                    return []
+                except Exception as e:
+                    logger.error(f"Failed to search for topic '{topic}': {e}")
+                    return []
+            
+            # Perform searches in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_topic = {
+                    executor.submit(perform_search_with_protection, topic): topic
+                    for topic in topics_to_search
+                }
+                
+                for future in as_completed(future_to_topic):
+                    topic = future_to_topic[future]
+                    try:
+                        urls = future.result()
+                        all_urls.extend(urls)
+                        logger.debug(f"Completed search for topic '{topic}': {len(urls)} URLs found")
+                    except Exception as e:
+                        logger.error(f"Error processing search for topic '{topic}': {e}")
             
             result['urls_found'] = len(all_urls)
             

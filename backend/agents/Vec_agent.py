@@ -817,6 +817,7 @@ class VecAgent:
     def sync_all_entities(self, force: bool = False) -> Dict[str, Any]:
         """
         Main method for scheduled job - sync all entities to Qdrant (scalable for 100k+ users)
+        Uses parallel processing to index jobs, users, and posts concurrently.
         
         Args:
             force: If True, re-index all entities regardless of timestamps
@@ -824,29 +825,65 @@ class VecAgent:
         Returns:
             Dictionary with statistics: jobs_indexed, users_indexed, posts_indexed
         """
-        logger.info("Starting Vec Agent sync for all entities (scalable mode)")
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import os
+        
+        logger.info("Starting Vec Agent sync for all entities (parallel mode)")
         sync_start_time = time.time()
         
         since = None if force else datetime.now() - timedelta(days=1)
         
-        # Process all entities (no limit) - pagination handles it
-        jobs_indexed = self.index_jobs(limit=None, since=since)
-        users_indexed = self.index_users(limit=None, since=since)
-        posts_indexed = self.index_posts(limit=None, since=since)
+        # Get max workers from environment (default: 3 for the three entity types)
+        max_workers = int(os.environ.get('VEC_SYNC_MAX_WORKERS', 3))
+        
+        # Process all entities in parallel using ThreadPoolExecutor
+        results = {
+            'jobs_indexed': 0,
+            'users_indexed': 0,
+            'posts_indexed': 0
+        }
+        
+        errors = {}
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all three indexing tasks
+            future_to_entity = {
+                executor.submit(self.index_jobs, None, since): 'jobs',
+                executor.submit(self.index_users, None, since): 'users',
+                executor.submit(self.index_posts, None, since): 'posts'
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_entity):
+                entity_type = future_to_entity[future]
+                try:
+                    count = future.result()
+                    results[f'{entity_type}_indexed'] = count
+                    logger.info(f"Vec Agent: {entity_type} indexing completed: {count} entities")
+                except Exception as e:
+                    error_msg = str(e)
+                    errors[entity_type] = error_msg
+                    logger.error(f"Vec Agent: {entity_type} indexing failed: {error_msg}", exc_info=True)
+                    # Continue with other entity types even if one fails
         
         total_time = time.time() - sync_start_time
         
         result = {
-            'success': True,
-            'jobs_indexed': jobs_indexed,
-            'users_indexed': users_indexed,
-            'posts_indexed': posts_indexed,
-            'total_indexed': jobs_indexed + users_indexed + posts_indexed,
+            'success': len(errors) == 0,
+            'jobs_indexed': results['jobs_indexed'],
+            'users_indexed': results['users_indexed'],
+            'posts_indexed': results['posts_indexed'],
+            'total_indexed': results['jobs_indexed'] + results['users_indexed'] + results['posts_indexed'],
             'total_time_seconds': round(total_time, 2),
             'timestamp': datetime.now().isoformat()
         }
         
-        logger.info(f"Vec Agent sync completed: {result}")
+        if errors:
+            result['errors'] = errors
+            logger.warning(f"Vec Agent sync completed with errors: {errors}")
+        else:
+            logger.info(f"Vec Agent sync completed successfully: {result}")
+        
         return result
     
     def is_available(self) -> bool:

@@ -220,12 +220,18 @@ class FeedService:
         return result
     
     def _enrich_posts(self, posts: List[Dict], user_id: int) -> List[Dict[str, Any]]:
-        """Enrich posts with like status and format for API response"""
-        enriched = []
+        """Enrich posts with like status and format for API response (optimized with batch query)"""
+        if not posts:
+            return []
         
+        # Batch query: Get all like statuses in a single query
+        post_ids = [post['post_id'] for post in posts]
+        liked_post_ids = self._get_liked_post_ids_batch(post_ids, user_id)
+        
+        enriched = []
         for post in posts:
-            # Check if user liked this post using ORM
-            is_liked = self._has_liked(post['post_id'], user_id)
+            # Check if user liked this post (from batch query result)
+            is_liked = post['post_id'] in liked_post_ids
             
             created_at = post['created_at']
             if hasattr(created_at, 'isoformat'):
@@ -263,6 +269,33 @@ class FeedService:
             .first()
         )
         return like is not None
+    
+    def _get_liked_post_ids_batch(self, post_ids: List[int], user_id: int) -> set:
+        """
+        Batch query to get all post IDs that the user has liked
+        
+        Args:
+            post_ids: List of post IDs to check
+            user_id: User ID
+        
+        Returns:
+            Set of post IDs that the user has liked
+        """
+        if not post_ids:
+            return set()
+        
+        liked_posts = (
+            self.db.query(Like.post_id)
+            .filter(
+                and_(
+                    Like.post_id.in_(post_ids),
+                    Like.uid == user_id
+                )
+            )
+            .all()
+        )
+        
+        return {post_id for (post_id,) in liked_posts}
     
     def _parse_cursor(self, cursor: str) -> Optional[Tuple[str, int]]:
         """Parse cursor string into (timestamp, post_id) tuple"""

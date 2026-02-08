@@ -5,6 +5,7 @@ AI-powered agent that evaluates user answers with lenient scoring (0-10) and upd
 
 import os
 import logging
+import threading
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
@@ -258,7 +259,7 @@ Return a JSON object with: score (0-10), is_correct (boolean), feedback (string)
         db_session = None
     ) -> Dict[str, Any]:
         """
-        Evaluate multiple answers in batch
+        Evaluate multiple answers in batch using parallel processing with rate limiting
         
         Args:
             answer_ids: List of answer IDs to evaluate
@@ -267,6 +268,9 @@ Return a JSON object with: score (0-10), is_correct (boolean), feedback (string)
         Returns:
             Dictionary with evaluation results and statistics
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import os
+        
         if not answer_ids:
             return {
                 'success': False,
@@ -275,7 +279,7 @@ Return a JSON object with: score (0-10), is_correct (boolean), feedback (string)
                 'average_score': 0.0
             }
         
-        # Get database session
+        # Get database session for initial query
         should_close = False
         if db_session is None:
             from config.database_orm import get_db
@@ -302,55 +306,127 @@ Return a JSON object with: score (0-10), is_correct (boolean), feedback (string)
                     'average_score': 0.0
                 }
             
-            service = LMSService(db)
+            # Import utilities for rate limiting, retry, and circuit breaker
+            from utils.rate_limiter import get_openai_limiter
+            from utils.api_retry import retry_with_backoff
+            from utils.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+            from utils.api_security import sanitize_input
+            
+            # Get rate limiter and circuit breaker
+            rate_limiter = get_openai_limiter()
+            circuit_breaker = get_circuit_breaker('openai_api')
+            
+            # Get max workers from environment
+            max_workers = int(os.environ.get('SEEZ_EVAL_MAX_WORKERS', 5))
+            
+            # Thread-safe collections for results
             evaluations = []
             scores = []
+            errors = []
+            lock = threading.Lock()
             
-            # Evaluate each answer
-            for answer in answers:
-                if not answer.answer_text:
-                    logger.warning(f"Answer {answer.id} has no answer_text, skipping")
-                    continue
+            def evaluate_single_answer_with_db(answer):
+                """Evaluate a single answer with its own database session"""
+                # Create new database session for this thread
+                from config.database_orm import get_db
+                thread_db = next(get_db())
+                thread_service = LMSService(thread_db)
                 
-                # Evaluate using LLM
-                evaluation = self._evaluate_single_answer(answer.question, answer.answer_text)
+                try:
+                    if not answer.answer_text:
+                        logger.warning(f"Answer {answer.id} has no answer_text, skipping")
+                        return None
+                    
+                    # Sanitize input
+                    sanitized_answer = sanitize_input(answer.answer_text, max_length=5000)
+                    
+                    # Evaluate with rate limiting, retry, and circuit breaker
+                    def evaluate_with_protection():
+                        with rate_limiter.acquire():
+                            return self._evaluate_single_answer(answer.question, sanitized_answer)
+                    
+                    try:
+                        evaluation = circuit_breaker.call(evaluate_with_protection)
+                    except CircuitBreakerOpenError as e:
+                        logger.error(f"Circuit breaker open for answer {answer.id}: {e}")
+                        return {'error': 'Service temporarily unavailable', 'answer_id': answer.id}
+                    except Exception as e:
+                        logger.error(f"Failed to evaluate answer {answer.id}: {e}")
+                        return {'error': str(e), 'answer_id': answer.id}
+                    
+                    # Update answer in database
+                    try:
+                        updated_answer = thread_service.evaluate_answer(
+                            answer_id=answer.id,
+                            is_correct=evaluation['is_correct'],
+                            points=evaluation['points_earned'],
+                            feedback=evaluation['feedback']
+                        )
+                        
+                        if updated_answer:
+                            result = {
+                                'answer_id': answer.id,
+                                'question_id': answer.question_id,
+                                'score': evaluation['score'],
+                                'is_correct': evaluation['is_correct'],
+                                'points_earned': evaluation['points_earned'],
+                                'feedback': evaluation['feedback'],
+                                'improvement_suggestions': evaluation.get('improvement_suggestions', [])
+                            }
+                            return result
+                        else:
+                            return {'error': 'Database update failed', 'answer_id': answer.id}
+                    except Exception as e:
+                        logger.error(f"Failed to update answer {answer.id} in database: {e}")
+                        return {'error': f'Database error: {str(e)}', 'answer_id': answer.id}
                 
-                # Update answer in database
-                updated_answer = service.evaluate_answer(
-                    answer_id=answer.id,
-                    is_correct=evaluation['is_correct'],
-                    points=evaluation['points_earned'],
-                    feedback=evaluation['feedback']
-                )
-                
-                if updated_answer:
-                    evaluations.append({
-                        'answer_id': answer.id,
-                        'question_id': answer.question_id,
-                        'score': evaluation['score'],
-                        'is_correct': evaluation['is_correct'],
-                        'points_earned': evaluation['points_earned'],
-                        'feedback': evaluation['feedback'],
-                        'improvement_suggestions': evaluation.get('improvement_suggestions', [])
-                    })
-                    scores.append(evaluation['score'])
+                finally:
+                    thread_db.close()
             
-            # Calculate average score using simple averaging algorithm
+            # Evaluate answers in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_answer = {
+                    executor.submit(evaluate_single_answer_with_db, answer): answer
+                    for answer in answers
+                }
+                
+                for future in as_completed(future_to_answer):
+                    answer = future_to_answer[future]
+                    try:
+                        result = future.result()
+                        if result and 'error' not in result:
+                            with lock:
+                                evaluations.append(result)
+                                scores.append(result['score'])
+                        elif result and 'error' in result:
+                            with lock:
+                                errors.append(result)
+                    except Exception as e:
+                        logger.error(f"Error processing answer {answer.id}: {e}", exc_info=True)
+                        with lock:
+                            errors.append({'error': str(e), 'answer_id': answer.id})
+            
+            # Calculate average score
             average_score = sum(scores) / len(scores) if scores else 0.0
             
             result = {
-                'success': True,
+                'success': len(errors) < len(answers),  # Success if at least some evaluations succeeded
                 'evaluated_count': len(evaluations),
                 'total_answers': len(answers),
                 'average_score': round(average_score, 2),
                 'evaluations': evaluations
             }
             
-            logger.info(f"Evaluated {len(evaluations)} answers, average score: {average_score:.2f}/10")
+            if errors:
+                result['errors'] = errors
+                logger.warning(f"Evaluated {len(evaluations)}/{len(answers)} answers with {len(errors)} errors")
+            else:
+                logger.info(f"Evaluated {len(evaluations)} answers, average score: {average_score:.2f}/10")
+            
             return result
             
         except Exception as e:
-            logger.error(f"Failed to evaluate answers batch: {e}")
+            logger.error(f"Failed to evaluate answers batch: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),
