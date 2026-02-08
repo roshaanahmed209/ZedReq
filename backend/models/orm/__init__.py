@@ -30,6 +30,7 @@ from .lms_recommendation import LMSRecommendation
 from .lms_deadline import LMSDeadline
 from .lms_certificate import LMSCertificate
 from .azel_search_url import AzelSearchUrl
+from .reserved_seat import ReservedSeat
 
 __all__ = [
     'User',
@@ -61,4 +62,5 @@ __all__ = [
     'LMSDeadline',
     'LMSCertificate',
     'AzelSearchUrl',
+    'ReservedSeat',
 ]

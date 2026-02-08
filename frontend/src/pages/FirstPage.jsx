@@ -3,19 +3,13 @@ import { Link } from 'react-router-dom'
 import DarkVeil from '../components/DarkVeil'
 import Beams from '../components/Beams'
 import CardSwap, { Card } from '../components/CardSwap'
+import ReserveSeatModal from '../components/ReserveSeatModal'
 import '../css/pages/FirstPage.css'
 
 const FirstPage = () => {
   const [activeLoop, setActiveLoop] = useState(0)
   const [activeTestimonial, setActiveTestimonial] = useState(0)
-  const [metricValues, setMetricValues] = useState({
-    roles: 0,
-    satisfaction: 0,
-    partners: 0,
-    privacy: 0
-  })
-  const metricsRef = useRef(null)
-  const hasAnimated = useRef(false)
+  const [showReserveModal, setShowReserveModal] = useState(false)
 
   // 3D card tilt effect
   const handleCardMouseMove = (e) => {
@@ -108,12 +102,6 @@ const FirstPage = () => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible')
           
-          // Trigger counter animation for metrics section
-          if (entry.target.classList.contains('metrics-section') && !hasAnimated.current) {
-            hasAnimated.current = true
-            animateMetrics()
-          }
-          
           observer.unobserve(entry.target)
         }
       })
@@ -128,43 +116,6 @@ const FirstPage = () => {
     }
   }, [])
 
-  // Animate metrics counter
-  const animateMetrics = () => {
-    const duration = 2500 // 2.5 seconds
-    const steps = 75
-    const stepDuration = duration / steps
-
-    const targets = {
-      roles: 25000,
-      satisfaction: 4.8,
-      partners: 200,
-      privacy: 100
-    }
-
-    let currentStep = 0
-
-    const interval = setInterval(() => {
-      currentStep++
-      const progress = currentStep / steps
-
-      setMetricValues({
-        roles: Math.floor(targets.roles * progress),
-        satisfaction: (targets.satisfaction * progress).toFixed(1),
-        partners: Math.floor(targets.partners * progress),
-        privacy: Math.floor(targets.privacy * progress)
-      })
-
-      if (currentStep >= steps) {
-        clearInterval(interval)
-        setMetricValues({
-          roles: targets.roles,
-          satisfaction: targets.satisfaction,
-          partners: targets.partners,
-          privacy: targets.privacy
-        })
-      }
-    }, stepDuration)
-  }
 
   return (
     <div className="first-page-container">
@@ -192,7 +143,12 @@ const FirstPage = () => {
           <p className="hero-subheadline">AI job matching • Intelligent career assistant • Realistic mock interviews</p>
           <div className="hero-cta">
             <Link to="/landing" className="btn-primary">Get Matched — It's Free</Link>
-            <a href="#platform-tour" className="btn-secondary">Explore Platform</a>
+            <button 
+              onClick={() => setShowReserveModal(true)} 
+              className="btn-secondary"
+            >
+              Reserve A Seat
+            </button>
           </div>
           <p className="hero-microcopy">No résumé required — AI builds a smart profile in minutes.</p>
           
@@ -309,75 +265,55 @@ const FirstPage = () => {
 
       {/* How It Works */}
       <section className="how-it-works" id="how-it-works">
-        <h2 className="section-title scroll-reveal">How It Works</h2>
-        <div className="timeline">
-          <div 
-            className="timeline-step glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="step-number">1</div>
-            <h3>Create your AI profile</h3>
-            <p>Answer a few guided prompts. ZedReq extracts skills, projects and career goals automatically.</p>
-          </div>
-          <div 
-            className="timeline-step glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="step-number">2</div>
-            <h3>Get matched & recommended roles</h3>
-            <p>Receive prioritized matches with role-fit scores and a suggested application checklist.</p>
-          </div>
-          <div 
-            className="timeline-step glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="step-number">3</div>
-            <h3>Practice & apply confidently</h3>
-            <p>Polish your application with the AI assistant and rehearse interviews until you're interview-ready.</p>
+        <div className="how-it-works-container">
+          <div className="how-it-works-grid">
+            <div className="work-card work-card-1 scroll-reveal">
+              <div className="work-card-number">01</div>
+              <div className="work-card-content">
+                <h3>Create your AI profile</h3>
+                <p>Answer a few guided prompts. ZedReq extracts skills, projects and career goals automatically.</p>
+              </div>
+            </div>
+            
+            <div className="work-card work-card-2 scroll-reveal">
+              <div className="work-card-number">02</div>
+              <div className="work-card-content">
+                <h3>Get matched & recommended roles</h3>
+                <p>Receive prioritized matches with role-fit scores and a suggested application checklist.</p>
+              </div>
+            </div>
+            
+            <div className="work-card work-card-3 scroll-reveal">
+              <div className="work-card-number">03</div>
+              <div className="work-card-content">
+                <h3>Practice & apply confidently</h3>
+                <p>Polish your application with the AI assistant and rehearse interviews until you're interview-ready.</p>
+              </div>
+            </div>
+            
+            <div className="work-stats work-stats-1 scroll-reveal">
+              <div className="stat-value">25,000+</div>
+              <div className="stat-label">matched roles</div>
+            </div>
+            
+            <div className="work-stats work-stats-2 scroll-reveal">
+              <div className="stat-value">4.8</div>
+              <div className="stat-label">average candidate satisfaction</div>
+            </div>
+            
+            <div className="work-stats work-stats-3 scroll-reveal">
+              <div className="stat-value">200+</div>
+              <div className="stat-label">hiring partners</div>
+            </div>
+            
+            <div className="work-stats work-stats-4 scroll-reveal">
+              <div className="stat-value">100%</div>
+              <div className="stat-label">privacy & compliance</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Metrics */}
-      <section className="metrics-section scroll-reveal" ref={metricsRef}>
-        <div className="metrics-grid">
-          <div 
-            className="metric-item glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="metric-number">{metricValues.roles.toLocaleString()}+</div>
-            <p className="metric-label">matched roles</p>
-          </div>
-          <div 
-            className="metric-item glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="metric-number">{metricValues.satisfaction}</div>
-            <p className="metric-label">average candidate satisfaction</p>
-          </div>
-          <div 
-            className="metric-item glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="metric-number">{metricValues.partners}+</div>
-            <p className="metric-label">hiring partners</p>
-          </div>
-          <div 
-            className="metric-item glass-card scroll-reveal"
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-          >
-            <div className="metric-number">{metricValues.privacy}%</div>
-            <p className="metric-label">privacy & compliance</p>
-          </div>
-        </div>
-      </section>
 
       {/* Testimonials */}
       <section className="testimonials-section">
@@ -440,10 +376,15 @@ const FirstPage = () => {
           <p>Create your AI profile in minutes — get matched today.</p>
           <div className="cta-buttons">
             <Link to="/landing" className="btn-primary large">Create Free Profile</Link>
-            <a href="#" className="btn-secondary">Watch Demo</a>
           </div>
         </div>
       </section>
+
+      {/* Reserve Seat Modal */}
+      <ReserveSeatModal 
+        isOpen={showReserveModal}
+        onClose={() => setShowReserveModal(false)}
+      />
 
       {/* Footer */}
       <footer className="footer">

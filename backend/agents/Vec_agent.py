@@ -16,6 +16,8 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
+from sqlalchemy import func
+
 from config.database_orm import get_db
 from models.orm.job_posting import JobPosting
 from models.orm.user import User
@@ -381,7 +383,13 @@ class VecAgent:
                 )
             
             # Get total count for progress tracking
-            total_count = base_query.count()
+            # Use func.count() with job_id to avoid selecting all columns (including deferred embedding)
+            count_query = db.query(func.count(JobPosting.job_id)).filter(JobPosting.status == 'active')
+            if since:
+                count_query = count_query.filter(
+                    (JobPosting.created_at >= since) | (JobPosting.updated_at >= since)
+                )
+            total_count = count_query.scalar()
             logger.info(f"Starting to index jobs (total: {total_count}, batch size: {self.batch_size})")
             
             offset = 0
