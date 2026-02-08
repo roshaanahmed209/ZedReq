@@ -31,6 +31,14 @@ const Navbar = styled.nav`
   top: 0;
   z-index: 100;
   padding: 0 20px;
+  
+  @media (max-width: 768px) {
+    padding: 0 15px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 12px;
+  }
 `
 
 const NavContainer = styled.div`
@@ -41,6 +49,16 @@ const NavContainer = styled.div`
   justify-content: space-between;
   padding: 12px 0;
   gap: 30px;
+  
+  @media (max-width: 768px) {
+    gap: 15px;
+    padding: 10px 0;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 10px;
+    padding: 8px 0;
+  }
 `
 
 const NavLeft = styled.div`
@@ -48,6 +66,14 @@ const NavLeft = styled.div`
   align-items: center;
   gap: 20px;
   position: relative;
+  
+  @media (max-width: 1024px) {
+    gap: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 10px;
+  }
 `
 
 const Logo = styled.h1`
@@ -61,12 +87,28 @@ const Logo = styled.h1`
   &:hover {
     transform: scale(1.05);
   }
+  
+  @media (max-width: 768px) {
+    font-size: 1.5em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.3em;
+  }
 `
 
 const NavRight = styled.div`
   display: flex;
   align-items: center;
   gap: 30px;
+  
+  @media (max-width: 768px) {
+    gap: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 10px;
+  }
 `
 
 const NavMenu = styled.div`
@@ -205,13 +247,29 @@ const MainContainer = styled.div`
   gap: 25px;
   padding: 30px 20px;
   
+  @media (max-width: 1200px) {
+    max-width: 100%;
+    margin: 0 auto;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    padding: 25px 15px;
+  }
+  
   @media (max-width: 1024px) {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 240px 1fr;
+    gap: 18px;
+    padding: 20px 15px;
   }
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding: 20px 15px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+    padding: 15px 12px;
   }
 `
 
@@ -219,6 +277,11 @@ const Sidebar = styled.aside`
   position: sticky;
   top: 100px;
   height: fit-content;
+  
+  @media (max-width: 768px) {
+    position: static;
+    top: auto;
+  }
 `
 
 const ProfileCard = styled.div`
@@ -227,6 +290,15 @@ const ProfileCard = styled.div`
   padding: 30px;
   border: 1px solid var(--border);
   text-align: center;
+  
+  @media (max-width: 768px) {
+    padding: 25px 20px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 20px 15px;
+    border-radius: 10px;
+  }
 `
 
 const ProfileAvatar = styled.div`
@@ -241,6 +313,20 @@ const ProfileAvatar = styled.div`
   font-size: 2em;
   font-weight: 500;
   margin: 0 auto 20px;
+  
+  @media (max-width: 768px) {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8em;
+    margin-bottom: 16px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5em;
+    margin-bottom: 12px;
+  }
 `
 
 const ProfileName = styled.h3`
@@ -281,6 +367,127 @@ const SidePanel = styled.div`
   
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+`
+
+const MobileMenuButton = styled.button`
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  z-index: 101;
+  
+  @media (max-width: 1024px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  &:hover {
+    background: rgba(10, 102, 194, 0.1);
+    color: var(--primary);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`
+
+const MobileMenuOverlay = styled.div`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: opacity 0.3s ease;
+  
+  @media (max-width: 1024px) {
+    display: block;
+  }
+`
+
+const MobileSidePanel = styled.aside`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: ${props => props.isOpen ? '0' : '-100%'};
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  background: var(--bg-white);
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 1024px) {
+    display: block;
+  }
+  
+  @media (max-width: 480px) {
+    width: 260px;
+    max-width: 90vw;
+  }
+  
+  & ${SidePanel} {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+  }
+`
+
+const MobileMenuHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  h2 {
+    font-size: 1.2em;
+    color: var(--text);
+    font-weight: 600;
+    margin: 0;
+  }
+`
+
+const MobileMenuCloseButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text);
+    transform: rotate(90deg);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
   }
 `
 
@@ -405,6 +612,18 @@ const PostCreator = styled.div`
   padding: 20px;
   margin-bottom: 30px;
   border: 1px solid var(--border);
+  
+  @media (max-width: 768px) {
+    padding: 18px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+  }
 `
 
 const PostCreatorHeader = styled.div`
@@ -470,6 +689,19 @@ const PostTextarea = styled.textarea`
   &::placeholder {
     color: var(--text-lighter);
   }
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+    font-size: 0.95em;
+    min-height: 70px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px;
+    font-size: 0.9em;
+    min-height: 60px;
+    border-radius: 6px;
+  }
 `
 
 const PostButton = styled.button`
@@ -505,6 +737,16 @@ const Post = styled.div`
   padding: 20px;
   border: 1px solid var(--border);
   animation: ${slideUp} 0.3s ease-out;
+  
+  @media (max-width: 768px) {
+    padding: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px;
+    border-radius: 8px;
+  }
 `
 
 const PostHeader = styled.div`
@@ -634,6 +876,15 @@ const LoadMoreSpinner = styled.div`
 const PostActions = styled.div`
   display: flex;
   gap: 20px;
+  
+  @media (max-width: 768px) {
+    gap: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 `
 
 const PostAction = styled.button`
@@ -662,6 +913,17 @@ const PostAction = styled.button`
     
     svg {
       color: #e74c3c;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 6px 10px;
+    gap: 6px;
+    font-size: 0.85em;
+    
+    svg {
+      width: 18px;
+      height: 18px;
     }
   }
 `
@@ -1031,6 +1293,7 @@ const Feed = () => {
   const [searchResults, setSearchResults] = useState([])
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [messagesOpen, setMessagesOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -1347,6 +1610,13 @@ const Feed = () => {
       <Navbar>
         <NavContainer>
           <NavLeft>
+            <MobileMenuButton onClick={() => setMobileMenuOpen(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </MobileMenuButton>
             <Logo>ZedReq</Logo>
             <SearchInput 
               type="text" 
@@ -1421,6 +1691,140 @@ const Feed = () => {
         </NavContainer>
       </Navbar>
 
+      <MobileMenuOverlay 
+        isOpen={mobileMenuOpen} 
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      <MobileSidePanel isOpen={mobileMenuOpen}>
+        <MobileMenuHeader>
+          <h2>Menu</h2>
+          <MobileMenuCloseButton onClick={() => setMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </MobileMenuCloseButton>
+        </MobileMenuHeader>
+        <SidePanel>
+          <PanelSection>
+            <PanelItem>
+              <span className="label">Profile views</span>
+              <span className="value">142</span>
+            </PanelItem>
+          </PanelSection>
+          
+          <PanelSection>
+            <PanelItem>
+              <span className="label">Post impressions</span>
+              <span className="value">1,234</span>
+            </PanelItem>
+          </PanelSection>
+          
+          <PanelDivider />
+          
+          <PanelSection onClick={() => { navigate('/lms'); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  <path d="M12 6h4"></path>
+                  <path d="M12 10h4"></path>
+                  <path d="M12 14h4"></path>
+                </svg>
+              </span>
+              <span>LMS</span>
+            </PanelLink>
+          </PanelSection>
+          
+          <PanelSection onClick={() => { navigate('/evaluation'); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 11l3 3L22 4"></path>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+              </span>
+              <span>Evaluation</span>
+            </PanelLink>
+          </PanelSection>
+
+          <PanelSection onClick={() => { navigate('/ai-mode'); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v3"></path>
+                  <path d="M12 18v3"></path>
+                  <path d="M5.5 5.5l2.1 2.1"></path>
+                  <path d="M16.4 16.4l2.1 2.1"></path>
+                  <path d="M3 12h3"></path>
+                  <path d="M18 12h3"></path>
+                  <path d="M5.5 18.5l2.1-2.1"></path>
+                  <path d="M16.4 7.6l2.1-2.1"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </span>
+              <span>AI Mode</span>
+            </PanelLink>
+          </PanelSection>
+          
+          <PanelSection onClick={() => { navigate('/ai-interviews'); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </span>
+              <span>AI Mock Interviews</span>
+            </PanelLink>
+          </PanelSection>
+          
+          <PanelSection onClick={() => { navigate('/jobs'); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              </span>
+              <span>Jobs</span>
+            </PanelLink>
+          </PanelSection>
+          
+          <PanelDivider />
+          
+          <PanelSection>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="9" x2="20" y2="9"></line>
+                  <line x1="4" y1="15" x2="20" y2="15"></line>
+                  <line x1="10" y1="3" x2="8" y2="21"></line>
+                  <line x1="16" y1="3" x2="14" y2="21"></line>
+                </svg>
+              </span>
+              <span>Followed Hashtags</span>
+            </PanelLink>
+          </PanelSection>
+          
+          <PanelSection>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M12 1v6m0 6v6m5.656-14.657l-4.242 4.243m0 4.242l-4.243 4.243m12.728 0l-4.243-4.243m0-4.242l-4.242-4.243"></path>
+                </svg>
+              </span>
+              <span>Settings</span>
+            </PanelLink>
+          </PanelSection>
+        </SidePanel>
+      </MobileSidePanel>
+
       <MainContainer>
         <LeftSidebar>
           <SidePanel>
@@ -1467,24 +1871,24 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
 
-              <PanelSection onClick={() => navigate('/ai-mode')}>
-                <PanelLink>
-                  <span className="icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3v3"></path>
-                      <path d="M12 18v3"></path>
-                      <path d="M5.5 5.5l2.1 2.1"></path>
-                      <path d="M16.4 16.4l2.1 2.1"></path>
-                      <path d="M3 12h3"></path>
-                      <path d="M18 12h3"></path>
-                      <path d="M5.5 18.5l2.1-2.1"></path>
-                      <path d="M16.4 7.6l2.1-2.1"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  </span>
-                  <span>AI Mode</span>
-                </PanelLink>
-              </PanelSection>
+            <PanelSection onClick={() => navigate('/ai-mode')}>
+              <PanelLink>
+                <span className="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3v3"></path>
+                    <path d="M12 18v3"></path>
+                    <path d="M5.5 5.5l2.1 2.1"></path>
+                    <path d="M16.4 16.4l2.1 2.1"></path>
+                    <path d="M3 12h3"></path>
+                    <path d="M18 12h3"></path>
+                    <path d="M5.5 18.5l2.1-2.1"></path>
+                    <path d="M16.4 7.6l2.1-2.1"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+                <span>AI Mode</span>
+              </PanelLink>
+            </PanelSection>
             
             <PanelSection onClick={() => navigate('/ai-interviews')}>
               <PanelLink>
@@ -1500,9 +1904,8 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
             
-            
-            <PanelSection>
-              <PanelLink onClick={() => navigate('/jobs')}>
+            <PanelSection onClick={() => navigate('/jobs')}>
+              <PanelLink>
                 <span className="icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>

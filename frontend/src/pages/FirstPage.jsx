@@ -292,17 +292,17 @@ const FirstPage = () => {
             </div>
             
             <div className="work-stats work-stats-1 scroll-reveal">
-              <div className="stat-value">25,000+</div>
+              <div className="stat-value">1000+</div>
               <div className="stat-label">matched roles</div>
             </div>
             
             <div className="work-stats work-stats-2 scroll-reveal">
-              <div className="stat-value">4.8</div>
+              <div className="stat-value">4.8/5</div>
               <div className="stat-label">average candidate satisfaction</div>
             </div>
             
             <div className="work-stats work-stats-3 scroll-reveal">
-              <div className="stat-value">200+</div>
+              <div className="stat-value">200</div>
               <div className="stat-label">hiring partners</div>
             </div>
             
