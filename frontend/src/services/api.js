@@ -416,6 +416,59 @@ export const lmsAPI = {
   
   updateSectionProgress: (sectionId, progressData) =>
     api.put(`/api/lms/sections/${sectionId}/progress`, progressData),
+  
+  // Azel Agent endpoints
+  triggerAzelProcessCourse: (courseId) =>
+    api.post(`/api/lms/azel/process-course/${courseId}`),
+  
+  // Course performance endpoint
+  getCoursePerformance: (courseId) =>
+    api.get(`/api/lms/dashboard/courses/${courseId}`),
+  
+  // Seez Agent endpoints
+  triggerSeezEvaluateCourse: (courseId) =>
+    api.post(`/api/lms/seez/evaluate-course/${courseId}`),
+  
+  triggerSeezEvaluateAnswers: (answerIds) =>
+    api.post('/api/lms/seez/evaluate-answers', answerIds),
+}
+
+// Nemz API methods
+export const nemzAPI = {
+  searchAll: ({ query, searchType, limit = 10 }) =>
+    api.post('/api/nemz/search', { query, search_type: searchType, limit }),
+  
+  searchJobs: ({ query, limit = 10 }) =>
+    api.post('/api/nemz/search/jobs', { query, limit }),
+  
+  searchProfiles: ({ query, limit = 10 }) =>
+    api.post('/api/nemz/search/profiles', { query, limit }),
+  
+  searchPosts: ({ query, limit = 10 }) =>
+    api.post('/api/nemz/search/posts', { query, limit }),
+}
+
+// Interview API methods
+export const interviewAPI = {
+  startInterview: (jobId) =>
+    api.post('/api/interviews/start', { job_id: jobId }),
+  
+  getInterview: (interviewId) =>
+    api.get(`/api/interviews/${interviewId}`),
+  
+  completeInterview: (interviewId) =>
+    api.post(`/api/interviews/${interviewId}/complete`),
+  
+  getMyInterviews: ({ jobId } = {}) => {
+    const params = jobId ? { job_id: jobId } : {}
+    return api.get('/api/interviews/my-interviews', { params })
+  },
+  
+  getInterviewRizFeedback: (interviewId) =>
+    api.get(`/api/interviews/${interviewId}/riz-feedback`),
+  
+  refreshRizFeedback: (interviewId) =>
+    api.post(`/api/interviews/${interviewId}/riz-feedback/refresh`),
 }
 
 // WebSocket connection for real-time notifications

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { nemzAPI } from '../services/api'
 import '../css/pages/AIMode.css'
 
 const fadeIn = keyframes`
@@ -682,6 +683,7 @@ const AIMode = () => {
   const [showJobs, setShowJobs] = useState(false)
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
+  const [jobs, setJobs] = useState([])
   const fileInputRef = React.useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
@@ -719,12 +721,14 @@ const AIMode = () => {
     }
   }
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (message.trim()) {
+      const userMessageText = message.trim()
+      
       // Add user message
       const userMessage = {
         id: Date.now(),
-        text: message,
+        text: userMessageText,
         isUser: true,
         time: "Just now"
       }
@@ -734,63 +738,86 @@ const AIMode = () => {
       // Show thinking animation
       setIsThinking(true)
       
-      // Simulate AI response after 2 seconds
-      setTimeout(() => {
+      try {
+        // Call Nemz API to search for jobs
+        const response = await nemzAPI.searchAll({
+          query: userMessageText,
+          searchType: 'jobs', // Default to jobs for AI Mode
+          limit: 10
+        })
+        
         setIsThinking(false)
+        
+        if (response.data && response.data.success) {
+          const results = response.data
+          const foundJobs = results.jobs || []
+          
+          // Map Nemz job results to display format
+          const mappedJobs = foundJobs.map((job, index) => {
+            // Extract job data from Nemz response structure
+            const jobData = job.payload || job
+            const matchScore = Math.round((job.score || 0) * 100) // Convert 0-1 score to 0-100
+            
+            return {
+              id: jobData.job_id || jobData.id || index + 1,
+              title: jobData.title || jobData.job_title || 'Job Title',
+              company: jobData.company_name || jobData.company || 'Company',
+              location: jobData.location || jobData.city || 'Location',
+              type: jobData.job_type || jobData.type || 'Full-time',
+              matchScore: matchScore
+            }
+          })
+          
+          setJobs(mappedJobs)
+          
+          // Bot response based on results
+          let botResponseText
+          if (foundJobs.length > 0) {
+            botResponseText = `I found ${foundJobs.length} job${foundJobs.length > 1 ? 's' : ''} aligned with your query! Based on your search, I've curated a personalized list of opportunities that match your skills and experience. You can see the recommended positions below with match scores to help you identify the best fits.`
+          } else {
+            botResponseText = "I couldn't find any jobs matching your query. Try refining your search terms or check back later for new opportunities."
+          }
+          
+          const botResponse = {
+            id: Date.now() + 1,
+            text: botResponseText,
+            isUser: false,
+            time: "Just now"
+          }
+          setChatMessages(prev => [...prev, botResponse])
+          
+          // Show jobs if we have results
+          if (foundJobs.length > 0) {
+            setIsLoadingJobs(true)
+            setTimeout(() => {
+              setIsLoadingJobs(false)
+              setShowJobs(true)
+            }, 500)
+          }
+        } else {
+          // Handle error or no results
+          const botResponse = {
+            id: Date.now() + 1,
+            text: "I encountered an issue searching for jobs. Please try again or rephrase your query.",
+            isUser: false,
+            time: "Just now"
+          }
+          setChatMessages(prev => [...prev, botResponse])
+        }
+      } catch (err) {
+        setIsThinking(false)
+        console.error('Error searching jobs:', err)
         const botResponse = {
           id: Date.now() + 1,
-          text: "I have found jobs aligned for you! Based on your query, I've curated a personalized list of opportunities that match your skills and experience. You can see the recommended positions below with match scores to help you identify the best fits.",
+          text: "I'm having trouble connecting to the search service. Please try again in a moment.",
           isUser: false,
           time: "Just now"
         }
         setChatMessages(prev => [...prev, botResponse])
-        
-        // Start loading jobs after bot responds
-        setIsLoadingJobs(true)
-        
-        // Show jobs after loading animation (1.5 seconds)
-        setTimeout(() => {
-          setIsLoadingJobs(false)
-          setShowJobs(true)
-        }, 1500)
-      }, 2000)
+      }
     }
   }
 
-  const mockJobs = [
-    {
-      id: 1,
-      title: 'Senior React Developer',
-      company: 'Tech Corp',
-      location: 'Remote',
-      type: 'Full-time',
-      matchScore: 95
-    },
-    {
-      id: 2,
-      title: 'Frontend Engineer',
-      company: 'StartupXYZ',
-      location: 'San Francisco, CA',
-      type: 'Full-time',
-      matchScore: 88
-    },
-    {
-      id: 3,
-      title: 'Full Stack Developer',
-      company: 'Digital Agency',
-      location: 'New York, NY',
-      type: 'Contract',
-      matchScore: 82
-    },
-    {
-      id: 4,
-      title: 'React Native Developer',
-      company: 'Mobile First Inc',
-      location: 'Remote',
-      type: 'Full-time',
-      matchScore: 78
-    }
-  ]
 
   return (
     <Container>
@@ -970,7 +997,7 @@ const AIMode = () => {
                 </LoadingContainer>
               ) : (
                 <JobList>
-                  {mockJobs.map((job, index) => (
+                  {jobs.length > 0 ? jobs.map((job, index) => (
                     <JobCard key={job.id} delay={`${index * 0.1}s`}>
                       <JobTitle>{job.title}</JobTitle>
                       <JobCompany>{job.company}</JobCompany>
@@ -992,7 +1019,11 @@ const AIMode = () => {
                       </JobMeta>
                       <MatchScore>{job.matchScore}% Match</MatchScore>
                     </JobCard>
-                  ))}
+                  )) : (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-light)' }}>
+                      No jobs found. Try searching with different keywords.
+                    </div>
+                  )}
                 </JobList>
               )}
             </ContentCard>

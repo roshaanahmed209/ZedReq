@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { lmsAPI } from '../services/api'
 import '../css/pages/Evaluation.css'
 
 const fadeIn = keyframes`
@@ -595,21 +596,96 @@ const TrendLabel = styled.div`
 `
 
 const Evaluation = () => {
-  const [selectedCourseId, setSelectedCourseId] = useState(1)
+  const [selectedCourseId, setSelectedCourseId] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [dashboard, setDashboard] = useState(null)
+  const [weeklyPerformance, setWeeklyPerformance] = useState([])
+  const [domainPerformance, setDomainPerformance] = useState([])
+  const [coursePerformance, setCoursePerformance] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [evaluating, setEvaluating] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { logout } = useAuth()
 
-  const courses = [
-    { id: 1, title: 'Introduction to React', icon: 'RC' },
-    { id: 2, title: 'Advanced JavaScript', icon: 'JS' },
-    { id: 3, title: 'Node.js Backend Development', icon: 'ND' },
-    { id: 4, title: 'TypeScript Fundamentals', icon: 'TS' },
-    { id: 5, title: 'GraphQL API Development', icon: 'GQ' },
-    { id: 6, title: 'Testing with Jest', icon: 'JT' },
-    { id: 7, title: 'Web Security Essentials', icon: 'SEC' },
-    { id: 8, title: 'CSS Grid & Flexbox', icon: 'CS' }
-  ]
+  // Fetch courses on mount
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
+  // Fetch performance data when course is selected
+  useEffect(() => {
+    if (selectedCourseId) {
+      fetchPerformanceData()
+    }
+  }, [selectedCourseId])
+
+  const fetchCourses = async () => {
+    try {
+      const response = await lmsAPI.getMyCourses({ limit: 100 })
+      if (response.data && response.data.courses) {
+        const coursesList = response.data.courses.map(course => ({
+          id: course.course_id || course.id,
+          title: course.course_title || course.title,
+          icon: course.course_icon || (course.title ? course.title.substring(0, 2).toUpperCase() : 'CO')
+        }))
+        setCourses(coursesList)
+        if (coursesList.length > 0 && !selectedCourseId) {
+          setSelectedCourseId(coursesList[0].id)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching courses:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchPerformanceData = async () => {
+    if (!selectedCourseId) return
+    
+    try {
+      setLoading(true)
+      const [dashboardRes, weeklyRes, domainRes, coursePerfRes] = await Promise.all([
+        lmsAPI.getDashboard(),
+        lmsAPI.getWeeklyPerformance(7),
+        lmsAPI.getDomainPerformance(),
+        lmsAPI.getCoursePerformance(selectedCourseId)
+      ])
+
+      if (dashboardRes.data) setDashboard(dashboardRes.data)
+      if (weeklyRes.data && weeklyRes.data.performance) setWeeklyPerformance(weeklyRes.data.performance)
+      if (domainRes.data && domainRes.data.domains) setDomainPerformance(domainRes.data.domains)
+      if (coursePerfRes.data) setCoursePerformance(coursePerfRes.data)
+    } catch (err) {
+      console.error('Error fetching performance data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRunEvaluation = async () => {
+    if (!selectedCourseId) return
+    
+    try {
+      setEvaluating(true)
+      const response = await lmsAPI.triggerSeezEvaluateCourse(selectedCourseId)
+      
+      if (response.data && response.data.result && response.data.result.success) {
+        alert(`Evaluation completed! Evaluated ${response.data.result.evaluated_count} answers.`)
+        // Refetch performance data to show updated metrics
+        await fetchPerformanceData()
+      } else {
+        alert('Evaluation completed, but some answers may not have been evaluated.')
+      }
+    } catch (err) {
+      console.error('Error running evaluation:', err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to run evaluation'
+      alert(`Error: ${errorMsg}`)
+    } finally {
+      setEvaluating(false)
+    }
+  }
 
   const handleBackToLMS = () => {
     navigate('/lms')
@@ -620,6 +696,18 @@ const Evaluation = () => {
   }
 
   const selectedCourse = courses.find(c => c.id === selectedCourseId)
+  
+  // Calculate overall score from course performance or dashboard
+  const overallScore = coursePerformance?.accuracy_percentage 
+    ? (coursePerformance.accuracy_percentage / 100) * 10 
+    : dashboard?.overall_accuracy 
+      ? (dashboard.overall_accuracy / 100) * 10 
+      : 8.4
+  
+  // Calculate metrics
+  const questionsAttempted = coursePerformance?.questions_answered || dashboard?.total_questions || 127
+  const correctAnswers = coursePerformance?.correct_answers || dashboard?.correct_answers || 98
+  const accuracyRate = coursePerformance?.accuracy_percentage || dashboard?.overall_accuracy || 77.2
 
   return (
     <Container>
@@ -648,18 +736,49 @@ const Evaluation = () => {
           
           <PanelContent>
             <ScrollableContent>
-              <CourseSelector>
-                {courses.map((course) => (
-                  <CourseOption
-                    key={course.id}
-                    active={selectedCourseId === course.id}
-                    onClick={() => setSelectedCourseId(course.id)}
-                  >
-                    <CourseIcon>{course.icon}</CourseIcon>
-                    <CourseTitle>{course.title}</CourseTitle>
-                  </CourseOption>
-                ))}
-              </CourseSelector>
+              {loading && courses.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                  Loading courses...
+                </div>
+              ) : courses.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                  No courses found. Enroll in a course first.
+                </div>
+              ) : (
+                <>
+                  <CourseSelector>
+                    {courses.map((course) => (
+                      <CourseOption
+                        key={course.id}
+                        active={selectedCourseId === course.id}
+                        onClick={() => setSelectedCourseId(course.id)}
+                      >
+                        <CourseIcon>{course.icon}</CourseIcon>
+                        <CourseTitle>{course.title}</CourseTitle>
+                      </CourseOption>
+                    ))}
+                  </CourseSelector>
+                  {selectedCourseId && (
+                    <button
+                      onClick={handleRunEvaluation}
+                      disabled={evaluating}
+                      style={{
+                        marginTop: '20px',
+                        width: '100%',
+                        padding: '12px',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: evaluating ? 'not-allowed' : 'pointer',
+                        opacity: evaluating ? 0.6 : 1
+                      }}
+                    >
+                      {evaluating ? 'Running AI Evaluation...' : 'Run AI Evaluation'}
+                    </button>
+                  )}
+                </>
+              )}
             </ScrollableContent>
           </PanelContent>
         </SidePanel>
@@ -694,11 +813,11 @@ const Evaluation = () => {
                       cy="90" 
                       r="70" 
                       circumference={2 * Math.PI * 70}
-                      offset={2 * Math.PI * 70 * (1 - 0.84)}
+                      offset={2 * Math.PI * 70 * (1 - overallScore / 10)}
                     />
                   </svg>
                   <CircleText>
-                    <CircleValue>8.4</CircleValue>
+                    <CircleValue>{overallScore.toFixed(1)}</CircleValue>
                     <CircleLabel>out of 10</CircleLabel>
                   </CircleText>
                 </ProgressCircle>
@@ -722,37 +841,37 @@ const Evaluation = () => {
                   <SkillBar>
                     <SkillHeader>
                       <SkillName>Questions Attempted</SkillName>
-                      <SkillPercentage>127</SkillPercentage>
+                      <SkillPercentage>{questionsAttempted}</SkillPercentage>
                     </SkillHeader>
                     <SkillProgressBar>
-                      <SkillProgressFill width={85} />
+                      <SkillProgressFill width={Math.min(100, (questionsAttempted / 150) * 100)} />
                     </SkillProgressBar>
                   </SkillBar>
                   <SkillBar>
                     <SkillHeader>
                       <SkillName>Correct Answers</SkillName>
-                      <SkillPercentage>98</SkillPercentage>
+                      <SkillPercentage>{correctAnswers}</SkillPercentage>
                     </SkillHeader>
                     <SkillProgressBar>
-                      <SkillProgressFill width={77} />
+                      <SkillProgressFill width={Math.min(100, (correctAnswers / questionsAttempted) * 100)} />
                     </SkillProgressBar>
                   </SkillBar>
                   <SkillBar>
                     <SkillHeader>
                       <SkillName>Accuracy Rate</SkillName>
-                      <SkillPercentage>77.2%</SkillPercentage>
+                      <SkillPercentage>{accuracyRate.toFixed(1)}%</SkillPercentage>
                     </SkillHeader>
                     <SkillProgressBar>
-                      <SkillProgressFill width={77} />
+                      <SkillProgressFill width={accuracyRate} />
                     </SkillProgressBar>
                   </SkillBar>
                   <SkillBar>
                     <SkillHeader>
-                      <SkillName>Study Time</SkillName>
-                      <SkillPercentage>12.5h</SkillPercentage>
+                      <SkillName>Total Points</SkillName>
+                      <SkillPercentage>{coursePerformance?.total_points_earned || 0}</SkillPercentage>
                     </SkillHeader>
                     <SkillProgressBar>
-                      <SkillProgressFill width={62} />
+                      <SkillProgressFill width={Math.min(100, ((coursePerformance?.total_points_earned || 0) / 200) * 100)} />
                     </SkillProgressBar>
                   </SkillBar>
                 </div>
@@ -775,33 +894,26 @@ const Evaluation = () => {
                 </CardHeader>
 
                 <div>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Component Architecture</SkillName>
-                      <SkillPercentage>92%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={92} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>State Management</SkillName>
-                      <SkillPercentage>88%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={88} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Performance Optimization</SkillName>
-                      <SkillPercentage>85%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={85} />
-                    </SkillProgressBar>
-                  </SkillBar>
+                  {domainPerformance.length > 0 ? (
+                    domainPerformance
+                      .sort((a, b) => (b.accuracy_percentage || 0) - (a.accuracy_percentage || 0))
+                      .slice(0, 3)
+                      .map((domain, index) => (
+                        <SkillBar key={domain.id || index}>
+                          <SkillHeader>
+                            <SkillName>{domain.domain_name || 'Domain'}</SkillName>
+                            <SkillPercentage>{domain.accuracy_percentage?.toFixed(1) || 0}%</SkillPercentage>
+                          </SkillHeader>
+                          <SkillProgressBar>
+                            <SkillProgressFill width={domain.accuracy_percentage || 0} />
+                          </SkillProgressBar>
+                        </SkillBar>
+                      ))
+                  ) : (
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                      No domain performance data available
+                    </div>
+                  )}
                 </div>
               </EvaluationCard>
 

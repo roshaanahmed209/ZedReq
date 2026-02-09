@@ -1,0 +1,157 @@
+Agent Integration & DuckDuckGo Migration Plan
+High-level goals
+Unify agents with UI: Connect AzelAgent, SeezAgent, NemzAgent, and a new RizAgent so the LMS, AI Mode, AI Interviews, and Evaluation pages call real backend endpoints and persist to the database.
+Replace Google search: Swap out googlesearch-python in Azel_agent.py for DuckDuckGo using the ddgs package, keeping existing behaviors (URLs + metadata + rate limiting).
+Make Evaluation & AI pages data-driven: Drive the Evaluation and AI-related pages from real LMS/interview data instead of the current static mocks.
+Backend changes
+1. Replace Google Search with DuckDuckGo (ddgs) in AzelAgent
+Update imports & requirements:
+In backend/agents/Azel_agent.py, replace from googlesearch import search as google_search with from ddgs import DDGS.
+In backend/requirements.txt, remove googlesearch-python and add ddgs.
+Refactor _perform_google_search to use DDGS:
+Rename docstrings/comments from Google to web search / DuckDuckGo to avoid confusion.
+Implement DuckDuckGo search using DDGS().text(query, max_results=num_results) and normalize each result to the existing {"url", "title", "snippet"} shape.
+Keep the existing HTML fetching via requests/BeautifulSoup as a fallback/metadata enhancer, but prefer the snippet/title that ddgs returns if available.
+Adjust rate limiting naming (optional):
+In backend/utils/rate_limiter.py, optionally rename get_google_search_limiter() to something neutral like get_web_search_limiter() and update its docstring.
+In Azel_agent.py, update the import and usage of the limiter to match the new name while keeping concurrency semantics unchanged.
+2. AzelAgent ↔ LMS integration (backend side already present)
+Confirm and rely on existing endpoint:
+Use POST /api/lms/azel/process-course/{course_id} in backend/routers/lms.py (trigger_azel_agent) as the main trigger for question generation.
+Ensure responses from AzelAgent.process_course_context already return enough status/detail for the frontend (e.g., success, generated_question_count, error messages). If needed, extend the returned dict with a concise summary while preserving backward compatibility.
+3. SeezAgent ↔ LMS Evaluation integration
+Use Seez endpoints already defined:
+POST /api/lms/seez/evaluate-course/{course_id} → evaluate all unevaluated answers for a course using SeezAgent.evaluate_course_answers in backend/agents/Seez_agent.py.
+POST /api/lms/seez/evaluate-answers → evaluate a batch of specific answer IDs using SeezAgent.evaluate_answers_batch.
+Ensure LMS performance metrics consume Seez results:
+In backend/services/lms_service.py, verify that when answers are evaluated (via LMSService.evaluate_answer), dashboard and performance aggregates (get_dashboard, get_weekly_performance, get_domain_performance, get_course_performance) correctly reflect updated scores and points from Seez.
+If necessary, add or adjust helper methods to recompute LMSDashboard, LMSWeeklyPerformance, LMSDomainPerformance, and LMSUserCoursePerformance after evaluation, so the Evaluation page can use these APIs directly.
+4. NemzAgent backend routing (AI Mode)
+Use existing Nemz router:
+In backend/routers/nemz.py, rely on:
+POST /api/nemz/search (intent-detecting multi-collection search),
+POST /api/nemz/search/jobs,
+POST /api/nemz/search/profiles,
+POST /api/nemz/search/posts.
+Confirm that each returns a JSON payload compatible with frontend job/profile/post card rendering (id, title, company, scores, etc.). If some minimal normalization is needed, keep it backend-side in the router so the frontend can treat the responses as stable.
+5. Design and implement RizAgent for post‑interview feedback
+**Implement RizAgent in backend/agents/Riz_agent.py**:
+Create a class RizAgent with an LLM client (via langchain_openai.ChatOpenAI) and a system prompt specialized for post‑interview coaching feedback (summarized strengths, weaknesses, and concrete recommendations) given:
+Job context,
+Interview questions,
+User responses,
+Existing scores/feedback from Tav_check_agent.
+Provide a method like generate_feedback(interview: LiveInterview, job: JobPosting) -> dict that returns a structured JSON payload: { summary, strengths, weaknesses, recommendations, next_steps }.
+Add a module-level get_riz_agent() similar to get_seez_agent() / get_nemz_agent() for reuse.
+Extend interview service / router to call RizAgent:
+In backend/services/interview_service.py, after TavCheckAgent completes an interview (complete_interview), add an optional step (flagged or always-on) to:
+Instantiate RizAgent via get_riz_agent().
+Call generate_feedback with the LiveInterview and job data.
+Persist this feedback.
+Decide on persistence strategy in backend/models/orm/live_interview.py:
+Preferably add a riz_feedback JSONB column to store structured Riz output (with a small migration). If you want to avoid a migration, store Riz feedback inside score_breakdown or an extended feedback text as clearly delimited JSON, but the migration path is cleaner.
+In backend/routers/interviews.py, add:
+GET /api/interviews/{interview_id}/riz-feedback → fetch the Riz feedback for a completed interview.
+Optionally POST /api/interviews/{interview_id}/riz-feedback/refresh → recompute Riz feedback if needed.
+Frontend changes
+6. LMS page ↔ AzelAgent (question generation)
+**Add LMS API methods in frontend/src/services/api.js**:
+Extend lmsAPI with:
+triggerAzelProcessCourse: (courseId) => api.post(/api/lms/azel/process-course/${courseId}),
+Optionally getCoursePerformance: (courseId) => api.get(/api/lms/dashboard/courses/${courseId}) if you want to surface course-level stats in LMS as well.
+**Wire LMS UI in frontend/src/pages/LMS.jsx**:
+Replace the current placeholder handleGenerateQuestions implementation with a real call:
+Show a loading state/spinner on the selected course.
+Call lmsAPI.triggerAzelProcessCourse(selectedCourse.id).
+On success, display a toast/notification and refetch course questions via lmsAPI.getCourseQuestions(courseId) to display the newly generated questions in the portal.
+Handle error states (e.g., Azel unavailable, Qdrant/OpenAI not configured) with user-friendly error messages.
+7. AI Mode page ↔ NemzAgent (career assistant search)
+Add Nemz API client in api.js:
+Create nemzAPI with methods that wrap the Nemz endpoints, e.g.:
+searchAll({ query, searchType, limit }) => api.post('/api/nemz/search', { query, search_type: searchType, limit }),
+searchJobs, searchProfiles, searchPosts as thin wrappers around the scoped endpoints.
+**Integrate Nemz into frontend/src/pages/AIMode.jsx**:
+Replace the hard-coded mockJobs list and simulated "I have found jobs" bot response with a real flow:
+On handleSendMessage, send the user message to nemzAPI.searchAll (or searchJobs by default for job-centric chat).
+Map the returned jobs array to the existing job cards and toggle showJobs when results arrive.
+Use matchScore / title / company / location fields from the Nemz response; where missing, compute display-safe fallbacks.
+Optionally, wire the resume upload section to a future backend endpoint (e.g. /api/nemz/upload-resume) for personalization, but initially keep upload purely client-side with a "feature coming soon" note unless you already have backend support.
+8. Evaluation page ↔ SeezAgent & LMS metrics (full integration)
+Extend lmsAPI in api.js:
+Add methods for existing endpoints:
+getCoursePerformance(courseId) => api.get(/api/lms/dashboard/courses/${courseId}),
+triggerSeezEvaluateCourse(courseId) => api.post(/api/lms/seez/evaluate-course/${courseId}),
+triggerSeezEvaluateAnswers(answerIds) => api.post('/api/lms/seez/evaluate-answers', answerIds) (if you later need fine-grained evaluation from UI).
+**Make frontend/src/pages/Evaluation.jsx data-driven**:
+Replace the static courses array and hard-coded metrics with:
+A real course list fetched from lmsAPI.getMyCourses, used for the left-side course selector.
+For the selected course, fetch:
+dashboard (overall totals) via lmsAPI.getDashboard(),
+weekly via lmsAPI.getWeeklyPerformance(days),
+domains via lmsAPI.getDomainPerformance(),
+coursePerformance via lmsAPI.getCoursePerformance(selectedCourseId).
+Map:
+Overall score and accuracy to the main circle and key metric cards.
+Weekly performance to the trend charts.
+Domain performance to strengths/weaknesses cards (e.g. highest vs lowest accuracy domains).
+Add a "Run AI Evaluation" button for the selected course:
+Calls lmsAPI.triggerSeezEvaluateCourse(selectedCourseId).
+On success, refetch performance data so the UI updates with fresh metrics from Seez.
+9. AI Interviews page ↔ InterviewService, Tav_check_agent, RizAgent
+Add interviews & Riz API in api.js:
+Create interviewAPI methods wrapping backend/routers/interviews.py:
+startInterview(jobId) => api.post('/api/interviews/start', { job_id: jobId }),
+getInterview(interviewId) => api.get(/api/interviews/${interviewId}),
+completeInterview(interviewId) => api.post(/api/interviews/${interviewId}/complete),
+getMyInterviews({ jobId }) => api.get('/api/interviews/my-interviews', { params: { job_id: jobId } }),
+getInterviewRizFeedback(interviewId) => api.get(/api/interviews/${interviewId}/riz-feedback).
+**Enhance frontend/src/pages/AIInterviews.jsx**:
+Keep the rich UI/animations, but:
+Load the user’s past interviews via interviewAPI.getMyInterviews, showing a history list and allowing the user to select one.
+For a selected completed interview, fetch detailed results (completeInterview/getInterview) and Riz feedback via getInterviewRizFeedback, then render:
+Overall score,
+Per-dimension breakdown from Tav_check_agent,
+RizAgent’s coaching feedback (strengths, weaknesses, recommendations) in a dedicated section.
+For starting new interviews, provide a button that:
+Calls startInterview(jobId) and displays the Tavus conversation link/ID (how you surface the actual video depends on your Tavus frontend embedding, which you can hook into later based on tavus_conversation_id).
+DuckDuckGo & config adjustments
+10. Dependency & config cleanup
+Backend dependencies:
+Ensure ddgs is installed (pip install ddgs) in the backend environment and recorded in backend/requirements.txt.
+Remove now-unused googlesearch-python from requirements and from any documentation mentions (ZedRec_Documentation.html) to prevent confusion.
+Environment/config:
+Optionally add DDGS_MAX_RESULTS or reuse existing AZEL_MAX_SEARCH_RESULTS for tuning query depth.
+Keep the existing AZEL_WEB_MAX_WORKERS concurrency semantics but update docs/comments to mention DuckDuckGo instead of Google.
+Data flow overview
+DB & Qdrant
+FastAPI Backend
+Frontend React
+/api/lms/...
+/api/lms/... + /seez
+/api/nemz/...
+/api/interviews/...
+/azel/process-course
+/seez/...
+complete + feedback
+LMS Tables
+LiveInterview
+Qdrant
+lms.py
+nemz.py
+interviews.py
+AzelAgent
+SeezAgent
+NemzAgent
+RizAgent
+LMS.jsx
+Evaluation.jsx
+AIMode.jsx
+AIInterviews.jsx
+Tav_check_agent
+Implementation todos
+backend-azel-ddg: Swap Google search for DuckDuckGo in Azel_agent.py, update rate limiter usage, and adjust backend/requirements.txt.
+backend-riz-agent: Implement RizAgent in backend/agents/Riz_agent.py, extend interview_service and interviews router, and persist Riz feedback on LiveInterview.
+frontend-lms-azel: Wire LMS.jsx to call lmsAPI.triggerAzelProcessCourse and refresh questions, replacing the current placeholder.
+frontend-aimode-nemz: Add nemzAPI in api.js and integrate Nemz search into AIMode.jsx chat + job recommendations instead of static mocks.
+frontend-eval-seez: Fully data-drive Evaluation.jsx using LMS dashboard/performance endpoints plus triggerSeezEvaluateCourse and getCoursePerformance.
+frontend-aiinterviews-riz: Hook AIInterviews.jsx to interview history, Tav_check results, and Riz feedback via new interviewAPI methods, keeping the existing UI but making it data-driven.

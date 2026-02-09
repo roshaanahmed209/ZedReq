@@ -1602,13 +1602,35 @@ const LMS = () => {
     if (!selectedCourse) return
 
     try {
-      // This would call the agent to generate questions
-      // For now, we'll just show an alert
-      alert('Question generation feature coming soon!')
-      // TODO: Integrate with LMS agent when ready
+      // Show loading state
+      setQuestionsLoading(true)
+      
+      // Call Azel agent to process course and generate questions
+      const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id)
+      
+      if (response.data && response.data.result) {
+        const result = response.data.result
+        
+        if (result.success) {
+          // Show success message
+          alert(`Successfully generated ${result.questions_saved || 0} questions!`)
+          
+          // Refetch course questions to display newly generated ones
+          await fetchCourseDetails(selectedCourse.id)
+        } else {
+          // Show error from agent
+          const errorMsg = result.error || 'Failed to generate questions'
+          alert(`Question generation failed: ${errorMsg}`)
+        }
+      } else {
+        alert('Question generation completed, but no questions were generated. Please check your Zed context.')
+      }
     } catch (err) {
       console.error('Error generating questions:', err)
-      alert('Failed to generate questions. Please try again.')
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to generate questions. Please try again.'
+      alert(`Error: ${errorMsg}`)
+    } finally {
+      setQuestionsLoading(false)
     }
   }
 

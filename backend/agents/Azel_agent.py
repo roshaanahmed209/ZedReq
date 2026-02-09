@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import json
 import time
 
-from googlesearch import search as google_search
+from ddgs import DDGS
 import requests
 from bs4 import BeautifulSoup
 from qdrant_client import QdrantClient
@@ -65,7 +65,7 @@ Return a JSON array of question objects. Generate 3-5 questions focusing on the 
 
 
 class AzelAgent:
-    """AI Agent for generating questions from Zed context using Google search and Qdrant knowledge base"""
+    """AI Agent for generating questions from Zed context using web search (DuckDuckGo) and Qdrant knowledge base"""
     
     def __init__(
         self,
@@ -226,7 +226,7 @@ Return a JSON array of topic strings."""
     
     def _perform_google_search(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
         """
-        Perform Google search and return URLs with metadata
+        Perform web search (DuckDuckGo via ddgs) and return URLs with metadata
         
         Args:
             query: Search query
@@ -236,49 +236,77 @@ Return a JSON array of topic strings."""
             List of dictionaries with url, title, snippet
         """
         try:
-            results = []
-            search_results = google_search(query, num=num_results, stop=num_results, pause=2)
-            
-            for url in search_results:
+            results: List[Dict[str, Any]] = []
+
+            # Primary web search via DuckDuckGo (ddgs)
+            try:
+                ddgs = DDGS()
+                # ddgs.text returns an iterator of result dicts
+                for item in ddgs.text(query, max_results=num_results):
+                    url = item.get("href") or item.get("url")
+                    if not url:
+                        continue
+
+                    title_text = item.get("title") or url
+                    snippet = item.get("body") or item.get("snippet") or ""
+
+                    results.append(
+                        {
+                            "url": url,
+                            "title": title_text[:500] if title_text else url,
+                            "snippet": snippet[:500] if snippet else "",
+                        }
+                    )
+
+                logger.info(f"DDG search returned {len(results)} results for query: {query}")
+            except Exception as e:
+                logger.error(f"DuckDuckGo search failed for query '{query}': {e}")
+
+            # Fallback: fetch HTML metadata for any URLs we have (or if DDG failed but results list is empty)
+            enriched_results: List[Dict[str, Any]] = []
+            for result in results:
+                url = result.get("url")
+                if not url:
+                    continue
                 try:
-                    # Try to get page title and snippet
-                    response = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    
-                    title = soup.find('title')
-                    title_text = title.string if title else url
-                    
-                    # Get meta description or first paragraph as snippet
-                    meta_desc = soup.find('meta', attrs={'name': 'description'})
-                    snippet = meta_desc.get('content', '') if meta_desc else ''
-                    
+                    response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+                    soup = BeautifulSoup(response.content, "html.parser")
+
+                    title_tag = soup.find("title")
+                    title_text = title_tag.string if title_tag else result.get("title") or url
+
+                    meta_desc = soup.find("meta", attrs={"name": "description"})
+                    snippet = meta_desc.get("content", "") if meta_desc else result.get("snippet") or ""
+
                     if not snippet:
-                        first_p = soup.find('p')
-                        snippet = first_p.get_text()[:200] if first_p else ''
-                    
-                    results.append({
-                        'url': url,
-                        'title': title_text[:500] if title_text else url,
-                        'snippet': snippet[:500] if snippet else ''
-                    })
-                    
-                    # Rate limiting
+                        first_p = soup.find("p")
+                        snippet = first_p.get_text()[:200] if first_p else ""
+
+                    enriched_results.append(
+                        {
+                            "url": url,
+                            "title": title_text[:500] if title_text else url,
+                            "snippet": snippet[:500] if snippet else "",
+                        }
+                    )
+
+                    # Simple pacing to avoid hammering sites
                     time.sleep(1)
-                    
                 except Exception as e:
                     logger.warning(f"Failed to fetch metadata for {url}: {e}")
-                    # Still add URL even if metadata fetch fails
-                    results.append({
-                        'url': url,
-                        'title': url,
-                        'snippet': ''
-                    })
-            
-            logger.info(f"Found {len(results)} search results for query: {query}")
-            return results
-            
+                    enriched_results.append(
+                        {
+                            "url": url,
+                            "title": result.get("title") or url,
+                            "snippet": result.get("snippet") or "",
+                        }
+                    )
+
+            logger.info(f"Finalized {len(enriched_results)} search results for query: {query}")
+            return enriched_results
+
         except Exception as e:
-            logger.error(f"Google search failed for query '{query}': {e}")
+            logger.error(f"Web search failed for query '{query}': {e}")
             return []
     
     def _save_search_urls(self, user_id: int, course_id: int, urls: List[Dict[str, Any]], search_query: str) -> bool:

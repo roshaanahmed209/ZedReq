@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { interviewAPI } from '../services/api'
 import '../css/pages/AIInterviews.css'
 
 const fadeIn = keyframes`
@@ -810,6 +811,11 @@ const MatchScore = styled.div`
 
 const AIInterviews = () => {
   const [selectedJob, setSelectedJob] = useState(null)
+  const [interviews, setInterviews] = useState([])
+  const [selectedInterview, setSelectedInterview] = useState(null)
+  const [interviewResults, setInterviewResults] = useState(null)
+  const [rizFeedback, setRizFeedback] = useState(null)
+  const [loadingInterviews, setLoadingInterviews] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
@@ -820,6 +826,59 @@ const AIInterviews = () => {
   const messagesEndRef = useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
+
+  // Fetch interview history on mount
+  useEffect(() => {
+    fetchInterviews()
+  }, [])
+
+  // Fetch interview details and Riz feedback when interview is selected
+  useEffect(() => {
+    if (selectedInterview) {
+      fetchInterviewDetails()
+    }
+  }, [selectedInterview])
+
+  const fetchInterviews = async () => {
+    try {
+      setLoadingInterviews(true)
+      const response = await interviewAPI.getMyInterviews()
+      if (response.data && response.data.interviews) {
+        setInterviews(response.data.interviews)
+      }
+    } catch (err) {
+      console.error('Error fetching interviews:', err)
+    } finally {
+      setLoadingInterviews(false)
+    }
+  }
+
+  const fetchInterviewDetails = async () => {
+    if (!selectedInterview) return
+    
+    try {
+      // Fetch interview details
+      const interviewRes = await interviewAPI.getInterview(selectedInterview.interview_id)
+      if (interviewRes.data) {
+        setInterviewResults(interviewRes.data)
+        
+        // If interview is completed, fetch Riz feedback
+        if (interviewRes.data.status === 'completed') {
+          try {
+            const rizRes = await interviewAPI.getInterviewRizFeedback(selectedInterview.interview_id)
+            if (rizRes.data && rizRes.data.riz_feedback) {
+              setRizFeedback(rizRes.data.riz_feedback)
+            }
+          } catch (err) {
+            // Riz feedback might not be available yet
+            console.log('Riz feedback not available:', err)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching interview details:', err)
+    }
+  }
 
   const jobs = [
     {
@@ -1177,51 +1236,110 @@ const AIInterviews = () => {
                 <path d="M16.4 7.6l2.1-2.1"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
-              AI Recommended Jobs
+              Interview History
             </PanelTitle>
-            <PanelSubtitle>Based on your resume and profile</PanelSubtitle>
+            <PanelSubtitle>Your past interviews and results</PanelSubtitle>
           </JobsPanelHeader>
 
-          <JobsList>
-            {jobs.map((job) => (
-              <JobCard
-                key={job.id}
-                selected={selectedJob?.id === job.id}
-                onClick={() => handleJobSelect(job)}
-              >
-                <JobHeader>
-                  <div style={{ flex: 1 }}>
-                    <JobTitle>{job.title}</JobTitle>
-                    <JobCompany>{job.company}</JobCompany>
-                  </div>
-                  <AIBadge>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3v3"></path>
-                      <path d="M12 18v3"></path>
-                      <path d="M5.5 5.5l2.1 2.1"></path>
-                      <path d="M16.4 16.4l2.1 2.1"></path>
-                      <path d="M3 12h3"></path>
-                      <path d="M18 12h3"></path>
-                      <path d="M5.5 18.5l2.1-2.1"></path>
-                      <path d="M16.4 7.6l2.1-2.1"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    {job.matchScore}%
-                  </AIBadge>
-                </JobHeader>
-                <JobDetails>
-                  <JobTag>📍 {job.location}</JobTag>
-                  <JobTag>💼 {job.type}</JobTag>
-                  <JobTag>⏱️ {job.experience}</JobTag>
-                </JobDetails>
-                <JobDetails style={{ marginTop: '8px' }}>
-                  {job.skills.map((skill, idx) => (
-                    <JobTag key={idx}>{skill}</JobTag>
-                  ))}
-                </JobDetails>
-              </JobCard>
-            ))}
-          </JobsList>
+          {loadingInterviews ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              Loading interviews...
+            </div>
+          ) : interviews.length > 0 ? (
+            <JobsList>
+              {interviews.map((interview) => (
+                <JobCard
+                  key={interview.interview_id}
+                  selected={selectedInterview?.interview_id === interview.interview_id}
+                  onClick={() => setSelectedInterview(interview)}
+                >
+                  <JobHeader>
+                    <div style={{ flex: 1 }}>
+                      <JobTitle>{interview.job_title || 'Interview'}</JobTitle>
+                      <JobCompany>{interview.company_name || 'Company'}</JobCompany>
+                    </div>
+                    {interview.overall_score !== null && (
+                      <AIBadge>
+                        {interview.overall_score}/100
+                      </AIBadge>
+                    )}
+                  </JobHeader>
+                  <JobDetails>
+                    <JobTag>Status: {interview.status}</JobTag>
+                    {interview.attempt_number && <JobTag>Attempt #{interview.attempt_number}</JobTag>}
+                    {interview.completed_at && (
+                      <JobTag>Completed: {new Date(interview.completed_at).toLocaleDateString()}</JobTag>
+                    )}
+                  </JobDetails>
+                  {interview.status === 'completed' && interviewResults && interviewResults.interview_id === interview.interview_id && (
+                    <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(10, 102, 194, 0.1)', borderRadius: '8px' }}>
+                      {interviewResults.score_breakdown && (
+                        <div style={{ fontSize: '0.85em', marginBottom: '8px' }}>
+                          <div>Technical: {interviewResults.score_breakdown.technical_score}/100</div>
+                          <div>Communication: {interviewResults.score_breakdown.communication_score}/100</div>
+                          <div>Problem Solving: {interviewResults.score_breakdown.problem_solving_score}/100</div>
+                        </div>
+                      )}
+                      {rizFeedback && (
+                        <div style={{ marginTop: '8px', fontSize: '0.85em' }}>
+                          <strong>Riz Feedback:</strong>
+                          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>
+                            {rizFeedback.summary || 'No summary available'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </JobCard>
+              ))}
+            </JobsList>
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              No interview history. Start a new interview to begin!
+            </div>
+          )}
+
+          {/* Keep mock jobs for now as fallback/new interview option */}
+          {interviews.length > 0 && (
+            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+              <PanelSubtitle style={{ marginBottom: '12px' }}>Start New Interview</PanelSubtitle>
+              <JobsList>
+                {jobs.slice(0, 3).map((job) => (
+                  <JobCard
+                    key={job.id}
+                    selected={selectedJob?.id === job.id}
+                    onClick={() => handleJobSelect(job)}
+                  >
+                    <JobHeader>
+                      <div style={{ flex: 1 }}>
+                        <JobTitle>{job.title}</JobTitle>
+                        <JobCompany>{job.company}</JobCompany>
+                      </div>
+                      <AIBadge>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3v3"></path>
+                          <path d="M12 18v3"></path>
+                          <path d="M5.5 5.5l2.1 2.1"></path>
+                          <path d="M16.4 16.4l2.1 2.1"></path>
+                          <path d="M3 12h3"></path>
+                          <path d="M18 12h3"></path>
+                          <path d="M5.5 18.5l2.1-2.1"></path>
+                          <path d="M16.4 7.6l2.1-2.1"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        {job.matchScore}%
+                      </AIBadge>
+                    </JobHeader>
+                    <JobDetails>
+                      <JobTag>📍 {job.location}</JobTag>
+                      <JobTag>💼 {job.type}</JobTag>
+                      <JobTag>⏱️ {job.experience}</JobTag>
+                    </JobDetails>
+                  </JobCard>
+                ))}
+              </JobsList>
+            </div>
+          )}
         </JobsPanel>
       </MainContainer>
     </Container>

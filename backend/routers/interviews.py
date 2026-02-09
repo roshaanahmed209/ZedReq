@@ -178,3 +178,140 @@ async def get_interview_recommendations(
         "recommendations": enriched_recommendations,
         "total": len(enriched_recommendations)
     }
+
+
+# ============================================================================
+# Riz Agent Endpoints
+# ============================================================================
+
+@router.get("/{interview_id}/riz-feedback")
+async def get_riz_feedback(
+    interview_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: InterviewService = Depends(get_interview_service),
+    db: Session = Depends(get_db)
+):
+    """
+    Get Riz coaching feedback for a completed interview
+    """
+    # Verify ownership
+    interview = service.get_interview(interview_id, user_id=current_user["id"])
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+    
+    # Check if interview is completed
+    from models.orm.live_interview import LiveInterview
+    interview_obj = db.query(LiveInterview).filter(
+        LiveInterview.interview_id == interview_id
+    ).first()
+    
+    if not interview_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+    
+    if interview_obj.status != 'completed':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Interview must be completed before fetching Riz feedback"
+        )
+    
+    # Return Riz feedback if available
+    if interview_obj.riz_feedback:
+        return {
+            "interview_id": interview_id,
+            "riz_feedback": interview_obj.riz_feedback
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Riz feedback not available for this interview"
+        )
+
+
+@router.post("/{interview_id}/riz-feedback/refresh")
+async def refresh_riz_feedback(
+    interview_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: InterviewService = Depends(get_interview_service),
+    db: Session = Depends(get_db)
+):
+    """
+    Regenerate Riz coaching feedback for a completed interview
+    """
+    from models.orm.live_interview import LiveInterview
+    from models.orm.job_posting import JobPosting
+    from agents.Riz_agent import get_riz_agent
+    
+    # Verify ownership
+    interview_obj = db.query(LiveInterview).filter(
+        LiveInterview.interview_id == interview_id,
+        LiveInterview.user_id == current_user["id"]
+    ).first()
+    
+    if not interview_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found"
+        )
+    
+    if interview_obj.status != 'completed':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Interview must be completed before generating Riz feedback"
+        )
+    
+    # Get job details
+    job = db.query(JobPosting).filter(
+        JobPosting.job_id == interview_obj.job_id
+    ).first()
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+    
+    # Generate Riz feedback
+    try:
+        riz_agent = get_riz_agent()
+        if not riz_agent.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Riz agent is not available. Please check OpenAI configuration."
+            )
+        
+        riz_feedback = riz_agent.generate_feedback(
+            job_title=job.title,
+            company_name=job.company_name,
+            job_description=job.description,
+            questions=interview_obj.questions or [],
+            user_responses=interview_obj.user_responses or [],
+            overall_score=interview_obj.overall_score,
+            score_breakdown=interview_obj.score_breakdown,
+            tav_check_feedback=interview_obj.feedback
+        )
+        
+        # Update interview with new Riz feedback
+        interview_obj.riz_feedback = riz_feedback
+        db.commit()
+        db.refresh(interview_obj)
+        
+        return {
+            "interview_id": interview_id,
+            "riz_feedback": riz_feedback,
+            "message": "Riz feedback regenerated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to regenerate Riz feedback: {str(e)}"
+        )

@@ -157,7 +157,7 @@ def get_openai_limiter() -> RateLimiter:
 
 
 def get_google_search_limiter() -> RateLimiter:
-    """Get Google Search API rate limiter"""
+    """Get web search (DuckDuckGo) rate limiter"""
     max_concurrent = int(os.environ.get('GOOGLE_SEARCH_MAX_CONCURRENT', 3))
     return get_rate_limiter('google_search', max_concurrent=max_concurrent)
 

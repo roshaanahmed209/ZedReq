@@ -13,6 +13,7 @@ from models.orm.job_posting import JobPosting
 from services.tavus_service import TavusService
 from services.interview_question_service import InterviewQuestionService
 from agents.Tav_check_agent import TavCheckAgent
+from agents.Riz_agent import get_riz_agent
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -166,12 +167,35 @@ class InterviewService:
             interview.status = 'completed'
             interview.completed_at = datetime.now()
             
+            # Generate Riz coaching feedback
+            try:
+                riz_agent = get_riz_agent()
+                if riz_agent.is_available():
+                    job_description = job.description if job else None
+                    riz_feedback = riz_agent.generate_feedback(
+                        job_title=job.title if job else "Unknown Position",
+                        company_name=job.company_name if job else "Unknown Company",
+                        job_description=job_description,
+                        questions=interview.questions or [],
+                        user_responses=user_responses,
+                        overall_score=analysis['overall_score'],
+                        score_breakdown=analysis['score_breakdown'],
+                        tav_check_feedback=analysis['detailed_feedback']
+                    )
+                    interview.riz_feedback = riz_feedback
+                    logger.info(f"Generated Riz coaching feedback for interview {interview_id}")
+                else:
+                    logger.warning("Riz agent not available, skipping coaching feedback generation")
+            except Exception as e:
+                logger.error(f"Failed to generate Riz coaching feedback: {e}")
+                # Don't fail the interview completion if Riz fails
+            
             self.db.commit()
             self.db.refresh(interview)
             
             logger.info(f"Completed interview {interview_id}. Score: {analysis['overall_score']}")
             
-            return {
+            result = {
                 'interview_id': interview.interview_id,
                 'overall_score': analysis['overall_score'],
                 'score_breakdown': analysis['score_breakdown'],
@@ -183,6 +207,12 @@ class InterviewService:
                 'attempt_number': interview.attempt_number,
                 'completed_at': interview.completed_at
             }
+            
+            # Include Riz feedback if available
+            if interview.riz_feedback:
+                result['riz_feedback'] = interview.riz_feedback
+            
+            return result
             
         except Exception as e:
             logger.error(f"Failed to complete interview {interview_id}: {e}")

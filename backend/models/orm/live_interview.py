@@ -49,6 +49,7 @@ class LiveInterview(Base):
     overall_score = Column(Integer)  # 0-100
     score_breakdown = Column(JSONB)  # Detailed scores by criteria
     feedback = Column(Text)  # Detailed feedback from Tav_check_agent
+    riz_feedback = Column(JSONB)  # Post-interview coaching feedback from RizAgent
     
     # Tracking
     attempt_number = Column(Integer, nullable=False, default=1)
@@ -85,6 +86,7 @@ class LiveInterview(Base):
             'overall_score': self.overall_score,
             'score_breakdown': self.score_breakdown,
             'feedback': self.feedback,
+            'riz_feedback': self.riz_feedback,
             'attempt_number': self.attempt_number,
             'status': self.status,
             'started_at': self.started_at.isoformat() if self.started_at else None,
