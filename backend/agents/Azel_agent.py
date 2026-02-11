@@ -17,7 +17,7 @@ from ddgs import DDGS
 import requests
 from bs4 import BeautifulSoup
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, PointIdsList
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
@@ -466,8 +466,21 @@ Return a JSON array of topic strings."""
             return False
     
     def _get_collection_name(self, user_id: int, course_id: int) -> str:
-        """Generate collection name for user and course"""
-        return f"azel_kb_{user_id}_{course_id}"
+        """
+        Generate secure collection name for user and course using hash with salt
+        
+        Args:
+            user_id: User ID
+            course_id: Course ID
+            
+        Returns:
+            Hashed collection name to prevent guessing and data leakage
+        """
+        # Use hash with salt to prevent guessing collection names
+        salt = os.environ.get('AZEL_COLLECTION_SALT', 'default_salt_change_in_prod')
+        user_hash = hashlib.sha256(f"{user_id}_{salt}".encode()).hexdigest()[:16]
+        course_hash = hashlib.sha256(f"{course_id}_{salt}".encode()).hexdigest()[:16]
+        return f"azel_kb_{user_hash}_{course_hash}"
     
     def _create_knowledge_base(self, user_id: int, course_id: int, urls: List[Dict[str, Any]]) -> bool:
         """
@@ -917,6 +930,164 @@ Return a JSON array of question objects."""
             logger.error(f"Failed to process course context: {e}")
         
         return result
+    
+    def cleanup_expired_collections(self) -> Dict[str, Any]:
+        """
+        Clean up expired Azel knowledge base collections
+        
+        Scans all collections matching azel_kb_* pattern and:
+        - Deletes collections where all points are expired (30+ minutes old)
+        - Deletes expired points from collections with mixed expiration
+        
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        if not self.qdrant_available or not self.qdrant_client:
+            logger.warning("Qdrant not available, cannot cleanup collections")
+            return {
+                'success': False,
+                'collections_deleted': 0,
+                'points_deleted': 0,
+                'collections_checked': 0,
+                'error': 'Qdrant not available'
+            }
+        
+        # Check if cleanup is enabled
+        cleanup_enabled = os.environ.get('AZEL_CLEANUP_ENABLED', 'true').lower() == 'true'
+        if not cleanup_enabled:
+            logger.debug("Azel cleanup is disabled via AZEL_CLEANUP_ENABLED")
+            return {
+                'success': True,
+                'collections_deleted': 0,
+                'points_deleted': 0,
+                'collections_checked': 0,
+                'message': 'Cleanup disabled'
+            }
+        
+        stats = {
+            'collections_deleted': 0,
+            'points_deleted': 0,
+            'collections_checked': 0,
+            'errors': []
+        }
+        
+        try:
+            # Get all collections
+            collections = self.qdrant_client.get_collections()
+            current_time = datetime.now()
+            
+            # Filter to only azel_kb_* collections
+            azel_collections = [
+                col.name for col in collections.collections 
+                if col.name.startswith('azel_kb_')
+            ]
+            
+            logger.info(f"Found {len(azel_collections)} Azel collections to check for cleanup")
+            
+            for collection_name in azel_collections:
+                try:
+                    stats['collections_checked'] += 1
+                    
+                    # Scroll through all points in collection
+                    offset = None
+                    expired_point_ids = []
+                    active_point_count = 0
+                    batch_size = 100
+                    
+                    while True:
+                        result, next_offset = self.qdrant_client.scroll(
+                            collection_name=collection_name,
+                            limit=batch_size,
+                            offset=offset,
+                            with_payload=True,
+                            with_vectors=False  # Don't need vectors for cleanup
+                        )
+                        
+                        if not result:
+                            break
+                        
+                        # Check each point's expires_at metadata
+                        for point in result:
+                            payload = point.payload or {}
+                            expires_at_str = payload.get('expires_at')
+                            
+                            if expires_at_str:
+                                try:
+                                    expires_at = datetime.fromisoformat(expires_at_str)
+                                    if expires_at < current_time:
+                                        expired_point_ids.append(point.id)
+                                    else:
+                                        active_point_count += 1
+                                except (ValueError, TypeError) as e:
+                                    logger.warning(f"Invalid expires_at format in collection {collection_name}, point {point.id}: {e}")
+                                    # Treat invalid dates as expired for safety
+                                    expired_point_ids.append(point.id)
+                            else:
+                                # No expires_at metadata - treat as expired for safety
+                                expired_point_ids.append(point.id)
+                        
+                        if next_offset is None:
+                            break
+                        offset = next_offset
+                    
+                    # If all points are expired, delete the entire collection
+                    if active_point_count == 0 and expired_point_ids:
+                        try:
+                            self.qdrant_client.delete_collection(collection_name)
+                            stats['collections_deleted'] += 1
+                            stats['points_deleted'] += len(expired_point_ids)
+                            logger.info(f"Deleted expired collection: {collection_name} ({len(expired_point_ids)} points)")
+                        except Exception as e:
+                            error_msg = f"Failed to delete collection {collection_name}: {e}"
+                            logger.error(error_msg)
+                            stats['errors'].append(error_msg)
+                    
+                    # If some points are expired but collection has active points, delete only expired points
+                    elif expired_point_ids and active_point_count > 0:
+                        try:
+                            # Delete expired points in batches
+                            for i in range(0, len(expired_point_ids), batch_size):
+                                batch_ids = expired_point_ids[i:i + batch_size]
+                                # Qdrant delete accepts PointIdsList or list of IDs
+                                self.qdrant_client.delete(
+                                    collection_name=collection_name,
+                                    points_selector=PointIdsList(points=batch_ids)
+                                )
+                            stats['points_deleted'] += len(expired_point_ids)
+                            logger.info(f"Deleted {len(expired_point_ids)} expired points from collection: {collection_name}")
+                        except Exception as e:
+                            error_msg = f"Failed to delete expired points from {collection_name}: {e}"
+                            logger.error(error_msg)
+                            stats['errors'].append(error_msg)
+                    
+                except Exception as e:
+                    error_msg = f"Error processing collection {collection_name}: {e}"
+                    logger.error(error_msg, exc_info=True)
+                    stats['errors'].append(error_msg)
+                    continue
+            
+            logger.info(
+                f"Azel cleanup completed: {stats['collections_deleted']} collections deleted, "
+                f"{stats['points_deleted']} points deleted, {stats['collections_checked']} collections checked"
+            )
+            
+            return {
+                'success': len(stats['errors']) == 0,
+                'collections_deleted': stats['collections_deleted'],
+                'points_deleted': stats['points_deleted'],
+                'collections_checked': stats['collections_checked'],
+                'errors': stats['errors'] if stats['errors'] else None
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to cleanup Azel collections: {e}", exc_info=True)
+            return {
+                'success': False,
+                'collections_deleted': stats['collections_deleted'],
+                'points_deleted': stats['points_deleted'],
+                'collections_checked': stats['collections_checked'],
+                'error': str(e)
+            }
     
     def is_available(self) -> bool:
         """Check if agent is available (both Qdrant and OpenAI working)"""

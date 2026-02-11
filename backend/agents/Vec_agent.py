@@ -169,6 +169,204 @@ class VecAgent:
             logger.error(f"Failed to create collection {collection_name}: {e}")
             return False
     
+    def _copy_collection_points(self, source_collection: str, target_collection: str) -> bool:
+        """
+        Copy all points from source collection to target collection using scroll API
+        
+        Args:
+            source_collection: Name of source collection
+            target_collection: Name of target collection
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.qdrant_available or not self.qdrant_client:
+            return False
+        
+        try:
+            # Check if source collection exists
+            collections = self.qdrant_client.get_collections()
+            existing_names = [col.name for col in collections.collections]
+            
+            if source_collection not in existing_names:
+                logger.info(f"Source collection {source_collection} does not exist, nothing to copy")
+                return True  # Not an error if source doesn't exist
+            
+            # Use scroll API to paginate through all points
+            offset = None
+            batch_size = 100  # Process in batches
+            total_copied = 0
+            
+            while True:
+                # Scroll through points
+                result, next_offset = self.qdrant_client.scroll(
+                    collection_name=source_collection,
+                    limit=batch_size,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=True
+                )
+                
+                if not result:
+                    break
+                
+                # Convert to PointStruct and upsert to target collection
+                points = []
+                for point in result:
+                    points.append(
+                        PointStruct(
+                            id=point.id,
+                            vector=point.vector,
+                            payload=point.payload
+                        )
+                    )
+                
+                if points:
+                    self.qdrant_client.upsert(
+                        collection_name=target_collection,
+                        points=points
+                    )
+                    total_copied += len(points)
+                
+                # Check if there are more points
+                if next_offset is None:
+                    break
+                
+                offset = next_offset
+            
+            logger.info(f"Copied {total_copied} points from {source_collection} to {target_collection}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to copy points from {source_collection} to {target_collection}: {e}")
+            return False
+    
+    def _rebuild_collection(self, collection_name: str) -> Optional[str]:
+        """
+        Rebuild collection by creating new timestamped collection and copying existing data
+        
+        Args:
+            collection_name: Name of the original collection
+            
+        Returns:
+            New collection name if successful, None otherwise
+        """
+        if not self.qdrant_available or not self.qdrant_client:
+            return None
+        
+        # Check if rebuild is enabled
+        rebuild_enabled = os.environ.get('VEC_REBUILD_COLLECTIONS', 'true').lower() == 'true'
+        if not rebuild_enabled:
+            logger.debug(f"Collection rebuild is disabled, skipping rebuild for {collection_name}")
+            return None
+        
+        try:
+            # Generate timestamped collection name
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            new_collection_name = f"{collection_name}_{timestamp}"
+            
+            # Create new collection
+            self.qdrant_client.create_collection(
+                collection_name=new_collection_name,
+                vectors_config=VectorParams(
+                    size=self.embedding_dimension,
+                    distance=Distance.COSINE
+                )
+            )
+            logger.info(f"Created new collection for rebuild: {new_collection_name}")
+            
+            # Copy existing points from old collection
+            copy_success = self._copy_collection_points(collection_name, new_collection_name)
+            
+            if not copy_success:
+                # If copy failed, delete the new collection and return None
+                try:
+                    self.qdrant_client.delete_collection(new_collection_name)
+                    logger.warning(f"Deleted new collection {new_collection_name} due to copy failure")
+                except Exception:
+                    pass
+                return None
+            
+            return new_collection_name
+            
+        except Exception as e:
+            logger.error(f"Failed to rebuild collection {collection_name}: {e}")
+            return None
+    
+    def _swap_collection(self, old_collection_name: str, new_collection_name: str) -> bool:
+        """
+        Swap collections by copying new collection to old name, then deleting both old and new
+        
+        Since Qdrant doesn't support rename, we:
+        1. Delete old collection
+        2. Create collection with original name
+        3. Copy points from new collection to original
+        4. Delete new collection
+        
+        Args:
+            old_collection_name: Name of the original collection
+            new_collection_name: Name of the new timestamped collection
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.qdrant_available or not self.qdrant_client:
+            return False
+        
+        try:
+            # Check if collections exist
+            collections = self.qdrant_client.get_collections()
+            existing_names = [col.name for col in collections.collections]
+            
+            if new_collection_name not in existing_names:
+                logger.error(f"New collection {new_collection_name} does not exist, cannot swap")
+                return False
+            
+            # Step 1: Delete old collection if it exists
+            if old_collection_name in existing_names:
+                try:
+                    self.qdrant_client.delete_collection(old_collection_name)
+                    logger.info(f"Deleted old collection: {old_collection_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete old collection {old_collection_name}: {e}")
+            
+            # Step 2: Create collection with original name
+            self.qdrant_client.create_collection(
+                collection_name=old_collection_name,
+                vectors_config=VectorParams(
+                    size=self.embedding_dimension,
+                    distance=Distance.COSINE
+                )
+            )
+            logger.info(f"Created collection with original name: {old_collection_name}")
+            
+            # Step 3: Copy points from new collection to original
+            copy_success = self._copy_collection_points(new_collection_name, old_collection_name)
+            
+            if not copy_success:
+                logger.error(f"Failed to copy points during swap, aborting")
+                # Cleanup: delete the collection we just created
+                try:
+                    self.qdrant_client.delete_collection(old_collection_name)
+                except Exception:
+                    pass
+                return False
+            
+            # Step 4: Delete new collection
+            try:
+                self.qdrant_client.delete_collection(new_collection_name)
+                logger.info(f"Deleted temporary collection: {new_collection_name}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temporary collection {new_collection_name}: {e}")
+                # This is not critical - the swap succeeded, just log warning
+            
+            logger.info(f"Successfully swapped collections: {new_collection_name} -> {old_collection_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to swap collections {old_collection_name} <-> {new_collection_name}: {e}")
+            return False
+    
     def _chunk_text(self, text: str, chunk_size: int = None, overlap: int = None) -> List[str]:
         """
         Split text into overlapping chunks for embedding
@@ -368,6 +566,11 @@ class VecAgent:
             logger.warning("Qdrant or OpenAI not available, cannot index jobs")
             return 0
         
+        # Rebuild collection before indexing
+        collection_name = self.collections['jobs']
+        new_collection_name = self._rebuild_collection(collection_name)
+        target_collection = new_collection_name if new_collection_name else collection_name
+        
         db = next(get_db())
         indexed_count = 0
         total_processed = 0
@@ -479,7 +682,7 @@ class VecAgent:
                     # Upsert batch to Qdrant
                     if points:
                         self.qdrant_client.upsert(
-                            collection_name=self.collections['jobs'],
+                            collection_name=target_collection,
                             points=points
                         )
                     
@@ -505,6 +708,12 @@ class VecAgent:
             logger.error(f"Failed to index jobs: {e}")
         finally:
             db.close()
+            
+            # Swap collections if rebuild was performed
+            if new_collection_name:
+                swap_success = self._swap_collection(collection_name, new_collection_name)
+                if not swap_success:
+                    logger.error(f"Failed to swap collections for jobs, keeping both collections")
         
         return indexed_count
     
@@ -522,6 +731,11 @@ class VecAgent:
         if not self.qdrant_available or not self.openai_available:
             logger.warning("Qdrant or OpenAI not available, cannot index users")
             return 0
+        
+        # Rebuild collection before indexing
+        collection_name = self.collections['users']
+        new_collection_name = self._rebuild_collection(collection_name)
+        target_collection = new_collection_name if new_collection_name else collection_name
         
         db = next(get_db())
         indexed_count = 0
@@ -649,7 +863,7 @@ class VecAgent:
                     # Upsert batch to Qdrant
                     if points:
                         self.qdrant_client.upsert(
-                            collection_name=self.collections['users'],
+                            collection_name=target_collection,
                             points=points
                         )
                     
@@ -675,6 +889,12 @@ class VecAgent:
             logger.error(f"Failed to index users: {e}")
         finally:
             db.close()
+            
+            # Swap collections if rebuild was performed
+            if new_collection_name:
+                swap_success = self._swap_collection(collection_name, new_collection_name)
+                if not swap_success:
+                    logger.error(f"Failed to swap collections for users, keeping both collections")
         
         return indexed_count
     
@@ -692,6 +912,11 @@ class VecAgent:
         if not self.qdrant_available or not self.openai_available:
             logger.warning("Qdrant or OpenAI not available, cannot index posts")
             return 0
+        
+        # Rebuild collection before indexing
+        collection_name = self.collections['posts']
+        new_collection_name = self._rebuild_collection(collection_name)
+        target_collection = new_collection_name if new_collection_name else collection_name
         
         db = next(get_db())
         indexed_count = 0
@@ -785,7 +1010,7 @@ class VecAgent:
                     # Upsert batch to Qdrant
                     if points:
                         self.qdrant_client.upsert(
-                            collection_name=self.collections['posts'],
+                            collection_name=target_collection,
                             points=points
                         )
                     
@@ -811,6 +1036,12 @@ class VecAgent:
             logger.error(f"Failed to index posts: {e}")
         finally:
             db.close()
+            
+            # Swap collections if rebuild was performed
+            if new_collection_name:
+                swap_success = self._swap_collection(collection_name, new_collection_name)
+                if not swap_success:
+                    logger.error(f"Failed to swap collections for posts, keeping both collections")
         
         return indexed_count
     
