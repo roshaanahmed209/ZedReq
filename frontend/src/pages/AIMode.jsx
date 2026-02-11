@@ -525,6 +525,97 @@ const MatchScore = styled.div`
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 `
 
+const ProfileList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const ProfileCard = styled.div`
+  padding: 20px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: ${props => props.delay || '0s'};
+  animation-fill-mode: both;
+
+  &:hover {
+    border-color: rgba(10, 102, 194, 0.4);
+    background: rgba(10, 102, 194, 0.03);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+`
+
+const ProfileName = styled.h3`
+  font-size: 1.1em;
+  color: var(--text);
+  font-weight: 400;
+  margin-bottom: 8px;
+`
+
+const ProfileAbout = styled.div`
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  line-height: 1.5;
+`
+
+const ProfileSkills = styled.div`
+  font-size: 0.85em;
+  color: var(--text-lighter);
+  margin-bottom: 12px;
+`
+
+const PostList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const PostCard = styled.div`
+  padding: 20px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: ${props => props.delay || '0s'};
+  animation-fill-mode: both;
+
+  &:hover {
+    border-color: rgba(10, 102, 194, 0.4);
+    background: rgba(10, 102, 194, 0.03);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+`
+
+const PostContent = styled.div`
+  font-size: 0.95em;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 12px;
+`
+
+const PostAuthor = styled.div`
+  font-size: 0.85em;
+  color: var(--text-light);
+  margin-bottom: 8px;
+`
+
+const PostMeta = styled.div`
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+  color: var(--text-lighter);
+`
+
 const bounce = keyframes`
   0%, 80%, 100% { 
     transform: scale(0.8);
@@ -681,9 +772,14 @@ const AIMode = () => {
   ])
   const [isThinking, setIsThinking] = useState(false)
   const [showJobs, setShowJobs] = useState(false)
+  const [showProfiles, setShowProfiles] = useState(false)
+  const [showPosts, setShowPosts] = useState(false)
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
   const [jobs, setJobs] = useState([])
+  const [profiles, setProfiles] = useState([])
+  const [posts, setPosts] = useState([])
+  const [searchType, setSearchType] = useState('all') // Track what type of results we have
   const fileInputRef = React.useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
@@ -739,10 +835,11 @@ const AIMode = () => {
       setIsThinking(true)
       
       try {
-        // Call Nemz API to search for jobs
+        // Call Nemz API to search across all types (jobs, profiles, posts)
+        // Let the backend determine intent or search all types
         const response = await nemzAPI.searchAll({
           query: userMessageText,
-          searchType: 'jobs', // Default to jobs for AI Mode
+          searchType: undefined, // Let backend determine intent based on query
           limit: 10
         })
         
@@ -751,12 +848,16 @@ const AIMode = () => {
         if (response.data && response.data.success) {
           const results = response.data
           const foundJobs = results.jobs || []
+          const foundProfiles = results.profiles || []
+          const foundPosts = results.posts || []
+          const detectedType = results.search_type || 'all'
+          
+          setSearchType(detectedType)
           
           // Map Nemz job results to display format
           const mappedJobs = foundJobs.map((job, index) => {
-            // Extract job data from Nemz response structure
             const jobData = job.payload || job
-            const matchScore = Math.round((job.score || 0) * 100) // Convert 0-1 score to 0-100
+            const matchScore = Math.round((job.score || 0) * 100)
             
             return {
               id: jobData.job_id || jobData.id || index + 1,
@@ -768,14 +869,69 @@ const AIMode = () => {
             }
           })
           
-          setJobs(mappedJobs)
+          // Map Nemz profile results to display format
+          const mappedProfiles = foundProfiles.map((profile, index) => {
+            const profileData = profile.payload || profile
+            const matchScore = Math.round((profile.score || 0) * 100)
+            
+            return {
+              id: profileData.user_id || profileData.id || index + 1,
+              name: profileData.name || profileData.user_name || 'User',
+              about: profileData.about || profileData.short_desc || '',
+              skills: profileData.skills || '',
+              currentStatus: profileData.current_status || '',
+              profileLink: profileData.profile_link || '',
+              matchScore: matchScore
+            }
+          })
           
-          // Bot response based on results
-          let botResponseText
-          if (foundJobs.length > 0) {
-            botResponseText = `I found ${foundJobs.length} job${foundJobs.length > 1 ? 's' : ''} aligned with your query! Based on your search, I've curated a personalized list of opportunities that match your skills and experience. You can see the recommended positions below with match scores to help you identify the best fits.`
+          // Map Nemz post results to display format
+          const mappedPosts = foundPosts.map((post, index) => {
+            const postData = post.payload || post
+            const matchScore = Math.round((post.score || 0) * 100)
+            
+            return {
+              id: postData.post_id || postData.id || index + 1,
+              description: postData.post_desc || postData.description || '',
+              userName: postData.user_name || postData.name || 'User',
+              userId: postData.user_id || null,
+              likes: postData.likes || 0,
+              comments: postData.comments || 0,
+              mediaUrl: postData.media_url || null,
+              mediaType: postData.media_type || null,
+              createdAt: postData.created_at || null,
+              matchScore: matchScore
+            }
+          })
+          
+          setJobs(mappedJobs)
+          setProfiles(mappedProfiles)
+          setPosts(mappedPosts)
+          
+          // Build bot response based on all result types
+          let botResponseText = ''
+          const resultCounts = {
+            jobs: foundJobs.length,
+            profiles: foundProfiles.length,
+            posts: foundPosts.length
+          }
+          const totalResults = resultCounts.jobs + resultCounts.profiles + resultCounts.posts
+          
+          if (totalResults > 0) {
+            const parts = []
+            if (resultCounts.jobs > 0) {
+              parts.push(`${resultCounts.jobs} job${resultCounts.jobs > 1 ? 's' : ''}`)
+            }
+            if (resultCounts.profiles > 0) {
+              parts.push(`${resultCounts.profiles} profile${resultCounts.profiles > 1 ? 's' : ''}`)
+            }
+            if (resultCounts.posts > 0) {
+              parts.push(`${resultCounts.posts} post${resultCounts.posts > 1 ? 's' : ''}`)
+            }
+            
+            botResponseText = `I found ${parts.join(', ')} matching your query! Here are the results below with match scores to help you identify the best matches.`
           } else {
-            botResponseText = "I couldn't find any jobs matching your query. Try refining your search terms or check back later for new opportunities."
+            botResponseText = "I couldn't find any results matching your query. Try refining your search terms or check back later."
           }
           
           const botResponse = {
@@ -786,19 +942,21 @@ const AIMode = () => {
           }
           setChatMessages(prev => [...prev, botResponse])
           
-          // Show jobs if we have results
-          if (foundJobs.length > 0) {
+          // Show results sections if we have any results
+          if (totalResults > 0) {
             setIsLoadingJobs(true)
             setTimeout(() => {
               setIsLoadingJobs(false)
-              setShowJobs(true)
+              setShowJobs(foundJobs.length > 0)
+              setShowProfiles(foundProfiles.length > 0)
+              setShowPosts(foundPosts.length > 0)
             }, 500)
           }
         } else {
           // Handle error or no results
           const botResponse = {
             id: Date.now() + 1,
-            text: "I encountered an issue searching for jobs. Please try again or rephrase your query.",
+            text: "I encountered an issue searching. Please try again or rephrase your query.",
             isUser: false,
             time: "Just now"
           }
@@ -976,57 +1134,143 @@ const AIMode = () => {
             </ContentCard>
           )}
 
-          {(isLoadingJobs || showJobs) && (
-            <ContentCard>
-              <CardHeader>
-                <CardHeaderLeft>
-                  <CardIcon>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                    </svg>
-                  </CardIcon>
-                  <CardTitle>Matched Jobs for You</CardTitle>
-                </CardHeaderLeft>
-              </CardHeader>
+          {(isLoadingJobs || showJobs || showProfiles || showPosts) && (
+            <>
+              {showJobs && (
+                <ContentCard>
+                  <CardHeader>
+                    <CardHeaderLeft>
+                      <CardIcon>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                      </CardIcon>
+                      <CardTitle>Matched Jobs</CardTitle>
+                    </CardHeaderLeft>
+                  </CardHeader>
 
-              {isLoadingJobs ? (
-                <LoadingContainer>
-                  <LoadingSpinner />
-                  <LoadingText>Finding the best jobs for you...</LoadingText>
-                </LoadingContainer>
-              ) : (
-                <JobList>
-                  {jobs.length > 0 ? jobs.map((job, index) => (
-                    <JobCard key={job.id} delay={`${index * 0.1}s`}>
-                      <JobTitle>{job.title}</JobTitle>
-                      <JobCompany>{job.company}</JobCompany>
-                      <JobMeta>
-                        <JobMetaItem>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                            <circle cx="12" cy="10" r="3"></circle>
-                          </svg>
-                          {job.location}
-                        </JobMetaItem>
-                        <JobMetaItem>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                          </svg>
-                          {job.type}
-                        </JobMetaItem>
-                      </JobMeta>
-                      <MatchScore>{job.matchScore}% Match</MatchScore>
-                    </JobCard>
-                  )) : (
-                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-light)' }}>
-                      No jobs found. Try searching with different keywords.
-                    </div>
+                  {isLoadingJobs ? (
+                    <LoadingContainer>
+                      <LoadingSpinner />
+                      <LoadingText>Finding the best jobs for you...</LoadingText>
+                    </LoadingContainer>
+                  ) : (
+                    <JobList>
+                      {jobs.length > 0 ? jobs.map((job, index) => (
+                        <JobCard key={job.id} delay={`${index * 0.1}s`}>
+                          <JobTitle>{job.title}</JobTitle>
+                          <JobCompany>{job.company}</JobCompany>
+                          <JobMeta>
+                            <JobMetaItem>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                              </svg>
+                              {job.location}
+                            </JobMetaItem>
+                            <JobMetaItem>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                              </svg>
+                              {job.type}
+                            </JobMetaItem>
+                          </JobMeta>
+                          <MatchScore>{job.matchScore}% Match</MatchScore>
+                        </JobCard>
+                      )) : null}
+                    </JobList>
                   )}
-                </JobList>
+                </ContentCard>
               )}
-            </ContentCard>
+
+              {showProfiles && (
+                <ContentCard>
+                  <CardHeader>
+                    <CardHeaderLeft>
+                      <CardIcon>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                      </CardIcon>
+                      <CardTitle>Matched Profiles</CardTitle>
+                    </CardHeaderLeft>
+                  </CardHeader>
+
+                  {isLoadingJobs ? (
+                    <LoadingContainer>
+                      <LoadingSpinner />
+                      <LoadingText>Finding matching profiles...</LoadingText>
+                    </LoadingContainer>
+                  ) : (
+                    <ProfileList>
+                      {profiles.length > 0 ? profiles.map((profile, index) => (
+                        <ProfileCard key={profile.id} delay={`${index * 0.1}s`}>
+                          <ProfileName>{profile.name}</ProfileName>
+                          {profile.about && <ProfileAbout>{profile.about}</ProfileAbout>}
+                          {profile.skills && <ProfileSkills><strong>Skills:</strong> {profile.skills}</ProfileSkills>}
+                          {profile.currentStatus && (
+                            <ProfileSkills><strong>Status:</strong> {profile.currentStatus}</ProfileSkills>
+                          )}
+                          <MatchScore>{profile.matchScore}% Match</MatchScore>
+                        </ProfileCard>
+                      )) : null}
+                    </ProfileList>
+                  )}
+                </ContentCard>
+              )}
+
+              {showPosts && (
+                <ContentCard>
+                  <CardHeader>
+                    <CardHeaderLeft>
+                      <CardIcon>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                      </CardIcon>
+                      <CardTitle>Matched Posts</CardTitle>
+                    </CardHeaderLeft>
+                  </CardHeader>
+
+                  {isLoadingJobs ? (
+                    <LoadingContainer>
+                      <LoadingSpinner />
+                      <LoadingText>Finding relevant posts...</LoadingText>
+                    </LoadingContainer>
+                  ) : (
+                    <PostList>
+                      {posts.length > 0 ? posts.map((post, index) => (
+                        <PostCard key={post.id} delay={`${index * 0.1}s`}>
+                          <PostAuthor><strong>{post.userName}</strong></PostAuthor>
+                          <PostContent>{post.description}</PostContent>
+                          <PostMeta>
+                            <JobMetaItem>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                              </svg>
+                              {post.likes} likes
+                            </JobMetaItem>
+                            <JobMetaItem>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                              </svg>
+                              {post.comments} comments
+                            </JobMetaItem>
+                          </PostMeta>
+                          <MatchScore>{post.matchScore}% Match</MatchScore>
+                        </PostCard>
+                      )) : null}
+                    </PostList>
+                  )}
+                </ContentCard>
+              )}
+            </>
           )}
         </MainContent>
       </MainContainer>

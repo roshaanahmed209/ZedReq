@@ -52,6 +52,7 @@ You will receive data from two primary sources:
 - Specific subjects discussed in liked posts (extract key topics, technologies, concepts mentioned)
 - Content patterns and preferences (long-form vs short, video vs text, educational vs entertainment)
 - Engagement intensity (how often, what times, what triggers engagement)
+- **CRITICAL**: Track topic engagement frequency and intensity to identify the user's most preferred topics
 
 ### 2. Professional Interests & Career Goals
 - Job fields of interest (e.g., Software Engineering, Data Science, Product Management, UX Design, DevOps)
@@ -113,6 +114,7 @@ You must generate EXTENSIVE, DETAILED text that:
 5. **Is Readable**: Use clear language, proper formatting, and logical flow
 6. **Is Actionable**: Include insights that can be used by other systems or agents
 7. **Updates Incrementally**: Build upon existing context rather than replacing it
+8. **Includes Preferred Topics**: MUST save the top 5 most preferred topics as "highlighted topics" and 5 additional topics as "extras" based on engagement frequency, intensity, and relevance
 
 ## Context Document Structure
 
@@ -162,6 +164,29 @@ When generating or updating context, use this structure:
 - New interests or patterns emerging
 - Changes in behavior or preferences
 
+### Preferred Topics (REQUIRED SECTION)
+**MANDATORY**: You MUST include this section with the following structure:
+
+**Highlighted Topics (Top 5 Most Preferred):**
+1. [Topic 1] - [Brief explanation of why this is a top preference based on engagement data]
+2. [Topic 2] - [Brief explanation of why this is a top preference based on engagement data]
+3. [Topic 3] - [Brief explanation of why this is a top preference based on engagement data]
+4. [Topic 4] - [Brief explanation of why this is a top preference based on engagement data]
+5. [Topic 5] - [Brief explanation of why this is a top preference based on engagement data]
+
+**Extra Topics (5 Additional Preferred Topics):**
+1. [Topic 6] - [Brief explanation]
+2. [Topic 7] - [Brief explanation]
+3. [Topic 8] - [Brief explanation]
+4. [Topic 9] - [Brief explanation]
+5. [Topic 10] - [Brief explanation]
+
+**Note**: Topics should be ranked based on:
+- Frequency of engagement (how often the user interacts with this topic)
+- Intensity of engagement (likes, comments, shares, time spent)
+- Recency of engagement (more recent interactions weighted higher)
+- Relevance to user's professional interests and career goals
+
 ### Contextual Insights & Inferences
 - Patterns and trends identified
 - Inferred preferences not explicitly stated
@@ -197,9 +222,11 @@ When new information is provided:
 When asked to update context, you must:
 1. Analyze all provided information thoroughly
 2. Retrieve and review existing context (if provided)
-3. Generate a complete, updated context document following the structure above
-4. Return ONLY the comprehensive context text (no explanations, no meta-commentary)
-5. The text should be ready to save directly to the database
+3. **Identify and rank user's preferred topics** based on engagement patterns, frequency, and intensity
+4. **Generate the "Preferred Topics" section** with exactly 5 highlighted topics (top preferences) and 5 extra topics (additional preferences)
+5. Generate a complete, updated context document following the structure above
+6. Return ONLY the comprehensive context text (no explanations, no meta-commentary)
+7. The text should be ready to save directly to the database
 
 Remember: Your output will be saved directly to the database. Make it comprehensive, well-structured, and detailed."""
 

@@ -7,6 +7,7 @@ import os
 import logging
 import hashlib
 import uuid
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import json
@@ -84,7 +85,7 @@ class AzelAgent:
             model_name: OpenAI model to use
         """
         # Initialize Qdrant client
-        qdrant_url = qdrant_url or os.environ.get('QDRANT_URL', 'http://localhost:6333')
+        qdrant_url = qdrant_url or os.environ.get('QDRANT_URL')
         qdrant_api_key = qdrant_api_key or os.environ.get('QDRANT_API_KEY')
         
         try:
@@ -168,10 +169,113 @@ class AzelAgent:
     
     def _extract_highlighted_topics(self, context: str, course_id: int) -> List[str]:
         """
-        Extract highlighted topics of interest from Zed context using LLM
+        Extract highlighted topics of interest from Zed context.
+        First tries to parse the structured "Preferred Topics" section,
+        then falls back to LLM extraction if structured format not found.
         
         Args:
             context: Zed context text containing highlighted topics
+            course_id: Course ID for context
+            
+        Returns:
+            List of highlighted topics (top 5 from "Highlighted Topics" section)
+        """
+        # Try to parse structured "Preferred Topics" section first
+        topics = self._parse_structured_topics(context)
+        
+        if topics:
+            logger.info(f"Extracted {len(topics)} highlighted topics from structured section for course_id={course_id}")
+            return topics
+        
+        # Fallback to LLM extraction if structured format not found
+        logger.info(f"Structured topics not found, falling back to LLM extraction for course_id={course_id}")
+        return self._extract_topics_with_llm(context, course_id)
+    
+    def _parse_structured_topics(self, context: str) -> List[str]:
+        """
+        Parse the structured "Preferred Topics" section from zed context.
+        Looks for "**Highlighted Topics (Top 5 Most Preferred):**" section.
+        
+        Args:
+            context: Zed context text
+            
+        Returns:
+            List of topic names extracted from the structured section, or empty list if not found
+        """
+        try:
+            # Find the "Preferred Topics" section
+            # Look for "### Preferred Topics" or "**Highlighted Topics (Top 5 Most Preferred):**"
+            preferred_topics_pattern = r'(?:###\s*Preferred\s+Topics|Preferred\s+Topics\s*\(REQUIRED\s+SECTION\)|Highlighted\s+Topics\s*\(Top\s+5\s+Most\s+Preferred\))'
+            
+            # Find the section
+            section_match = re.search(preferred_topics_pattern, context, re.IGNORECASE)
+            if not section_match:
+                return []
+            
+            # Extract text after the section header
+            section_start = section_match.end()
+            section_text = context[section_start:]
+            
+            # Look for "Highlighted Topics (Top 5 Most Preferred):" specifically
+            highlighted_pattern = r'\*\*Highlighted\s+Topics\s*\(Top\s+5\s+Most\s+Preferred\):\*\*'
+            highlighted_match = re.search(highlighted_pattern, section_text, re.IGNORECASE)
+            
+            if not highlighted_match:
+                return []
+            
+            # Extract the highlighted topics section
+            highlighted_start = highlighted_match.end()
+            # Find where "Extra Topics" section starts (or end of document)
+            extra_pattern = r'\*\*Extra\s+Topics|###\s*[A-Z]'
+            extra_match = re.search(extra_pattern, section_text[highlighted_start:], re.IGNORECASE)
+            
+            if extra_match:
+                highlighted_section = section_text[highlighted_start:highlighted_start + extra_match.start()]
+            else:
+                # Take next 2000 characters if no extra section found
+                highlighted_section = section_text[highlighted_start:highlighted_start + 2000]
+            
+            # Extract topic names from numbered list items
+            # Pattern: "1. **Topic Name** - description" or "1. Topic Name - description"
+            topics = []
+            for line in highlighted_section.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Match lines starting with number and period (e.g., "1. **Topic** -" or "1. Topic -")
+                numbered_item_match = re.match(r'^\d+\.\s*(.+?)(?:\s*-\s*|$)', line)
+                if numbered_item_match:
+                    topic_text = numbered_item_match.group(1).strip()
+                    
+                    # Extract bold text if present (format: **Topic Name**)
+                    bold_match = re.match(r'\*\*([^*]+)\*\*', topic_text)
+                    if bold_match:
+                        topic = bold_match.group(1).strip()
+                    else:
+                        # If no bold, take text before dash or first part
+                        topic = topic_text.split('-')[0].strip() if '-' in topic_text else topic_text.strip()
+                    
+                    # Clean up any remaining markdown
+                    topic = re.sub(r'\*\*', '', topic)
+                    topic = topic.strip()
+                    
+                    if topic and len(topic) > 2:  # Filter out very short matches
+                        topics.append(topic)
+            
+            # Return top 5 topics (or all if less than 5)
+            return topics[:5] if topics else []
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse structured topics: {e}")
+            return []
+    
+    def _extract_topics_with_llm(self, context: str, course_id: int) -> List[str]:
+        """
+        Fallback method: Extract highlighted topics using LLM when structured format not found.
+        
+        Args:
+            context: Zed context text
             course_id: Course ID for context
             
         Returns:
@@ -210,8 +314,8 @@ Return a JSON array of topic strings."""
             
             topics = json.loads(content)
             if isinstance(topics, list):
-                logger.info(f"Extracted {len(topics)} highlighted topics for course_id={course_id}")
-                return topics
+                logger.info(f"Extracted {len(topics)} highlighted topics via LLM for course_id={course_id}")
+                return topics[:5]  # Return top 5
             else:
                 logger.warning(f"Unexpected topics format: {type(topics)}")
                 return []
@@ -221,7 +325,7 @@ Return a JSON array of topic strings."""
             logger.debug(f"Response content: {content[:500]}")
             return []
         except Exception as e:
-            logger.error(f"Failed to extract highlighted topics: {e}")
+            logger.error(f"Failed to extract highlighted topics with LLM: {e}")
             return []
     
     def _perform_google_search(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
