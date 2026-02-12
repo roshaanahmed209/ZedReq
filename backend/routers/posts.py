@@ -3,10 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional
+import logging
 
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.post_service import PostService
+from utils.errors import NotFoundError, AuthorizationError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -59,6 +63,37 @@ async def create_post(
         "created_at": post.get("created_at"),
         "message": "Post created successfully"
     }
+
+
+@router.get("/user/{user_id}")
+async def get_user_posts(
+    user_id: int,
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    current_user: dict = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """Get all posts by a specific user"""
+    try:
+        posts = post_service.get_posts_by_user(
+            target_user_id=user_id,
+            current_user_id=current_user["id"],
+            limit=limit,
+            offset=offset
+        )
+        
+        return {
+            "posts": posts,
+            "total": len(posts),
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        logger.error(f"Error getting user posts: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user posts: {str(e)}"
+        )
 
 
 @router.get("/{post_id}")

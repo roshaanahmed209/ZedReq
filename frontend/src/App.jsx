@@ -12,6 +12,7 @@ import AIMode from './pages/AIMode'
 import AIInterviews from './pages/AIInterviews'
 import Notifications from './pages/Notifications'
 import Messages from './pages/Messages'
+import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -91,6 +92,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Messages />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/:username-:hashedId" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/:userId" 
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } 
           />

@@ -202,6 +202,15 @@ class AuthService:
         )
         
         self.db.add(user)
+        self.db.flush()  # Flush to get the user ID
+        
+        # Generate profile path (not full URL) after user is created (so we have the user ID)
+        # Store only the path part so it works in any environment
+        from utils.profile_url import generate_profile_path
+        profile_path = generate_profile_path(user.uid, username)
+        if profile_path:
+            user.profile_url = profile_path
+        
         self.db.commit()
         self.db.refresh(user)
         

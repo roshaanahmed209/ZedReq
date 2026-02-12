@@ -23,6 +23,7 @@ class User(Base):
     description_id = Column(Integer)
     pay_id = Column(Integer)
     job_id = Column(Integer)
+    profile_url = Column(Text)  # Profile URL in format: {API_URL}/profile/{username}-{hashed_user_id}
     last_login = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -45,6 +46,7 @@ class User(Base):
             'user_email': self.user_email,
             'email_verified': self.email_verified,
             'description_id': self.description_id,
+            'profile_url': self.profile_url,
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

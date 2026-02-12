@@ -140,6 +140,7 @@ export const authAPI = {
 // User API methods
 export const userAPI = {
   getCurrentUser: () => api.get('/api/user'),
+  getUserProfile: (userId) => api.get(`/api/user/${userId}`),
   updateProfile: (data) => api.put('/api/user', data),
   searchUsers: (query) => api.get('/api/user/search', { params: { q: query } }),
 }
@@ -148,6 +149,7 @@ export const userAPI = {
 export const postAPI = {
   createPost: (data) => api.post('/api/posts', data),
   getPost: (postId) => api.get(`/api/posts/${postId}`),
+  getUserPosts: (userId, params = {}) => api.get(`/api/posts/user/${userId}`, { params }),
   updatePost: (postId, data) => api.put(`/api/posts/${postId}`, data),
   deletePost: (postId) => api.delete(`/api/posts/${postId}`),
   toggleLike: (postId) => api.post(`/api/posts/${postId}/like`),

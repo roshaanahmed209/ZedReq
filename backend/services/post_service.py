@@ -161,6 +161,111 @@ class PostService:
             logger.error(f"Get posts error: {e}")
             raise
     
+    def get_posts_by_user(self, target_user_id: int, current_user_id: int = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get all posts by a specific user"""
+        try:
+            posts = (
+                self.db.query(Post)
+                .options(joinedload(Post.user))
+                .join(User, Post.uid == User.uid)
+                .outerjoin(Description, User.description_id == Description.desc_id)
+                .filter(
+                    and_(
+                        Post.uid == target_user_id,
+                        Post.is_deleted == False
+                    )
+                )
+                .order_by(desc(Post.created_at))
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+            
+            result = []
+            for post in posts:
+                try:
+                    # Validate post has required data
+                    if not post:
+                        logger.warning(f"Empty post object encountered")
+                        continue
+                    
+                    # Check if current user has liked
+                    is_liked = False
+                    if current_user_id:
+                        try:
+                            is_liked = self._has_liked(post.post_id, current_user_id)
+                        except Exception as e:
+                            logger.warning(f"Error checking like status for post {post.post_id}: {e}")
+                    
+                    # Get user info safely
+                    username = None
+                    full_name = None
+                    name = None
+                    profile_pic = None
+                    
+                    if post.user:
+                        username = getattr(post.user, 'username', None)
+                        full_name = getattr(post.user, 'name', None)
+                        name = getattr(post.user, 'name', None)
+                        
+                        # Get profile pic
+                        if hasattr(post.user, 'description_id') and post.user.description_id:
+                            try:
+                                description = (
+                                    self.db.query(Description)
+                                    .filter(Description.desc_id == post.user.description_id)
+                                    .first()
+                                )
+                                if description:
+                                    profile_pic = getattr(description, 'profile_pic', None)
+                            except Exception as e:
+                                logger.warning(f"Error getting description for post {post.post_id}: {e}")
+                    else:
+                        logger.warning(f"Post {post.post_id} has no associated user (uid={post.uid})")
+                    
+                    # Format created_at safely
+                    created_at_str = None
+                    if post.created_at:
+                        try:
+                            if hasattr(post.created_at, 'isoformat'):
+                                created_at_str = post.created_at.isoformat()
+                            else:
+                                # If it's already a string, use it as is
+                                created_at_str = str(post.created_at)
+                        except Exception as e:
+                            logger.warning(f"Error formatting created_at for post {post.post_id}: {e}")
+                            created_at_str = str(post.created_at) if post.created_at else None
+                    
+                    result.append({
+                        'id': post.post_id,
+                        'post_id': post.post_id,
+                        'user_id': post.uid,
+                        'uid': post.uid,
+                        'content': post.post_desc or '',
+                        'post_desc': post.post_desc or '',
+                        'media_url': getattr(post, 'media_url', None),
+                        'media_type': getattr(post, 'media_type', None),
+                        'created_at': created_at_str,
+                        'username': username,
+                        'full_name': full_name,
+                        'name': name,
+                        'profile_pic': profile_pic,
+                        'like_count': getattr(post, 'likes', 0) or 0,
+                        'likes': getattr(post, 'likes', 0) or 0,
+                        'comment_count': getattr(post, 'comments', 0) or 0,
+                        'comments': getattr(post, 'comments', 0) or 0,
+                        'is_liked': is_liked
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing post {getattr(post, 'post_id', 'unknown')}: {e}", exc_info=True)
+                    # Skip this post but continue with others
+                    continue
+            
+            return result
+        except Exception as e:
+            logger.error(f"Get posts by user error: {e}", exc_info=True)
+            raise
+    
     def toggle_like(self, post_id: int, user_id: int) -> dict:
         """Toggle like on a post"""
         try:

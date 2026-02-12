@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import Messages from './Messages'
+import { generateProfileUrl } from '../utils/profileUrl'
 import '../css/pages/Feed.css'
 
 const fadeIn = keyframes`
@@ -290,6 +291,14 @@ const ProfileCard = styled.div`
   padding: 30px;
   border: 1px solid var(--border);
   text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
+  }
   
   @media (max-width: 768px) {
     padding: 25px 20px;
@@ -1795,6 +1804,18 @@ const Feed = () => {
             </PanelLink>
           </PanelSection>
           
+          <PanelSection onClick={() => { user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username)); setMobileMenuOpen(false); }}>
+            <PanelLink>
+              <span className="icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <span>Profile</span>
+            </PanelLink>
+          </PanelSection>
+          
           <PanelDivider />
           
           <PanelSection>
@@ -1916,6 +1937,18 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
             
+            <PanelSection onClick={() => user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username))}>
+              <PanelLink>
+                <span className="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </span>
+                <span>Profile</span>
+              </PanelLink>
+            </PanelSection>
+            
             <PanelDivider />
             
             <PanelSection>
@@ -1947,7 +1980,7 @@ const Feed = () => {
         </LeftSidebar>
 
         <Sidebar>
-          <ProfileCard>
+          <ProfileCard onClick={() => user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username))}>
             <ProfileAvatar>
               {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
             </ProfileAvatar>

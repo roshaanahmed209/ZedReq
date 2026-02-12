@@ -10,15 +10,18 @@ import json
 import webbrowser
 from pathlib import Path
 
-# Load environment variables from backend/.env
+# Load environment variables from .env file in project root
 def load_env():
-    env_path = "E:\professional\ZedRec\.env"
-    if not env_path != None:
+    # Use Path to get the .env file location (works cross-platform)
+    project_root = Path(__file__).parent
+    env_path = project_root / '.env'
+    
+    if not env_path.exists():
         print(f"Error: .env file not found at {env_path}")
-        print("Please create backend/.env file based on backend/env.example")
+        print("Please create .env file based on backend/env.example")
         sys.exit(1)
     
-    with open(env_path, 'r') as f:
+    with open(env_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
