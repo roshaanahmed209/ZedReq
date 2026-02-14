@@ -52,12 +52,13 @@ class RateLimiter:
                 # Make API call
                 pass
         """
-        # Wait for semaphore (concurrent limit)
-        self.semaphore.acquire()
-        
-        # Check RPM limit if configured
+        # Check RPM limit first (before acquiring semaphore to avoid blocking)
         if self.requests_per_minute:
             self._wait_for_rpm_limit()
+        
+        # Wait for semaphore (concurrent limit)
+        # Acquire after RPM check to avoid semaphore leak if RPM check fails
+        self.semaphore.acquire()
         
         try:
             yield
@@ -66,6 +67,8 @@ class RateLimiter:
     
     def _wait_for_rpm_limit(self):
         """Wait if necessary to respect requests per minute limit"""
+        # Calculate wait time while holding lock (quick operation)
+        wait_time = 0
         with self.lock:
             now = time.time()
             # Remove requests older than 1 minute
@@ -75,16 +78,22 @@ class RateLimiter:
                 # Calculate wait time until oldest request expires
                 oldest_time = min(self.request_times)
                 wait_time = 60 - (now - oldest_time) + 0.1  # Add small buffer
-                
-                if wait_time > 0:
-                    logger.debug(f"RateLimiter '{self.name}': Waiting {wait_time:.2f}s for RPM limit")
-                    time.sleep(wait_time)
-                    # Clean up again after waiting
-                    now = time.time()
-                    self.request_times = [t for t in self.request_times if now - t < 60]
+            else:
+                # Record this request immediately if under limit
+                self.request_times.append(time.time())
+        
+        # Sleep outside the lock to avoid serializing all requests
+        if wait_time > 0:
+            logger.debug(f"RateLimiter '{self.name}': Waiting {wait_time:.2f}s for RPM limit")
+            time.sleep(wait_time)
             
-            # Record this request
-            self.request_times.append(time.time())
+            # Re-acquire lock to record request after waiting
+            with self.lock:
+                now = time.time()
+                # Clean up again after waiting
+                self.request_times = [t for t in self.request_times if now - t < 60]
+                # Record this request
+                self.request_times.append(time.time())
 
 
 class RateLimiterManager:
@@ -119,23 +128,36 @@ class RateLimiterManager:
         
         Returns:
             RateLimiter instance
+            
+        Note:
+            If a limiter with the given name already exists, the provided parameters
+            are ignored and the existing limiter is returned. To update a limiter,
+            it must be removed first or a new name must be used.
         """
-        if name not in self._limiters:
-            # Get defaults from environment
-            if max_concurrent is None:
-                env_key = f"{name.upper()}_MAX_CONCURRENT"
-                max_concurrent = int(os.environ.get(env_key, 5))
-            
-            if requests_per_minute is None:
-                env_key = f"{name.upper()}_RATE_LIMIT_RPM"
-                requests_per_minute = int(os.environ.get(env_key, 0)) or None
-            
-            with self._lock:
-                if name not in self._limiters:
-                    self._limiters[name] = RateLimiter(
-                        max_concurrent=max_concurrent,
-                        name=name,
-                        requests_per_minute=requests_per_minute
+        with self._lock:
+            if name not in self._limiters:
+                # Get defaults from environment
+                if max_concurrent is None:
+                    env_key = f"{name.upper()}_MAX_CONCURRENT"
+                    max_concurrent = int(os.environ.get(env_key, 5))
+                
+                if requests_per_minute is None:
+                    env_key = f"{name.upper()}_RATE_LIMIT_RPM"
+                    requests_per_minute = int(os.environ.get(env_key, 0)) or None
+                
+                self._limiters[name] = RateLimiter(
+                    max_concurrent=max_concurrent,
+                    name=name,
+                    requests_per_minute=requests_per_minute
+                )
+            else:
+                # Log warning if parameters are provided but limiter already exists
+                if max_concurrent is not None or requests_per_minute is not None:
+                    logger.warning(
+                        f"RateLimiter '{name}' already exists. "
+                        f"Provided parameters (max_concurrent={max_concurrent}, "
+                        f"requests_per_minute={requests_per_minute}) are ignored. "
+                        f"Using existing limiter configuration."
                     )
         
         return self._limiters[name]
@@ -156,10 +178,23 @@ def get_openai_limiter() -> RateLimiter:
     return get_rate_limiter('openai', max_concurrent=max_concurrent, requests_per_minute=rpm)
 
 
-def get_google_search_limiter() -> RateLimiter:
+def get_duckduckgo_search_limiter() -> RateLimiter:
     """Get web search (DuckDuckGo) rate limiter"""
-    max_concurrent = int(os.environ.get('GOOGLE_SEARCH_MAX_CONCURRENT', 3))
-    return get_rate_limiter('google_search', max_concurrent=max_concurrent)
+    max_concurrent = int(os.environ.get('DUCKDUCKGO_SEARCH_MAX_CONCURRENT', 3))
+    return get_rate_limiter('duckduckgo_search', max_concurrent=max_concurrent)
+
+
+def get_google_search_limiter() -> RateLimiter:
+    """
+    Deprecated: Use get_duckduckgo_search_limiter() instead.
+    This function is kept for backward compatibility but uses DuckDuckGo env vars.
+    """
+    logger.warning(
+        "get_google_search_limiter() is deprecated. "
+        "Use get_duckduckgo_search_limiter() instead. "
+        "Falling back to DuckDuckGo configuration."
+    )
+    return get_duckduckgo_search_limiter()
 
 
 def get_qdrant_limiter() -> RateLimiter:

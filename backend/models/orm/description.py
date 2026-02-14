@@ -17,6 +17,10 @@ class Description(Base):
     proj_id = Column(Integer)
     skills = Column(Text)
     current_status = Column(String(100))
+    role = Column(String(150))
+    company = Column(String(150))
+    location = Column(String(150))
+    industry = Column(String(100))
     profile_pic = Column(Text)
     cover_pic = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
@@ -40,6 +44,10 @@ class Description(Base):
             'proj_id': self.proj_id,
             'skills': self.skills,
             'current_status': self.current_status,
+            'role': self.role,
+            'company': self.company,
+            'location': self.location,
+            'industry': self.industry,
             'profile_pic': self.profile_pic,
             'cover_pic': self.cover_pic,
             'created_at': self.created_at.isoformat() if self.created_at else None,

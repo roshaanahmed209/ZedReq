@@ -49,7 +49,11 @@ class ProfileService:
                 'about': None,
                 'skills': None,
                 'certificates': None,
-                'current_status': None
+                'current_status': None,
+                'role': None,
+                'company': None,
+                'location': None,
+                'industry': None
             }
             
             # Get description if available
@@ -67,7 +71,11 @@ class ProfileService:
                         'about': description.about,
                         'skills': description.skills,
                         'certificates': description.certificates,
-                        'current_status': description.current_status
+                        'current_status': description.current_status,
+                        'role': description.role,
+                        'company': description.company,
+                        'location': description.location,
+                        'industry': description.industry
                     })
             
             return result
@@ -151,10 +159,46 @@ class ProfileService:
                 current_user_id, 
                 target_user_id
             )
+            
+            # Track profile view
+            try:
+                from services.profile_analytics_service import ProfileAnalyticsService
+                analytics_service = ProfileAnalyticsService(self.db)
+                analytics_service.track_profile_view(
+                    user_id=target_user_id,
+                    viewer_id=current_user_id,
+                    source='direct'
+                )
+            except Exception as e:
+                logger.warning(f"Failed to track profile view: {e}")
         else:
             profile['connection_status'] = None
         
         return profile
+    
+    def get_connection_counts(self, user_id: int) -> Dict[str, int]:
+        """Get followers and following counts for a user"""
+        try:
+            followers_count = (
+                self.db.query(Connection)
+                .filter(Connection.followed_uid == user_id)
+                .count()
+            )
+            
+            following_count = (
+                self.db.query(Connection)
+                .filter(Connection.follower_uid == user_id)
+                .count()
+            )
+            
+            return {
+                'followers': followers_count,
+                'following': following_count,
+                'connections': followers_count  # For now, connections = followers
+            }
+        except Exception as e:
+            logger.error(f"Get connection counts error: {e}", exc_info=True)
+            return {'followers': 0, 'following': 0, 'connections': 0}
     
     def update_profile(self, user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update user profile information"""
@@ -196,10 +240,18 @@ class ProfileService:
                 description.certificates = update_data['certificates']
             if 'current_status' in update_data:
                 description.current_status = update_data['current_status']
+            if 'role' in update_data:
+                description.role = update_data['role']
+            if 'company' in update_data:
+                description.company = update_data['company']
             if 'profile_pic' in update_data:
                 description.profile_pic = update_data['profile_pic']
             if 'cover_pic' in update_data:
                 description.cover_pic = update_data['cover_pic']
+            if 'location' in update_data:
+                description.location = update_data['location']
+            if 'industry' in update_data:
+                description.industry = update_data['industry']
             
             self.db.commit()
             self.db.refresh(user)

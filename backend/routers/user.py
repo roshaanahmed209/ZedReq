@@ -7,6 +7,7 @@ from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.user_service import UserService
 from services.profile_service import ProfileService
+from services.lms_service import LMSService
 
 router = APIRouter()
 
@@ -19,6 +20,12 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 def get_profile_service(db: Session = Depends(get_db)) -> ProfileService:
     """Dependency to get profile service with ORM session"""
     return ProfileService(db)
+
+
+def get_lms_service(db: Session = Depends(get_db)) -> LMSService:
+    """Dependency to get LMS service with ORM session"""
+    from services.lms_service import LMSService
+    return LMSService(db)
 
 
 @router.get("")
@@ -43,6 +50,10 @@ async def get_current_user_profile(
             "skills": profile.get("skills"),
             "certificates": profile.get("certificates"),
             "current_status": profile.get("current_status"),
+            "role": profile.get("role"),
+            "company": profile.get("company"),
+            "location": profile.get("location"),
+            "industry": profile.get("industry"),
             "created_at": profile.get("created_at")
         }
     
@@ -88,11 +99,40 @@ async def get_user_profile_by_id(
         "cover_pic": profile.get("cover_pic"),
         "short_desc": profile.get("short_desc"),
         "about": profile.get("about"),
-        "skills": profile.get("skills"),
-        "certificates": profile.get("certificates"),
-        "current_status": profile.get("current_status"),
-        "connection_status": profile.get("connection_status"),
-        "created_at": profile.get("created_at")
+            "skills": profile.get("skills"),
+            "certificates": profile.get("certificates"),
+            "current_status": profile.get("current_status"),
+            "role": profile.get("role"),
+            "company": profile.get("company"),
+            "location": profile.get("location"),
+            "industry": profile.get("industry"),
+            "connection_status": profile.get("connection_status"),
+            "created_at": profile.get("created_at")
+        }
+
+
+@router.get("/{user_id}/connections/count")
+async def get_user_connection_counts(
+    user_id: int,
+    current_user: dict = Depends(get_current_user),
+    profile_service: ProfileService = Depends(get_profile_service)
+):
+    """Get followers and following counts for a user"""
+    counts = profile_service.get_connection_counts(user_id)
+    return counts
+
+
+@router.get("/{user_id}/certificates")
+async def get_user_certificates(
+    user_id: int,
+    current_user: dict = Depends(get_current_user),
+    lms_service: LMSService = Depends(get_lms_service)
+):
+    """Get certificates for a specific user"""
+    certificates = lms_service.get_user_certificates(user_id)
+    return {
+        "certificates": certificates,
+        "total": len(certificates)
     }
 
 

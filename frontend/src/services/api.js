@@ -143,6 +143,54 @@ export const userAPI = {
   getUserProfile: (userId) => api.get(`/api/user/${userId}`),
   updateProfile: (data) => api.put('/api/user', data),
   searchUsers: (query) => api.get('/api/user/search', { params: { q: query } }),
+  getConnectionCounts: (userId) => api.get(`/api/user/${userId}/connections/count`),
+  getUserCertificates: (userId) => api.get(`/api/user/${userId}/certificates`),
+}
+
+// Profile Features API methods
+export const profileFeaturesAPI = {
+  // Experience
+  getExperiences: (userId, limit = 50, offset = 0) => 
+    api.get(`/api/profile/experience/${userId}`, { params: { limit, offset } }),
+  createExperience: (data) => api.post('/api/profile/experience', data),
+  updateExperience: (experienceId, data) => api.put(`/api/profile/experience/${experienceId}`, data),
+  deleteExperience: (experienceId) => api.delete(`/api/profile/experience/${experienceId}`),
+  
+  // Education
+  getEducations: (userId, limit = 50, offset = 0) => 
+    api.get(`/api/profile/education/${userId}`, { params: { limit, offset } }),
+  createEducation: (data) => api.post('/api/profile/education', data),
+  updateEducation: (educationId, data) => api.put(`/api/profile/education/${educationId}`, data),
+  deleteEducation: (educationId) => api.delete(`/api/profile/education/${educationId}`),
+  
+  // Projects
+  getProjects: (userId, limit = 50, offset = 0) => 
+    api.get(`/api/profile/projects/${userId}`, { params: { limit, offset } }),
+  createProject: (data) => api.post('/api/profile/projects', data),
+  updateProject: (projectId, data) => api.put(`/api/profile/projects/${projectId}`, data),
+  deleteProject: (projectId) => api.delete(`/api/profile/projects/${projectId}`),
+  
+  // Recommendations
+  getRecommendations: (userId, limit = 50, offset = 0) => 
+    api.get(`/api/profile/recommendations/${userId}`, { params: { limit, offset } }),
+  createRecommendation: (data) => api.post('/api/profile/recommendations', data),
+  updateRecommendation: (recommendationId, data) => api.put(`/api/profile/recommendations/${recommendationId}`, data),
+  deleteRecommendation: (recommendationId) => api.delete(`/api/profile/recommendations/${recommendationId}`),
+  
+  // Interests
+  getInterests: (userId, interestType = null, limit = 50, offset = 0) => {
+    const params = { limit, offset }
+    if (interestType) params.interest_type = interestType
+    return api.get(`/api/profile/interests/${userId}`, { params })
+  },
+  createInterest: (data) => api.post('/api/profile/interests', data),
+  updateInterest: (interestId, data) => api.put(`/api/profile/interests/${interestId}`, data),
+  deleteInterest: (interestId) => api.delete(`/api/profile/interests/${interestId}`),
+  
+  // Analytics
+  getAnalytics: (userId, days = 30) => api.get(`/api/profile/analytics/${userId}`, { params: { days } }),
+  getProfileViews: (userId, days = 30) => api.get(`/api/profile/analytics/${userId}/views`, { params: { days } }),
+  trackProfileView: (userId, source = 'direct') => api.post('/api/profile/analytics/track-view', { user_id: userId, source }),
 }
 
 // Post API methods
@@ -150,6 +198,13 @@ export const postAPI = {
   createPost: (data) => api.post('/api/posts', data),
   getPost: (postId) => api.get(`/api/posts/${postId}`),
   getUserPosts: (userId, params = {}) => api.get(`/api/posts/user/${userId}`, { params }),
+  getUserFeaturedPosts: (userId, params = {}) => {
+    // Support both object and number for backward compatibility
+    if (typeof params === 'number') {
+      return api.get(`/api/posts/user/${userId}/featured`, { params: { limit: params, offset: 0 } })
+    }
+    return api.get(`/api/posts/user/${userId}/featured`, { params })
+  },
   updatePost: (postId, data) => api.put(`/api/posts/${postId}`, data),
   deletePost: (postId) => api.delete(`/api/posts/${postId}`),
   toggleLike: (postId) => api.post(`/api/posts/${postId}/like`),

@@ -32,6 +32,14 @@ from .lms_certificate import LMSCertificate
 from .azel_search_url import AzelSearchUrl
 from .reserved_seat import ReservedSeat
 
+# Profile Feature Models
+from .user_experience import UserExperience
+from .user_education import UserEducation
+from .user_project import UserProject
+from .user_recommendation import UserRecommendation
+from .user_interest import UserInterest
+from .profile_analytics import ProfileAnalytics
+
 __all__ = [
     'User',
     'Connection',
@@ -63,4 +71,11 @@ __all__ = [
     'LMSCertificate',
     'AzelSearchUrl',
     'ReservedSeat',
+    # Profile Feature Models
+    'UserExperience',
+    'UserEducation',
+    'UserProject',
+    'UserRecommendation',
+    'UserInterest',
+    'ProfileAnalytics',
 ]

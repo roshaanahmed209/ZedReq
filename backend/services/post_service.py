@@ -163,7 +163,25 @@ class PostService:
     
     def get_posts_by_user(self, target_user_id: int, current_user_id: int = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """Get all posts by a specific user"""
+        posts, _ = self.get_posts_by_user_paginated(target_user_id, current_user_id, limit, offset)
+        return posts
+    
+    def get_posts_by_user_paginated(self, target_user_id: int, current_user_id: int = None, limit: int = 20, offset: int = 0) -> tuple[List[Dict[str, Any]], int]:
+        """Get paginated posts by a specific user with total count"""
         try:
+            # Get total count first
+            total = (
+                self.db.query(Post)
+                .filter(
+                    and_(
+                        Post.uid == target_user_id,
+                        Post.is_deleted == False
+                    )
+                )
+                .count()
+            )
+            
+            # Get paginated posts
             posts = (
                 self.db.query(Post)
                 .options(joinedload(Post.user))
@@ -261,10 +279,106 @@ class PostService:
                     # Skip this post but continue with others
                     continue
             
-            return result
+            return result, total
         except Exception as e:
             logger.error(f"Get posts by user error: {e}", exc_info=True)
             raise
+    
+    def get_featured_posts_by_user_paginated(self, target_user_id: int, current_user_id: int = None, limit: int = 10, offset: int = 0) -> tuple[List[Dict[str, Any]], int]:
+        """Get paginated featured posts (posts with media) by a specific user with total count"""
+        try:
+            # Get total count first
+            total = (
+                self.db.query(Post)
+                .filter(
+                    and_(
+                        Post.uid == target_user_id,
+                        Post.is_deleted == False,
+                        Post.media_url.isnot(None),
+                        Post.media_url != ''
+                    )
+                )
+                .count()
+            )
+            
+            # Get paginated posts
+            posts = (
+                self.db.query(Post)
+                .options(joinedload(Post.user))
+                .join(User, Post.uid == User.uid)
+                .outerjoin(Description, User.description_id == Description.desc_id)
+                .filter(
+                    and_(
+                        Post.uid == target_user_id,
+                        Post.is_deleted == False,
+                        Post.media_url.isnot(None),
+                        Post.media_url != ''
+                    )
+                )
+                .order_by(desc(Post.created_at))
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+            
+            result = []
+            for post in posts:
+                try:
+                    # Check if current user has liked
+                    is_liked = False
+                    if current_user_id:
+                        is_liked = self._has_liked(post.post_id, current_user_id)
+                    
+                    # Get user info
+                    username = post.user.username if post.user else None
+                    full_name = post.user.name if post.user else None
+                    name = post.user.name if post.user else None
+                    profile_pic = None
+                    
+                    if post.user and post.user.description_id:
+                        desc = (
+                            self.db.query(Description)
+                            .filter(Description.desc_id == post.user.description_id)
+                            .first()
+                        )
+                        if desc:
+                            profile_pic = desc.profile_pic
+                    
+                    created_at_str = post.created_at.isoformat() if post.created_at else None
+                    
+                    result.append({
+                        'id': post.post_id,
+                        'post_id': post.post_id,
+                        'user_id': post.uid,
+                        'uid': post.uid,
+                        'content': post.post_desc or '',
+                        'post_desc': post.post_desc or '',
+                        'media_url': post.media_url,
+                        'media_type': post.media_type,
+                        'created_at': created_at_str,
+                        'username': username,
+                        'full_name': full_name,
+                        'name': name,
+                        'profile_pic': profile_pic,
+                        'like_count': post.likes or 0,
+                        'likes': post.likes or 0,
+                        'comment_count': post.comments or 0,
+                        'comments': post.comments or 0,
+                        'is_liked': is_liked
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing featured post {getattr(post, 'post_id', 'unknown')}: {e}", exc_info=True)
+                    continue
+            
+            return result, total
+        except Exception as e:
+            logger.error(f"Get featured posts by user error: {e}", exc_info=True)
+            raise
+    
+    def get_featured_posts_by_user(self, target_user_id: int, current_user_id: int = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get featured posts (posts with media) by a specific user"""
+        posts, _ = self.get_featured_posts_by_user_paginated(target_user_id, current_user_id, limit, 0)
+        return posts
     
     def toggle_like(self, post_id: int, user_id: int) -> dict:
         """Toggle like on a post"""
@@ -313,14 +427,15 @@ class PostService:
             logger.error(f"Toggle like error: {e}")
             raise
     
-    def get_likers(self, post_id: int, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get users who liked a post"""
+    def get_likers(self, post_id: int, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get users who liked a post with pagination"""
         likers = (
             self.db.query(Like)
             .join(User, Like.uid == User.uid)
             .filter(Like.post_id == post_id)
             .order_by(desc(Like.created_at))
             .limit(limit)
+            .offset(offset)
             .all()
         )
         

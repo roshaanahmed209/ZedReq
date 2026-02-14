@@ -14,11 +14,15 @@ load_dotenv(_env_file)
 try:
     import psycopg
     from psycopg.rows import dict_row
-    from psycopg_pool import ConnectionPool
+    try:
+        from psycopg_pool import ConnectionPool
+    except ImportError:
+        ConnectionPool = None  # ConnectionPool not available
     PSYCOPG_VERSION = 3
 except ImportError:
     import psycopg2
     from psycopg2.extras import RealDictCursor
+    ConnectionPool = None  # ConnectionPool not available in psycopg2
     PSYCOPG_VERSION = 2
 
 
@@ -115,8 +119,11 @@ class Database:
 _pool: Optional[ConnectionPool] = None
 
 
-def get_pool() -> ConnectionPool:
+def get_pool() -> Optional[ConnectionPool]:
     """Get or create connection pool"""
+    if ConnectionPool is None:
+        return None  # ConnectionPool not available
+    
     global _pool
     if _pool is None:
         params = get_connection_params()
@@ -136,11 +143,19 @@ def get_pool() -> ConnectionPool:
 def get_db_connection():
     """Context manager for getting a pooled database connection"""
     pool = get_pool()
-    conn = pool.getconn()
-    try:
-        yield conn
-    finally:
-        pool.putconn(conn)
+    if pool is None:
+        # Fallback to direct connection if pool not available
+        db = Database()
+        try:
+            yield db.conn
+        finally:
+            db.close()
+    else:
+        conn = pool.getconn()
+        try:
+            yield conn
+        finally:
+            pool.putconn(conn)
 
 
 # Global database instance for simple usage

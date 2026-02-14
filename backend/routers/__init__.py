@@ -13,6 +13,7 @@ from .lms import router as lms_router
 from .nemz import router as nemz_router
 from .vec import router as vec_router
 from .interviews import router as interviews_router
+from .profile_features import router as profile_features_router
 
 __all__ = [
     "auth_router",
@@ -28,5 +29,6 @@ __all__ = [
     "lms_router",
     "nemz_router",
     "vec_router",
-    "interviews_router"
+    "interviews_router",
+    "profile_features_router"
 ]

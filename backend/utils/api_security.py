@@ -281,3 +281,80 @@ def sanitize_dict_for_logging(data: Dict[str, Any], max_value_length: int = 100)
             sanitized[key] = str(value)[:max_value_length]
     
     return sanitized
+
+
+def sanitize_text_for_storage(text: str, max_length: Optional[int] = None) -> str:
+    """
+    Sanitize text input for safe storage (XSS prevention, HTML escaping)
+    
+    Args:
+        text: Text to sanitize
+        max_length: Maximum length (truncate if longer)
+    
+    Returns:
+        Sanitized text safe for storage
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    
+    # Remove null bytes
+    text = text.replace('\x00', '')
+    
+    # Remove control characters except newlines, tabs, and carriage returns
+    text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', text)
+    
+    # Remove script tags and event handlers (basic XSS prevention)
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)
+    
+    # Normalize whitespace (but preserve intentional line breaks)
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    
+    # Truncate if needed
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+        logger.debug(f"Text truncated to {max_length} characters")
+    
+    return text.strip()
+
+
+def validate_url_safe(url: str, allowed_schemes: List[str] = None) -> str:
+    """
+    Validate and sanitize URL for safe use
+    
+    Args:
+        url: URL to validate
+        allowed_schemes: List of allowed URL schemes (default: ['http', 'https'])
+    
+    Returns:
+        Sanitized URL
+    
+    Raises:
+        ValueError: If URL is invalid or uses disallowed scheme
+    """
+    if not url or not isinstance(url, str):
+        raise ValueError("URL must be a non-empty string")
+    
+    url = url.strip()
+    
+    if allowed_schemes is None:
+        allowed_schemes = ['http', 'https']
+    
+    # Basic URL validation
+    if not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*://', url):
+        raise ValueError(f"URL must include a scheme (e.g., http:// or https://)")
+    
+    # Check scheme
+    scheme = url.split('://')[0].lower()
+    if scheme not in allowed_schemes:
+        raise ValueError(f"URL scheme '{scheme}' is not allowed. Allowed schemes: {allowed_schemes}")
+    
+    # Remove dangerous characters
+    url = re.sub(r'[\x00-\x1F\x7F]', '', url)
+    
+    # Basic length check
+    if len(url) > 2048:
+        raise ValueError("URL exceeds maximum length of 2048 characters")
+    
+    return url

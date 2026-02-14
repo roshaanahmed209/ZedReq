@@ -7,6 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from models.orm.reserved_seat import ReservedSeat
 from models.orm.user import User
 from utils.email_sender import send_reservation_confirmation_email
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class ReservedSeatService:
@@ -62,51 +65,65 @@ class ReservedSeatService:
             if not user:
                 user_id = None  # User doesn't exist, proceed without user_id
         
-        # Generate unique promo code
-        promo_code = self.generate_promo_code(email)
-        
-        # Ensure promo code is unique (retry if collision)
+        # Generate unique promo code with retry logic
+        # Use database constraint to ensure uniqueness (avoid TOCTOU race condition)
         max_retries = 10
-        for _ in range(max_retries):
-            existing = self.db.query(ReservedSeat).filter(
-                ReservedSeat.promo_code == promo_code
-            ).first()
-            
-            if not existing:
-                break
-            
-            # Regenerate if collision
+        reservation = None
+        
+        for attempt in range(max_retries):
+            # Generate promo code
             promo_code = self.generate_promo_code(email)
+            
+            # Create reservation - let database enforce uniqueness
+            reservation = ReservedSeat(
+                email=email.lower(),
+                user_id=user_id,
+                promo_code=promo_code
+            )
+            
+            try:
+                self.db.add(reservation)
+                self.db.commit()
+                self.db.refresh(reservation)
+                # Success - break out of retry loop
+                break
+            except IntegrityError as e:
+                self.db.rollback()
+                
+                # Check if it's a duplicate email error (not promo code)
+                error_str = str(e.orig).lower() if hasattr(e, 'orig') else str(e).lower()
+                
+                if "email" in error_str or ("unique" in error_str and "email" in error_str):
+                    # Email was reserved between check and insert (race condition)
+                    existing_reservation = self.db.query(ReservedSeat).filter(
+                        ReservedSeat.email == email.lower()
+                    ).first()
+                    if existing_reservation:
+                        logger.info(f"Email already reserved (race condition detected): {email[:3]}***")
+                        return {
+                            "success": True,
+                            "message": "You've already reserved your seat! Check your email for your promo code.",
+                            "promo_code": existing_reservation.promo_code,
+                            "already_reserved": True
+                        }
+                
+                # If it's a promo code collision, retry with new code
+                if "promo_code" in error_str or ("unique" in error_str and "promo_code" in error_str):
+                    logger.debug(f"Promo code collision on attempt {attempt + 1}, regenerating...")
+                    if attempt == max_retries - 1:
+                        # Last attempt failed
+                        logger.error("Failed to generate unique promo code after multiple attempts")
+                        raise ValueError("Unable to generate unique reservation code. Please try again.")
+                    # Continue to next iteration to retry
+                    continue
+                
+                # Unknown integrity error
+                logger.error(f"Database integrity error during reservation: {type(e).__name__}")
+                raise ValueError("Unable to complete reservation. Please try again later.")
         else:
-            raise ValueError("Failed to generate unique promo code after multiple attempts")
-        
-        # Create reservation
-        reservation = ReservedSeat(
-            email=email.lower(),
-            user_id=user_id,
-            promo_code=promo_code
-        )
-        
-        try:
-            self.db.add(reservation)
-            self.db.commit()
-            self.db.refresh(reservation)
-        except IntegrityError as e:
-            self.db.rollback()
-            # Check if it's a duplicate email error
-            if "email" in str(e).lower() or "unique" in str(e).lower():
-                # Email was reserved between check and insert
-                existing_reservation = self.db.query(ReservedSeat).filter(
-                    ReservedSeat.email == email.lower()
-                ).first()
-                if existing_reservation:
-                    return {
-                        "success": True,
-                        "message": "You've already reserved your seat! Check your email for your promo code.",
-                        "promo_code": existing_reservation.promo_code,
-                        "already_reserved": True
-                    }
-            raise ValueError(f"Failed to create reservation: {str(e)}")
+            # This should not happen due to raise in loop, but safety check
+            logger.error("Failed to create reservation after all retries")
+            raise ValueError("Unable to complete reservation. Please try again later.")
         
         # Send confirmation email
         email_sent = send_reservation_confirmation_email(email, promo_code)
@@ -114,7 +131,10 @@ class ReservedSeatService:
         if not email_sent:
             # Email failed but reservation was created
             # Log the error but don't fail the request
-            print(f"Warning: Reservation created for {email} but email failed to send")
+            # Don't log PII (email) - log reservation ID instead
+            logger.warning(
+                f"Reservation created (ID: {reservation.id}) but confirmation email failed to send"
+            )
         
         return {
             "success": True,
