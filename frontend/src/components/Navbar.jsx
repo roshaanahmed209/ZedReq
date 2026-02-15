@@ -1,0 +1,761 @@
+import React, { useState, useEffect, useRef } from 'react'
+import styled from 'styled-components'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import api from '../services/api'
+import { generateProfileUrl } from '../utils/profileUrl'
+import Messages from '../pages/Messages'
+import './Navbar.css'
+
+/* ═══════════════════════════════════════════════════════════════
+   Styled Components (Extracted from Feed.jsx)
+   ═══════════════════════════════════════════════════════════════ */
+
+const NavWrapper = styled.nav`
+  background: rgba(13, 13, 13, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0 20px;
+  
+  @media (max-width: 768px) { padding: 0 15px; }
+  @media (max-width: 480px) { padding: 0 12px; }
+`
+
+const NavContainer = styled.div`
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  gap: 30px;
+  position: relative;
+  
+  @media (max-width: 768px) { gap: 15px; padding: 10px 0; }
+  @media (max-width: 480px) { gap: 10px; padding: 8px 0; }
+`
+
+const NavLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  z-index: 10; /* Ensure search input is above centered menu if overlap */
+  
+  @media (max-width: 1024px) { gap: 15px; }
+  @media (max-width: 480px) { gap: 10px; }
+`
+
+const Logo = styled.h1`
+  font-size: 1.8em;
+  font-weight: 300;
+  color: var(--primary);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  white-space: nowrap;
+  
+  &:hover { transform: scale(1.05); }
+  @media (max-width: 768px) { font-size: 1.5em; }
+  @media (max-width: 480px) { font-size: 1.3em; }
+  @media (max-width: 480px) { font-size: 1.3em; }
+`
+
+const NavCenter = styled.div`
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none; /* Prevent blocking clicks if covering empty space, but buttons need events */
+  
+  & > * { pointer-events: auto; }
+
+  @media (max-width: 1024px) { display: none; }
+`
+
+const NavRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  position: relative;
+  z-index: 10; 
+
+  @media (max-width: 768px) { gap: 15px; }
+  @media (max-width: 480px) { gap: 10px; }
+`
+
+const NavMenu = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  @media (max-width: 768px) { display: none; }
+`
+
+const NavMenuItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 0.85em;
+  transition: color 0.2s ease;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-width: 80px;
+  text-align: center;
+  
+  svg { width: 22px; height: 22px; }
+  span { white-space: nowrap; }
+  
+  &:hover {
+    color: var(--primary);
+    background: rgba(10, 102, 194, 0.1);
+  }
+  
+  &.active { color: var(--primary); }
+`
+
+const SearchInput = styled.input`
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  &::placeholder { color: var(--text-lighter); }
+`
+
+const SearchResults = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 280px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-top: 8px;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-height: 400px;
+  overflow-y: auto;
+`
+
+const SearchResultItem = styled.div`
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover { background: var(--hover-bg); }
+  &:first-child { border-radius: 8px 8px 0 0; }
+  &:last-child { border-radius: 0 0 8px 8px; }
+`
+
+const SearchAvatar = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 500;
+`
+
+const LogoutButton = styled.button`
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary);
+  }
+`
+
+const MobileMenuButton = styled.button`
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  z-index: 101;
+  
+  @media (max-width: 1024px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  &:hover {
+    background: rgba(10, 102, 194, 0.1);
+    color: var(--primary);
+  }
+  
+  svg { width: 24px; height: 24px; }
+`
+
+const MobileMenuOverlay = styled.div`
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: opacity 0.3s ease;
+  
+  @media (max-width: 1024px) { display: block; }
+`
+
+const MobileSidePanel = styled.aside`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: ${props => props.isOpen ? '0' : '-100%'};
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  background: var(--bg-white);
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 1024px) { display: block; }
+  @media (max-width: 480px) { width: 260px; max-width: 90vw; }
+`
+
+const MessagesPanel = styled.aside`
+  position: fixed;
+  top: 100px;
+  right: ${props => props.isOpen ? '20px' : '-400px'};
+  width: 380px;
+  height: 500px;
+  max-height: calc(100vh - 140px);
+  background: var(--bg-white);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 200;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+
+  @media (max-width: 768px) {
+    width: 350px;
+    top: 80px;
+    height: 480px;
+    max-height: calc(100vh - 120px);
+    right: ${props => props.isOpen ? '20px' : '-380px'};
+  }
+
+  @media (max-width: 480px) {
+    width: calc(100vw - 40px);
+    height: 450px;
+    max-height: calc(100vh - 100px);
+    right: ${props => props.isOpen ? '20px' : 'calc(-100vw)'};
+  }
+`
+
+const MobileMenuHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  h2 {
+    font-size: 1.2em;
+    color: var(--text);
+    font-weight: 600;
+    margin: 0;
+  }
+`
+
+const MobileMenuCloseButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text);
+    transform: rotate(90deg);
+  }
+  
+  svg { width: 24px; height: 24px; }
+`
+
+const SidePanel = styled.div`
+  background: var(--bg-white);
+  /* Reset styles for mobile panel consistency */
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+`
+
+const PanelSection = styled.div`
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+  
+  &:last-child { border-bottom: none; }
+  &:hover {
+    background: var(--hover-bg);
+    cursor: pointer;
+    padding-left: 24px;
+  }
+`
+
+const PanelItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+  
+  .label {
+    font-size: 0.875em;
+    color: var(--text-light);
+    font-weight: 400;
+    letter-spacing: 0.2px;
+  }
+  
+  .value {
+    font-weight: 700;
+    font-size: 1.1em;
+    color: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+`
+
+const PanelLink = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text);
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(10, 102, 194, 0.1);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    
+    svg { color: var(--text-light); transition: all 0.2s ease; }
+  }
+  
+  &:hover {
+    color: var(--primary);
+    transform: translateX(2px);
+    
+    .icon {
+      background: var(--primary);
+      transform: scale(1.05);
+      svg { color: white; }
+    }
+  }
+`
+
+const PanelDivider = styled.div`
+  height: 1px;
+  background: var(--border);
+  margin: 10px 20px;
+`
+
+
+function Navbar() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const { user, logout } = useAuth()
+
+    const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState([])
+    const [searchTimeout, setSearchTimeout] = useState(null)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [messagesOpen, setMessagesOpen] = useState(false)
+    const [searchActive, setSearchActive] = useState(false)
+    const searchWrapperRef = useRef(null)
+    const inputRef = useRef(null)
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (searchWrapperRef.current && !searchWrapperRef.current.contains(event.target)) {
+                // Only collapse if query is empty
+                if (!searchQuery) {
+                    setSearchActive(false)
+                }
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside)
+        }
+    }, [searchQuery])
+
+    /* ── Search Logic ────────────────────────────────────────── */
+    const searchUsers = async (query) => {
+        if (!query.trim()) {
+            setSearchResults([])
+            return
+        }
+
+        try {
+            const response = await api.get(`/api/user/search?q=${encodeURIComponent(query)}`)
+            // Normalize user data
+            const users = (response.data || []).map(u => ({
+                ...u,
+                id: u.id || u.uid,
+                full_name: u.full_name || u.name || u.username
+            }))
+            setSearchResults(users)
+        } catch (error) {
+            console.error('Error searching users:', error)
+        }
+    }
+
+    const handleSearchChange = (e) => {
+        const query = e.target.value
+        setSearchQuery(query)
+
+        if (searchTimeout) clearTimeout(searchTimeout)
+
+        const timeout = setTimeout(() => {
+            searchUsers(query)
+        }, 300)
+
+        setSearchTimeout(timeout)
+    }
+
+    const handleLogout = async () => {
+        try {
+            await logout()
+            navigate('/landing')
+        } catch (error) {
+            console.error('Logout error:', error)
+        }
+    }
+
+    /* ── JSX Render ──────────────────────────────────────────── */
+    return (
+        <>
+            <NavWrapper>
+                <NavContainer>
+                    <NavLeft>
+                        <MobileMenuButton onClick={() => setMobileMenuOpen(true)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </MobileMenuButton>
+                        <Logo onClick={() => navigate('/feed')}>ZedReq</Logo>
+
+                        <div
+                            className={`search-wrapper ${searchActive || searchQuery ? 'active' : ''}`}
+                            ref={searchWrapperRef}
+                        >
+                            <button
+                                className="search-button"
+                                onClick={() => {
+                                    if (searchActive) {
+                                        if (searchQuery.trim()) {
+                                            searchUsers(searchQuery)
+                                        } else {
+                                            setSearchActive(false)
+                                        }
+                                    } else {
+                                        setSearchActive(true)
+                                        setTimeout(() => inputRef.current?.focus(), 100)
+                                    }
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </button>
+                            <SearchInput
+                                ref={inputRef}
+                                type="text"
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                onFocus={() => setSearchActive(true)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        searchUsers(searchQuery)
+                                    } else if (e.key === 'Escape') {
+                                        setSearchActive(false)
+                                    }
+                                }}
+                                className="search-input-wide"
+                            />
+                            {searchResults.length > 0 && (
+                                <SearchResults className="search-results-positioned">
+                                    {searchResults.map(u => (
+                                        <SearchResultItem key={u.id} onClick={() => {
+                                            navigate(generateProfileUrl(u.id, u.username))
+                                            setSearchResults([])
+                                            setSearchQuery('')
+                                            setSearchActive(false)
+                                        }}>
+                                            <SearchAvatar>
+                                                {u.full_name ? u.full_name.charAt(0).toUpperCase() : 'U'}
+                                            </SearchAvatar>
+                                            <div>
+                                                <div><strong>{u.full_name || u.username}</strong></div>
+                                                <div className="search-username">@{u.username}</div>
+                                            </div>
+                                        </SearchResultItem>
+                                    ))}
+                                </SearchResults>
+                            )}
+                        </div>
+
+                    </NavLeft>
+
+                    <NavCenter>
+                        <NavMenu>
+                            <NavMenuItem className={location.pathname === '/feed' ? 'active' : ''} onClick={() => navigate('/feed')}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                <span>Home</span>
+                            </NavMenuItem>
+
+                            <NavMenuItem className={location.pathname === '/network' ? 'active' : ''} onClick={() => navigate('/network')}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>Network</span>
+                            </NavMenuItem>
+
+                            <NavMenuItem className={location.pathname.startsWith('/jobs') ? 'active' : ''} onClick={() => navigate('/jobs')}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                                </svg>
+                                <span>Jobs</span>
+                            </NavMenuItem>
+
+                            <NavMenuItem className={location.pathname === '/messages' ? 'active' : ''} onClick={() => setMessagesOpen(!messagesOpen)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <span>Messages</span>
+                            </NavMenuItem>
+
+                            <NavMenuItem className={location.pathname === '/notifications' ? 'active' : ''} onClick={() => navigate('/notifications')}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                <span>Notifications</span>
+                            </NavMenuItem>
+                        </NavMenu>
+                    </NavCenter>
+
+                    <NavRight>
+                        <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
+                    </NavRight>
+                </NavContainer>
+            </NavWrapper >
+
+            {/* Mobile Menu Overlay */}
+            < MobileMenuOverlay
+                isOpen={mobileMenuOpen}
+                onClick={() => setMobileMenuOpen(false)
+                }
+            />
+
+            {/* Mobile Side Panel */}
+            <MobileSidePanel isOpen={mobileMenuOpen}>
+                <MobileMenuHeader>
+                    <h2>Menu</h2>
+                    <MobileMenuCloseButton onClick={() => setMobileMenuOpen(false)}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </MobileMenuCloseButton>
+                </MobileMenuHeader>
+
+                <SidePanel>
+                    <PanelSection onClick={() => { navigate('/lms'); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                    <path d="M12 6h4"></path>
+                                    <path d="M12 10h4"></path>
+                                    <path d="M12 14h4"></path>
+                                </svg>
+                            </span>
+                            <span>LMS</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection onClick={() => { navigate('/evaluation'); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 11l3 3L22 4"></path>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                            </span>
+                            <span>Evaluation</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection onClick={() => { navigate('/ai-mode'); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 3v3"></path>
+                                    <path d="M12 18v3"></path>
+                                    <path d="M5.5 5.5l2.1 2.1"></path>
+                                    <path d="M16.4 16.4l2.1 2.1"></path>
+                                    <path d="M3 12h3"></path>
+                                    <path d="M18 12h3"></path>
+                                    <path d="M5.5 18.5l2.1-2.1"></path>
+                                    <path d="M16.4 7.6l2.1-2.1"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </span>
+                            <span>AI Mode</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection onClick={() => { navigate('/ai-interviews'); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                                </svg>
+                            </span>
+                            <span>AI Mock Interviews</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection onClick={() => { navigate('/jobs'); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                                </svg>
+                            </span>
+                            <span>Jobs</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection onClick={() => { user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username)); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </span>
+                            <span>Profile</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelDivider />
+
+                    <PanelSection>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="9" x2="20" y2="9"></line>
+                                    <line x1="4" y1="15" x2="20" y2="15"></line>
+                                    <line x1="10" y1="3" x2="8" y2="21"></line>
+                                    <line x1="16" y1="3" x2="14" y2="21"></line>
+                                </svg>
+                            </span>
+                            <span>Followed Hashtags</span>
+                        </PanelLink>
+                    </PanelSection>
+
+                    <PanelSection>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v6m0 6v6m5.656-14.657l-4.242 4.243m0 4.242l-4.243 4.243m12.728 0l-4.243-4.243m0-4.242l-4.242-4.243"></path>
+                                </svg>
+                            </span>
+                            <span>Settings</span>
+                        </PanelLink>
+                    </PanelSection>
+                </SidePanel>
+            </MobileSidePanel>
+
+            <MessagesPanel isOpen={messagesOpen}>
+                <Messages overlay={true} onClose={() => setMessagesOpen(false)} />
+            </MessagesPanel>
+        </>
+    )
+}
+
+export default Navbar

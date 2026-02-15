@@ -1,11 +1,11 @@
-/* Profile Page Additional Styles */
+/* Profile Page — Additional Styles */
 
-/* Ensure smooth transitions */
+/* Smooth box-sizing */
 * {
   box-sizing: border-box;
 }
 
-/* Additional responsive tweaks if needed */
+/* Responsive tweaks */
 @media (max-width: 1024px) {
   .profile-wrapper {
     padding: 0 16px;
@@ -14,8 +14,8 @@
 
 /* Print styles */
 @media print {
-  .navbar,
-  .action-buttons {
-    display: none;
+  nav,
+  button {
+    display: none !important;
   }
 }

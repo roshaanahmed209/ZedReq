@@ -99,15 +99,15 @@ async def get_user_profile_by_id(
         "cover_pic": profile.get("cover_pic"),
         "short_desc": profile.get("short_desc"),
         "about": profile.get("about"),
-            "skills": profile.get("skills"),
-            "certificates": profile.get("certificates"),
-            "current_status": profile.get("current_status"),
+        "skills": profile.get("skills"),
+        "certificates": profile.get("certificates"),
+        "current_status": profile.get("current_status"),
             "role": profile.get("role"),
             "company": profile.get("company"),
             "location": profile.get("location"),
             "industry": profile.get("industry"),
-            "connection_status": profile.get("connection_status"),
-            "created_at": profile.get("created_at")
+        "connection_status": profile.get("connection_status"),
+        "created_at": profile.get("created_at")
         }
 
 
