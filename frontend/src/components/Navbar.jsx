@@ -85,11 +85,12 @@ const NavCenter = styled.div`
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   height: 100%;
   z-index: ${props => props.$searchActive ? '0' : '1'};
   pointer-events: none; /* Prevent blocking clicks if covering empty space, but buttons need events */
+  overflow: visible;
   
   & > * { pointer-events: auto; }
 
@@ -125,11 +126,13 @@ const NavMenuItem = styled.div`
   cursor: pointer;
   color: var(--text-light);
   font-size: 0.85em;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   padding: 8px 12px;
   border-radius: 8px;
   min-width: 80px;
   text-align: center;
+  position: relative;
+  transform-origin: bottom center;
   
   svg { width: 22px; height: 22px; }
   span { white-space: nowrap; }
@@ -137,7 +140,7 @@ const NavMenuItem = styled.div`
   &:hover {
     color: var(--primary);
     background: rgba(10, 102, 194, 0.1);
-    transform: scale(1.1);
+    transform: translateY(-4px) scale(1.1);
   }
   
   &.active { color: var(--primary); }
@@ -780,7 +783,7 @@ function Navbar() {
                             <span className="icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <circle cx="12" cy="12" r="3"></circle>
-                                    <path d="M12 1v6m0 6v6m5.656-14.657l-4.242 4.243m0 4.242l-4.243 4.243m12.728 0l-4.243-4.243m0-4.242l-4.242-4.243"></path>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                                 </svg>
                             </span>
                             <span>Settings</span>
