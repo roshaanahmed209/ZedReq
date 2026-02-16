@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { notificationAPI, connectionAPI } from '../services/api'
+import Navbar from '../components/Navbar'
 import './Notifications.css'
 
 const Notifications = () => {
@@ -131,39 +132,10 @@ const Notifications = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/landing')
-  }
 
   return (
     <div className="notifications-container">
-      <nav className="notifications-navbar">
-        <div className="notifications-nav-container">
-          <div className="notifications-nav-left">
-            <h1 className="notifications-logo" onClick={() => navigate('/feed')}>ZedReq</h1>
-          </div>
-          
-          <div className="notifications-nav-links">
-            <button className="notifications-nav-link" onClick={() => navigate('/feed')}>Feed</button>
-            <button className="notifications-nav-link" onClick={() => navigate('/network')}>Network</button>
-            <button className="notifications-nav-link" onClick={() => navigate('/jobs')}>Jobs</button>
-            <button className="notifications-nav-link" onClick={() => navigate('/lms')}>LMS</button>
-            <button className="notifications-nav-link active">Notifications</button>
-          </div>
-          
-          <div className="notifications-nav-right">
-            <button className="notifications-icon-btn" onClick={handleLogout} title="Logout">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </nav>
-
+      <Navbar />
       <main className="notifications-main">
         <div className="notifications-header">
           <h1 className="notifications-title">

@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { messagingAPI, MessagingWebSocket } from '../services/api'
+import Navbar from '../components/Navbar'
 import '../css/pages/Feed.css'
 
 const fadeIn = keyframes`
@@ -708,6 +709,7 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
 
   return (
     <Container overlay={overlay}>
+      {!overlay && <Navbar />}
       <MessagesContainer overlay={overlay}>
         <MessagesPanelHeader>
           <MessagesPanelTitle>Messages</MessagesPanelTitle>

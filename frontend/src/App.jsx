@@ -13,6 +13,7 @@ import AIInterviews from './pages/AIInterviews'
 import Notifications from './pages/Notifications'
 import Messages from './pages/Messages'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -108,6 +109,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } 
           />

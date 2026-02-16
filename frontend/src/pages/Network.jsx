@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { motion, useInView } from 'framer-motion'
 import { networkAPI, connectionAPI, notificationAPI } from '../services/api'
 import Messages from './Messages'
+import Navbar from '../components/Navbar'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -29,52 +30,6 @@ const Container = styled.div`
   animation: ${fadeIn} 0.6s ease-in;
 `
 
-const Navbar = styled.nav`
-  background: rgba(13, 13, 13, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  width: 100%;
-  padding: 0 20px;
-`
-
-const NavContainer = styled.div`
-  max-width: 100%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  gap: 30px;
-`
-
-const NavLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-`
-
-const Logo = styled.h1`
-  font-size: 1.8em;
-  font-weight: 300;
-  color: var(--primary);
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
-`
-
-const NavRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-`
 
 const NotificationBadge = styled.span`
   position: absolute;
@@ -853,30 +808,7 @@ const Network = () => {
 
   return (
     <Container>
-      <Navbar>
-        <NavContainer>
-          <NavLeft>
-            <Logo onClick={handleBackToFeed}>ZedReq</Logo>
-          </NavLeft>
-          <NavRight>
-            <IconButton onClick={() => navigate('/notifications')}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              {unreadNotifications > 0 && (
-                <NotificationBadge>{unreadNotifications}</NotificationBadge>
-              )}
-            </IconButton>
-            <IconButton onClick={handleBackToFeed}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-            </IconButton>
-          </NavRight>
-        </NavContainer>
-      </Navbar>
+      <Navbar />
 
       <MainContainer>
         <Header>

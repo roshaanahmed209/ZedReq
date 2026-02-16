@@ -130,13 +130,13 @@ class PostService:
                 # Get profile pic
                 profile_pic = None
                 if post.user and post.user.description_id:
-                    desc = (
+                    user_description = (
                         self.db.query(Description)
                         .filter(Description.desc_id == post.user.description_id)
                         .first()
                     )
-                    if desc:
-                        profile_pic = desc.profile_pic
+                    if user_description:
+                        profile_pic = user_description.profile_pic
                 
                 result.append({
                     'id': post.post_id,
@@ -336,13 +336,13 @@ class PostService:
                     profile_pic = None
                     
                     if post.user and post.user.description_id:
-                        desc = (
+                        user_description = (
                             self.db.query(Description)
                             .filter(Description.desc_id == post.user.description_id)
                             .first()
                         )
-                        if desc:
-                            profile_pic = desc.profile_pic
+                        if user_description:
+                            profile_pic = user_description.profile_pic
                     
                     created_at_str = post.created_at.isoformat() if post.created_at else None
                     

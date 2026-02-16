@@ -1,7 +1,15 @@
 .search-wrapper {
     position: relative;
-    display: flex;
+    display: none;
     align-items: center;
+    z-index: 1;
+    max-width: 250px;
+    flex-shrink: 0;
+}
+
+.search-wrapper.active {
+    display: flex;
+    z-index: 20;
 }
 
 .search-button {
@@ -15,7 +23,9 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    z-index: 2;
+    z-index: 22;
+    position: relative;
+    flex-shrink: 0;
 }
 
 .search-button:hover {
@@ -44,11 +54,6 @@
     border-radius: 20px;
 }
 
-.search-wrapper.active .search-button {
-    position: absolute;
-    left: 4px;
-    color: var(--primary);
-}
 
 .search-results-positioned {
     left: 0;

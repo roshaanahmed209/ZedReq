@@ -15,13 +15,26 @@ const NavWrapper = styled.nav`
   background: rgba(13, 13, 13, 0.7);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: ${props => props.$scrolled ? '20px' : '0'};
   z-index: 100;
-  padding: 0 20px;
   
-  @media (max-width: 768px) { padding: 0 15px; }
+  /* Transition properties for shrink effect */
+  width: ${props => props.$scrolled ? (props.$searchActive ? 'min(96%, 1600px)' : 'min(90%, 1200px)') : '100%'};
+  border-radius: ${props => props.$scrolled ? '50px' : '0'};
+  padding: ${props => props.$scrolled ? (props.$searchActive ? '0 40px' : '0 30px') : '0 20px'};
+  box-shadow: ${props => props.$scrolled ? '0 10px 30px rgba(0, 0, 0, 0.3)' : '0 4px 30px rgba(0, 0, 0, 0.2)'};
+  
+  /* Centering */
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 768px) { 
+    padding: ${props => props.$scrolled ? '0 20px' : '0 15px'};
+    width: ${props => props.$scrolled ? 'calc(100% - 30px)' : '100%'};
+    top: ${props => props.$scrolled ? '15px' : '0'};
+  }
   @media (max-width: 480px) { padding: 0 12px; }
 `
 
@@ -31,9 +44,10 @@ const NavContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
-  gap: 30px;
+  padding: ${props => props.$scrolled ? '8px 0' : '12px 0'};
+  gap: ${props => props.$scrolled ? (props.$searchActive ? '40px' : '30px') : '30px'};
   position: relative;
+  transition: all 0.3s ease;
   
   @media (max-width: 768px) { gap: 15px; padding: 10px 0; }
   @media (max-width: 480px) { gap: 10px; padding: 8px 0; }
@@ -45,6 +59,8 @@ const NavLeft = styled.div`
   gap: 20px;
   position: relative;
   z-index: 10; /* Ensure search input is above centered menu if overlap */
+  flex-shrink: 0;
+  max-width: fit-content;
   
   @media (max-width: 1024px) { gap: 15px; }
   @media (max-width: 480px) { gap: 10px; }
@@ -65,14 +81,14 @@ const Logo = styled.h1`
 `
 
 const NavCenter = styled.div`
-  position: absolute;
+  position: ${props => props.$scrolled ? 'absolute' : 'absolute'};
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
-  z-index: 1;
+  z-index: ${props => props.$searchActive ? '0' : '1'};
   pointer-events: none; /* Prevent blocking clicks if covering empty space, but buttons need events */
   
   & > * { pointer-events: auto; }
@@ -86,6 +102,8 @@ const NavRight = styled.div`
   gap: 30px;
   position: relative;
   z-index: 10; 
+  flex-shrink: 0;
+  margin-left: auto;
 
   @media (max-width: 768px) { gap: 15px; }
   @media (max-width: 480px) { gap: 10px; }
@@ -119,9 +137,16 @@ const NavMenuItem = styled.div`
   &:hover {
     color: var(--primary);
     background: rgba(10, 102, 194, 0.1);
+    transform: scale(1.1);
   }
   
   &.active { color: var(--primary); }
+`
+
+const NavPlaceholder = styled.div`
+  height: 80px;
+  width: 100%;
+  @media (max-width: 768px) { height: 70px; }
 `
 
 const SearchInput = styled.input`
@@ -132,6 +157,8 @@ const SearchInput = styled.input`
   color: var(--text);
   font-size: 0.9em;
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 21;
   
   &:focus {
     outline: none;
@@ -426,8 +453,17 @@ function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [messagesOpen, setMessagesOpen] = useState(false)
     const [searchActive, setSearchActive] = useState(false)
+    const [isScrolled, setIsScrolled] = useState(false)
     const searchWrapperRef = useRef(null)
     const inputRef = useRef(null)
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20)
+        }
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -490,9 +526,9 @@ function Navbar() {
     /* ── JSX Render ──────────────────────────────────────────── */
     return (
         <>
-            <NavWrapper>
-                <NavContainer>
-                    <NavLeft>
+            <NavWrapper $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
+                <NavContainer $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
+                    <NavLeft $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
                         <MobileMenuButton onClick={() => setMobileMenuOpen(true)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -502,30 +538,31 @@ function Navbar() {
                         </MobileMenuButton>
                         <Logo onClick={() => navigate('/feed')}>ZedReq</Logo>
 
+                        <button
+                            className="search-button"
+                            onClick={() => {
+                                if (searchActive) {
+                                    if (searchQuery.trim()) {
+                                        searchUsers(searchQuery)
+                                    } else {
+                                        setSearchActive(false)
+                                    }
+                                } else {
+                                    setSearchActive(true)
+                                    setTimeout(() => inputRef.current?.focus(), 100)
+                                }
+                            }}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </button>
+
                         <div
                             className={`search-wrapper ${searchActive || searchQuery ? 'active' : ''}`}
                             ref={searchWrapperRef}
                         >
-                            <button
-                                className="search-button"
-                                onClick={() => {
-                                    if (searchActive) {
-                                        if (searchQuery.trim()) {
-                                            searchUsers(searchQuery)
-                                        } else {
-                                            setSearchActive(false)
-                                        }
-                                    } else {
-                                        setSearchActive(true)
-                                        setTimeout(() => inputRef.current?.focus(), 100)
-                                    }
-                                }}
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                </svg>
-                            </button>
                             <SearchInput
                                 ref={inputRef}
                                 type="text"
@@ -566,7 +603,7 @@ function Navbar() {
 
                     </NavLeft>
 
-                    <NavCenter>
+                    <NavCenter $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
                         <NavMenu>
                             <NavMenuItem className={location.pathname === '/feed' ? 'active' : ''} onClick={() => navigate('/feed')}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -611,11 +648,12 @@ function Navbar() {
                         </NavMenu>
                     </NavCenter>
 
-                    <NavRight>
+                    <NavRight $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
                         <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
                     </NavRight>
                 </NavContainer>
-            </NavWrapper >
+            </NavWrapper>
+            <NavPlaceholder />
 
             {/* Mobile Menu Overlay */}
             < MobileMenuOverlay
@@ -737,7 +775,7 @@ function Navbar() {
                         </PanelLink>
                     </PanelSection>
 
-                    <PanelSection>
+                    <PanelSection onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
