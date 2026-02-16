@@ -39,6 +39,8 @@ from .user_project import UserProject
 from .user_recommendation import UserRecommendation
 from .user_interest import UserInterest
 from .profile_analytics import ProfileAnalytics
+from .users_context import UsersContext
+from .payment import Payment
 
 __all__ = [
     'User',
@@ -78,4 +80,6 @@ __all__ = [
     'UserRecommendation',
     'UserInterest',
     'ProfileAnalytics',
+    'UsersContext',
+    'Payment',
 ]

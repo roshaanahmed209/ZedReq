@@ -23,6 +23,7 @@ class Description(Base):
     industry = Column(String(100))
     profile_pic = Column(Text)
     cover_pic = Column(Text)
+    resume = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
@@ -50,6 +51,7 @@ class Description(Base):
             'industry': self.industry,
             'profile_pic': self.profile_pic,
             'cover_pic': self.cover_pic,
+            'resume': self.resume,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

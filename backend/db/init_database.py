@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS users (
     description_id INTEGER,
     pay_id INTEGER,
     job_id INTEGER,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -108,6 +109,7 @@ CREATE TABLE IF NOT EXISTS description (
     current_status VARCHAR(100),
     profile_pic TEXT,
     cover_pic TEXT,
+    resume TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
