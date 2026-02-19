@@ -27,3 +27,57 @@ Recommendations
 
 
 all of these components in a new column just beside the main one, the main column width should not be changed at all
+
+
+i have added URL links of the profiles in the database in the users table so this can be used by vec_agent.
+now we will proceed to posts and posts link creation, i also have to verify first that how and when the links are saved in the database for the user profiles.
+the last thing that will be left is jobs 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
