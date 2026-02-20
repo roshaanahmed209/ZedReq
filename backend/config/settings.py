@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     TAVUS_REPLICA_ID: str | None = None
     TAVUS_API_URL: str = "https://api.tavus.ai/v2"
     
+    # Firebase Google Auth Configuration (separate from messaging Firebase)
+    FIREBASE_AUTH_PROJECT_ID: str | None = None  # Firebase project ID for Google Auth
+    FIREBASE_AUTH_API_KEY: str | None = None  # Firebase API key for Google Auth
+    
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"

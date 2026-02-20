@@ -10,6 +10,7 @@ from schemas.auth import (
     UserResponse,
     RefreshTokenRequest
 )
+from pydantic import BaseModel
 from schemas.two_factor import (
     TwoFactorVerify,
     TwoFactorVerifySetup
@@ -112,4 +113,31 @@ async def verify_2fa_login(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="2FA verification failed"
+        )
+
+
+class GoogleAuthRequest(BaseModel):
+    """Google authentication request"""
+    id_token: str
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_auth(
+    google_data: GoogleAuthRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Authenticate user with Google ID token"""
+    try:
+        result = auth_service.verify_google_token(google_data.id_token)
+        return TokenResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Google auth error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google authentication failed"
         )

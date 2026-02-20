@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import secrets
 import re
+import requests
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 
@@ -421,7 +422,7 @@ class AuthService:
         user = self.user_service.get_user_by_id(user_id)
         if not user:
             return None
-        
+
         return {
             "id": user.get("id") or user.get("uid"),
             "username": user.get("username", ""),
@@ -433,3 +434,112 @@ class AuthService:
             "company": user.get("company"),
             "created_at": user.get("created_at")
         }
+    
+    def verify_google_token(self, id_token: str) -> dict:
+        """Verify Google ID token and create/login user"""
+        try:
+            # Verify token with Google
+            verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+            response = requests.get(verify_url, timeout=10)
+            
+            if response.status_code != 200:
+                raise ValueError('Invalid Google token')
+            
+            token_data = response.json()
+            
+            # Verify the token is for our Firebase project
+            if settings.FIREBASE_G_AUTH and token_data.get('aud') != settings.FIREBASE_G_AUTH:
+                # If FIREBASE_G_AUTH is not set, skip this check
+                if settings.FIREBASE_G_AUTH:
+                    raise ValueError('Token audience mismatch')
+            
+            # Extract user info from token
+            google_email = token_data.get('email')
+            google_name = token_data.get('name', '')
+            google_picture = token_data.get('picture')
+            google_sub = token_data.get('sub')  # Google user ID
+            
+            if not google_email:
+                raise ValueError('Email not found in Google token')
+            
+            # Check if user exists by email
+            user = (
+                self.db.query(User)
+                .filter(func.lower(User.user_email) == func.lower(google_email))
+                .first()
+            )
+            
+            if user:
+                # User exists, update last login and return tokens
+                user.last_login = datetime.utcnow()
+                if google_picture and not user.profile_url:
+                    user.profile_url = google_picture
+                self.db.commit()
+                self.db.refresh(user)
+                
+                user_dict = {
+                    "id": user.uid,
+                    "uid": user.uid,
+                    "username": user.username,
+                    "email": user.user_email,
+                    "user_email": user.user_email,
+                    "name": user.name,
+                    "profile_pic": user.profile_url or google_picture,
+                    "created_at": user.created_at.isoformat() if user.created_at else None,
+                    "two_factor_enabled": user.two_factor_enabled or False,
+                    "two_factor_verified": user.two_factor_verified or False
+                }
+                
+                return self._create_tokens(user_dict)
+            else:
+                # Create new user
+                # Generate username from email (before @)
+                base_username = google_email.split('@')[0].lower()
+                username = base_username
+                counter = 1
+                
+                # Ensure username is unique
+                while self.db.query(User).filter(func.lower(User.username) == func.lower(username)).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                # Create user with Google info
+                # Generate a random password hash (user won't use it, but required by schema)
+                random_password = secrets.token_urlsafe(32)
+                password_hash = hash_password(random_password)
+                
+                new_user = User(
+                    username=username,
+                    name=google_name or username,
+                    user_email=google_email,
+                    password_hash=password_hash,
+                    email_verified=True,  # Google emails are verified
+                    profile_url=google_picture,
+                    last_login=datetime.utcnow()
+                )
+                
+                self.db.add(new_user)
+                self.db.commit()
+                self.db.refresh(new_user)
+                
+                user_dict = {
+                    "id": new_user.uid,
+                    "uid": new_user.uid,
+                    "username": new_user.username,
+                    "email": new_user.user_email,
+                    "user_email": new_user.user_email,
+                    "name": new_user.name,
+                    "profile_pic": new_user.profile_url,
+                    "created_at": new_user.created_at.isoformat() if new_user.created_at else None,
+                    "two_factor_enabled": False,
+                    "two_factor_verified": False
+                }
+                
+                return self._create_tokens(user_dict)
+                
+        except requests.RequestException as e:
+            logger.error(f"Google token verification error: {e}")
+            raise ValueError('Failed to verify Google token')
+        except Exception as e:
+            logger.error(f"Google auth error: {e}", exc_info=True)
+            raise ValueError(f'Google authentication failed: {str(e)}')

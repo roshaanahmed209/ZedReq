@@ -80,7 +80,11 @@ class SubscriptionUpdate(BaseModel):
 
 class SubscriptionInfo(BaseModel):
     """Subscription information response"""
-    plan: str
-    status: str
+    plan: str = "free"
+    status: str = "inactive"
     subscription_start: Optional[str] = None
     subscription_end: Optional[str] = None
+    
+    class Config:
+        # Allow None values to be converted to defaults
+        orm_mode = False

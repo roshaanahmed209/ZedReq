@@ -379,11 +379,11 @@ const Settings = () => {
   const [backupCodes, setBackupCodes] = useState([])
   const [showBackupCodes, setShowBackupCodes] = useState(false)
 
-  // Subscription
-  const [subscriptionPlan, setSubscriptionPlan] = useState('free')
-  const [subscriptionStatus, setSubscriptionStatus] = useState('inactive')
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
-  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
+  // Subscription - Hard coded to free plan
+  const [subscriptionPlan] = useState('free') // Always free, cannot be changed
+  const [subscriptionStatus] = useState('active') // Always active for free plan
+  const [subscriptionLoading] = useState(false)
+  const [subscriptionLoaded] = useState(true) // Mark as loaded immediately
 
   // Refs for timeout cleanup
   const timeoutRefs = useRef([])
@@ -404,35 +404,8 @@ const Settings = () => {
     }
   }, [user])
 
-  // Load subscription status on mount (only once)
-  useEffect(() => {
-    const loadSubscription = async () => {
-      if (!user || subscriptionLoaded) return
-      
-      try {
-        setSubscriptionLoading(true)
-        const response = await api.get('/api/user/subscription')
-        if (response.data) {
-          setSubscriptionPlan(response.data.plan || 'free')
-          setSubscriptionStatus(response.data.status || 'inactive')
-          setSubscriptionLoaded(true)
-        }
-      } catch (error) {
-        // Don't show error for subscription load failure, just use defaults
-        console.warn('Failed to load subscription status:', error)
-        setSubscriptionLoaded(true) // Mark as loaded to prevent retries
-      } finally {
-        setSubscriptionLoading(false)
-      }
-    }
-
-    loadSubscription()
-    
-    // Cleanup function
-    return () => {
-      // Clear any pending operations if component unmounts
-    }
-  }, [user, subscriptionLoaded])
+  // Subscription is hard coded to free plan - no API call needed
+  // Removed subscription loading useEffect - subscription is always 'free'
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -1276,58 +1249,54 @@ const Settings = () => {
 
             <FormGroup>
               <Label>Current Plan</Label>
-              {subscriptionLoading && !subscriptionLoaded ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                  Loading subscription information...
-                </div>
-              ) : (
-                <div style={{ 
-                  padding: '20px', 
-                  background: 'var(--bg-light)', 
-                  borderRadius: '8px',
-                  border: '2px solid var(--border)'
-                }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>
-                    {subscriptionPlan === 'free' ? 'Free Plan' : subscriptionPlan === 'pro' ? 'Pro Plan' : 'Premium Plan'}
-                  </h3>
-                  <p style={{ margin: '0 0 10px 0', color: 'var(--text-light)' }}>
-                    {subscriptionPlan === 'free' 
-                      ? 'Basic features included'
-                      : subscriptionPlan === 'pro'
-                      ? 'Advanced features and priority support'
-                      : 'All features and premium support'}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.9em', color: 'var(--text-light)' }}>
-                    Status: <span style={{ 
-                      color: subscriptionStatus === 'active' ? 'var(--success)' : 'var(--text-light)',
-                      fontWeight: 500
-                    }}>{subscriptionStatus}</span>
-                  </p>
-                </div>
-              )}
+              <div style={{ 
+                padding: '20px', 
+                background: 'var(--bg-light)', 
+                borderRadius: '8px',
+                border: '2px solid var(--border)'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>
+                  Free Plan
+                </h3>
+                <p style={{ margin: '0 0 10px 0', color: 'var(--text-light)' }}>
+                  Basic features included
+                </p>
+                <p style={{ margin: 0, fontSize: '0.9em', color: 'var(--success)', fontWeight: 500 }}>
+                  Status: Active
+                </p>
+              </div>
             </FormGroup>
 
             <FormGroup>
-              <Label>Select Plan</Label>
-              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+              <Label>Plan Selection</Label>
+              <div style={{ 
+                padding: '15px', 
+                background: 'rgba(108, 117, 125, 0.1)', 
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                color: 'var(--text-light)'
+              }}>
+                <p style={{ margin: 0, fontSize: '0.9em' }}>
+                  <strong>Note:</strong> Subscription plans are currently locked to the Free Plan. 
+                  Plan upgrades will be available in the future.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px', opacity: 0.5 }}>
                 <SecondaryButton 
-                  onClick={() => setSubscriptionPlan('free')}
-                  disabled={subscriptionLoading}
-                  style={subscriptionPlan === 'free' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
+                  disabled={true}
+                  style={{ borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)', cursor: 'not-allowed' }}
                 >
-                  Free Plan
+                  Free Plan (Current)
                 </SecondaryButton>
                 <SecondaryButton 
-                  onClick={() => setSubscriptionPlan('pro')}
-                  disabled={subscriptionLoading}
-                  style={subscriptionPlan === 'pro' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
+                  disabled={true}
+                  style={{ cursor: 'not-allowed' }}
                 >
                   Pro Plan - $9.99/month
                 </SecondaryButton>
                 <SecondaryButton 
-                  onClick={() => setSubscriptionPlan('premium')}
-                  disabled={subscriptionLoading}
-                  style={subscriptionPlan === 'premium' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
+                  disabled={true}
+                  style={{ cursor: 'not-allowed' }}
                 >
                   Premium Plan - $19.99/month
                 </SecondaryButton>
@@ -1335,10 +1304,14 @@ const Settings = () => {
             </FormGroup>
 
             <Button 
-              onClick={updateSubscription} 
-              disabled={subscriptionLoading || loading}
+              disabled={true}
+              style={{ 
+                opacity: 0.5, 
+                cursor: 'not-allowed',
+                marginTop: '10px'
+              }}
             >
-              {subscriptionLoading ? 'Processing...' : 'Update Subscription'}
+              Update Subscription (Disabled)
             </Button>
           </>
         )
