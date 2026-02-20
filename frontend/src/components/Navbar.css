@@ -1,6 +1,6 @@
 .search-wrapper {
     position: relative;
-    display: none;
+    display: flex;
     align-items: center;
     z-index: 1;
     max-width: 250px;
@@ -8,8 +8,8 @@
 }
 
 .search-wrapper.active {
-    display: flex;
     z-index: 20;
+    display: flex;
 }
 
 .search-button {
