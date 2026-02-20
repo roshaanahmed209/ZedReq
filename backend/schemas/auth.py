@@ -20,10 +20,14 @@ class UserLogin(BaseModel):
 
 class TokenResponse(BaseModel):
     """JWT token response"""
-    access_token: str
-    refresh_token: str
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
-    user: "UserResponse"
+    user: Optional["UserResponse"] = None
+    # 2FA fields
+    requires_2fa: bool = False
+    temp_token: Optional[str] = None
+    message: Optional[str] = None
 
 
 class RefreshTokenRequest(BaseModel):

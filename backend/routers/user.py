@@ -1,7 +1,7 @@
 """User Router - User profile endpoints using ORM"""
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,13 +13,19 @@ from services.user_service import UserService
 from services.profile_service import ProfileService
 from services.lms_service import LMSService
 from services.settings_service import SettingsService
+from services.two_factor_service import TwoFactorService
 from schemas.settings import (
     ProfileUpdate,
     PasswordChange,
     EmailUpdate,
-    TwoFactorUpdate,
     SubscriptionUpdate,
     SubscriptionInfo
+)
+from schemas.two_factor import (
+    TwoFactorSetupResponse,
+    TwoFactorVerifySetup,
+    TwoFactorBackupCodesResponse,
+    TwoFactorStatusResponse
 )
 from utils.errors import NotFoundError, ValidationError
 
@@ -77,6 +83,11 @@ def get_settings_service(db: Session = Depends(get_db)) -> SettingsService:
     return SettingsService(db)
 
 
+def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
+    """Dependency to get 2FA service with ORM session"""
+    return TwoFactorService(db)
+
+
 @router.get("")
 async def get_current_user_profile(
     current_user: dict = Depends(get_current_user),
@@ -103,6 +114,8 @@ async def get_current_user_profile(
             "company": profile.get("company"),
             "location": profile.get("location"),
             "industry": profile.get("industry"),
+            "two_factor_enabled": profile.get("two_factor_enabled", False),
+            "interests": profile.get("interests"),  # Include interests from runtime_context
             "created_at": profile.get("created_at")
         }
     
@@ -307,29 +320,215 @@ async def update_email(
         )
 
 
-@router.put("/2fa")
-async def toggle_two_factor(
-    two_factor_data: TwoFactorUpdate,
+def _get_2fa_status_logic(
+    current_user: dict,
+    two_factor_service: TwoFactorService
+) -> Dict[str, Any]:
+    """Shared logic for getting 2FA status"""
+    from models.orm import User
+    user = (
+        two_factor_service.db.query(User)
+        .filter(User.uid == current_user["id"])
+        .first()
+    )
+    if not user:
+        raise NotFoundError('User')
+    
+    return {
+        "enabled": user.two_factor_enabled or False,
+        "verified": user.two_factor_verified or False,
+        "has_backup_codes": bool(user.two_factor_backup_codes)
+    }
+
+
+@router.get("/2fa/status", response_model=TwoFactorStatusResponse)
+async def get_2fa_status(
     current_user: dict = Depends(get_current_user),
-    settings_service: SettingsService = Depends(get_settings_service)
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
 ):
-    """Toggle two-factor authentication"""
+    """Get 2FA status for current user"""
     try:
-        enabled = settings_service.toggle_two_factor(
-            user_id=current_user["id"],
-            enabled=two_factor_data.enabled
-        )
-        return {"enabled": enabled, "message": f"Two-factor authentication {'enabled' if enabled else 'disabled'}"}
+        return _get_2fa_status_logic(current_user, two_factor_service)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     except Exception as e:
-        logger.error(f"Toggle 2FA error: {e}")
+        logger.error(f"Get 2FA status error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update 2FA settings"
+            detail="Failed to get 2FA status"
+        )
+
+
+@router.get("/2fa", response_model=TwoFactorStatusResponse)
+async def get_2fa_status_short(
+    current_user: dict = Depends(get_current_user),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Get 2FA status for current user (alias for /2fa/status)"""
+    try:
+        return _get_2fa_status_logic(current_user, two_factor_service)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except Exception as e:
+        logger.error(f"Get 2FA status error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get 2FA status"
+        )
+
+
+@router.post("/2fa/setup", response_model=TwoFactorSetupResponse)
+async def setup_2fa(
+    current_user: dict = Depends(sensitive_rate_limit),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Generate 2FA secret and QR code for setup"""
+    try:
+        result = two_factor_service.generate_secret(current_user["id"])
+        return result
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"2FA setup error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to setup 2FA"
+        )
+
+
+@router.post("/2fa/verify-setup")
+async def verify_2fa_setup(
+    verify_data: TwoFactorVerifySetup,
+    current_user: dict = Depends(sensitive_rate_limit),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Verify 2FA setup code and complete setup"""
+    try:
+        is_valid = two_factor_service.verify_setup_code(
+            current_user["id"],
+            verify_data.code
+        )
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid 2FA code. Please try again."
+            )
+        
+        # Get backup codes
+        backup_codes = two_factor_service.get_backup_codes(current_user["id"])
+        
+        return {
+            "message": "2FA enabled successfully",
+            "backup_codes": backup_codes
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"2FA verify setup error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify 2FA setup"
+        )
+
+
+@router.get("/2fa/backup-codes", response_model=TwoFactorBackupCodesResponse)
+async def get_backup_codes(
+    current_user: dict = Depends(get_current_user),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Get backup codes for current user"""
+    try:
+        codes = two_factor_service.get_backup_codes(current_user["id"])
+        return {
+            "backup_codes": codes,
+            "message": "Store these codes in a safe place. Each code can only be used once."
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except Exception as e:
+        logger.error(f"Get backup codes error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get backup codes"
+        )
+
+
+@router.post("/2fa/regenerate-backup-codes", response_model=TwoFactorBackupCodesResponse)
+async def regenerate_backup_codes(
+    current_user: dict = Depends(sensitive_rate_limit),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Regenerate backup codes for current user"""
+    try:
+        codes = two_factor_service.regenerate_backup_codes(current_user["id"])
+        return {
+            "backup_codes": codes,
+            "message": "New backup codes generated. Store these in a safe place. Old codes are no longer valid."
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Regenerate backup codes error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to regenerate backup codes"
+        )
+
+
+@router.delete("/2fa")
+async def disable_2fa(
+    current_user: dict = Depends(sensitive_rate_limit),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+):
+    """Disable 2FA for current user"""
+    try:
+        two_factor_service.disable_2fa(current_user["id"])
+        return {"message": "2FA disabled successfully"}
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except Exception as e:
+        logger.error(f"Disable 2FA error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to disable 2FA"
         )
 
 
@@ -341,7 +540,15 @@ async def get_subscription(
     """Get user subscription information"""
     try:
         subscription = settings_service.get_subscription_info(current_user["id"])
-        return subscription
+        # Ensure all required fields are present and valid strings
+        subscription['plan'] = str(subscription.get('plan', 'free')).strip() or 'free'
+        subscription['status'] = str(subscription.get('status', 'inactive')).strip() or 'inactive'
+        # Ensure optional fields are None if not present
+        subscription['subscription_start'] = subscription.get('subscription_start') or None
+        subscription['subscription_end'] = subscription.get('subscription_end') or None
+        
+        # Validate and return
+        return SubscriptionInfo(**subscription)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

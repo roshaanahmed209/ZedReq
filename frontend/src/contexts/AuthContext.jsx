@@ -91,6 +91,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.login(username, password)
       
+      // Check if 2FA is required
+      if (response.data && response.data.requires_2fa) {
+        return {
+          success: false,
+          requires2FA: true,
+          tempToken: response.data.temp_token,
+          message: response.data.message || 'Please enter your 2FA code'
+        }
+      }
+      
       if (response.data && response.data.user) {
         setUser(response.data.user)
         return { 
@@ -108,6 +118,30 @@ export const AuthProvider = ({ children }) => {
                           error.response?.data?.message || 
                           'Network error. Please try again.'
       return { success: false, message: errorMessage }
+    }
+  }
+
+  const verify2FA = async (tempToken, code) => {
+    try {
+      const response = await authAPI.verify2FA(tempToken, code)
+      
+      if (response.data && response.data.user) {
+        setUser(response.data.user)
+        return { 
+          success: true, 
+          message: 'Login successful' 
+        }
+      }
+      
+      return { 
+        success: false, 
+        message: '2FA verification failed' 
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.detail || '2FA verification failed' 
+      }
     }
   }
 
@@ -159,6 +193,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    verify2FA,
     register,
     logout,
     loading,

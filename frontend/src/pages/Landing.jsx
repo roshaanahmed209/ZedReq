@@ -290,7 +290,10 @@ const Landing = () => {
   const [errors, setErrors] = useState([])
   const [isError, setIsError] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { login, register } = useAuth()
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [tempToken, setTempToken] = useState(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const { login, verify2FA, register } = useAuth()
   const navigate = useNavigate()
 
   const showMessage = (text, error = false, errorList = []) => {
@@ -323,6 +326,14 @@ const Landing = () => {
     
     const result = await login(username, password)
     
+    if (result.requires2FA) {
+      setRequires2FA(true)
+      setTempToken(result.tempToken)
+      showMessage(result.message || 'Please enter your 2FA code')
+      setLoading(false)
+      return
+    }
+    
     if (result.success) {
       showMessage(result.message || 'Login successful!')
       setTimeout(() => {
@@ -330,6 +341,34 @@ const Landing = () => {
       }, 800)
     } else {
       showMessage(result.message || 'Login failed', true)
+    }
+    
+    setLoading(false)
+  }
+
+  const handle2FAVerification = async (e) => {
+    e.preventDefault()
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
+      showMessage('Please enter a 6-digit code', true)
+      return
+    }
+
+    setLoading(true)
+    setMessage('')
+    
+    const result = await verify2FA(tempToken, twoFactorCode)
+    
+    if (result.success) {
+      showMessage('Login successful!')
+      setRequires2FA(false)
+      setTempToken(null)
+      setTwoFactorCode('')
+      setTimeout(() => {
+        navigate('/feed')
+      }, 800)
+    } else {
+      showMessage(result.message || 'Invalid 2FA code', true)
+      setTwoFactorCode('')
     }
     
     setLoading(false)
@@ -421,33 +460,81 @@ const Landing = () => {
           </Tabs>
           
           <TabContent $active={activeTab === 'login'}>
-            <Form onSubmit={handleLogin}>
-              <InputWrapper>
-                <Label htmlFor="login-username">Username or Email</Label>
-                <Input 
-                  id="login-username"
-                  type="text" 
-                  name="username" 
-                  placeholder="Enter your username or email" 
-                  autoComplete="username"
-                  required 
-                />
-              </InputWrapper>
-              <InputWrapper>
-                <Label htmlFor="login-password">Password</Label>
-                <Input 
-                  id="login-password"
-                  type="password" 
-                  name="password" 
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  required 
-                />
-              </InputWrapper>
-              <Button type="submit" disabled={loading}>
-                {loading ? <LoadingSpinner>Signing In...</LoadingSpinner> : 'Sign In →'}
-              </Button>
-            </Form>
+            {!requires2FA ? (
+              <Form onSubmit={handleLogin}>
+                <InputWrapper>
+                  <Label htmlFor="login-username">Username or Email</Label>
+                  <Input 
+                    id="login-username"
+                    type="text" 
+                    name="username" 
+                    placeholder="Enter your username or email" 
+                    autoComplete="username"
+                    required 
+                  />
+                </InputWrapper>
+                <InputWrapper>
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input 
+                    id="login-password"
+                    type="password" 
+                    name="password" 
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    required 
+                  />
+                </InputWrapper>
+                <Button type="submit" disabled={loading}>
+                  {loading ? <LoadingSpinner>Signing In...</LoadingSpinner> : 'Sign In →'}
+                </Button>
+              </Form>
+            ) : (
+              <Form onSubmit={handle2FAVerification}>
+                <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: 'var(--text)' }}>Two-Factor Authentication</h3>
+                  <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '0.9em' }}>
+                    Enter the 6-digit code from your authenticator app
+                  </p>
+                </div>
+                <InputWrapper>
+                  <Label htmlFor="2fa-code">2FA Code</Label>
+                  <Input 
+                    id="2fa-code"
+                    type="text" 
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    required
+                    style={{ 
+                      fontFamily: 'monospace', 
+                      fontSize: '1.5em', 
+                      letterSpacing: '0.5em', 
+                      textAlign: 'center' 
+                    }}
+                  />
+                  <PasswordHint>You can also use a backup code (8 characters)</PasswordHint>
+                </InputWrapper>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <Button type="submit" disabled={loading || twoFactorCode.length !== 6}>
+                    {loading ? <LoadingSpinner>Verifying...</LoadingSpinner> : 'Verify →'}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={() => {
+                      setRequires2FA(false)
+                      setTempToken(null)
+                      setTwoFactorCode('')
+                      setMessage('')
+                    }}
+                    style={{ background: 'var(--bg-light)', color: 'var(--text)' }}
+                  >
+                    Back
+                  </Button>
+                </div>
+              </Form>
+            )}
           </TabContent>
           
           <TabContent $active={activeTab === 'register'}>

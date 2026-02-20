@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 
-from models.orm import User, Description, Connection, ConnectionRequest
+from models.orm import User, Description, Connection, ConnectionRequest, UsersContext
 from utils.errors import NotFoundError
 from utils.logger import setup_logger
 
@@ -42,6 +42,7 @@ class ProfileService:
                 'user_email': user.user_email or '',
                 'profile_url': full_profile_url,  # Full URL generated dynamically
                 'profile_path': user.profile_url,  # Also include path for reference
+                'two_factor_enabled': user.two_factor_enabled or False,  # Include 2FA status
                 'created_at': user.created_at.isoformat() if user.created_at else None,
                 'profile_pic': None,
                 'cover_pic': None,
@@ -77,6 +78,29 @@ class ProfileService:
                         'location': description.location,
                         'industry': description.industry
                     })
+            
+            # Extract interests from runtime_context (latest entry containing "interests")
+            result['interests'] = None  # Default to None
+            try:
+                users_context = (
+                    self.db.query(UsersContext)
+                    .filter(UsersContext.user_id == user_id)
+                    .first()
+                )
+                if users_context and users_context.runtime_context:
+                    # Look for the most recent entry containing interests
+                    if isinstance(users_context.runtime_context, list):
+                        for item in reversed(users_context.runtime_context):  # Start from most recent
+                            if isinstance(item, dict) and 'content' in item:
+                                content = item['content']
+                                # Check if this content looks like interests (contains common patterns)
+                                # Interests are typically comma-separated and relatively short
+                                if isinstance(content, str) and ',' in content and len(content) < 1000:
+                                    # Likely interests string (comma-separated, reasonable length)
+                                    result['interests'] = content.strip()
+                                    break
+            except Exception as e:
+                logger.warning(f"Error extracting interests from runtime_context: {e}")
             
             return result
         except Exception as e:

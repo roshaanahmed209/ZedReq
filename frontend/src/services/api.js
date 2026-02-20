@@ -102,6 +102,23 @@ api.interceptors.response.use(
 export const authAPI = {
   login: async (username, password) => {
     const response = await api.post('/api/auth/login', { username, password })
+    // Check if 2FA is required
+    if (response.data.requires_2fa) {
+      // Return temp token for 2FA verification
+      return response
+    }
+    // Normal login - set tokens
+    if (response.data.access_token) {
+      tokenService.setTokens(response.data.access_token, response.data.refresh_token)
+    }
+    return response
+  },
+  
+  verify2FA: async (tempToken, code) => {
+    const response = await api.post('/api/auth/2fa/verify', { 
+      temp_token: tempToken, 
+      code: code 
+    })
     if (response.data.access_token) {
       tokenService.setTokens(response.data.access_token, response.data.refresh_token)
     }

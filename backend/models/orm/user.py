@@ -24,6 +24,9 @@ class User(Base):
     pay_id = Column(Integer)
     job_id = Column(Integer)
     two_factor_enabled = Column(Boolean, default=False)
+    two_factor_secret = Column(Text)  # Encrypted TOTP secret
+    two_factor_backup_codes = Column(Text)  # Encrypted JSON array of backup codes
+    two_factor_verified = Column(Boolean, default=False)  # Whether 2FA setup is complete
     profile_url = Column(Text)  # Profile URL in format: {API_URL}/profile/{username}-{hashed_user_id}
     last_login = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())

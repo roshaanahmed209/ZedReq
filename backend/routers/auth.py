@@ -10,9 +10,18 @@ from schemas.auth import (
     UserResponse,
     RefreshTokenRequest
 )
+from schemas.two_factor import (
+    TwoFactorVerify,
+    TwoFactorVerifySetup
+)
 from services.auth_service import AuthService
+from services.two_factor_service import TwoFactorService
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
+from utils.errors import NotFoundError, ValidationError
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 router = APIRouter()
 security = HTTPBearer()
@@ -74,3 +83,33 @@ async def get_current_user_info(
 ):
     """Get current user information"""
     return UserResponse(**current_user)
+
+
+def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
+    """Dependency to get 2FA service"""
+    return TwoFactorService(db)
+
+
+@router.post("/2fa/verify")
+async def verify_2fa_login(
+    verify_data: TwoFactorVerify,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Verify 2FA code and complete login"""
+    try:
+        result = auth_service.verify_2fa_and_login(
+            verify_data.temp_token,
+            verify_data.code
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"2FA verification error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="2FA verification failed"
+        )

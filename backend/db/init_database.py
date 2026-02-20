@@ -92,6 +92,9 @@ CREATE TABLE IF NOT EXISTS users (
     pay_id INTEGER,
     job_id INTEGER,
     two_factor_enabled BOOLEAN DEFAULT FALSE,
+    two_factor_secret TEXT,
+    two_factor_backup_codes TEXT,
+    two_factor_verified BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

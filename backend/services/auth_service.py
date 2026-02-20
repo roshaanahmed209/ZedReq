@@ -228,8 +228,19 @@ class AuthService:
         # Return tokens
         return self._create_tokens(user_dict)
     
+    def _create_temp_token(self, user_id: str) -> str:
+        """Create temporary token for 2FA verification (short-lived)"""
+        expire = datetime.utcnow() + timedelta(minutes=5)  # 5 minutes validity
+        payload = {
+            "sub": user_id,
+            "type": "2fa_temp",
+            "exp": expire,
+            "iat": datetime.utcnow()
+        }
+        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
     def login(self, identifier: str, password: str) -> dict:
-        """Login user and return tokens"""
+        """Login user and return tokens (or temp token if 2FA enabled)"""
         if not identifier or not password:
             raise ValueError('Username/email and password are required')
         
@@ -252,6 +263,16 @@ class AuthService:
         if not verify_password(password, user.password_hash):
             raise ValueError('Invalid username or password')
         
+        # Check if 2FA is enabled and verified
+        if user.two_factor_enabled and user.two_factor_verified:
+            # Return temporary token for 2FA verification
+            temp_token = self._create_temp_token(str(user.uid))
+            return {
+                "requires_2fa": True,
+                "temp_token": temp_token,
+                "message": "Please enter your 2FA code to complete login"
+            }
+        
         # Update last login using ORM
         user.last_login = datetime.utcnow()
         self.db.commit()
@@ -269,6 +290,73 @@ class AuthService:
         
         # Return tokens
         return self._create_tokens(user_dict)
+    
+    def verify_2fa_and_login(self, temp_token: str, code: str) -> dict:
+        """
+        Verify 2FA code and complete login
+        
+        Args:
+            temp_token: Temporary token from login
+            code: 2FA code (TOTP or backup code)
+            
+        Returns:
+            Full access and refresh tokens
+        """
+        from services.two_factor_service import TwoFactorService
+        
+        try:
+            # Verify temp token
+            payload = jwt.decode(
+                temp_token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
+            )
+            
+            if payload.get("type") != "2fa_temp":
+                raise ValueError("Invalid token type")
+            
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Invalid token")
+            
+            # Get user
+            user = (
+                self.db.query(User)
+                .filter(User.uid == int(user_id))
+                .first()
+            )
+            
+            if not user:
+                raise ValueError("User not found")
+            
+            if not user.two_factor_enabled or not user.two_factor_verified:
+                raise ValueError("2FA is not enabled for this user")
+            
+            # Verify 2FA code
+            two_factor_service = TwoFactorService(self.db)
+            if not two_factor_service.verify_code(int(user_id), code):
+                raise ValueError("Invalid 2FA code")
+            
+            # Update last login
+            user.last_login = datetime.utcnow()
+            self.db.commit()
+            
+            # Format user for token creation
+            user_dict = {
+                "id": user.uid,
+                "uid": user.uid,
+                "username": user.username,
+                "email": user.user_email,
+                "user_email": user.user_email,
+                "name": user.name,
+                "created_at": user.created_at.isoformat() if user.created_at else None
+            }
+            
+            # Return full tokens
+            return self._create_tokens(user_dict)
+            
+        except JWTError as e:
+            raise ValueError(f"Invalid or expired token: {str(e)}")
     
     def refresh_token(self, refresh_token: str) -> dict:
         """Refresh access token using refresh token"""

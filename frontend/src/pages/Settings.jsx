@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -372,10 +372,23 @@ const Settings = () => {
 
   // Security settings
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [twoFactorVerified, setTwoFactorVerified] = useState(false)
+  const [loading2FA, setLoading2FA] = useState(false)
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null) // { secret, qr_code, manual_entry_key }
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [backupCodes, setBackupCodes] = useState([])
+  const [showBackupCodes, setShowBackupCodes] = useState(false)
 
   // Subscription
   const [subscriptionPlan, setSubscriptionPlan] = useState('free')
+  const [subscriptionStatus, setSubscriptionStatus] = useState('inactive')
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
 
+  // Refs for timeout cleanup
+  const timeoutRefs = useRef([])
+
+  // Load user data on mount and when user changes
   useEffect(() => {
     if (user) {
       setProfilePicPreview(user.profile_pic || '')
@@ -383,8 +396,52 @@ const Settings = () => {
       setInterests(user.interests || '')
       setLocation(user.location || '')
       setNewEmail(user.email || '')
+      
+      // Load 2FA status from user profile
+      if (user.two_factor_enabled !== undefined) {
+        setTwoFactorEnabled(user.two_factor_enabled)
+      }
     }
   }, [user])
+
+  // Load subscription status on mount (only once)
+  useEffect(() => {
+    const loadSubscription = async () => {
+      if (!user || subscriptionLoaded) return
+      
+      try {
+        setSubscriptionLoading(true)
+        const response = await api.get('/api/user/subscription')
+        if (response.data) {
+          setSubscriptionPlan(response.data.plan || 'free')
+          setSubscriptionStatus(response.data.status || 'inactive')
+          setSubscriptionLoaded(true)
+        }
+      } catch (error) {
+        // Don't show error for subscription load failure, just use defaults
+        console.warn('Failed to load subscription status:', error)
+        setSubscriptionLoaded(true) // Mark as loaded to prevent retries
+      } finally {
+        setSubscriptionLoading(false)
+      }
+    }
+
+    loadSubscription()
+    
+    // Cleanup function
+    return () => {
+      // Clear any pending operations if component unmounts
+    }
+  }, [user, subscriptionLoaded])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any pending timeouts when component unmounts
+      timeoutRefs.current.forEach(timeoutId => clearTimeout(timeoutId))
+      timeoutRefs.current = []
+    }
+  }, [])
 
   const uploadToCloudinary = async (file, type = 'image') => {
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -458,8 +515,16 @@ const Settings = () => {
     const file = e.target.files[0]
     if (!file) return
 
-    if (file.type !== 'application/pdf') {
-      setError('Please select a PDF file')
+    // Validate file type (PDF, Word, or TXT)
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ]
+    
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
+      setError('Please select a PDF, Word, or TXT file')
       return
     }
 
@@ -469,6 +534,7 @@ const Settings = () => {
     }
 
     setResume(file)
+    setError('') // Clear previous errors
   }
 
   const saveProfileSettings = async () => {
@@ -479,41 +545,92 @@ const Settings = () => {
     try {
       const updateData = {}
 
+      // Validate and upload profile picture
       if (profilePic) {
-        const url = await uploadToCloudinary(profilePic, 'image')
-        updateData.profile_pic = url
+        try {
+          const url = await uploadToCloudinary(profilePic, 'image')
+          updateData.profile_pic = url
+        } catch (uploadError) {
+          setError('Failed to upload profile picture. Please try again.')
+          setLoading(false)
+          return
+        }
       }
 
+      // Validate and upload cover picture
       if (coverPic) {
-        const url = await uploadToCloudinary(coverPic, 'image')
-        updateData.cover_pic = url
+        try {
+          const url = await uploadToCloudinary(coverPic, 'image')
+          updateData.cover_pic = url
+        } catch (uploadError) {
+          setError('Failed to upload cover picture. Please try again.')
+          setLoading(false)
+          return
+        }
       }
 
+      // Validate and upload resume
       if (resume) {
-        const url = await uploadToCloudinary(resume, 'pdf')
-        updateData.resume = url
+        try {
+          // Determine resource type based on file extension
+          const fileExtension = resume.name.split('.').pop().toLowerCase()
+          const resourceType = fileExtension === 'pdf' ? 'raw' : 
+                              ['doc', 'docx'].includes(fileExtension) ? 'raw' : 'raw'
+          const url = await uploadToCloudinary(resume, resourceType === 'raw' ? 'pdf' : 'image')
+          updateData.resume = url
+        } catch (uploadError) {
+          setError('Failed to upload resume. Please ensure the file is valid.')
+          setLoading(false)
+          return
+        }
       }
 
-      if (interests) {
-        updateData.interests = interests
+      // Validate and sanitize interests (client-side validation)
+      if (interests && interests.trim()) {
+        const trimmedInterests = interests.trim()
+        if (trimmedInterests.length > 1000) {
+          setError('Interests must be less than 1000 characters')
+          setLoading(false)
+          return
+        }
+        updateData.interests = trimmedInterests
       }
 
-      if (location) {
-        updateData.location = location
+      // Validate and sanitize location (client-side validation)
+      if (location && location.trim()) {
+        const trimmedLocation = location.trim()
+        if (trimmedLocation.length > 150) {
+          setError('Location must be less than 150 characters')
+          setLoading(false)
+          return
+        }
+        updateData.location = trimmedLocation
       }
 
       if (Object.keys(updateData).length > 0) {
         const response = await api.put('/api/user/profile', updateData)
-        if (updateUser) {
+        if (updateUser && response.data) {
           updateUser({ ...user, ...response.data })
         }
         setSuccess('Profile updated successfully!')
         setProfilePic(null)
         setCoverPic(null)
         setResume(null)
+        
+        // Clear success message after 5 seconds
+        const timeoutId = setTimeout(() => setSuccess(''), 5000)
+        timeoutRefs.current.push(timeoutId)
+      } else {
+        setError('No changes to save')
       }
     } catch (error) {
-      setError(error.response?.data?.detail || 'Failed to update profile')
+      // Handle rate limiting errors
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.headers['retry-after'] || 60
+        setError(`Too many requests. Please wait ${retryAfter} seconds before trying again.`)
+      } else {
+        setError(error.response?.data?.detail || error.message || 'Failed to update profile')
+      }
     } finally {
       setLoading(false)
     }
@@ -525,7 +642,16 @@ const Settings = () => {
     setSuccess('')
 
     try {
+      let hasChanges = false
+
+      // Validate and update password
       if (newPassword) {
+        if (!currentPassword) {
+          setError('Please enter your current password')
+          setLoading(false)
+          return
+        }
+
         if (newPassword !== confirmPassword) {
           setError('New passwords do not match')
           setLoading(false)
@@ -538,25 +664,85 @@ const Settings = () => {
           return
         }
 
-        await api.put('/api/user/change-password', {
-          current_password: currentPassword,
-          new_password: newPassword
-        })
-        setSuccess('Password changed successfully!')
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
-      }
+        if (newPassword.length > 25) {
+          setError('Password must be less than 25 characters')
+          setLoading(false)
+          return
+        }
 
-      if (newEmail && newEmail !== user?.email) {
-        await api.put('/api/user/email', { email: newEmail })
-        setSuccess('Email updated successfully!')
-        if (updateUser) {
-          updateUser({ ...user, email: newEmail })
+        // Check for at least one uppercase letter (client-side validation)
+        if (!/[A-Z]/.test(newPassword)) {
+          setError('Password must contain at least one uppercase letter')
+          setLoading(false)
+          return
+        }
+
+        try {
+          await api.put('/api/user/change-password', {
+            current_password: currentPassword,
+            new_password: newPassword
+          })
+          setSuccess('Password changed successfully!')
+          setCurrentPassword('')
+          setNewPassword('')
+          setConfirmPassword('')
+          hasChanges = true
+        } catch (passwordError) {
+          if (passwordError.response?.status === 429) {
+            const retryAfter = passwordError.response?.headers['retry-after'] || 60
+            setError(`Too many password change attempts. Please wait ${retryAfter} seconds.`)
+          } else {
+            setError(passwordError.response?.data?.detail || 'Failed to change password')
+          }
+          setLoading(false)
+          return
         }
       }
+
+      // Validate and update email
+      if (newEmail && newEmail !== user?.email) {
+        // Basic email validation (client-side)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(newEmail)) {
+          setError('Please enter a valid email address')
+          setLoading(false)
+          return
+        }
+
+        try {
+          await api.put('/api/user/email', { email: newEmail })
+          setSuccess(hasChanges ? 'Password and email updated successfully!' : 'Email updated successfully!')
+          if (updateUser) {
+            updateUser({ ...user, email: newEmail })
+          }
+          hasChanges = true
+        } catch (emailError) {
+          if (emailError.response?.status === 429) {
+            const retryAfter = emailError.response?.headers['retry-after'] || 60
+            setError(`Too many email update attempts. Please wait ${retryAfter} seconds.`)
+          } else {
+            setError(emailError.response?.data?.detail || 'Failed to update email')
+          }
+          setLoading(false)
+          return
+        }
+      }
+
+      if (!hasChanges && !newPassword && (!newEmail || newEmail === user?.email)) {
+        setError('No changes to save')
+      }
+
+      // Clear success message after 5 seconds
+      if (hasChanges) {
+        setTimeout(() => setSuccess(''), 5000)
+      }
     } catch (error) {
-      setError(error.response?.data?.detail || 'Failed to update account settings')
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.headers['retry-after'] || 60
+        setError(`Too many requests. Please wait ${retryAfter} seconds before trying again.`)
+      } else {
+        setError(error.response?.data?.detail || error.message || 'Failed to update account settings')
+      }
     } finally {
       setLoading(false)
     }
@@ -582,17 +768,169 @@ const Settings = () => {
     }
   }
 
-  const toggleTwoFactor = async () => {
-    setLoading(true)
+  const updateSubscription = async () => {
+    setSubscriptionLoading(true)
     setError('')
+    setSuccess('')
+
     try {
-      await api.put('/api/user/2fa', { enabled: !twoFactorEnabled })
-      setTwoFactorEnabled(!twoFactorEnabled)
-      setSuccess('Two-factor authentication updated!')
+      // Validate subscription plan
+      if (!['free', 'pro', 'premium'].includes(subscriptionPlan)) {
+        setError('Invalid subscription plan selected')
+        setSubscriptionLoading(false)
+        return
+      }
+
+      const response = await api.put('/api/user/subscription', { plan: subscriptionPlan })
+      
+      if (response.data) {
+        setSubscriptionPlan(response.data.plan || subscriptionPlan)
+        setSubscriptionStatus(response.data.status || 'active')
+        setSuccess(`Subscription updated to ${subscriptionPlan} plan successfully!`)
+        
+        // Clear success message after 5 seconds
+        const timeoutId = setTimeout(() => setSuccess(''), 5000)
+        timeoutRefs.current.push(timeoutId)
+      }
     } catch (error) {
-      setError(error.response?.data?.detail || 'Failed to update 2FA settings')
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.headers['retry-after'] || 60
+        setError(`Too many requests. Please wait ${retryAfter} seconds before trying again.`)
+      } else {
+        setError(error.response?.data?.detail || 'Failed to update subscription')
+      }
     } finally {
-      setLoading(false)
+      setSubscriptionLoading(false)
+    }
+  }
+
+  // Load 2FA status on mount
+  useEffect(() => {
+    const load2FAStatus = async () => {
+      try {
+        const response = await api.get('/api/user/2fa/status')
+        if (response.data) {
+          setTwoFactorEnabled(response.data.enabled || false)
+          setTwoFactorVerified(response.data.verified || false)
+        }
+      } catch (error) {
+        console.warn('Failed to load 2FA status:', error)
+        // Set defaults if API fails - ensure toggle button is visible
+        setTwoFactorEnabled(false)
+        setTwoFactorVerified(false)
+      }
+    }
+    if (user) {
+      load2FAStatus()
+    }
+  }, [user])
+
+  const setup2FA = async () => {
+    setLoading2FA(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      const response = await api.post('/api/user/2fa/setup')
+      setTwoFactorSetup(response.data)
+      setSuccess('Scan the QR code with your authenticator app')
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to setup 2FA')
+    } finally {
+      setLoading2FA(false)
+    }
+  }
+
+  const verify2FASetup = async () => {
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
+      setError('Please enter a 6-digit code')
+      return
+    }
+
+    setLoading2FA(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await api.post('/api/user/2fa/verify-setup', { code: twoFactorCode })
+      setTwoFactorEnabled(true)
+      setTwoFactorVerified(true)
+      setBackupCodes(response.data.backup_codes || [])
+      setShowBackupCodes(true)
+      setTwoFactorSetup(null)
+      setTwoFactorCode('')
+      setSuccess('2FA enabled successfully! Please save your backup codes.')
+      
+      if (updateUser) {
+        updateUser({ ...user, two_factor_enabled: true })
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Invalid code. Please try again.')
+    } finally {
+      setLoading2FA(false)
+    }
+  }
+
+  const disable2FA = async () => {
+    if (!window.confirm('Are you sure you want to disable 2FA? This will make your account less secure.')) {
+      return
+    }
+
+    setLoading2FA(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      await api.delete('/api/user/2fa')
+      setTwoFactorEnabled(false)
+      setTwoFactorVerified(false)
+      setTwoFactorSetup(null)
+      setBackupCodes([])
+      setShowBackupCodes(false)
+      setSuccess('2FA disabled successfully')
+      
+      if (updateUser) {
+        updateUser({ ...user, two_factor_enabled: false })
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to disable 2FA')
+    } finally {
+      setLoading2FA(false)
+    }
+  }
+
+  const getBackupCodes = async () => {
+    setLoading2FA(true)
+    setError('')
+    
+    try {
+      const response = await api.get('/api/user/2fa/backup-codes')
+      setBackupCodes(response.data.backup_codes || [])
+      setShowBackupCodes(true)
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to get backup codes')
+    } finally {
+      setLoading2FA(false)
+    }
+  }
+
+  const regenerateBackupCodes = async () => {
+    if (!window.confirm('Regenerating backup codes will invalidate your existing codes. Continue?')) {
+      return
+    }
+
+    setLoading2FA(true)
+    setError('')
+    
+    try {
+      const response = await api.post('/api/user/2fa/regenerate-backup-codes')
+      setBackupCodes(response.data.backup_codes || [])
+      setShowBackupCodes(true)
+      setSuccess('New backup codes generated. Save them in a safe place.')
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to regenerate backup codes')
+    } finally {
+      setLoading2FA(false)
     }
   }
 
@@ -759,21 +1097,164 @@ const Settings = () => {
             <SectionTitle>Security Settings</SectionTitle>
 
             <FormGroup>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <Label>Two-Factor Authentication (2FA)</Label>
-                  <InfoText>Add an extra layer of security to your account</InfoText>
-                </div>
-                <ToggleSwitch>
-                  <input
-                    type="checkbox"
-                    checked={twoFactorEnabled}
-                    onChange={toggleTwoFactor}
-                    disabled={loading}
-                  />
-                  <span className="slider"></span>
-                </ToggleSwitch>
+              <Label>Two-Factor Authentication (2FA)</Label>
+              <InfoText>Add an extra layer of security to your account using an authenticator app</InfoText>
+              
+              {/* Simple toggle button - always visible based on database state */}
+              <div style={{ marginTop: '15px' }}>
+                <Button 
+                  onClick={twoFactorEnabled ? disable2FA : setup2FA} 
+                  disabled={loading2FA}
+                  style={{
+                    background: twoFactorEnabled ? 'var(--success)' : 'var(--primary)',
+                    minWidth: '180px',
+                    fontSize: '1em',
+                    padding: '12px 24px'
+                  }}
+                >
+                  {loading2FA 
+                    ? 'Processing...' 
+                    : twoFactorEnabled 
+                      ? '✓ 2FA Enabled (Click to Disable)' 
+                      : 'Enable 2FA'}
+                </Button>
               </div>
+              
+              {/* Status indicator */}
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '12px', 
+                background: twoFactorEnabled ? 'rgba(40, 167, 69, 0.1)' : 'rgba(108, 117, 125, 0.1)', 
+                borderRadius: '8px',
+                border: `1px solid ${twoFactorEnabled ? 'var(--success)' : 'var(--border)'}`,
+                color: twoFactorEnabled ? 'var(--success)' : 'var(--text-light)',
+                fontWeight: 500
+              }}>
+                <strong>Status:</strong> {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+              </div>
+
+              {twoFactorSetup && (
+                <div style={{ marginTop: '20px', padding: '20px', background: 'var(--bg-light)', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 15px 0', color: 'var(--text)' }}>Scan QR Code</h4>
+                  <p style={{ margin: '0 0 15px 0', color: 'var(--text-light)', fontSize: '0.9em' }}>
+                    Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                  </p>
+                  <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <img 
+                      src={twoFactorSetup.qr_code} 
+                      alt="2FA QR Code" 
+                      style={{ maxWidth: '250px', border: '1px solid var(--border)', borderRadius: '8px' }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <Label>Manual Entry Key (if QR code doesn't work):</Label>
+                    <div style={{ 
+                      padding: '10px', 
+                      background: 'var(--bg-white)', 
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '0.9em',
+                      wordBreak: 'break-all'
+                    }}>
+                      {twoFactorSetup.manual_entry_key}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Enter 6-digit code from your app:</Label>
+                    <Input
+                      type="text"
+                      value={twoFactorCode}
+                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      maxLength={6}
+                      style={{ fontFamily: 'monospace', fontSize: '1.2em', letterSpacing: '0.5em', textAlign: 'center' }}
+                    />
+                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                      <Button onClick={verify2FASetup} disabled={loading2FA || twoFactorCode.length !== 6}>
+                        {loading2FA ? 'Verifying...' : 'Verify & Enable'}
+                      </Button>
+                      <SecondaryButton onClick={() => { setTwoFactorSetup(null); setTwoFactorCode('') }}>
+                        Cancel
+                      </SecondaryButton>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {twoFactorEnabled && twoFactorVerified && (
+                <div style={{ marginTop: '20px' }}>
+                  <div style={{ 
+                    padding: '15px', 
+                    background: 'var(--success)', 
+                    color: 'white', 
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }}>
+                    ✓ 2FA is enabled and active
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                    <SecondaryButton onClick={getBackupCodes} disabled={loading2FA}>
+                      View Backup Codes
+                    </SecondaryButton>
+                    <SecondaryButton onClick={regenerateBackupCodes} disabled={loading2FA}>
+                      Regenerate Backup Codes
+                    </SecondaryButton>
+                  </div>
+
+                  {showBackupCodes && backupCodes.length > 0 && (
+                    <div style={{ 
+                      marginTop: '15px', 
+                      padding: '20px', 
+                      background: 'var(--bg-light)', 
+                      borderRadius: '8px',
+                      border: '2px solid var(--warning)'
+                    }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: 'var(--warning)' }}>
+                        ⚠️ Save These Backup Codes
+                      </h4>
+                      <p style={{ margin: '0 0 15px 0', color: 'var(--text-light)', fontSize: '0.9em' }}>
+                        Store these codes in a safe place. Each code can only be used once if you lose access to your authenticator app.
+                      </p>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', 
+                        gap: '10px',
+                        marginBottom: '15px'
+                      }}>
+                        {backupCodes.map((code, index) => (
+                          <div 
+                            key={index}
+                            style={{
+                              padding: '8px',
+                              background: 'var(--bg-white)',
+                              borderRadius: '4px',
+                              fontFamily: 'monospace',
+                              textAlign: 'center',
+                              fontSize: '0.9em'
+                            }}
+                          >
+                            {code}
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={() => setShowBackupCodes(false)}>
+                        I've Saved These Codes
+                      </Button>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '20px' }}>
+                    <Button 
+                      variant="danger" 
+                      onClick={disable2FA} 
+                      disabled={loading2FA}
+                    >
+                      {loading2FA ? 'Disabling...' : 'Disable 2FA'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </FormGroup>
 
             <Divider />
@@ -795,36 +1276,57 @@ const Settings = () => {
 
             <FormGroup>
               <Label>Current Plan</Label>
-              <div style={{ 
-                padding: '20px', 
-                background: 'var(--bg-light)', 
-                borderRadius: '8px',
-                border: '2px solid var(--border)'
-              }}>
-                <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>
-                  {subscriptionPlan === 'free' ? 'Free Plan' : subscriptionPlan === 'pro' ? 'Pro Plan' : 'Premium Plan'}
-                </h3>
-                <p style={{ margin: 0, color: 'var(--text-light)' }}>
-                  {subscriptionPlan === 'free' 
-                    ? 'Basic features included'
-                    : subscriptionPlan === 'pro'
-                    ? 'Advanced features and priority support'
-                    : 'All features and premium support'}
-                </p>
-              </div>
+              {subscriptionLoading && !subscriptionLoaded ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                  Loading subscription information...
+                </div>
+              ) : (
+                <div style={{ 
+                  padding: '20px', 
+                  background: 'var(--bg-light)', 
+                  borderRadius: '8px',
+                  border: '2px solid var(--border)'
+                }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>
+                    {subscriptionPlan === 'free' ? 'Free Plan' : subscriptionPlan === 'pro' ? 'Pro Plan' : 'Premium Plan'}
+                  </h3>
+                  <p style={{ margin: '0 0 10px 0', color: 'var(--text-light)' }}>
+                    {subscriptionPlan === 'free' 
+                      ? 'Basic features included'
+                      : subscriptionPlan === 'pro'
+                      ? 'Advanced features and priority support'
+                      : 'All features and premium support'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.9em', color: 'var(--text-light)' }}>
+                    Status: <span style={{ 
+                      color: subscriptionStatus === 'active' ? 'var(--success)' : 'var(--text-light)',
+                      fontWeight: 500
+                    }}>{subscriptionStatus}</span>
+                  </p>
+                </div>
+              )}
             </FormGroup>
 
             <FormGroup>
-              <Label>Upgrade Plan</Label>
+              <Label>Select Plan</Label>
               <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                 <SecondaryButton 
+                  onClick={() => setSubscriptionPlan('free')}
+                  disabled={subscriptionLoading}
+                  style={subscriptionPlan === 'free' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
+                >
+                  Free Plan
+                </SecondaryButton>
+                <SecondaryButton 
                   onClick={() => setSubscriptionPlan('pro')}
+                  disabled={subscriptionLoading}
                   style={subscriptionPlan === 'pro' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
                 >
                   Pro Plan - $9.99/month
                 </SecondaryButton>
                 <SecondaryButton 
                   onClick={() => setSubscriptionPlan('premium')}
+                  disabled={subscriptionLoading}
                   style={subscriptionPlan === 'premium' ? { borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)' } : {}}
                 >
                   Premium Plan - $19.99/month
@@ -832,8 +1334,11 @@ const Settings = () => {
               </div>
             </FormGroup>
 
-            <Button onClick={() => setSuccess('Subscription updated!')} disabled={loading}>
-              {loading ? 'Processing...' : 'Update Subscription'}
+            <Button 
+              onClick={updateSubscription} 
+              disabled={subscriptionLoading || loading}
+            >
+              {subscriptionLoading ? 'Processing...' : 'Update Subscription'}
             </Button>
           </>
         )
