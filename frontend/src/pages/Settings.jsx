@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
@@ -350,6 +351,7 @@ const PrivacyPolicyContent = styled.div`
 const Settings = () => {
   const navigate = useNavigate()
   const { user, updateUser } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const [activeSection, setActiveSection] = useState('profile')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -1316,6 +1318,71 @@ const Settings = () => {
           </>
         )
 
+      case 'appearance':
+        return (
+          <>
+            <SectionTitle>Appearance Settings</SectionTitle>
+            
+            <FormGroup>
+              <Label>Theme</Label>
+              <InfoText>Choose between light and dark theme for the application</InfoText>
+              
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '20px', 
+                marginTop: '20px',
+                padding: '20px',
+                background: 'var(--bg-light)',
+                borderRadius: '12px',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontSize: '1.1em', 
+                    fontWeight: 500, 
+                    color: 'var(--text)',
+                    marginBottom: '8px'
+                  }}>
+                    {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.9em', 
+                    color: 'var(--text-light)'
+                  }}>
+                    {theme === 'light' 
+                      ? 'Bright theme with light backgrounds' 
+                      : 'Dark theme with dark backgrounds'}
+                  </div>
+                </div>
+                
+                <ToggleSwitch>
+                  <input
+                    type="checkbox"
+                    checked={theme === 'dark'}
+                    onChange={toggleTheme}
+                  />
+                  <span className="slider"></span>
+                </ToggleSwitch>
+              </div>
+              
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '12px', 
+                background: theme === 'dark' 
+                  ? 'rgba(10, 102, 194, 0.1)' 
+                  : 'rgba(10, 102, 194, 0.05)', 
+                borderRadius: '8px',
+                border: `1px solid ${theme === 'dark' ? 'var(--primary)' : 'var(--border)'}`,
+                color: 'var(--text-light)',
+                fontSize: '0.85em'
+              }}>
+                <strong>Current theme:</strong> {theme === 'light' ? 'Light' : 'Dark'} mode
+              </div>
+            </FormGroup>
+          </>
+        )
+
       case 'privacy':
         return (
           <>
@@ -1429,6 +1496,24 @@ const Settings = () => {
               <path d="M16 10a4 4 0 0 1-8 0"></path>
             </svg>
             Subscription
+          </SidePanelSection>
+
+          <SidePanelSection 
+            className={activeSection === 'appearance' ? 'active' : ''}
+            onClick={() => setActiveSection('appearance')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            Appearance
           </SidePanelSection>
 
           <SidePanelSection 

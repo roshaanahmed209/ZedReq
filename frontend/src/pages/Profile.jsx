@@ -70,7 +70,7 @@ const CoverWrap = styled.div`
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, rgba(13,13,13,0.85) 100%);
+    background: linear-gradient(to bottom, transparent 40%, color-mix(in srgb, var(--bg-light) 85%, black) 100%);
   }
 
   @media (max-width: 768px) { height: 200px; }
@@ -81,13 +81,14 @@ const HeaderCard = styled.div`
   position: relative;
   margin-top: -100px;
   z-index: 10;
-  background: rgba(26, 26, 26, 0.7);
+  background: color-mix(in srgb, var(--bg-white) 70%, transparent);
   backdrop-filter: blur(28px) saturate(160%);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   border-radius: 20px;
   padding: 0 32px 32px;
   animation: ${slideUp} 0.55s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 
   @media (max-width: 768px) {
     margin-top: -80px;
@@ -130,7 +131,7 @@ const AvatarCircle = styled.div`
   overflow: hidden;
   flex-shrink: 0;
   background: var(--bg-white);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  box-shadow: var(--shadow-lg);
   animation: ${pulseGlow} 3s ease-in-out infinite;
 
   img {
@@ -200,7 +201,7 @@ const StatsRow = styled.div`
   gap: 28px;
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   flex-wrap: wrap;
   @media (max-width: 480px) {
     gap: 20px;
@@ -721,7 +722,7 @@ const FeatThumb = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: color-mix(in srgb, var(--bg-light) 65%, black);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -791,7 +792,7 @@ const InfoRow = styled.div`
    ═══════════════════════════════════════════════════════════════ */
 
 const SkeletonBox = styled.div`
-  background: linear-gradient(90deg, var(--bg-white) 25%, #252525 50%, var(--bg-white) 75%);
+  background: linear-gradient(90deg, var(--bg-white) 25%, var(--hover-bg) 50%, var(--bg-white) 75%);
   background-size: 800px 100%;
   animation: ${shimmer} 1.6s infinite ease-in-out;
   border-radius: ${p => p.$r || '8px'};

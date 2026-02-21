@@ -15,7 +15,7 @@
 .search-button {
     background: none;
     border: none;
-    color: #999;
+    color: var(--text-light);
     cursor: pointer;
     padding: 8px;
     border-radius: 50%;
@@ -29,7 +29,7 @@
 }
 
 .search-button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--hover-bg) 50%, transparent);
     color: var(--primary);
 }
 
@@ -49,9 +49,10 @@
     /* Space for icon */
     opacity: 1;
     pointer-events: auto;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: color-mix(in srgb, var(--bg-white) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
     border-radius: 20px;
+    color: var(--text);
 }
 
 
@@ -64,7 +65,7 @@
 
 .search-username {
     font-size: 0.85em;
-    color: #999;
+    color: var(--text-light);
 }
 
 /* Responsive Design for Navbar */

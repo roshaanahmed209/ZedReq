@@ -12,7 +12,7 @@ import './Navbar.css'
    ═══════════════════════════════════════════════════════════════ */
 
 const NavWrapper = styled.nav`
-  background: rgba(13, 13, 13, 0.7);
+  background: color-mix(in srgb, var(--bg-light) 70%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   position: fixed;
@@ -23,12 +23,13 @@ const NavWrapper = styled.nav`
   width: ${props => props.$scrolled ? (props.$searchActive ? 'min(96%, 1600px)' : 'min(90%, 1200px)') : '100%'};
   border-radius: ${props => props.$scrolled ? '50px' : '0'};
   padding: ${props => props.$scrolled ? (props.$searchActive ? '0 40px' : '0 30px') : '0 20px'};
-  box-shadow: ${props => props.$scrolled ? '0 10px 30px rgba(0, 0, 0, 0.3)' : '0 4px 30px rgba(0, 0, 0, 0.2)'};
+  box-shadow: ${props => props.$scrolled ? 'var(--shadow-lg)' : 'var(--shadow)'};
+  border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   
   /* Centering */
   left: 50%;
   transform: translateX(-50%);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
   
   @media (max-width: 768px) { 
     padding: ${props => props.$scrolled ? '0 20px' : '0 15px'};
@@ -153,9 +154,9 @@ const NavPlaceholder = styled.div`
 
 const SearchInput = styled.input`
   padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--bg-white) 20%, transparent);
   color: var(--text);
   font-size: 0.9em;
   transition: all 0.2s ease;
@@ -165,7 +166,7 @@ const SearchInput = styled.input`
   &:focus {
     outline: none;
     border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--bg-white) 30%, transparent);
   }
   &::placeholder { color: var(--text-lighter); }
 `
@@ -180,7 +181,7 @@ const SearchResults = styled.div`
   border-radius: 12px;
   margin-top: 8px;
   z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg);
   max-height: 400px;
   overflow-y: auto;
 `
@@ -243,7 +244,7 @@ const MobileMenuButton = styled.button`
   }
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
     color: var(--primary);
   }
   
@@ -254,12 +255,12 @@ const MobileMenuOverlay = styled.div`
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in srgb, var(--bg-light) 70%, black);
   backdrop-filter: blur(4px);
   z-index: 199;
   opacity: ${props => props.isOpen ? 1 : 0};
   pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, background-color 0.3s ease;
   
   @media (max-width: 1024px) { display: block; }
 `
@@ -275,8 +276,8 @@ const MobileSidePanel = styled.aside`
   background: var(--bg-white);
   z-index: 200;
   overflow-y: auto;
-  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-lg);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
   
   @media (max-width: 1024px) { display: block; }
   @media (max-width: 480px) { width: 260px; max-width: 90vw; }
@@ -292,14 +293,14 @@ const MessagesPanel = styled.aside`
   background: var(--bg-white);
   border-radius: 16px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 200;
   opacity: ${props => props.isOpen ? 1 : 0};
   pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
-  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, background-color 0.3s ease;
 
   @media (max-width: 768px) {
     width: 350px;
@@ -368,7 +369,7 @@ const SidePanel = styled.div`
 
 const PanelSection = styled.div`
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   transition: all 0.2s ease;
   
   &:last-child { border-bottom: none; }

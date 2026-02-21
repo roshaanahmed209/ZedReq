@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import FirstPage from './pages/FirstPage'
 import Landing from './pages/Landing'
 import Feed from './pages/Feed'
@@ -18,8 +19,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />
@@ -122,7 +124,8 @@ function App() {
           />
         </Routes>
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
