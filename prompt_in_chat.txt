@@ -34,7 +34,7 @@ now we will proceed to posts and posts link creation, i also have to verify firs
 the last thing that will be left is jobs 
 
 
-
+also after the user sign in with google auth the procedure should same as signup since the user is logging in with google auth, what database entries are being made how is the user registered in our system?
 
 
 

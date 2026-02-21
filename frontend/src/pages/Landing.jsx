@@ -353,7 +353,7 @@ const Landing = () => {
   const [requires2FA, setRequires2FA] = useState(false)
   const [tempToken, setTempToken] = useState(null)
   const [twoFactorCode, setTwoFactorCode] = useState('')
-  const { login, verify2FA, register } = useAuth()
+  const { login, verify2FA, register, updateUser, checkAuthStatus } = useAuth()
   const navigate = useNavigate()
 
   const showMessage = (text, error = false, errorList = []) => {
@@ -452,13 +452,22 @@ const Landing = () => {
       
       if (response.data && response.data.access_token) {
         // Store tokens using tokenService
-        const { access_token, refresh_token } = response.data
+        const { access_token, refresh_token, user: userData } = response.data
         tokenService.setTokens(access_token, refresh_token)
         
+        // Update AuthContext with user data
+        if (userData) {
+          updateUser(userData)
+        } else {
+          // If user data not in response, fetch it from backend
+          await checkAuthStatus()
+        }
+        
         showMessage('Login successful!')
+        // Wait a bit longer to ensure state is updated before navigation
         setTimeout(() => {
           navigate('/feed')
-        }, 800)
+        }, 1000)
       } else {
         showMessage(response.data?.detail || 'Google sign-in failed', true)
       }
