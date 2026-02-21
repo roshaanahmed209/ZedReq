@@ -133,9 +133,17 @@ export const authAPI = {
     return response
   },
   
-  logout: () => {
-    tokenService.clearTokens()
-    return Promise.resolve()
+  logout: async () => {
+    try {
+      // Call backend logout endpoint to trigger context refresh
+      await api.post('/api/auth/logout')
+    } catch (error) {
+      // Don't fail logout if backend call fails
+      console.warn('Backend logout call failed:', error)
+    } finally {
+      // Always clear tokens locally
+      tokenService.clearTokens()
+    }
   },
   
   getCurrentUser: () => api.get('/api/auth/me'),
@@ -543,6 +551,31 @@ export const interviewAPI = {
   
   refreshRizFeedback: (interviewId) =>
     api.post(`/api/interviews/${interviewId}/riz-feedback/refresh`),
+}
+
+// Context API methods - Generic context update endpoint
+export const contextAPI = {
+  /**
+   * Update user context based on actions
+   * @param {string} action - Action type: "apply" | "like" | "view"
+   * @param {string} entityType - Entity type: "job" | "post" | "profile"
+   * @param {number} entityId - Entity ID
+   * @returns {Promise} API response
+   */
+  updateContext: async (action, entityType, entityId) => {
+    try {
+      const response = await api.post('/api/context/update', {
+        action,
+        entity_type: entityType,
+        entity_id: entityId
+      })
+      return response
+    } catch (error) {
+      // Silently fail - context updates are non-critical
+      console.warn('Context update failed:', error)
+      return { data: { success: false } }
+    }
+  }
 }
 
 // WebSocket connection for real-time notifications

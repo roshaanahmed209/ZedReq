@@ -17,6 +17,7 @@ from schemas.two_factor import (
 )
 from services.auth_service import AuthService
 from services.two_factor_service import TwoFactorService
+from services.context_updater import ContextUpdater
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from utils.errors import NotFoundError, ValidationError
@@ -141,3 +142,28 @@ async def google_auth(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google authentication failed"
         )
+
+
+@router.post("/logout")
+async def logout(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Logout user and refresh context for Zed Agent"""
+    try:
+        # Refresh runtime_context and trigger Zed Agent to update zed column
+        context_updater = ContextUpdater(db)
+        context_updater.refresh_and_update_zed_context(user_id=current_user["id"])
+        
+        return {
+            "message": "Logged out successfully",
+            "context_updated": True
+        }
+    except Exception as e:
+        logger.error(f"Error during logout context update: {e}", exc_info=True)
+        # Don't fail logout if context update fails
+        return {
+            "message": "Logged out successfully",
+            "context_updated": False,
+            "warning": "Context update failed but logout completed"
+        }

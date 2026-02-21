@@ -9,6 +9,7 @@ from dependencies.auth import get_current_user
 from dependencies.rate_limit import profile_rate_limit, write_rate_limit
 from config.database_orm import get_db
 from services.post_service import PostService
+from services.context_updater import ContextUpdater
 from utils.errors import NotFoundError, AuthorizationError
 from utils.api_security import sanitize_text_for_storage, validate_url_safe
 from utils.logger import setup_logger
@@ -269,11 +270,27 @@ async def delete_post(
 async def toggle_like(
     post_id: int,
     current_user: dict = Depends(write_rate_limit),  # write_rate_limit includes get_current_user
-    post_service: PostService = Depends(get_post_service)
+    post_service: PostService = Depends(get_post_service),
+    db: Session = Depends(get_db)
 ):
     """Toggle like on a post"""
     try:
         result = post_service.toggle_like(post_id, current_user["id"])
+        
+        # Update context for Zed Agent (only when post is liked, not unliked)
+        if result["is_liked"]:
+            try:
+                context_updater = ContextUpdater(db)
+                context_updater.update_context_from_action(
+                    user_id=current_user["id"],
+                    action="like",
+                    entity_type="post",
+                    entity_id=post_id
+                )
+            except Exception as e:
+                # Don't fail the like if context update fails
+                logger.warning(f"Failed to update context for post like: {e}")
+        
         return {
             "is_liked": result["is_liked"],
             "like_count": result["like_count"],

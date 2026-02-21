@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { jobAPI } from '../services/api'
+import { jobAPI, contextAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 
 const fadeIn = keyframes`
@@ -927,6 +927,9 @@ const Jobs = () => {
       setRemoteJobs(updateJobs)
       setSavedJobs(updateJobs)
       setPostedJobs(updateJobs)
+      
+      // Update context for job application
+      contextAPI.updateContext('apply', 'job', jobId).catch(() => {})
     } catch (err) {
       console.error('Failed to apply:', err)
       alert(err.response?.data?.detail || 'Failed to apply')
@@ -1125,12 +1128,22 @@ const Jobs = () => {
     return date.toLocaleDateString()
   }
 
+  // Track job view when job card is clicked
+  const handleJobCardClick = (jobId, e) => {
+    // Only track if click is not on a button or interactive element
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+      return
+    }
+    // Track job view
+    contextAPI.updateContext('view', 'job', jobId).catch(() => {})
+  }
+
   const renderJobCard = (job, index) => {
     const salary = formatSalary(job.salary_min, job.salary_max)
     const skills = parseSkills(job.skills_required)
     
     return (
-      <JobCard key={job.job_id} delay={`${index * 0.1}s`}>
+      <JobCard key={job.job_id} delay={`${index * 0.1}s`} onClick={(e) => handleJobCardClick(job.job_id, e)}>
         <JobHeader>
           <JobInfo>
             <JobTitle>{job.title}</JobTitle>

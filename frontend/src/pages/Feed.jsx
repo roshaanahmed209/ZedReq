@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
+import { contextAPI } from '../services/api'
 import Messages from './Messages'
 import { generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
@@ -1324,6 +1325,11 @@ const Feed = () => {
               }
             : post
         ))
+        
+        // Update context if post was liked
+        if (data.is_liked) {
+          contextAPI.updateContext('like', 'post', postId).catch(() => {})
+        }
       }
     } catch (error) {
       console.error('Error toggling like:', error)

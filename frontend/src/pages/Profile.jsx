@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled, { keyframes, css } from 'styled-components'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { userAPI, connectionAPI, postAPI, profileFeaturesAPI } from '../services/api'
+import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, contextAPI } from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
 import '../css/pages/Profile.css'
@@ -990,7 +990,11 @@ function Profile() {
   const trackProfileView = async () => {
     if (!userId || !currentUser || userId === currentUser.id) return
     try {
-      const fire = () => profileFeaturesAPI.trackProfileView(userId, 'direct').catch(() => { })
+      const fire = () => {
+        profileFeaturesAPI.trackProfileView(userId, 'direct').catch(() => { })
+        // Update context for profile view
+        contextAPI.updateContext('view', 'profile', userId).catch(() => { })
+      }
       if (window.requestIdleCallback) window.requestIdleCallback(fire, { timeout: 2000 })
       else setTimeout(fire, 100)
     } catch { }
@@ -1014,6 +1018,11 @@ function Profile() {
           ? { ...p, is_liked: r.data.is_liked, like_count: r.data.like_count }
           : p
       ))
+      
+      // Update context if post was liked
+      if (r.data.is_liked) {
+        contextAPI.updateContext('like', 'post', postId)
+      }
     } catch { }
   }
 

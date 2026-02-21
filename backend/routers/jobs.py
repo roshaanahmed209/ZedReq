@@ -2,11 +2,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
+import logging
 
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.job_service import JobService
 from services.recommendation_service import RecommendationService
+from services.context_updater import ContextUpdater
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 from schemas.job import (
     JobPostingCreate,
     JobPostingUpdate,
@@ -181,7 +186,8 @@ async def get_my_applications(
 async def get_job(
     job_id: int,
     current_user: dict = Depends(get_current_user),
-    service: JobService = Depends(get_job_service)
+    service: JobService = Depends(get_job_service),
+    db: Session = Depends(get_db)
 ):
     """Get a specific job posting by ID"""
     job = service.get_job(job_id, current_user["id"])
@@ -191,6 +197,19 @@ async def get_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found"
         )
+    
+    # Update context for job view (non-blocking)
+    try:
+        context_updater = ContextUpdater(db)
+        context_updater.update_context_from_action(
+            user_id=current_user["id"],
+            action="view",
+            entity_type="job",
+            entity_id=job_id
+        )
+    except Exception as e:
+        # Don't fail the request if context update fails
+        logger.warning(f"Failed to update context for job view: {e}")
     
     return job
 
@@ -268,7 +287,8 @@ async def apply_to_job(
     job_id: int,
     application_data: JobApplicationCreate,
     current_user: dict = Depends(get_current_user),
-    service: JobService = Depends(get_job_service)
+    service: JobService = Depends(get_job_service),
+    db: Session = Depends(get_db)
 ):
     """Apply to a job posting"""
     try:
@@ -277,6 +297,19 @@ async def apply_to_job(
             applicant_id=current_user["id"],
             cover_letter=application_data.cover_letter
         )
+        
+        # Update context for Zed Agent
+        try:
+            context_updater = ContextUpdater(db)
+            context_updater.update_context_from_action(
+                user_id=current_user["id"],
+                action="apply",
+                entity_type="job",
+                entity_id=job_id
+            )
+        except Exception as e:
+            # Don't fail the application if context update fails
+            logger.warning(f"Failed to update context for job application: {e}")
         
         return {
             **application.to_dict(),

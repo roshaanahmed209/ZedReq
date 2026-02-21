@@ -11,6 +11,7 @@ from dependencies.rate_limit import write_rate_limit, RateLimiter
 from config.database_orm import get_db
 from services.user_service import UserService
 from services.profile_service import ProfileService
+from services.context_updater import ContextUpdater
 from services.lms_service import LMSService
 from services.settings_service import SettingsService
 from services.two_factor_service import TwoFactorService
@@ -137,7 +138,8 @@ async def get_current_user_profile(
 async def get_user_profile_by_id(
     user_id: int,
     current_user: dict = Depends(get_current_user),
-    profile_service: ProfileService = Depends(get_profile_service)
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
 ):
     """Get user profile by ID with description data and connection status"""
     profile = profile_service.get_profile_with_connection_status(
@@ -150,6 +152,20 @@ async def get_user_profile_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User profile not found"
         )
+    
+    # Update context for Zed Agent (only when viewing someone else's profile)
+    if current_user.get("id") != user_id:
+        try:
+            context_updater = ContextUpdater(db)
+            context_updater.update_context_from_action(
+                user_id=current_user["id"],
+                action="view",
+                entity_type="profile",
+                entity_id=user_id
+            )
+        except Exception as e:
+            # Don't fail the profile request if context update fails
+            logger.warning(f"Failed to update context for profile view: {e}")
     
     return {
         "uid": profile.get("id") or profile.get("uid"),

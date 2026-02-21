@@ -39,7 +39,8 @@ from routers import (
     nemz_router,
     vec_router,
     interviews_router,
-    profile_features_router
+    profile_features_router,
+    context_router
 )
 from routers.reserved_seats import router as reserved_seats_router
 
@@ -288,6 +289,7 @@ app.include_router(nemz_router, prefix="/api/nemz", tags=["Nemz Agent"])
 app.include_router(vec_router, prefix="/api/vec", tags=["Vec Agent"])
 app.include_router(interviews_router, prefix="/api/interviews", tags=["Interviews"])
 app.include_router(profile_features_router, prefix="/api/profile", tags=["Profile Features"])
+app.include_router(context_router, prefix="/api/context", tags=["Context"])
 app.include_router(reserved_seats_router)
 
 
