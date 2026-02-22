@@ -26,6 +26,7 @@ class Post(Base):
     media_url = Column(Text)
     media_type = Column(String(20))
     post_desc = Column(Text)
+    post_link = Column(Text)  # Post link/reference within ZedRec domain
     is_deleted = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -58,6 +59,7 @@ class Post(Base):
             'media_url': self.media_url,
             'media_type': self.media_type,
             'post_desc': self.post_desc,
+            'post_link': self.post_link,
             'is_deleted': self.is_deleted,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

@@ -637,8 +637,18 @@ const ApplicantsModalOverlay = styled(ModalOverlay)`
 `
 
 const ApplicantsModalContent = styled(ModalContent)`
-  max-width: 800px;
-  max-height: 85vh;
+  max-width: 1400px;
+  width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  
+  @media (max-width: 768px) {
+    width: 100vw;
+    max-height: 100vh;
+  }
 `
 
 const ApplicantsHeader = styled.div`
@@ -648,6 +658,51 @@ const ApplicantsHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  background: var(--bg-white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`
+
+const ApplicantsLayout = styled.div`
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`
+
+const ApplicantsLeftPanel = styled.div`
+  width: 360px;
+  min-width: 360px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-light);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 300px;
+  }
+`
+
+const ApplicantsRightPanel = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-white);
+  min-width: 0;
 `
 
 const ApplicantsTitle = styled.h2`
@@ -673,12 +728,194 @@ const ApplicantCount = styled.div`
 `
 
 const ApplicantsList = styled.div`
-  padding: 24px;
-  max-height: calc(85vh - 200px);
-  overflow-y: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+  flex: 1;
+`
+
+const ApplicantListItem = styled.div`
+  padding: 16px;
+  background: ${props => props.selected ? 'var(--bg-white)' : 'transparent'};
+  border: 1px solid ${props => props.selected ? 'var(--primary)' : 'var(--border)'};
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  &:hover {
+    background: var(--bg-white);
+    border-color: ${props => props.selected ? 'var(--primary)' : 'rgba(10, 102, 194, 0.3)'};
+    transform: translateX(2px);
+  }
+`
+
+const ApplicantListAvatar = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 500;
+  font-size: 0.9em;
+  flex-shrink: 0;
+`
+
+const ApplicantListInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const ApplicantListName = styled.div`
+  font-size: 0.95em;
+  font-weight: ${props => props.selected ? '500' : '400'};
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const ApplicantListMeta = styled.div`
+  font-size: 0.8em;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const ApplicantDetailContent = styled.div`
+  padding: 32px;
+  flex: 1;
+  max-width: 100%;
+  overflow-x: hidden;
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+  }
+`
+
+const ApplicantDetailSection = styled.div`
+  margin-bottom: 32px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`
+
+const ApplicantDetailTitle = styled.h3`
+  font-size: 1.2em;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+`
+
+const ApplicantDetailInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const ApplicantDetailRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  
+  svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-light);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+`
+
+const ApplicantDetailLabel = styled.span`
+  font-size: 0.9em;
+  color: var(--text-light);
+  font-weight: 500;
+  min-width: 120px;
+`
+
+const ApplicantDetailValue = styled.div`
+  font-size: 0.95em;
+  color: var(--text);
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.6;
+`
+
+const ApplicantResume = styled.div`
+  background: var(--bg-light);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  font-size: 0.95em;
+  color: var(--text);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+  word-wrap: break-word;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--bg-white);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--text-lighter);
+    }
+  }
+  
+  &:empty::before {
+    content: 'No resume available';
+    color: var(--text-lighter);
+    font-style: italic;
+  }
+`
+
+const ProfileLinkButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.9em;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `
 
 const ApplicantCard = styled.div`
@@ -838,6 +1075,176 @@ const ApplicantCountBadge = styled.span`
   margin-left: 8px;
 `
 
+// Job Detail Side Panel Styles
+const JobDetailOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1500;
+  display: ${props => props.isOpen ? 'block' : 'none'};
+  animation: ${fadeIn} 0.2s ease;
+`
+
+const JobDetailPanel = styled.div`
+  position: fixed;
+  top: 0;
+  right: ${props => props.isOpen ? '0' : '-100%'};
+  width: 100%;
+  max-width: 600px;
+  height: 100vh;
+  background: var(--bg-white);
+  z-index: 1501;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+`
+
+const JobDetailHeader = styled.div`
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-white);
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+`
+
+const JobDetailTitle = styled.h2`
+  font-size: 1.5em;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+`
+
+const JobDetailCloseButton = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`
+
+const JobDetailContent = styled.div`
+  padding: 24px;
+  flex: 1;
+`
+
+const JobDetailSection = styled.div`
+  margin-bottom: 32px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`
+
+const JobDetailSectionTitle = styled.h3`
+  font-size: 1.1em;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+`
+
+const JobDetailInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const JobDetailInfoRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  
+  svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-light);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+`
+
+const JobDetailInfoLabel = styled.span`
+  font-size: 0.9em;
+  color: var(--text-light);
+  font-weight: 500;
+  min-width: 100px;
+`
+
+const JobDetailInfoValue = styled.span`
+  font-size: 0.95em;
+  color: var(--text);
+  flex: 1;
+`
+
+const JobDetailDescription = styled.div`
+  font-size: 0.95em;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+`
+
+const JobDetailSkills = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+`
+
+const JobDetailSkillTag = styled.span`
+  padding: 6px 14px;
+  background: rgba(10, 102, 194, 0.1);
+  border: 1px solid rgba(10, 102, 194, 0.3);
+  border-radius: 12px;
+  font-size: 0.85em;
+  color: var(--primary);
+  font-weight: 400;
+`
+
+const JobDetailActions = styled.div`
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-white);
+  z-index: 10;
+`
+
 const Jobs = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -853,12 +1260,17 @@ const Jobs = () => {
   const [activeFilter, setActiveFilter] = useState('all')
   const [sidePanelOpen, setSidePanelOpen] = useState(false)
   
+  // Job detail side panel state
+  const [selectedJobDetail, setSelectedJobDetail] = useState(null)
+  const [jobDetailPanelOpen, setJobDetailPanelOpen] = useState(false)
+  
   // Applicants modal state
   const [selectedJob, setSelectedJob] = useState(null)
   const [applicants, setApplicants] = useState([])
   const [loadingApplicants, setLoadingApplicants] = useState(false)
   const [showApplicantsModal, setShowApplicantsModal] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(null)
+  const [selectedApplicant, setSelectedApplicant] = useState(null)
   
   // Post job modal state
   const [showPostModal, setShowPostModal] = useState(false)
@@ -1078,10 +1490,16 @@ const Jobs = () => {
     setShowApplicantsModal(true)
     setLoadingApplicants(true)
     setApplicants([])
+    setSelectedApplicant(null)
     
     try {
       const res = await jobAPI.getJobApplicants(jobId)
-      setApplicants(res.data.applicants || res.data || [])
+      const applicantsList = res.data.applicants || res.data || []
+      setApplicants(applicantsList)
+      // Auto-select first applicant if available
+      if (applicantsList.length > 0) {
+        setSelectedApplicant(applicantsList[0])
+      }
     } catch (err) {
       console.error('Failed to fetch applicants:', err)
       setError('Failed to load applicants. Please try again.')
@@ -1128,14 +1546,23 @@ const Jobs = () => {
     return date.toLocaleDateString()
   }
 
-  // Track job view when job card is clicked
-  const handleJobCardClick = (jobId, e) => {
+  // Handle job card click - open detail panel
+  const handleJobCardClick = (job, e) => {
     // Only track if click is not on a button or interactive element
     if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
       return
     }
+    // Set selected job and open panel
+    setSelectedJobDetail(job)
+    setJobDetailPanelOpen(true)
     // Track job view
-    contextAPI.updateContext('view', 'job', jobId).catch(() => {})
+    contextAPI.updateContext('view', 'job', job.job_id).catch(() => {})
+  }
+
+  // Close job detail panel
+  const handleCloseJobDetailPanel = () => {
+    setJobDetailPanelOpen(false)
+    setSelectedJobDetail(null)
   }
 
   const renderJobCard = (job, index) => {
@@ -1143,7 +1570,7 @@ const Jobs = () => {
     const skills = parseSkills(job.skills_required)
     
     return (
-      <JobCard key={job.job_id} delay={`${index * 0.1}s`} onClick={(e) => handleJobCardClick(job.job_id, e)}>
+      <JobCard key={job.job_id} delay={`${index * 0.1}s`} onClick={(e) => handleJobCardClick(job, e)}>
         <JobHeader>
           <JobInfo>
             <JobTitle>{job.title}</JobTitle>
@@ -1219,6 +1646,7 @@ const Jobs = () => {
       {error && <ErrorMessage style={{ margin: '20px' }}>{error}</ErrorMessage>}
 
       <Overlay isOpen={sidePanelOpen} onClick={() => setSidePanelOpen(false)} />
+      <JobDetailOverlay isOpen={jobDetailPanelOpen} onClick={handleCloseJobDetailPanel} />
 
       <MainContent>
         <SidePanel isOpen={sidePanelOpen}>
@@ -1331,77 +1759,289 @@ const Jobs = () => {
               </CloseButton>
             </ApplicantsHeader>
             
-            <ApplicantsList>
-              {loadingApplicants ? (
-                <LoadingSpinner />
-              ) : applicants.length === 0 ? (
-                <EmptyState>No applicants yet for this job posting.</EmptyState>
-              ) : (
-                applicants.map((applicant) => {
-                  const initials = applicant.applicant_name 
-                    ? applicant.applicant_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                    : applicant.username
-                    ? applicant.username.substring(0, 2).toUpperCase()
-                    : 'U'
-                  
-                  return (
-                    <ApplicantCard key={applicant.application_id || applicant.user_id || applicant.applicant_id}>
-                      <ApplicantHeader>
-                        <ApplicantInfo>
-                          <ApplicantAvatar>{initials}</ApplicantAvatar>
-                          <ApplicantDetails>
-                            <ApplicantName>
-                              {applicant.applicant_name || applicant.username || applicant.name || 'Unknown User'}
-                            </ApplicantName>
-                            <ApplicantMeta>
-                              <span>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline', marginRight: '4px' }}>
-                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                                Applied {formatDate(applicant.applied_at || applicant.created_at || applicant.application_date)}
-                              </span>
+            <ApplicantsLayout>
+              {/* Left Panel - Applicant List */}
+              <ApplicantsLeftPanel>
+                <ApplicantsList>
+                  {loadingApplicants ? (
+                    <LoadingSpinner />
+                  ) : applicants.length === 0 ? (
+                    <EmptyState style={{ padding: '20px', textAlign: 'center' }}>
+                      No applicants yet for this job posting.
+                    </EmptyState>
+                  ) : (
+                    applicants.map((applicant) => {
+                      const initials = applicant.applicant_name 
+                        ? applicant.applicant_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : applicant.applicant_username
+                        ? applicant.applicant_username.substring(0, 2).toUpperCase()
+                        : 'U'
+                      
+                      const isSelected = selectedApplicant && (
+                        (selectedApplicant.application_id && applicant.application_id && 
+                         selectedApplicant.application_id === applicant.application_id) ||
+                        (selectedApplicant.applicant_id && applicant.applicant_id && 
+                         selectedApplicant.applicant_id === applicant.applicant_id)
+                      )
+                      
+                      return (
+                        <ApplicantListItem
+                          key={applicant.application_id || applicant.applicant_id}
+                          selected={isSelected}
+                          onClick={() => setSelectedApplicant(applicant)}
+                        >
+                          <ApplicantListAvatar>{initials}</ApplicantListAvatar>
+                          <ApplicantListInfo>
+                            <ApplicantListName selected={isSelected}>
+                              {applicant.applicant_name || applicant.applicant_username || 'Unknown User'}
+                            </ApplicantListName>
+                            <ApplicantListMeta>
+                              <span>{formatDate(applicant.applied_at || applicant.created_at || applicant.application_date)}</span>
                               {applicant.status && (
-                                <StatusBadge status={applicant.status}>
+                                <StatusBadge status={applicant.status} style={{ fontSize: '0.75em', padding: '2px 8px' }}>
                                   {applicant.status.charAt(0).toUpperCase() + applicant.status.slice(1)}
                                 </StatusBadge>
                               )}
-                            </ApplicantMeta>
-                          </ApplicantDetails>
-                        </ApplicantInfo>
-                      </ApplicantHeader>
-                      
-                      {applicant.cover_letter && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-white)', borderRadius: '8px', fontSize: '0.9em', color: 'var(--text-light)', lineHeight: '1.6' }}>
-                          {applicant.cover_letter}
+                            </ApplicantListMeta>
+                          </ApplicantListInfo>
+                        </ApplicantListItem>
+                      )
+                    })
+                  )}
+                </ApplicantsList>
+              </ApplicantsLeftPanel>
+              
+              {/* Right Panel - Applicant Details */}
+              <ApplicantsRightPanel>
+                {selectedApplicant ? (
+                  <ApplicantDetailContent>
+                    <ApplicantDetailSection>
+                      <ApplicantDetailInfo>
+                        <ApplicantDetailRow>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                          <ApplicantDetailLabel>Name:</ApplicantDetailLabel>
+                          <ApplicantDetailValue>
+                            {selectedApplicant.applicant_name || selectedApplicant.applicant_username || 'Unknown User'}
+                          </ApplicantDetailValue>
+                        </ApplicantDetailRow>
+                        
+                        {selectedApplicant.applicant_email && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                              <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <ApplicantDetailLabel>Email:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.applicant_email}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.short_desc && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                              <line x1="16" y1="13" x2="8" y2="13"></line>
+                              <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            <ApplicantDetailLabel>Bio:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.short_desc}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.current_status && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <ApplicantDetailLabel>Status:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.current_status}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.role && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <ApplicantDetailLabel>Role:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.role}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.company && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                              <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <ApplicantDetailLabel>Company:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.company}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.location && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                              <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <ApplicantDetailLabel>Location:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.location}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.industry && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                              <line x1="3" y1="9" x2="21" y2="9"></line>
+                              <line x1="9" y1="21" x2="9" y2="9"></line>
+                            </svg>
+                            <ApplicantDetailLabel>Industry:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>{selectedApplicant.industry}</ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.skills && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                              <path d="M2 17l10 5 10-5"></path>
+                              <path d="M2 12l10 5 10-5"></path>
+                            </svg>
+                            <ApplicantDetailLabel>Skills:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {selectedApplicant.skills.split(',').map((skill, idx) => (
+                                  <JobTag key={idx}>{skill.trim()}</JobTag>
+                                ))}
+                              </div>
+                            </ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                        
+                        {selectedApplicant.profile_url && (
+                          <ApplicantDetailRow>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                              <polyline points="15 3 21 3 21 9"></polyline>
+                              <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            <ApplicantDetailLabel>Profile:</ApplicantDetailLabel>
+                            <ApplicantDetailValue>
+                              <ProfileLinkButton 
+                                onClick={() => {
+                                  // Extract path from full URL if needed
+                                  let profilePath = selectedApplicant.profile_url
+                                  if (profilePath.startsWith('http://') || profilePath.startsWith('https://')) {
+                                    // Extract path from full URL
+                                    try {
+                                      const url = new URL(profilePath)
+                                      profilePath = url.pathname
+                                    } catch (e) {
+                                      // If URL parsing fails, try to extract /profile/... part
+                                      const match = profilePath.match(/\/profile\/[^\/]+/)
+                                      if (match) {
+                                        profilePath = match[0]
+                                      }
+                                    }
+                                  }
+                                  // Navigate using React Router (will use localStorage token automatically)
+                                  navigate(profilePath)
+                                  // Close the modal
+                                  setShowApplicantsModal(false)
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                  <polyline points="15 3 21 3 21 9"></polyline>
+                                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                                View Profile
+                              </ProfileLinkButton>
+                            </ApplicantDetailValue>
+                          </ApplicantDetailRow>
+                        )}
+                      </ApplicantDetailInfo>
+                    </ApplicantDetailSection>
+                    
+                    {selectedApplicant.about && (
+                      <ApplicantDetailSection>
+                        <ApplicantDetailTitle>About</ApplicantDetailTitle>
+                        <div style={{ 
+                          lineHeight: '1.8', 
+                          whiteSpace: 'pre-wrap', 
+                          padding: '20px', 
+                          background: 'var(--bg-light)', 
+                          borderRadius: '8px',
+                          fontSize: '0.95em',
+                          color: 'var(--text)'
+                        }}>
+                          {selectedApplicant.about}
                         </div>
-                      )}
-                      
-                      {applicant.status !== 'accepted' && applicant.status !== 'rejected' && (
+                      </ApplicantDetailSection>
+                    )}
+                    
+                    <ApplicantDetailSection>
+                      <ApplicantDetailTitle>Resume</ApplicantDetailTitle>
+                      <ApplicantResume>
+                        {selectedApplicant.resume || 'No resume available'}
+                      </ApplicantResume>
+                    </ApplicantDetailSection>
+                    
+                    {selectedApplicant.cover_letter && (
+                      <ApplicantDetailSection>
+                        <ApplicantDetailTitle>Cover Letter</ApplicantDetailTitle>
+                        <div style={{ 
+                          lineHeight: '1.8', 
+                          whiteSpace: 'pre-wrap', 
+                          padding: '20px', 
+                          background: 'var(--bg-light)', 
+                          borderRadius: '8px',
+                          fontSize: '0.95em',
+                          color: 'var(--text)'
+                        }}>
+                          {selectedApplicant.cover_letter}
+                        </div>
+                      </ApplicantDetailSection>
+                    )}
+                    
+                    {selectedApplicant.status !== 'accepted' && selectedApplicant.status !== 'rejected' && (
+                      <ApplicantDetailSection>
                         <ApplicantActions>
                           <ActionButton
                             variant="accept"
-                            onClick={() => handleUpdateApplicationStatus(applicant.application_id || applicant.id, 'accepted')}
-                            disabled={updatingStatus === (applicant.application_id || applicant.id)}
+                            onClick={() => handleUpdateApplicationStatus(selectedApplicant.application_id || selectedApplicant.id, 'accepted')}
+                            disabled={updatingStatus === (selectedApplicant.application_id || selectedApplicant.id)}
                           >
-                            {updatingStatus === (applicant.application_id || applicant.id) ? 'Updating...' : 'Accept'}
+                            {updatingStatus === (selectedApplicant.application_id || selectedApplicant.id) ? 'Updating...' : 'Accept'}
                           </ActionButton>
                           <ActionButton
                             variant="reject"
-                            onClick={() => handleUpdateApplicationStatus(applicant.application_id || applicant.id, 'rejected')}
-                            disabled={updatingStatus === (applicant.application_id || applicant.id)}
+                            onClick={() => handleUpdateApplicationStatus(selectedApplicant.application_id || selectedApplicant.id, 'rejected')}
+                            disabled={updatingStatus === (selectedApplicant.application_id || selectedApplicant.id)}
                           >
-                            {updatingStatus === (applicant.application_id || applicant.id) ? 'Updating...' : 'Reject'}
+                            {updatingStatus === (selectedApplicant.application_id || selectedApplicant.id) ? 'Updating...' : 'Reject'}
                           </ActionButton>
                         </ApplicantActions>
-                      )}
-                    </ApplicantCard>
-                  )
-                })
-              )}
-            </ApplicantsList>
+                      </ApplicantDetailSection>
+                    )}
+                  </ApplicantDetailContent>
+                ) : (
+                  <ApplicantDetailContent>
+                    <EmptyState style={{ textAlign: 'center', padding: '40px' }}>
+                      Select an applicant from the list to view their details
+                    </EmptyState>
+                  </ApplicantDetailContent>
+                )}
+              </ApplicantsRightPanel>
+            </ApplicantsLayout>
           </ApplicantsModalContent>
         </ApplicantsModalOverlay>
       )}
@@ -1546,6 +2186,183 @@ const Jobs = () => {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      {/* Job Detail Side Panel */}
+      <JobDetailPanel isOpen={jobDetailPanelOpen}>
+        {selectedJobDetail && (
+          <>
+            <JobDetailHeader>
+              <JobDetailTitle>{selectedJobDetail.title}</JobDetailTitle>
+              <JobDetailCloseButton onClick={handleCloseJobDetailPanel}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </JobDetailCloseButton>
+            </JobDetailHeader>
+            
+            <JobDetailContent>
+              <JobDetailSection>
+                <JobDetailInfo>
+                  <JobDetailInfoRow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <JobDetailInfoLabel>Company:</JobDetailInfoLabel>
+                    <JobDetailInfoValue>
+                      {selectedJobDetail.company_name || selectedJobDetail.poster_name || 'Unknown Company'}
+                    </JobDetailInfoValue>
+                  </JobDetailInfoRow>
+                  
+                  <JobDetailInfoRow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <JobDetailInfoLabel>Location:</JobDetailInfoLabel>
+                    <JobDetailInfoValue>
+                      {selectedJobDetail.location || 'Location not specified'}
+                    </JobDetailInfoValue>
+                  </JobDetailInfoRow>
+                  
+                  <JobDetailInfoRow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    <JobDetailInfoLabel>Job Type:</JobDetailInfoLabel>
+                    <JobDetailInfoValue>
+                      {selectedJobDetail.job_type ? selectedJobDetail.job_type.charAt(0).toUpperCase() + selectedJobDetail.job_type.slice(1).replace('-', ' ') : 'Full-time'}
+                    </JobDetailInfoValue>
+                  </JobDetailInfoRow>
+                  
+                  {selectedJobDetail.is_remote && (
+                    <JobDetailInfoRow>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                      </svg>
+                      <JobDetailInfoLabel>Remote:</JobDetailInfoLabel>
+                      <JobDetailInfoValue>Yes</JobDetailInfoValue>
+                    </JobDetailInfoRow>
+                  )}
+                  
+                  {formatSalary(selectedJobDetail.salary_min, selectedJobDetail.salary_max) && (
+                    <JobDetailInfoRow>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                      </svg>
+                      <JobDetailInfoLabel>Salary:</JobDetailInfoLabel>
+                      <JobDetailInfoValue>
+                        {formatSalary(selectedJobDetail.salary_min, selectedJobDetail.salary_max)}
+                      </JobDetailInfoValue>
+                    </JobDetailInfoRow>
+                  )}
+                  
+                  {selectedJobDetail.experience_level && (
+                    <JobDetailInfoRow>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                      </svg>
+                      <JobDetailInfoLabel>Experience:</JobDetailInfoLabel>
+                      <JobDetailInfoValue>
+                        {selectedJobDetail.experience_level.charAt(0).toUpperCase() + selectedJobDetail.experience_level.slice(1).replace('_', ' ')}
+                      </JobDetailInfoValue>
+                    </JobDetailInfoRow>
+                  )}
+                  
+                  {selectedJobDetail.match_score && (
+                    <JobDetailInfoRow>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                      <JobDetailInfoLabel>Match Score:</JobDetailInfoLabel>
+                      <JobDetailInfoValue>
+                        <MatchScore>{selectedJobDetail.match_score}% Match</MatchScore>
+                      </JobDetailInfoValue>
+                    </JobDetailInfoRow>
+                  )}
+                </JobDetailInfo>
+              </JobDetailSection>
+              
+              <JobDetailSection>
+                <JobDetailSectionTitle>Description</JobDetailSectionTitle>
+                <JobDetailDescription>
+                  {selectedJobDetail.description || 'No description provided.'}
+                </JobDetailDescription>
+              </JobDetailSection>
+              
+              {parseSkills(selectedJobDetail.skills_required).length > 0 && (
+                <JobDetailSection>
+                  <JobDetailSectionTitle>Required Skills</JobDetailSectionTitle>
+                  <JobDetailSkills>
+                    {parseSkills(selectedJobDetail.skills_required).map((skill, idx) => (
+                      <JobDetailSkillTag key={idx}>{skill}</JobDetailSkillTag>
+                    ))}
+                  </JobDetailSkills>
+                </JobDetailSection>
+              )}
+            </JobDetailContent>
+            
+            <JobDetailActions>
+              {activeFilter === 'posted' ? (
+                <ViewApplicantsButton 
+                  onClick={() => {
+                    handleViewApplicants(selectedJobDetail.job_id)
+                    handleCloseJobDetailPanel()
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                  View Applicants
+                  {selectedJobDetail.application_count > 0 && (
+                    <ApplicantCountBadge>{selectedJobDetail.application_count}</ApplicantCountBadge>
+                  )}
+                </ViewApplicantsButton>
+              ) : (
+                <>
+                  <ApplyButton 
+                    applied={selectedJobDetail.has_applied}
+                    disabled={applyingTo === selectedJobDetail.job_id || selectedJobDetail.has_applied}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!selectedJobDetail.has_applied) {
+                        handleApply(selectedJobDetail.job_id, e)
+                      }
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    {applyingTo === selectedJobDetail.job_id ? 'Applying...' : selectedJobDetail.has_applied ? 'Applied' : 'Apply Now'}
+                  </ApplyButton>
+                  <SaveButton 
+                    saved={selectedJobDetail.is_saved}
+                    disabled={savingJob === selectedJobDetail.job_id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSave(selectedJobDetail.job_id, e)
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill={selectedJobDetail.is_saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </SaveButton>
+                </>
+              )}
+            </JobDetailActions>
+          </>
+        )}
+      </JobDetailPanel>
     </Container>
   )
 }

@@ -1,6 +1,6 @@
 """Job Service - Business logic for job portal using SQLAlchemy ORM"""
 from typing import Optional, List, Dict, Any
-from sqlalchemy import or_, and_, desc
+from sqlalchemy import or_, and_, desc, func
 from sqlalchemy.orm import Session, joinedload
 
 # Import all ORM models - User must be imported first
@@ -37,6 +37,11 @@ class JobService:
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
+        
+        # Generate and store job_link
+        job_link = f"/job/{job.job_id}"
+        job.job_link = job_link
+        self.db.commit()
         
         # Generate and store embedding asynchronously (non-blocking)
         try:
@@ -268,17 +273,17 @@ class JobService:
     def get_total_jobs_count(self) -> int:
         """Get total count of active jobs"""
         return (
-            self.db.query(JobPosting)
+            self.db.query(func.count(JobPosting.job_id))
             .filter(JobPosting.status == 'active')
-            .count()
+            .scalar()
         )
     
     def get_my_posted_jobs_count(self, poster_id: int) -> int:
         """Get total count of jobs posted by user"""
         return (
-            self.db.query(JobPosting)
+            self.db.query(func.count(JobPosting.job_id))
             .filter(JobPosting.poster_id == poster_id)
-            .count()
+            .scalar()
         )
     
     # ========================================================================
@@ -362,9 +367,11 @@ class JobService:
         for app in applications:
             data = app.to_dict()
             
-            # Get user info
+            # Get user info with resume and profile_url
             user = db_raw.fetch_one(
-                '''SELECT u.username, u.name, u.user_email, d.profile_pic, d.skills, d.short_desc
+                '''SELECT u.username, u.name, u.user_email, u.profile_url, 
+                          d.profile_pic, d.skills, d.short_desc, d.about, d.resume,
+                          d.current_status, d.role, d.company, d.location, d.industry
                    FROM users u
                    LEFT JOIN description d ON u.description_id = d.desc_id
                    WHERE u.uid = %s''',
@@ -372,13 +379,26 @@ class JobService:
             )
             
             if user:
+                # Generate full profile URL
+                from utils.profile_url import get_full_profile_url
+                full_profile_url = get_full_profile_url(user.get('profile_url')) if user.get('profile_url') else None
+                
                 data.update({
+                    'applicant_id': app.applicant_id,
                     'applicant_username': user['username'],
                     'applicant_name': user['name'],
                     'applicant_email': user['user_email'],
                     'profile_pic': user.get('profile_pic'),
+                    'profile_url': full_profile_url,
                     'skills': user.get('skills'),
-                    'short_desc': user.get('short_desc')
+                    'short_desc': user.get('short_desc'),
+                    'about': user.get('about'),
+                    'resume': user.get('resume'),
+                    'current_status': user.get('current_status'),
+                    'role': user.get('role'),
+                    'company': user.get('company'),
+                    'location': user.get('location'),
+                    'industry': user.get('industry')
                 })
             
             results.append(data)

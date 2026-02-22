@@ -39,6 +39,11 @@ class PostService:
             self.db.commit()
             self.db.refresh(post)
             
+            # Generate and store post_link
+            post_link = f"/post/{post.post_id}"
+            post.post_link = post_link
+            self.db.commit()
+            
             logger.info(f"Post created: {post.post_id} by user {user_id}")
             return {
                 'id': post.post_id,
@@ -49,6 +54,7 @@ class PostService:
                 'post_desc': post.post_desc,
                 'media_url': post.media_url,
                 'media_type': post.media_type,
+                'post_link': post.post_link,
                 'likes': post.likes,
                 'comments': post.comments,
                 'created_at': post.created_at.isoformat() if post.created_at else None

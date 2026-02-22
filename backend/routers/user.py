@@ -272,6 +272,37 @@ async def update_profile(
         )
 
 
+@router.put("/profile/description")
+async def update_profile_description(
+    description_data: Dict[str, Any],
+    current_user: dict = Depends(write_rate_limit),
+    profile_service: ProfileService = Depends(get_profile_service)
+):
+    """Update user profile description fields (short_desc, about, skills, etc.)"""
+    try:
+        updated_profile = profile_service.update_profile(
+            user_id=current_user["id"],
+            update_data=description_data
+        )
+        return updated_profile
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.message
+        )
+    except Exception as e:
+        logger.error(f"Update profile description error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile description"
+        )
+
+
 @router.put("/change-password")
 async def change_password(
     password_data: PasswordChange,

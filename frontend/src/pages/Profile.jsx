@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import styled, { keyframes, css } from 'styled-components'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, contextAPI } from '../services/api'
+import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, contextAPI, networkAPI } from '../services/api'
+import api from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
 import '../css/pages/Profile.css'
@@ -330,11 +331,44 @@ const Card = styled.div`
   @media (max-width: 480px) { padding: 18px; border-radius: 12px; }
 `
 
+const CardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+`
+
 const CardTitle = styled.h2`
   font-size: 1.15em;
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 18px;
+  margin: 0;
+`
+
+const EditButton = styled.button`
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `
 
 const CardText = styled.div`
@@ -609,6 +643,136 @@ const InterestBadge = styled.div`
 `
 
 /* ═══════════════════════════════════════════════════════════════
+   People Suggestions (for Recommendations tab)
+   ═══════════════════════════════════════════════════════════════ */
+
+const PeopleGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+const PersonCard = styled.div`
+  background: var(--bg-white);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s;
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+  }
+`
+
+const PersonContent = styled.div`
+  padding: 60px 20px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+`
+
+const PersonAvatar = styled.div`
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: ${props => props.src ? `url(${props.src}) center/cover` : 'linear-gradient(135deg, var(--primary), var(--secondary))'};
+  border: 4px solid var(--bg-white);
+  position: absolute;
+  top: -45px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 2em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+`
+
+const PersonName = styled.h3`
+  font-size: 1.1em;
+  color: var(--text);
+  margin: 8px 0 4px;
+  font-weight: 500;
+`
+
+const PersonTitle = styled.p`
+  font-size: 0.88em;
+  color: var(--text-light);
+  margin: 0 0 8px;
+`
+
+const PersonCompany = styled.p`
+  font-size: 0.85em;
+  color: var(--text-lighter);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+`
+
+const MutualConnections = styled.div`
+  font-size: 0.82em;
+  color: var(--primary);
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: rgba(10, 102, 194, 0.08);
+  border-radius: 8px;
+`
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+`
+
+const ConnectButton = styled.button`
+  flex: 1;
+  padding: 10px 16px;
+  background: ${props => {
+    if (props.pending) return 'var(--bg-light)'
+    if (props.connected) return 'transparent'
+    return 'var(--primary)'
+  }};
+  color: ${props => {
+    if (props.pending) return 'var(--text-light)'
+    if (props.connected) return 'var(--primary)'
+    return '#fff'
+  }};
+  border: ${props => props.connected ? '1px solid var(--primary)' : 'none'};
+  border-radius: 8px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${props => props.disabled ? 0.6 : 1};
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  &:hover:not(:disabled) {
+    background: ${props => {
+      if (props.pending || props.connected) return 'var(--hover-bg)'
+      return 'var(--primary-dark)'
+    }};
+    transform: translateY(-1px);
+  }
+`
+
+/* ═══════════════════════════════════════════════════════════════
    Posts
    ═══════════════════════════════════════════════════════════════ */
 
@@ -788,6 +952,124 @@ const InfoRow = styled.div`
 `
 
 /* ═══════════════════════════════════════════════════════════════
+   Edit Modal Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+const EditModal = styled(Modal)`
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+`
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95em;
+    color: var(--text);
+    background: var(--bg-white);
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+  }
+
+  small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8em;
+    color: var(--text-lighter);
+  }
+`
+
+const FormActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+`
+
+const Button = styled.button`
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+
+  &.primary {
+    background: var(--primary);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+  }
+
+  &.secondary {
+    background: var(--bg-light);
+    color: var(--text);
+    border: 1px solid var(--border);
+
+    &:hover {
+      background: var(--hover-bg);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+const SkillsInput = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 50px;
+  background: var(--bg-white);
+
+  input {
+    border: none;
+    padding: 4px 8px;
+    background: transparent;
+    flex: 1;
+    min-width: 120px;
+    font-size: 0.9em;
+
+    &:focus {
+      outline: none;
+    }
+  }
+`
+
+/* ═══════════════════════════════════════════════════════════════
    Skeleton Loading
    ═══════════════════════════════════════════════════════════════ */
 
@@ -863,6 +1145,14 @@ function Profile() {
   const [interests, setInterests] = useState([])
   const [loadingFeatures, setLoadingFeatures] = useState(false)
   const [activeTab, setActiveTab] = useState('About')
+  const [suggestions, setSuggestions] = useState([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  
+  // Edit modal states
+  const [editModal, setEditModal] = useState(null) // 'description', 'about', 'skills', 'experience', 'education', 'projects', 'recommendations'
+  const [editingItem, setEditingItem] = useState(null) // For editing specific items
+  const [formData, setFormData] = useState({})
+  const [saving, setSaving] = useState(false)
 
   /* ── URL parsing ─────────────────────────────────────────── */
   const getUserIdFromUrl = () => {
@@ -890,6 +1180,7 @@ function Profile() {
       loadConnectionCounts()
       loadCertificates()
       loadProfileFeatures()
+      loadSuggestions()
       trackProfileView()
     } else {
       setError('Invalid profile URL')
@@ -987,6 +1278,19 @@ function Profile() {
     } finally { setLoadingFeatures(false) }
   }
 
+  const loadSuggestions = async () => {
+    if (!currentUser || !isOwn) return
+    try {
+      setLoadingSuggestions(true)
+      const response = await networkAPI.getSuggestions(20)
+      setSuggestions(response.data || [])
+    } catch {
+      setSuggestions([])
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }
+
   const trackProfileView = async () => {
     if (!userId || !currentUser || userId === currentUser.id) return
     try {
@@ -1024,6 +1328,179 @@ function Profile() {
         contextAPI.updateContext('like', 'post', postId)
       }
     } catch { }
+  }
+
+  /* ── Edit handlers ─────────────────────────────────────────── */
+  const openEditModal = (section, item = null) => {
+    setEditingItem(item)
+    setEditModal(section)
+    
+    if (section === 'description') {
+      setFormData({
+        short_desc: profile.short_desc || '',
+        current_status: profile.current_status || '',
+        role: profile.role || '',
+        company: profile.company || '',
+        location: profile.location || '',
+        industry: profile.industry || ''
+      })
+    } else if (section === 'about') {
+      setFormData({ about: profile.about || '' })
+    } else if (section === 'skills') {
+      setFormData({ skills: skills.join(', ') })
+    } else if (section === 'experience' && item) {
+      setFormData({
+        title: item.title || '',
+        company: item.company || '',
+        location: item.location || '',
+        start_date: item.start_date ? item.start_date.split('T')[0] : '',
+        end_date: item.end_date ? item.end_date.split('T')[0] : '',
+        is_current: item.is_current || false,
+        employment_type: item.employment_type || '',
+        description: item.description || ''
+      })
+    } else if (section === 'education' && item) {
+      setFormData({
+        school: item.school || '',
+        degree: item.degree || '',
+        field_of_study: item.field_of_study || '',
+        start_year: item.start_year || '',
+        end_year: item.end_year || '',
+        grade: item.grade || '',
+        description: item.description || ''
+      })
+    } else if (section === 'projects' && item) {
+      setFormData({
+        title: item.title || '',
+        description: item.description || '',
+        url: item.url || '',
+        associated_with: item.associated_with || '',
+        technologies: Array.isArray(item.technologies) ? item.technologies.join(', ') : ''
+      })
+    } else if (section === 'recommendations' && item) {
+      setFormData({
+        recommendation_text: item.recommendation_text || '',
+        relationship: item.relationship || ''
+      })
+    } else if (section === 'certificates') {
+      // For certificates, we'll edit the legacy certificates field
+      const certs = parseCertificates(profile.certificates || '')
+      setFormData({
+        certificates: certs.join('\n')
+      })
+    } else {
+      setFormData({})
+    }
+  }
+
+  const closeEditModal = () => {
+    setEditModal(null)
+    setEditingItem(null)
+    setFormData({})
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      if (editModal === 'description') {
+        // Use direct API call to update profile description fields via ProfileService
+        const response = await api.put('/api/user/profile/description', {
+          short_desc: formData.short_desc,
+          current_status: formData.current_status,
+          role: formData.role,
+          company: formData.company,
+          location: formData.location,
+          industry: formData.industry
+        })
+        if (response.data) {
+          setProfile(prev => ({ ...prev, ...response.data }))
+        }
+        await loadProfile() // Reload to get updated data
+      } else if (editModal === 'about') {
+        const response = await api.put('/api/user/profile/description', { about: formData.about })
+        if (response.data) {
+          setProfile(prev => ({ ...prev, about: formData.about }))
+        }
+        await loadProfile()
+      } else if (editModal === 'skills') {
+        const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+        const response = await api.put('/api/user/profile/description', { skills: JSON.stringify(skillsArray) })
+        if (response.data) {
+          setProfile(prev => ({ ...prev, skills: JSON.stringify(skillsArray) }))
+        }
+        await loadProfile()
+      } else if (editModal === 'experience') {
+        if (editingItem) {
+          await profileFeaturesAPI.updateExperience(editingItem.id, formData)
+        } else {
+          await profileFeaturesAPI.createExperience({ ...formData, user_id: userId })
+        }
+        await loadProfileFeatures()
+      } else if (editModal === 'education') {
+        if (editingItem) {
+          await profileFeaturesAPI.updateEducation(editingItem.id, formData)
+        } else {
+          await profileFeaturesAPI.createEducation({ ...formData, user_id: userId })
+        }
+        await loadProfileFeatures()
+      } else if (editModal === 'projects') {
+        if (editingItem) {
+          await profileFeaturesAPI.updateProject(editingItem.id, {
+            ...formData,
+            technologies: formData.technologies ? formData.technologies.split(',').map(t => t.trim()).filter(Boolean) : []
+          })
+        } else {
+          await profileFeaturesAPI.createProject({
+            ...formData,
+            user_id: userId,
+            technologies: formData.technologies ? formData.technologies.split(',').map(t => t.trim()).filter(Boolean) : []
+          })
+        }
+        await loadProfileFeatures()
+      } else if (editModal === 'recommendations') {
+        if (editingItem) {
+          await profileFeaturesAPI.updateRecommendation(editingItem.id, formData)
+        } else {
+          await profileFeaturesAPI.createRecommendation({ ...formData, user_id: userId })
+        }
+        await loadProfileFeatures()
+      } else if (editModal === 'certificates') {
+        // Update legacy certificates field
+        const certsArray = formData.certificates.split('\n').map(c => c.trim()).filter(Boolean)
+        const response = await api.put('/api/user/profile/description', { 
+          certificates: certsArray.join('\n') 
+        })
+        if (response.data) {
+          setProfile(prev => ({ ...prev, certificates: certsArray.join('\n') }))
+        }
+        await loadProfile()
+      }
+      
+      closeEditModal()
+    } catch (error) {
+      alert(error.response?.data?.detail || error.message || 'Failed to save changes')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (section, itemId) => {
+    if (!confirm('Are you sure you want to delete this item?')) return
+    
+    try {
+      if (section === 'experience') {
+        await profileFeaturesAPI.deleteExperience(itemId)
+      } else if (section === 'education') {
+        await profileFeaturesAPI.deleteEducation(itemId)
+      } else if (section === 'projects') {
+        await profileFeaturesAPI.deleteProject(itemId)
+      } else if (section === 'recommendations') {
+        await profileFeaturesAPI.deleteRecommendation(itemId)
+      }
+      await loadProfileFeatures()
+    } catch (error) {
+      alert(error.response?.data?.detail || error.message || 'Failed to delete item')
+    }
   }
 
   /* ── Helpers ─────────────────────────────────────────────── */
@@ -1110,9 +1587,20 @@ function Profile() {
   const renderAbout = () => (
     <TabPanel key="about">
       {/* Description / Headline */}
-      {(profile.short_desc || profile.current_status || profile.role || profile.location || profile.industry) && (
+      {(profile.short_desc || profile.current_status || profile.role || profile.location || profile.industry || isOwn) && (
         <Card>
-          <CardTitle>Description</CardTitle>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+            {isOwn && (
+              <EditButton onClick={() => openEditModal('description')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit
+              </EditButton>
+            )}
+          </CardHeader>
           {profile.short_desc && (
             <CardText style={{ fontSize: '1.05em', marginBottom: 14 }}>{profile.short_desc}</CardText>
           )}
@@ -1134,26 +1622,67 @@ function Profile() {
       )}
 
       {/* About */}
-      {profile.about && profile.about.trim() && (
+      {(profile.about && profile.about.trim() || isOwn) && (
         <Card>
-          <CardTitle>About</CardTitle>
-          <CardText>{profile.about}</CardText>
+          <CardHeader>
+            <CardTitle>About</CardTitle>
+            {isOwn && (
+              <EditButton onClick={() => openEditModal('about')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit
+              </EditButton>
+            )}
+          </CardHeader>
+          {profile.about && profile.about.trim() ? (
+            <CardText>{profile.about}</CardText>
+          ) : (
+            <EmptyState>No about section yet. Click Edit to add one.</EmptyState>
+          )}
         </Card>
       )}
 
       {/* Skills */}
-      {skills.length > 0 && (
+      {(skills.length > 0 || isOwn) && (
         <Card>
-          <CardTitle>Skills</CardTitle>
-          <ChipsWrap>
-            {skills.map((s, i) => <Chip key={i}>{s}</Chip>)}
-          </ChipsWrap>
+          <CardHeader>
+            <CardTitle>Skills</CardTitle>
+            {isOwn && (
+              <EditButton onClick={() => openEditModal('skills')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit
+              </EditButton>
+            )}
+          </CardHeader>
+          {skills.length > 0 ? (
+            <ChipsWrap>
+              {skills.map((s, i) => <Chip key={i}>{s}</Chip>)}
+            </ChipsWrap>
+          ) : (
+            <EmptyState>No skills yet. Click Edit to add skills.</EmptyState>
+          )}
         </Card>
       )}
 
       {/* Certificates */}
       <Card>
-        <CardTitle>Licenses & Certifications</CardTitle>
+        <CardHeader>
+          <CardTitle>Licenses & Certifications</CardTitle>
+          {isOwn && (
+            <EditButton onClick={() => openEditModal('certificates')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Edit
+            </EditButton>
+          )}
+        </CardHeader>
         {loadingCertificates ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <SkeletonBox $h="60px" />
@@ -1217,7 +1746,18 @@ function Profile() {
   const renderExperience = () => (
     <TabPanel key="experience">
       <Card>
-        <CardTitle>Experience</CardTitle>
+        <CardHeader>
+          <CardTitle>Experience</CardTitle>
+          {isOwn && (
+            <EditButton onClick={() => openEditModal('experience')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add
+            </EditButton>
+          )}
+        </CardHeader>
         {loadingFeatures ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2, 3].map(i => <SkeletonBox key={i} $h="80px" />)}
@@ -1226,16 +1766,36 @@ function Profile() {
           <Timeline>
             {experiences.map(exp => (
               <TimelineItem key={exp.id} $color="var(--primary)">
-                <TLTitle>{exp.title || 'Untitled Position'}</TLTitle>
-                <TLSub>{exp.company || 'Unknown Company'}</TLSub>
-                {exp.location && <TLDate>📍 {exp.location}</TLDate>}
-                <TLDate>
-                  {exp.start_date ? formatDate(exp.start_date) : ''}
-                  {' — '}
-                  {exp.is_current ? 'Present' : (exp.end_date ? formatDate(exp.end_date) : '')}
-                  {exp.employment_type && ` · ${exp.employment_type}`}
-                </TLDate>
-                {exp.description && <TLDesc>{exp.description}</TLDesc>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <TLTitle>{exp.title || 'Untitled Position'}</TLTitle>
+                    <TLSub>{exp.company || 'Unknown Company'}</TLSub>
+                    {exp.location && <TLDate>📍 {exp.location}</TLDate>}
+                    <TLDate>
+                      {exp.start_date ? formatDate(exp.start_date) : ''}
+                      {' — '}
+                      {exp.is_current ? 'Present' : (exp.end_date ? formatDate(exp.end_date) : '')}
+                      {exp.employment_type && ` · ${exp.employment_type}`}
+                    </TLDate>
+                    {exp.description && <TLDesc>{exp.description}</TLDesc>}
+                  </div>
+                  {isOwn && (
+                    <div style={{ display: 'flex', gap: 8, marginLeft: 12 }}>
+                      <EditButton onClick={() => openEditModal('experience', exp)} style={{ padding: '4px 8px', fontSize: '0.8em' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </EditButton>
+                      <EditButton onClick={() => handleDelete('experience', exp.id)} style={{ padding: '4px 8px', fontSize: '0.8em', color: '#dc3545', borderColor: '#dc3545' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </EditButton>
+                    </div>
+                  )}
+                </div>
               </TimelineItem>
             ))}
           </Timeline>
@@ -1247,39 +1807,114 @@ function Profile() {
     </TabPanel>
   )
 
-  const renderRecommendations = () => (
-    <TabPanel key="recommendations">
-      <Card>
-        <CardTitle>Recommendations</CardTitle>
-        {loadingFeatures ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {[1, 2, 3].map(i => <SkeletonBox key={i} $h="80px" />)}
-          </div>
-        ) : recommendations.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {recommendations.map(rec => (
-              <RecCard key={rec.id}>
-                <RecText>"{rec.recommendation_text}"</RecText>
-                {rec.recommender && (
-                  <RecAuthor>
-                    — {rec.recommender.name || rec.recommender.username}
-                    {rec.relationship && `, ${rec.relationship}`}
-                  </RecAuthor>
-                )}
-              </RecCard>
-            ))}
-          </div>
-        ) : (
-          <EmptyState>No recommendations yet</EmptyState>
-        )}
-      </Card>
-    </TabPanel>
-  )
+  const renderRecommendations = () => {
+    // For own profile, show friend-of-friend suggestions
+    if (isOwn) {
+      return (
+        <TabPanel key="recommendations">
+          <Card>
+            <CardHeader>
+              <CardTitle>People You May Know</CardTitle>
+            </CardHeader>
+            {loadingSuggestions ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {[1, 2, 3, 4].map(i => <SkeletonBox key={i} $h="120px" />)}
+              </div>
+            ) : suggestions.length > 0 ? (
+              <PeopleGrid>
+                {suggestions.map(user => {
+                  const userConnectionStatus = connectionStatus // This would need to be per-user, simplified for now
+                  return (
+                    <PersonCard key={user.id || user.uid}>
+                      <PersonContent>
+                        <PersonAvatar src={user.profile_pic}>
+                          {!user.profile_pic && (user.name || user.full_name)?.charAt(0).toUpperCase()}
+                        </PersonAvatar>
+                        <PersonName>{user.name || user.full_name}</PersonName>
+                        <PersonTitle>@{user.username}</PersonTitle>
+                        {user.job_title && user.company && (
+                          <PersonCompany>
+                            {user.job_title} at {user.company}
+                          </PersonCompany>
+                        )}
+                        {user.mutual_connections > 0 && (
+                          <MutualConnections>
+                            {user.mutual_connections} mutual connection{user.mutual_connections > 1 ? 's' : ''}
+                            {user.mutual_connection_names?.length > 0 && (
+                              <> including {user.mutual_connection_names.slice(0, 2).join(', ')}</>
+                            )}
+                          </MutualConnections>
+                        )}
+                        <ButtonGroup style={{ marginTop: 12 }}>
+                          <ConnectButton 
+                            onClick={() => handleConnect(user.id || user.uid)}
+                            pending={userConnectionStatus === 'pending'}
+                            disabled={userConnectionStatus === 'pending' || userConnectionStatus === 'connected'}
+                          >
+                            {userConnectionStatus === 'pending' ? 'Pending...' : userConnectionStatus === 'connected' ? 'Connected' : 'Connect'}
+                          </ConnectButton>
+                        </ButtonGroup>
+                      </PersonContent>
+                    </PersonCard>
+                  )
+                })}
+              </PeopleGrid>
+            ) : (
+              <EmptyState>No suggestions available. Connect with more people to see friend-of-friend suggestions.</EmptyState>
+            )}
+          </Card>
+        </TabPanel>
+      )
+    }
+
+    // For other users, show recommendations
+    return (
+      <TabPanel key="recommendations">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommendations</CardTitle>
+          </CardHeader>
+          {loadingFeatures ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[1, 2, 3].map(i => <SkeletonBox key={i} $h="80px" />)}
+            </div>
+          ) : recommendations.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {recommendations.map(rec => (
+                <RecCard key={rec.id}>
+                  <RecText>"{rec.recommendation_text}"</RecText>
+                  {rec.recommender && (
+                    <RecAuthor>
+                      — {rec.recommender.name || rec.recommender.username}
+                      {rec.relationship && `, ${rec.relationship}`}
+                    </RecAuthor>
+                  )}
+                </RecCard>
+              ))}
+            </div>
+          ) : (
+            <EmptyState>No recommendations yet</EmptyState>
+          )}
+        </Card>
+      </TabPanel>
+    )
+  }
 
   const renderEducation = () => (
     <TabPanel key="education">
       <Card>
-        <CardTitle>Education</CardTitle>
+        <CardHeader>
+          <CardTitle>Education</CardTitle>
+          {isOwn && (
+            <EditButton onClick={() => openEditModal('education')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add
+            </EditButton>
+          )}
+        </CardHeader>
         {loadingFeatures ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2].map(i => <SkeletonBox key={i} $h="80px" />)}
@@ -1288,16 +1923,36 @@ function Profile() {
           <Timeline>
             {educations.map(edu => (
               <TimelineItem key={edu.id} $color="var(--secondary)">
-                <TLTitle>{edu.school || 'Unknown School'}</TLTitle>
-                {edu.degree && <TLSub>{edu.degree}</TLSub>}
-                {edu.field_of_study && <TLSub>{edu.field_of_study}</TLSub>}
-                <TLDate>
-                  {edu.start_year && `${edu.start_year}`}
-                  {edu.end_year && ` — ${edu.end_year}`}
-                  {!edu.end_year && edu.start_year && ' — Present'}
-                  {edu.grade && ` · Grade: ${edu.grade}`}
-                </TLDate>
-                {edu.description && <TLDesc>{edu.description}</TLDesc>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <TLTitle>{edu.school || 'Unknown School'}</TLTitle>
+                    {edu.degree && <TLSub>{edu.degree}</TLSub>}
+                    {edu.field_of_study && <TLSub>{edu.field_of_study}</TLSub>}
+                    <TLDate>
+                      {edu.start_year && `${edu.start_year}`}
+                      {edu.end_year && ` — ${edu.end_year}`}
+                      {!edu.end_year && edu.start_year && ' — Present'}
+                      {edu.grade && ` · Grade: ${edu.grade}`}
+                    </TLDate>
+                    {edu.description && <TLDesc>{edu.description}</TLDesc>}
+                  </div>
+                  {isOwn && (
+                    <div style={{ display: 'flex', gap: 8, marginLeft: 12 }}>
+                      <EditButton onClick={() => openEditModal('education', edu)} style={{ padding: '4px 8px', fontSize: '0.8em' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </EditButton>
+                      <EditButton onClick={() => handleDelete('education', edu.id)} style={{ padding: '4px 8px', fontSize: '0.8em', color: '#dc3545', borderColor: '#dc3545' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </EditButton>
+                    </div>
+                  )}
+                </div>
               </TimelineItem>
             ))}
           </Timeline>
@@ -1311,7 +1966,18 @@ function Profile() {
   const renderProjects = () => (
     <TabPanel key="projects">
       <Card>
-        <CardTitle>Projects</CardTitle>
+        <CardHeader>
+          <CardTitle>Projects</CardTitle>
+          {isOwn && (
+            <EditButton onClick={() => openEditModal('projects')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add
+            </EditButton>
+          )}
+        </CardHeader>
         {loadingFeatures ? (
           <ProjectsGrid>
             {[1, 2, 3].map(i => <SkeletonBox key={i} $h="140px" $r="14px" />)}
@@ -1320,7 +1986,25 @@ function Profile() {
           <ProjectsGrid>
             {projects.map(proj => (
               <ProjectCard key={proj.id}>
-                <ProjTitle>{proj.title}</ProjTitle>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <ProjTitle style={{ flex: 1 }}>{proj.title}</ProjTitle>
+                  {isOwn && (
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
+                      <EditButton onClick={() => openEditModal('projects', proj)} style={{ padding: '4px 8px', fontSize: '0.75em' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </EditButton>
+                      <EditButton onClick={() => handleDelete('projects', proj.id)} style={{ padding: '4px 8px', fontSize: '0.75em', color: '#dc3545', borderColor: '#dc3545' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </EditButton>
+                    </div>
+                  )}
+                </div>
                 {proj.description && <ProjDesc>{proj.description}</ProjDesc>}
                 {proj.associated_with && (
                   <TLDate>Associated with: {proj.associated_with}</TLDate>
@@ -1513,6 +2197,366 @@ function Profile() {
               </InfoRow>
             )}
           </Modal>
+        </Overlay>
+      )}
+
+      {/* Edit Modals */}
+      {editModal && (
+        <Overlay onClick={closeEditModal}>
+          <EditModal onClick={e => e.stopPropagation()}>
+            <ModalHead>
+              <h2>
+                {editModal === 'description' && 'Edit Description'}
+                {editModal === 'about' && 'Edit About'}
+                {editModal === 'skills' && 'Edit Skills'}
+                {editModal === 'experience' && (editingItem ? 'Edit Experience' : 'Add Experience')}
+                {editModal === 'education' && (editingItem ? 'Edit Education' : 'Add Education')}
+                {editModal === 'projects' && (editingItem ? 'Edit Project' : 'Add Project')}
+                {editModal === 'recommendations' && (editingItem ? 'Edit Recommendation' : 'Add Recommendation')}
+                {editModal === 'certificates' && 'Edit Certificates'}
+              </h2>
+              <button onClick={closeEditModal}>×</button>
+            </ModalHead>
+
+            {editModal === 'description' && (
+              <>
+                <FormGroup>
+                  <label>Short Description / Headline</label>
+                  <textarea
+                    value={formData.short_desc || ''}
+                    onChange={e => setFormData({ ...formData, short_desc: e.target.value })}
+                    placeholder="e.g., Software Engineer passionate about AI"
+                    rows={3}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Current Status</label>
+                  <input
+                    type="text"
+                    value={formData.current_status || ''}
+                    onChange={e => setFormData({ ...formData, current_status: e.target.value })}
+                    placeholder="e.g., Open to opportunities"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Role</label>
+                  <input
+                    type="text"
+                    value={formData.role || ''}
+                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    placeholder="e.g., Senior Software Engineer"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Company</label>
+                  <input
+                    type="text"
+                    value={formData.company || ''}
+                    onChange={e => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="e.g., Tech Corp"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Location</label>
+                  <input
+                    type="text"
+                    value={formData.location || ''}
+                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g., San Francisco, CA"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Industry</label>
+                  <input
+                    type="text"
+                    value={formData.industry || ''}
+                    onChange={e => setFormData({ ...formData, industry: e.target.value })}
+                    placeholder="e.g., Technology"
+                  />
+                </FormGroup>
+              </>
+            )}
+
+            {editModal === 'about' && (
+              <FormGroup>
+                <label>About</label>
+                <textarea
+                  value={formData.about || ''}
+                  onChange={e => setFormData({ ...formData, about: e.target.value })}
+                  placeholder="Tell us about yourself..."
+                  rows={8}
+                />
+              </FormGroup>
+            )}
+
+            {editModal === 'skills' && (
+              <FormGroup>
+                <label>Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.skills || ''}
+                  onChange={e => setFormData({ ...formData, skills: e.target.value })}
+                  placeholder="e.g., JavaScript, Python, React, Node.js"
+                />
+                <small>Separate multiple skills with commas</small>
+              </FormGroup>
+            )}
+
+            {editModal === 'experience' && (
+              <>
+                <FormGroup>
+                  <label>Job Title *</label>
+                  <input
+                    type="text"
+                    value={formData.title || ''}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., Software Engineer"
+                    required
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Company *</label>
+                  <input
+                    type="text"
+                    value={formData.company || ''}
+                    onChange={e => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="e.g., Tech Corp"
+                    required
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Location</label>
+                  <input
+                    type="text"
+                    value={formData.location || ''}
+                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g., San Francisco, CA"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Employment Type</label>
+                  <select
+                    value={formData.employment_type || ''}
+                    onChange={e => setFormData({ ...formData, employment_type: e.target.value })}
+                  >
+                    <option value="">Select type</option>
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Internship">Internship</option>
+                    <option value="Freelance">Freelance</option>
+                  </select>
+                </FormGroup>
+                <FormGroup>
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.start_date || ''}
+                    onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={formData.is_current || false}
+                      onChange={e => setFormData({ ...formData, is_current: e.target.checked, end_date: e.target.checked ? '' : formData.end_date })}
+                    />
+                    {' '}I currently work here
+                  </label>
+                </FormGroup>
+                {!formData.is_current && (
+                  <FormGroup>
+                    <label>End Date</label>
+                    <input
+                      type="date"
+                      value={formData.end_date || ''}
+                      onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                    />
+                  </FormGroup>
+                )}
+                <FormGroup>
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe your role and achievements..."
+                    rows={5}
+                  />
+                </FormGroup>
+              </>
+            )}
+
+            {editModal === 'education' && (
+              <>
+                <FormGroup>
+                  <label>School / University *</label>
+                  <input
+                    type="text"
+                    value={formData.school || ''}
+                    onChange={e => setFormData({ ...formData, school: e.target.value })}
+                    placeholder="e.g., Stanford University"
+                    required
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Degree</label>
+                  <input
+                    type="text"
+                    value={formData.degree || ''}
+                    onChange={e => setFormData({ ...formData, degree: e.target.value })}
+                    placeholder="e.g., Bachelor of Science"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Field of Study</label>
+                  <input
+                    type="text"
+                    value={formData.field_of_study || ''}
+                    onChange={e => setFormData({ ...formData, field_of_study: e.target.value })}
+                    placeholder="e.g., Computer Science"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Start Year</label>
+                  <input
+                    type="number"
+                    value={formData.start_year || ''}
+                    onChange={e => setFormData({ ...formData, start_year: e.target.value })}
+                    placeholder="e.g., 2018"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>End Year</label>
+                  <input
+                    type="number"
+                    value={formData.end_year || ''}
+                    onChange={e => setFormData({ ...formData, end_year: e.target.value })}
+                    placeholder="e.g., 2022"
+                    min="1900"
+                    max={new Date().getFullYear() + 10}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Grade / GPA</label>
+                  <input
+                    type="text"
+                    value={formData.grade || ''}
+                    onChange={e => setFormData({ ...formData, grade: e.target.value })}
+                    placeholder="e.g., 3.8 GPA"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Additional details..."
+                    rows={4}
+                  />
+                </FormGroup>
+              </>
+            )}
+
+            {editModal === 'projects' && (
+              <>
+                <FormGroup>
+                  <label>Project Title *</label>
+                  <input
+                    type="text"
+                    value={formData.title || ''}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., E-commerce Platform"
+                    required
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe your project..."
+                    rows={5}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Project URL</label>
+                  <input
+                    type="url"
+                    value={formData.url || ''}
+                    onChange={e => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://example.com"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Associated With</label>
+                  <input
+                    type="text"
+                    value={formData.associated_with || ''}
+                    onChange={e => setFormData({ ...formData, associated_with: e.target.value })}
+                    placeholder="e.g., Company name or organization"
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Technologies (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={formData.technologies || ''}
+                    onChange={e => setFormData({ ...formData, technologies: e.target.value })}
+                    placeholder="e.g., React, Node.js, MongoDB"
+                  />
+                </FormGroup>
+              </>
+            )}
+
+            {editModal === 'recommendations' && (
+              <>
+                <FormGroup>
+                  <label>Recommendation Text *</label>
+                  <textarea
+                    value={formData.recommendation_text || ''}
+                    onChange={e => setFormData({ ...formData, recommendation_text: e.target.value })}
+                    placeholder="Enter the recommendation text..."
+                    rows={6}
+                    required
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <label>Relationship</label>
+                  <input
+                    type="text"
+                    value={formData.relationship || ''}
+                    onChange={e => setFormData({ ...formData, relationship: e.target.value })}
+                    placeholder="e.g., Former Manager, Colleague"
+                  />
+                </FormGroup>
+              </>
+            )}
+
+            {editModal === 'certificates' && (
+              <FormGroup>
+                <label>Certificates (one per line)</label>
+                <textarea
+                  value={formData.certificates || ''}
+                  onChange={e => setFormData({ ...formData, certificates: e.target.value })}
+                  placeholder="Enter certificates, one per line:&#10;AWS Certified Solutions Architect&#10;Google Cloud Professional&#10;Microsoft Azure Fundamentals"
+                  rows={8}
+                />
+                <small>Enter each certificate on a new line. These are legacy certificates (non-LMS).</small>
+              </FormGroup>
+            )}
+
+            <FormActions>
+              <Button className="secondary" onClick={closeEditModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button className="primary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+            </FormActions>
+          </EditModal>
         </Overlay>
       )}
     </Page>
