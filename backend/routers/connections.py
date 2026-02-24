@@ -1,7 +1,7 @@
 """Connections Router - Connection requests management using ORM"""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from schemas.connection import (
     ConnectionRequestCreate,
@@ -23,7 +23,7 @@ def get_connection_service(db: Session = Depends(get_db)) -> ConnectionService:
 @router.post("/request/{user_id}", response_model=ConnectionRequestResponse, status_code=status.HTTP_201_CREATED)
 async def send_connection_request(
     user_id: int,
-    request_data: ConnectionRequestCreate = None,
+    request_data: Optional[ConnectionRequestCreate] = None,
     current_user: dict = Depends(get_current_user),
     connection_service: ConnectionService = Depends(get_connection_service)
 ):
@@ -37,7 +37,11 @@ async def send_connection_request(
         )
     
     try:
-        message = request_data.message if request_data else None
+        # Handle optional request body - if None or empty, use None for message
+        message = None
+        if request_data:
+            message = request_data.message if request_data.message else None
+        
         result = connection_service.send_request(
             sender_id=sender_id,
             receiver_id=user_id,

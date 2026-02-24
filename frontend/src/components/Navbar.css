@@ -5,6 +5,7 @@
     z-index: 1;
     max-width: 250px;
     flex-shrink: 0;
+    display: none;
 }
 
 .search-wrapper.active {

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { interviewAPI } from '../services/api'
+import { interviewAPI, jobAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/AIInterviews.css'
 
@@ -60,6 +60,10 @@ const MainContainer = styled.div`
   grid-template-columns: 1fr 450px;
   gap: 0;
   
+  @media (max-width: 1400px) {
+    grid-template-columns: 1fr 420px;
+  }
+  
   @media (max-width: 1200px) {
     grid-template-columns: 1fr 400px;
   }
@@ -68,10 +72,27 @@ const MainContainer = styled.div`
     grid-template-columns: 1fr 350px;
   }
   
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 320px;
+  }
+  
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     height: auto;
     min-height: calc(100vh - 80px);
+  }
+  
+  @media (max-width: 600px) {
+    height: auto;
+    min-height: calc(100vh - 70px);
+  }
+  
+  @media (max-width: 480px) {
+    min-height: calc(100vh - 65px);
+  }
+  
+  @media (max-width: 360px) {
+    min-height: calc(100vh - 60px);
   }
 `
 
@@ -84,13 +105,32 @@ const VideoPanel = styled.div`
   padding: 30px;
   position: relative;
 
+  @media (max-width: 1024px) {
+    padding: 25px;
+  }
+  
+  @media (max-width: 900px) {
+    padding: 22px;
+  }
+
   @media (max-width: 768px) {
     padding: 20px;
     min-height: 60vh;
   }
+  
+  @media (max-width: 600px) {
+    padding: 18px;
+    min-height: 55vh;
+  }
 
   @media (max-width: 480px) {
     padding: 15px;
+    min-height: 50vh;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px;
+    min-height: 45vh;
   }
 `
 
@@ -221,6 +261,8 @@ const CallButton = styled.button`
   align-items: center;
   justify-content: center;
   position: relative;
+  min-width: 44px; /* Better touch target */
+  min-height: 44px;
 
   svg {
     width: 24px;
@@ -239,6 +281,16 @@ const CallButton = styled.button`
     transform: translateY(0);
   }
 
+  @media (max-width: 1024px) {
+    width: 52px;
+    height: 52px;
+    
+    svg {
+      width: 23px;
+      height: 23px;
+    }
+  }
+
   @media (max-width: 768px) {
     width: 50px;
     height: 50px;
@@ -246,6 +298,20 @@ const CallButton = styled.button`
     svg {
       width: 22px;
       height: 22px;
+    }
+    
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+  
+  @media (max-width: 600px) {
+    width: 48px;
+    height: 48px;
+    
+    svg {
+      width: 21px;
+      height: 21px;
     }
   }
 
@@ -256,6 +322,20 @@ const CallButton = styled.button`
     svg {
       width: 20px;
       height: 20px;
+    }
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    width: 44px;
+    height: 44px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
     }
   }
 `
@@ -317,14 +397,35 @@ const ChatPanel = styled.div`
   flex-direction: column;
   height: 400px;
 
+  @media (max-width: 1024px) {
+    height: 380px;
+    margin-top: 18px;
+  }
+  
+  @media (max-width: 900px) {
+    height: 360px;
+  }
+
   @media (max-width: 768px) {
     margin-top: 16px;
     height: 350px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 600px) {
+    height: 320px;
+    margin-top: 14px;
   }
 
   @media (max-width: 480px) {
     margin-top: 12px;
     height: 300px;
+    border-radius: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    height: 280px;
+    margin-top: 10px;
   }
 `
 
@@ -482,6 +583,7 @@ const ChatInput = styled.input`
   font-size: 0.9em;
   font-family: inherit;
   transition: all 0.2s ease;
+  min-height: 44px; /* Better touch target */
 
   &:focus {
     outline: none;
@@ -497,11 +599,24 @@ const ChatInput = styled.input`
   @media (max-width: 768px) {
     padding: 10px 14px;
     font-size: 0.875em;
+    min-height: 42px;
+    
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
+    }
   }
 
   @media (max-width: 480px) {
     padding: 10px 12px;
     font-size: 0.85em;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    min-height: 38px;
   }
 `
 
@@ -518,6 +633,8 @@ const SendButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 44px; /* Better touch target */
+  min-width: 44px;
 
   &:hover {
     transform: translateY(-2px);
@@ -536,14 +653,39 @@ const SendButton = styled.button`
   @media (max-width: 768px) {
     padding: 10px 16px;
     font-size: 0.875em;
+    min-height: 42px;
+    min-width: 42px;
+    
+    &:hover {
+      transform: translateY(-1px);
+    }
   }
 
   @media (max-width: 480px) {
     padding: 10px 14px;
     font-size: 0.85em;
+    min-height: 40px;
+    min-width: 40px;
+    border-radius: 6px;
     
     span {
       display: none;
+    }
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    min-height: 38px;
+    min-width: 38px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
     }
   }
 `
@@ -753,6 +895,9 @@ const AIInterviews = () => {
   const [interviewResults, setInterviewResults] = useState(null)
   const [rizFeedback, setRizFeedback] = useState(null)
   const [loadingInterviews, setLoadingInterviews] = useState(true)
+  const [recommendedJobs, setRecommendedJobs] = useState([])
+  const [loadingJobs, setLoadingJobs] = useState(true)
+  const { user } = useAuth()
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
@@ -764,10 +909,27 @@ const AIInterviews = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
-  // Fetch interview history on mount
+  // Fetch interview history and recommendations on mount
   useEffect(() => {
     fetchInterviews()
+    fetchInterviewRecommendations()
   }, [])
+
+  // Fetch interview recommendations (jobs with attempt counts)
+  const fetchInterviewRecommendations = async () => {
+    if (!user?.id) return
+    
+    setLoadingJobs(true)
+    try {
+      const res = await jobAPI.getInterviewRecommendations(user.id, 10)
+      setRecommendedJobs(res.data?.recommendations || [])
+    } catch (err) {
+      console.error('Failed to fetch interview recommendations:', err)
+      setRecommendedJobs([])
+    } finally {
+      setLoadingJobs(false)
+    }
+  }
 
   // Fetch interview details and Riz feedback when interview is selected
   useEffect(() => {
@@ -817,96 +979,22 @@ const AIInterviews = () => {
     }
   }
 
-  const jobs = [
-    {
-      id: 1,
-      title: 'Senior Frontend Developer',
-      company: 'TechCorp Inc.',
-      location: 'Remote',
-      type: 'Full-time',
-      experience: '5+ years',
-      matchScore: 95,
-      skills: ['React', 'TypeScript', 'Node.js'],
-      script: "Welcome to your mock interview for Senior Frontend Developer at TechCorp Inc. Today we'll focus on your React expertise, component architecture, and state management. Let's start with your experience in building scalable frontend applications..."
-    },
-    {
-      id: 2,
-      title: 'Full Stack Engineer',
-      company: 'StartupHub',
-      location: 'San Francisco, CA',
-      type: 'Full-time',
-      experience: '3-5 years',
-      matchScore: 88,
-      skills: ['JavaScript', 'Python', 'AWS'],
-      script: "Hello! This is your AI mock interview for the Full Stack Engineer position at StartupHub. We'll discuss your experience with both frontend and backend development, cloud services, and your approach to building end-to-end features..."
-    },
-    {
-      id: 3,
-      title: 'React Developer',
-      company: 'Digital Solutions',
-      location: 'New York, NY',
-      type: 'Contract',
-      experience: '2-4 years',
-      matchScore: 92,
-      skills: ['React', 'Redux', 'REST APIs'],
-      script: "Welcome to the React Developer interview simulation for Digital Solutions. Today we'll evaluate your React skills, your understanding of hooks, context API, and your experience with state management libraries like Redux..."
-    },
-    {
-      id: 4,
-      title: 'Software Engineer',
-      company: 'InnovateLabs',
-      location: 'Remote',
-      type: 'Full-time',
-      experience: '2-3 years',
-      matchScore: 85,
-      skills: ['Java', 'Spring Boot', 'Microservices'],
-      script: "Good day! This is your mock interview for Software Engineer at InnovateLabs. We'll cover your backend development experience, microservices architecture, and your understanding of enterprise-level application development..."
-    },
-    {
-      id: 5,
-      title: 'UI/UX Developer',
-      company: 'DesignFirst',
-      location: 'Austin, TX',
-      type: 'Full-time',
-      experience: '3-5 years',
-      matchScore: 80,
-      skills: ['HTML/CSS', 'JavaScript', 'Figma'],
-      script: "Welcome to your UI/UX Developer interview at DesignFirst. Today's session will focus on your design implementation skills, your approach to creating user-friendly interfaces, and your collaboration with design teams..."
-    },
-    {
-      id: 6,
-      title: 'DevOps Engineer',
-      company: 'CloudTech',
-      location: 'Seattle, WA',
-      type: 'Full-time',
-      experience: '4+ years',
-      matchScore: 78,
-      skills: ['Docker', 'Kubernetes', 'CI/CD'],
-      script: "Hello and welcome to the DevOps Engineer mock interview with CloudTech. We'll discuss your experience with containerization, orchestration, continuous integration and deployment, and infrastructure as code..."
-    },
-    {
-      id: 7,
-      title: 'Backend Developer',
-      company: 'DataSystems',
-      location: 'Remote',
-      type: 'Full-time',
-      experience: '3-6 years',
-      matchScore: 90,
-      skills: ['Node.js', 'MongoDB', 'Express'],
-      script: "Welcome to your Backend Developer interview simulation for DataSystems. Today we'll explore your server-side development expertise, database design skills, API development, and your approach to building scalable backend systems..."
-    },
-    {
-      id: 8,
-      title: 'Mobile App Developer',
-      company: 'AppVentures',
-      location: 'Los Angeles, CA',
-      type: 'Full-time',
-      experience: '2-4 years',
-      matchScore: 75,
-      skills: ['React Native', 'iOS', 'Android'],
-      script: "Hello! This is your mock interview for Mobile App Developer at AppVentures. We'll discuss your experience with mobile development, cross-platform frameworks, native development considerations, and mobile-specific challenges..."
-    }
-  ]
+  // Use recommended jobs from API, fallback to empty array
+  const jobs = recommendedJobs.length > 0 
+    ? recommendedJobs.map(job => ({
+        id: job.job_id,
+        job_id: job.job_id,
+        title: job.title,
+        company: job.company_name || 'Company',
+        location: job.location || 'Location not specified',
+        type: job.job_type || 'Full-time',
+        experience: job.experience_level || 'Not specified',
+        matchScore: job.composite_score ? Math.round(job.composite_score * 100) : null,
+        composite_score: job.composite_score,
+        attempt_count: job.attempt_count || 0,
+        best_score: job.best_score
+      }))
+    : []
 
   const handleJobSelect = (job) => {
     setSelectedJob(job)
@@ -914,10 +1002,11 @@ const AIInterviews = () => {
       videoRef.current.currentTime = 0
     }
     // Initialize chat with AI greeting
+    const companyName = job.company_name || job.company || 'the company'
     setMessages([
       {
         id: 1,
-        text: `Hello! Welcome to your AI mock interview for the ${job.title} position at ${job.company}. I'm your AI interviewer today. Are you ready to begin?`,
+        text: `Hello! Welcome to your AI mock interview for the ${job.title} position at ${companyName}. I'm your AI interviewer today. Are you ready to begin?`,
         isUser: false,
         timestamp: new Date()
       }
@@ -1222,47 +1311,71 @@ const AIInterviews = () => {
             </div>
           )}
 
-          {/* Keep mock jobs for now as fallback/new interview option */}
-          {interviews.length > 0 && (
-            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-              <PanelSubtitle style={{ marginBottom: '12px' }}>Start New Interview</PanelSubtitle>
-              <JobsList>
-                {jobs.slice(0, 3).map((job) => (
+          {/* Recommended Jobs for Interviews */}
+          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+            <PanelSubtitle style={{ marginBottom: '12px' }}>
+              {loadingJobs ? 'Loading Recommendations...' : 'Recommended Jobs for Practice'}
+            </PanelSubtitle>
+            <JobsList>
+              {loadingJobs ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
+                  Loading personalized job recommendations...
+                </div>
+              ) : jobs.length > 0 ? (
+                jobs.map((job) => (
                   <JobCard
-                    key={job.id}
-                    selected={selectedJob?.id === job.id}
+                    key={job.job_id || job.id}
+                    selected={selectedJob?.job_id === job.job_id || selectedJob?.id === job.id}
                     onClick={() => handleJobSelect(job)}
                   >
                     <JobHeader>
                       <div style={{ flex: 1 }}>
                         <JobTitle>{job.title}</JobTitle>
-                        <JobCompany>{job.company}</JobCompany>
+                        <JobCompany>{job.company_name || job.company || 'Company'}</JobCompany>
                       </div>
-                      <AIBadge>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v3"></path>
-                          <path d="M12 18v3"></path>
-                          <path d="M5.5 5.5l2.1 2.1"></path>
-                          <path d="M16.4 16.4l2.1 2.1"></path>
-                          <path d="M3 12h3"></path>
-                          <path d="M18 12h3"></path>
-                          <path d="M5.5 18.5l2.1-2.1"></path>
-                          <path d="M16.4 7.6l2.1-2.1"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        {job.matchScore}%
-                      </AIBadge>
+                      {job.matchScore && (
+                        <AIBadge>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 3v3"></path>
+                            <path d="M12 18v3"></path>
+                            <path d="M5.5 5.5l2.1 2.1"></path>
+                            <path d="M16.4 16.4l2.1 2.1"></path>
+                            <path d="M3 12h3"></path>
+                            <path d="M18 12h3"></path>
+                            <path d="M5.5 18.5l2.1-2.1"></path>
+                            <path d="M16.4 7.6l2.1-2.1"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                          {job.matchScore}%
+                        </AIBadge>
+                      )}
                     </JobHeader>
                     <JobDetails>
-                      <JobTag>📍 {job.location}</JobTag>
-                      <JobTag>💼 {job.type}</JobTag>
-                      <JobTag>⏱️ {job.experience}</JobTag>
+                      <JobTag>📍 {job.location || 'Location not specified'}</JobTag>
+                      <JobTag>💼 {job.job_type || job.type || 'Full-time'}</JobTag>
+                      {job.experience_level && (
+                        <JobTag>⏱️ {job.experience_level}</JobTag>
+                      )}
+                      {job.attempt_count > 0 && (
+                        <JobTag style={{ background: 'rgba(10, 102, 194, 0.1)', color: 'var(--primary)' }}>
+                          🔄 Attempt {job.attempt_count + 1}
+                        </JobTag>
+                      )}
+                      {job.best_score && (
+                        <JobTag style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e' }}>
+                          ⭐ Best: {job.best_score}%
+                        </JobTag>
+                      )}
                     </JobDetails>
                   </JobCard>
-                ))}
-              </JobsList>
-            </div>
-          )}
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
+                  No job recommendations available. Update your profile to get personalized recommendations!
+                </div>
+              )}
+            </JobsList>
+          </div>
         </JobsPanel>
       </MainContainer>
     </Container>

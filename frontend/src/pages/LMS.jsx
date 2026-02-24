@@ -60,6 +60,12 @@ const MainContainer = styled.div`
   gap: 25px;
   padding: 30px 20px;
   
+  @media (max-width: 1400px) {
+    grid-template-columns: 420px 1fr;
+    gap: 22px;
+    padding: 28px 18px;
+  }
+  
   @media (max-width: 1200px) {
     grid-template-columns: 400px 1fr;
     gap: 20px;
@@ -71,15 +77,31 @@ const MainContainer = styled.div`
     padding: 25px 15px;
   }
   
+  @media (max-width: 900px) {
+    grid-template-columns: 320px 1fr;
+    gap: 18px;
+    padding: 22px 14px;
+  }
+  
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 20px 15px;
   }
+  
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
 
   @media (max-width: 480px) {
     padding: 15px 12px;
     gap: 15px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px 10px;
+    gap: 12px;
   }
 `
 
@@ -98,6 +120,24 @@ const SidePanel = styled.aside`
     position: relative;
     top: 0;
     max-height: none;
+    order: -1; /* Show sidebar first on mobile */
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 600px) {
+    margin-bottom: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-bottom: 14px;
+    border-radius: 8px;
   }
 `
 
@@ -133,6 +173,24 @@ const PanelHeader = styled.div`
   z-index: 10;
   border-radius: 16px 16px 0 0;
   border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 1024px) {
+    padding: 24px 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px 20px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 18px 16px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 16px 14px;
+  }
 `
 
 const PageTitle = styled.h1`
@@ -140,16 +198,67 @@ const PageTitle = styled.h1`
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 300;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.4em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.2em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const PageSubtitle = styled.p`
   font-size: 0.9em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.75em;
+  }
 `
 
 const PanelContent = styled.div`
   position: relative;
   padding: 24px 28px;
+  
+  @media (max-width: 1024px) {
+    padding: 20px 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 18px 20px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px 18px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px 16px;
+  }
 `
 
 const ScrollGradientTop = styled.div`
@@ -181,6 +290,11 @@ const ScrollGradientBottom = styled.div`
 const MainContent = styled.main`
   min-height: 80vh;
   width: 100%;
+  
+  @media (max-width: 768px) {
+    order: 1; /* Show main content after sidebar on mobile */
+    min-height: auto;
+  }
 `
 
 const TopBanner = styled.div`
@@ -190,21 +304,43 @@ const TopBanner = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
+  background: var(--bg-white);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+
+  @media (max-width: 1024px) {
+    padding: 22px 28px;
+    gap: 14px;
+    border-radius: 14px;
+  }
 
   @media (max-width: 768px) {
     padding: 20px 24px;
     gap: 12px;
+    border-radius: 12px;
+    margin-bottom: 18px;
   }
 
   @media (max-width: 600px) {
-    padding: 16px 20px;
+    padding: 18px 20px;
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    margin-bottom: 16px;
   }
 
   @media (max-width: 480px) {
     padding: 16px;
+    gap: 10px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 `
 
@@ -217,11 +353,59 @@ const BannerIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   
   svg {
     width: 32px;
     height: 32px;
     color: white;
+  }
+  
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    border-radius: 10px;
+    
+    svg {
+      width: 28px;
+      height: 28px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 10px;
+    
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 8px;
+    
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    
+    svg {
+      width: 22px;
+      height: 22px;
+    }
   }
 `
 
@@ -237,19 +421,37 @@ const BannerTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  word-wrap: break-word;
+
+  @media (max-width: 1024px) {
+    font-size: 1.6em;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
 
   @media (max-width: 768px) {
-    font-size: 1.5em;
-    gap: 10px;
+    font-size: 1.4em;
+    gap: 8px;
+    margin-bottom: 5px;
   }
 
   @media (max-width: 600px) {
     font-size: 1.3em;
     flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
   }
 
   @media (max-width: 480px) {
     font-size: 1.2em;
+    gap: 6px;
+    line-height: 1.3;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.1em;
+    gap: 5px;
   }
 `
 
@@ -269,9 +471,17 @@ const BannerDescription = styled.p`
   color: var(--text-light);
   line-height: 1.6;
   font-weight: 300;
+  word-wrap: break-word;
+  margin: 0;
+
+  @media (max-width: 1024px) {
+    font-size: 1.05em;
+    line-height: 1.55;
+  }
 
   @media (max-width: 768px) {
     font-size: 1em;
+    line-height: 1.5;
   }
 
   @media (max-width: 600px) {
@@ -281,6 +491,12 @@ const BannerDescription = styled.p`
 
   @media (max-width: 480px) {
     font-size: 0.9em;
+    line-height: 1.45;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+    line-height: 1.4;
   }
 `
 
@@ -290,14 +506,42 @@ const DashboardContainer = styled.div`
   gap: 20px;
   width: 100%;
 
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  @media (max-width: 360px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  /* Ensure all direct children (cards) are in separate rows on mobile */
+  & > * {
+    @media (max-width: 900px) {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
   }
 `
 
@@ -308,6 +552,31 @@ const DashboardCard = styled.div`
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   animation: ${slideUp} 0.4s ease-out;
+  
+  @media (max-width: 1024px) {
+    padding: 22px;
+    border-radius: 14px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    border-radius: 8px;
+  }
 `
 
 const CardTitle = styled.h3`
@@ -318,12 +587,56 @@ const CardTitle = styled.h3`
   display: flex;
   align-items: center;
   gap: 8px;
+  word-wrap: break-word;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.05em;
+    margin-bottom: 18px;
+    gap: 7px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1em;
+    margin-bottom: 16px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.95em;
+    margin-bottom: 14px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 12px;
+    gap: 5px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
 `
 
 const StatCard = styled(DashboardCard)`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  
+  @media (max-width: 480px) {
+    min-height: 120px;
+  }
 `
 
 const StatValue = styled.div`
@@ -334,13 +647,31 @@ const StatValue = styled.div`
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 8px;
+  line-height: 1.2;
+  word-wrap: break-word;
+
+  @media (max-width: 1024px) {
+    font-size: 2.3em;
+    margin-bottom: 7px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 2.1em;
+    margin-bottom: 6px;
+  }
 
   @media (max-width: 600px) {
-    font-size: 2.2em;
+    font-size: 2em;
+    margin-bottom: 5px;
   }
 
   @media (max-width: 480px) {
-    font-size: 2em;
+    font-size: 1.8em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.6em;
   }
 `
 
@@ -349,6 +680,26 @@ const StatLabel = styled.div`
   color: var(--text-light);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+    letter-spacing: 0.4px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.8em;
+    letter-spacing: 0.3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    letter-spacing: 0.3px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.7em;
+  }
 `
 
 const StatChange = styled.div`
@@ -358,6 +709,38 @@ const StatChange = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    margin-top: 6px;
+    gap: 3px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.75em;
+    margin-top: 5px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    margin-top: 4px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
 `
 
 const ProgressCircle = styled.div`
@@ -366,14 +749,39 @@ const ProgressCircle = styled.div`
   height: 150px;
   margin: 20px auto;
 
-  @media (max-width: 600px) {
+  @media (max-width: 1024px) {
+    width: 140px;
+    height: 140px;
+    margin: 18px auto;
+  }
+  
+  @media (max-width: 768px) {
     width: 130px;
     height: 130px;
+    margin: 16px auto;
+  }
+
+  @media (max-width: 600px) {
+    width: 120px;
+    height: 120px;
+    margin: 14px auto;
   }
 
   @media (max-width: 480px) {
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
+    margin: 12px auto;
+  }
+  
+  @media (max-width: 360px) {
+    width: 100px;
+    height: 100px;
+    margin: 10px auto;
+  }
+  
+  svg {
+    width: 100%;
+    height: 100%;
   }
 `
 
@@ -407,11 +815,39 @@ const CircleValue = styled.div`
   font-size: 2em;
   font-weight: 300;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 1.8em;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.6em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.4em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.2em;
+  }
 `
 
 const CircleLabel = styled.div`
   font-size: 0.8em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+  }
 `
 
 const BarChart = styled.div`
@@ -437,6 +873,32 @@ const Bar = styled.div`
   position: relative;
   min-height: 30px;
   display: flex;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    max-width: 50px;
+    min-width: 30px;
+    min-height: 25px;
+  }
+  
+  @media (max-width: 600px) {
+    max-width: 45px;
+    min-width: 28px;
+    min-height: 20px;
+  }
+  
+  @media (max-width: 480px) {
+    max-width: 40px;
+    min-width: 25px;
+    min-height: 18px;
+    border-radius: 6px 6px 0 0;
+  }
+  
+  @media (max-width: 360px) {
+    max-width: 35px;
+    min-width: 22px;
+    min-height: 15px;
+  }
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
@@ -459,6 +921,31 @@ const BarValue = styled.div`
   padding: 4px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  
+  @media (max-width: 768px) {
+    top: -28px;
+    font-size: 0.85em;
+    padding: 3px 6px;
+  }
+  
+  @media (max-width: 600px) {
+    top: -26px;
+    font-size: 0.8em;
+    padding: 3px 5px;
+  }
+  
+  @media (max-width: 480px) {
+    top: -24px;
+    font-size: 0.75em;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 360px) {
+    top: -22px;
+    font-size: 0.7em;
+    padding: 2px 3px;
+  }
 `
 
 const BarLabel = styled.div`
@@ -467,6 +954,27 @@ const BarLabel = styled.div`
   text-align: center;
   margin-top: 10px;
   font-weight: 400;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    margin-top: 8px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.75em;
+    margin-top: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    margin-top: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    margin-top: 4px;
+  }
 `
 
 const DomainList = styled.div`
@@ -574,6 +1082,31 @@ const CourseCard = styled.div`
   display: flex;
   gap: 14px;
   align-items: start;
+  min-height: 80px; /* Better touch target */
+  
+  @media (max-width: 1024px) {
+    padding: 16px;
+    gap: 12px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 10px;
+    border-radius: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px;
+    gap: 8px;
+    min-height: 70px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    gap: 6px;
+    min-height: 65px;
+  }
   
   &:hover {
     background: rgba(10, 102, 194, 0.1);
@@ -594,6 +1127,31 @@ const CourseIcon = styled.div`
   font-weight: 300;
   color: white;
   letter-spacing: -0.5px;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 8px;
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 8px;
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }
 `
 
 const CourseContent = styled.div`
@@ -606,6 +1164,25 @@ const CourseTitle = styled.h3`
   color: var(--text);
   margin-bottom: 6px;
   font-weight: 300;
+  word-wrap: break-word;
+  line-height: 1.3;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    line-height: 1.25;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.8em;
+    margin-bottom: 3px;
+  }
 `
 
 const CourseDescription = styled.p`
@@ -617,6 +1194,26 @@ const CourseDescription = styled.p`
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    -webkit-line-clamp: 2;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    -webkit-line-clamp: 2;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    margin-bottom: 5px;
+  }
 `
 
 const CourseFooter = styled.div`
@@ -624,6 +1221,13 @@ const CourseFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
 `
 
 const CourseInfo = styled.div`
@@ -632,6 +1236,23 @@ const CourseInfo = styled.div`
   gap: 12px;
   font-size: 0.75em;
   color: var(--text-lighter);
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+    font-size: 0.7em;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 8px;
+    font-size: 0.65em;
+    width: 100%;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+    font-size: 0.6em;
+  }
 `
 
 const InfoItem = styled.div`
@@ -680,11 +1301,38 @@ const Tab = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  min-height: 44px; /* Better touch target */
+  word-wrap: break-word;
   
   &:hover {
     background: rgba(10, 102, 194, 0.1);
     border-color: var(--primary);
     color: var(--primary);
+  }
+  
+  @media (max-width: 1024px) {
+    padding: 12px 16px;
+    font-size: 0.85em;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+    font-size: 0.85em;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 12px;
+    font-size: 0.8em;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    font-size: 0.75em;
+    min-height: 38px;
   }
 `
 

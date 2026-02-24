@@ -272,14 +272,34 @@ class ProfileService:
                 description.profile_pic = update_data['profile_pic']
             if 'cover_pic' in update_data:
                 description.cover_pic = update_data['cover_pic']
+            # Track if embedding-relevant fields changed
+            embedding_fields = {'skills', 'current_status', 'role', 'company', 'location', 'about', 'short_desc'}
+            embedding_changed = any(key in embedding_fields for key in update_data.keys())
+            
             if 'location' in update_data:
                 description.location = update_data['location']
+                # Parse and store city/country
+                from services.recommendation_service import RecommendationService
+                rec_service = RecommendationService(self.db)
+                parsed_location = rec_service._parse_location(update_data['location'])
+                description.city = parsed_location.get('city')
+                description.country = parsed_location.get('country')
+            
             if 'industry' in update_data:
                 description.industry = update_data['industry']
             
             self.db.commit()
             self.db.refresh(user)
             self.db.refresh(description)
+            
+            # Update user embedding if relevant fields changed
+            if embedding_changed:
+                try:
+                    from utils.job_embeddings import update_user_embedding_if_needed
+                    update_user_embedding_if_needed(user_id, self.db)
+                except Exception as e:
+                    logger.warning(f"Failed to update embedding for user {user_id}: {e}")
+                    # Don't fail profile update if embedding fails
             
             logger.info(f"Profile updated for user {user_id}")
             

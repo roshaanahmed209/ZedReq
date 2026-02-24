@@ -263,8 +263,11 @@ export const networkAPI = {
 // Connection Request API methods
 export const connectionAPI = {
   // Send connection request to a user
-  sendRequest: (userUuid, message = null) => 
-    api.post(`/api/connections/request/${userUuid}`, message ? { message } : {}),
+  sendRequest: (userUuid, message = null) => {
+    // Always send an object, even if message is null/undefined
+    const payload = message ? { message } : {};
+    return api.post(`/api/connections/request/${userUuid}`, payload);
+  },
   
   // Accept a connection request
   acceptRequest: (requestId) => 
@@ -352,6 +355,14 @@ export const jobAPI = {
   // Search jobs
   searchJobs: (query, filters = {}) =>
     api.get('/api/jobs', { params: { query, ...filters } }),
+  
+  // Get personalized job recommendations
+  getJobRecommendations: (userId, limit = 10) =>
+    api.get(`/api/jobs/recommendations/${userId}`, { params: { limit } }),
+  
+  // Get interview recommendations (jobs with attempt counts)
+  getInterviewRecommendations: (userId, limit = 10) =>
+    api.get(`/api/interviews/recommendations/${userId}`, { params: { limit } }),
 }
 
 // Notification API methods
@@ -756,8 +767,13 @@ export class MessagingWebSocket {
           
           // Handle errors
           if (data.type === 'error') {
-            console.error('Messaging WebSocket error:', data.message)
-            if (this.onError) this.onError(new Error(data.message))
+            // Only log detailed errors in development
+            if (import.meta.env.DEV) {
+              console.error('Messaging WebSocket error:', data.message)
+            }
+            if (this.onError) {
+              this.onError(new Error(data.message))
+            }
           }
         } catch (e) {
           if (event.data !== 'pong') {
@@ -767,30 +783,27 @@ export class MessagingWebSocket {
       }
       
       this.ws.onerror = (error) => {
-        console.error('Messaging WebSocket error:', error)
-        console.error('WebSocket state:', this.ws?.readyState)
-        console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
-        
-        // Provide more helpful error message based on readyState
-        let errorMessage = 'WebSocket connection failed'
-        if (this.ws?.readyState === WebSocket.CLOSED) {
-          errorMessage = 'WebSocket connection was closed. Check if the backend server is running at ' + apiUrl
-        } else if (this.ws?.readyState === WebSocket.CONNECTING) {
-          errorMessage = 'WebSocket connection is still connecting...'
+        // Only log detailed errors in development to reduce console noise
+        if (import.meta.env.DEV) {
+          console.error('Messaging WebSocket error:', error)
+          console.error('WebSocket state:', this.ws?.readyState)
+          console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
         }
         
-        if (this.onError) {
-          this.onError(new Error(errorMessage))
-        }
+        // Don't call onError for connection failures - let onclose handle reconnection
+        // The onclose handler will manage reconnection logic
       }
       
       this.ws.onclose = (event) => {
-        console.log('Messaging WebSocket closed:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          url: this.ws?.url
-        })
+        // Only log in development to reduce console noise
+        if (import.meta.env.DEV) {
+          console.log('Messaging WebSocket closed:', {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean,
+            url: this.ws?.url
+          })
+        }
         
         // Clear ping interval
         if (this.pingInterval) {
@@ -800,26 +813,49 @@ export class MessagingWebSocket {
         
         // Don't reconnect if authentication error
         if (event.code === 4001) {
-          console.error('Messaging WebSocket authentication failed - not reconnecting')
+          if (import.meta.env.DEV) {
+            console.error('Messaging WebSocket authentication failed - not reconnecting')
+          }
           if (this.onError) {
             this.onError(new Error('Authentication failed. Please log in again.'))
           }
           return
         }
         
-        // Don't reconnect if manually closed
-        if (event.code === 1000) {
-          console.log('Messaging WebSocket closed normally')
+        // Don't reconnect if manually closed (code 1000)
+        if (event.wasClean && event.code === 1000) {
+          if (import.meta.env.DEV) {
+            console.log('Messaging WebSocket closed normally')
+          }
           return
         }
         
-        // Attempt to reconnect
+        // Handle connection failures (code 1006) - server unreachable
+        if (event.code === 1006) {
+          if (import.meta.env.DEV) {
+            console.warn('Messaging WebSocket connection failed. Server may be unreachable.')
+          }
+          // Still attempt reconnection but with longer delay
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++
+            this.reconnectDelay = Math.min(this.reconnectDelay * 2, 60000) // Max 60s for server issues
+            setTimeout(() => this.connect(), this.reconnectDelay)
+          }
+          return
+        }
+        
+        // Attempt to reconnect for other errors
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++
-          console.log(`Attempting to reconnect Messaging WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
-          setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts)
+          if (import.meta.env.DEV) {
+            console.log(`Attempting to reconnect Messaging WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
+          }
+          setTimeout(() => this.connect(), this.reconnectDelay)
+          this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000) // Exponential backoff, max 30s
         } else {
-          console.error('Max reconnection attempts reached for Messaging WebSocket')
+          if (import.meta.env.DEV) {
+            console.error('Max reconnection attempts reached for Messaging WebSocket')
+          }
           if (this.onError) {
             this.onError(new Error('Failed to connect to messaging server after multiple attempts. Please check if the backend is running.'))
           }

@@ -60,6 +60,12 @@ const MainContainer = styled.div`
   gap: 25px;
   padding: 30px 20px;
   
+  @media (max-width: 1400px) {
+    grid-template-columns: 420px 1fr;
+    gap: 22px;
+    padding: 28px 18px;
+  }
+  
   @media (max-width: 1200px) {
     grid-template-columns: 400px 1fr;
     gap: 20px;
@@ -71,15 +77,31 @@ const MainContainer = styled.div`
     padding: 25px 15px;
   }
   
+  @media (max-width: 900px) {
+    grid-template-columns: 320px 1fr;
+    gap: 18px;
+    padding: 22px 14px;
+  }
+  
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 20px 15px;
   }
+  
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
 
   @media (max-width: 480px) {
     padding: 15px 12px;
     gap: 15px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px 10px;
+    gap: 12px;
   }
 `
 
@@ -110,6 +132,24 @@ const PanelHeader = styled.div`
   z-index: 10;
   border-radius: 16px 16px 0 0;
   border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 1024px) {
+    padding: 24px 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px 20px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 18px 16px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 16px 14px;
+  }
 `
 
 const PageTitle = styled.h1`
@@ -117,11 +157,46 @@ const PageTitle = styled.h1`
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 300;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.4em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.2em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const PageSubtitle = styled.p`
   font-size: 0.9em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.75em;
+  }
 `
 
 const ScrollableContent = styled.div`

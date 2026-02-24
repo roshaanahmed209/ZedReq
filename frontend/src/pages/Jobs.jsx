@@ -90,9 +90,31 @@ const MainContent = styled.div`
   gap: 24px;
   padding: 30px 20px;
   
+  @media (max-width: 1024px) {
+    gap: 20px;
+    padding: 25px 18px;
+  }
+  
+  @media (max-width: 900px) {
+    gap: 18px;
+    padding: 22px 16px;
+  }
+  
   @media (max-width: 768px) {
     padding: 20px 15px;
     gap: 0;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 18px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px 12px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px 10px;
   }
 `
 
@@ -109,17 +131,45 @@ const SidePanel = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: ${slideUp} 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   
+  @media (max-width: 1024px) {
+    width: 260px;
+    min-width: 260px;
+    padding: 22px;
+  }
+  
+  @media (max-width: 900px) {
+    width: 240px;
+    min-width: 240px;
+    padding: 20px;
+  }
+  
   @media (max-width: 768px) {
     position: fixed;
     top: 0;
     left: ${props => props.isOpen ? '0' : '-100%'};
     height: 100vh;
     width: 280px;
+    max-width: 85vw;
     z-index: 1000;
     border-radius: 0;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
     padding-top: 60px;
+    min-width: auto;
+  }
+  
+  @media (max-width: 480px) {
+    width: 260px;
+    max-width: 90vw;
+    padding: 18px;
+    padding-top: 55px;
+  }
+  
+  @media (max-width: 360px) {
+    width: 240px;
+    max-width: 95vw;
+    padding: 16px;
+    padding-top: 50px;
   }
 `
 
@@ -179,6 +229,7 @@ const FilterOption = styled.button`
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+  min-height: 44px; /* Better touch target */
   
   &:hover {
     background: ${props => props.active ? 'rgba(10, 102, 194, 0.15)' : 'var(--hover-bg)'};
@@ -194,6 +245,44 @@ const FilterOption = styled.button`
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+  }
+  
+  @media (max-width: 1024px) {
+    padding: 14px 18px;
+    font-size: 0.95em;
+    gap: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+    font-size: 0.9em;
+    gap: 10px;
+    min-height: 42px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 14px;
+    font-size: 0.85em;
+    gap: 8px;
+    min-height: 40px;
+    border-radius: 8px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    gap: 6px;
+    min-height: 38px;
   }
 `
 
@@ -258,6 +347,23 @@ const JobsHeader = styled.div`
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: ${fadeInScale} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
 `
 
 const JobsTitle = styled.h2`
@@ -266,18 +372,56 @@ const JobsTitle = styled.h2`
   font-weight: 400;
   margin-bottom: 8px;
   letter-spacing: -0.3px;
+  
+  @media (max-width: 768px) {
+    font-size: 1.3em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.2em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.1em;
+  }
 `
 
 const JobsSubtitle = styled.p`
   font-size: 0.9em;
   color: var(--text-light);
   font-weight: 300;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.75em;
+  }
 `
 
 const JobsContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  
+  @media (max-width: 768px) {
+    gap: 14px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 10px;
+  }
 `
 
 const JobCard = styled.div`
@@ -297,6 +441,29 @@ const JobCard = styled.div`
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 10px;
+    
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px;
+    border-radius: 8px;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    border-radius: 6px;
+  }
 `
 
 const JobHeader = styled.div`
@@ -304,10 +471,26 @@ const JobHeader = styled.div`
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 16px;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 14px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-bottom: 10px;
+    gap: 8px;
+  }
 `
 
 const JobInfo = styled.div`
   flex: 1;
+  min-width: 0;
 `
 
 const JobTitle = styled.h3`
@@ -316,12 +499,43 @@ const JobTitle = styled.h3`
   font-weight: 400;
   margin-bottom: 8px;
   letter-spacing: -0.2px;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 1.1em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.05em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+    margin-bottom: 4px;
+  }
 `
 
 const JobCompany = styled.div`
   font-size: 0.95em;
   color: var(--text-light);
   margin-bottom: 4px;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9em;
+    margin-bottom: 3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.85em;
+    margin-bottom: 2px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.8em;
+  }
 `
 
 const JobLocation = styled.div`
@@ -331,10 +545,39 @@ const JobLocation = styled.div`
   align-items: center;
   gap: 6px;
   margin-top: 8px;
+  flex-wrap: wrap;
 
   svg {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    margin-top: 6px;
+    gap: 5px;
+    
+    svg {
+      width: 13px;
+      height: 13px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    margin-top: 5px;
+    gap: 4px;
+    
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.7em;
+    margin-top: 4px;
   }
 `
 
@@ -364,6 +607,48 @@ const MatchScore = styled.div`
   color: var(--primary);
   font-weight: 500;
   white-space: nowrap;
+`
+
+const LocationPriorityBadge = styled.span`
+  padding: 4px 10px;
+  background: ${props => {
+    if (props.priority === 1) return 'rgba(34, 197, 94, 0.15)'; // City - Green
+    if (props.priority === 2) return 'rgba(59, 130, 246, 0.15)'; // Country - Blue
+    return 'rgba(168, 85, 247, 0.15)'; // Remote - Purple
+  }};
+  border: 1px solid ${props => {
+    if (props.priority === 1) return 'rgba(34, 197, 94, 0.4)';
+    if (props.priority === 2) return 'rgba(59, 130, 246, 0.4)';
+    return 'rgba(168, 85, 247, 0.4)';
+  }};
+  border-radius: 6px;
+  font-size: 0.75em;
+  color: ${props => {
+    if (props.priority === 1) return '#22c55e';
+    if (props.priority === 2) return '#3b82f6';
+    return '#a855f7';
+  }};
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+`
+
+const RecommendationScores = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.75em;
+`
+
+const ScoreBadge = styled.span`
+  padding: 3px 8px;
+  background: rgba(10, 102, 194, 0.08);
+  border: 1px solid rgba(10, 102, 194, 0.2);
+  border-radius: 4px;
+  color: var(--text-light);
+  font-weight: 400;
 `
 
 const JobDescription = styled.p`
@@ -1253,8 +1538,10 @@ const Jobs = () => {
   const [remoteJobs, setRemoteJobs] = useState([])
   const [savedJobs, setSavedJobs] = useState([])
   const [postedJobs, setPostedJobs] = useState([])
+  const [recommendedJobs, setRecommendedJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [applyingTo, setApplyingTo] = useState(null)
   const [savingJob, setSavingJob] = useState(null)
   const [activeFilter, setActiveFilter] = useState('all')
@@ -1318,9 +1605,32 @@ const Jobs = () => {
     }
   }
 
+  // Fetch job recommendations
+  const fetchRecommendations = async () => {
+    if (!user?.id) return
+    
+    setLoadingRecommendations(true)
+    try {
+      const res = await jobAPI.getJobRecommendations(user.id, 20)
+      setRecommendedJobs(res.data?.recommendations || [])
+    } catch (err) {
+      console.error('Failed to fetch recommendations:', err)
+      setRecommendedJobs([])
+    } finally {
+      setLoadingRecommendations(false)
+    }
+  }
+
   useEffect(() => {
     fetchJobs()
   }, [])
+
+  // Fetch recommendations when user is available and recommended filter is active
+  useEffect(() => {
+    if (user?.id && activeFilter === 'recommended') {
+      fetchRecommendations()
+    }
+  }, [user?.id, activeFilter])
 
   // Handle apply to job
   const handleApply = async (jobId, e) => {
@@ -1434,8 +1744,29 @@ const Jobs = () => {
 
   // Parse skills string to array
   const parseSkills = (skills) => {
+    // Always return an array, even if input is invalid
     if (!skills) return []
-    return skills.split(',').map(s => s.trim()).filter(Boolean)
+    
+    // If already an array, return it (filtered and trimmed)
+    if (Array.isArray(skills)) {
+      return skills.map(s => String(s).trim()).filter(Boolean)
+    }
+    
+    // If it's a string, split by comma
+    if (typeof skills === 'string') {
+      const result = skills.split(',').map(s => s.trim()).filter(Boolean)
+      return Array.isArray(result) ? result : []
+    }
+    
+    // For any other type, try to convert to string first
+    try {
+      const result = String(skills).split(',').map(s => s.trim()).filter(Boolean)
+      return Array.isArray(result) ? result : []
+    } catch (e) {
+      // If anything goes wrong, return empty array
+      console.warn('Error parsing skills:', e, skills)
+      return []
+    }
   }
 
   // Get current jobs based on active filter
@@ -1447,6 +1778,8 @@ const Jobs = () => {
         return remoteJobs
       case 'posted':
         return postedJobs
+      case 'recommended':
+        return recommendedJobs
       default:
         return allJobs
     }
@@ -1469,6 +1802,13 @@ const Jobs = () => {
         return {
           title: 'Posted Jobs',
           subtitle: `${postedJobs.length} jobs posted by you`
+        }
+      case 'recommended':
+        return {
+          title: 'Recommended for You',
+          subtitle: loadingRecommendations 
+            ? 'Loading personalized recommendations...' 
+            : `${recommendedJobs.length} jobs matched to your profile`
         }
       default:
         return {
@@ -1568,6 +1908,18 @@ const Jobs = () => {
   const renderJobCard = (job, index) => {
     const salary = formatSalary(job.salary_min, job.salary_max)
     const skills = parseSkills(job.skills_required)
+    // Ensure skills is always an array - double check for safety
+    let skillsArray = []
+    if (Array.isArray(skills)) {
+      skillsArray = skills
+    } else if (skills) {
+      // If parseSkills returned something unexpected, try to convert it
+      try {
+        skillsArray = Array.from(skills) || []
+      } catch (e) {
+        skillsArray = []
+      }
+    }
     
     return (
       <JobCard key={job.job_id} delay={`${index * 0.1}s`} onClick={(e) => handleJobCardClick(job, e)}>
@@ -1583,19 +1935,42 @@ const Jobs = () => {
               {job.location || 'Location not specified'}
             </JobLocation>
           </JobInfo>
-          {job.match_score && <MatchScore>{job.match_score}% Match</MatchScore>}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {job.composite_score && (
+              <MatchScore>
+                {Math.round(job.composite_score * 100)}% Match
+              </MatchScore>
+            )}
+            {job.location_priority && (
+              <LocationPriorityBadge priority={job.location_priority}>
+                {job.location_priority === 1 ? '📍 City Match' : 
+                 job.location_priority === 2 ? '🌍 Country Match' : 
+                 '🌐 Remote'}
+              </LocationPriorityBadge>
+            )}
+          </div>
         </JobHeader>
         
         <JobDescription>{job.description}</JobDescription>
+        
+        {/* Show recommendation scores for recommended jobs */}
+        {activeFilter === 'recommended' && job.composite_score && (
+          <RecommendationScores>
+            <ScoreBadge>Similarity: {Math.round(job.similarity_score * 100)}%</ScoreBadge>
+            <ScoreBadge>Skills: {Math.round(job.skill_match_score * 100)}%</ScoreBadge>
+            <ScoreBadge>Salary: {Math.round(job.salary_match_score * 100)}%</ScoreBadge>
+            <ScoreBadge>Recency: {Math.round(job.recency_score * 100)}%</ScoreBadge>
+          </RecommendationScores>
+        )}
         
         <JobMeta>
           <JobTag primary>{job.job_type || 'full-time'}</JobTag>
           {salary && <JobTag>{salary}</JobTag>}
           {job.is_remote && <JobTag primary>Remote</JobTag>}
-          {skills.slice(0, 3).map((skill, idx) => (
+          {skillsArray.length > 0 && skillsArray.slice(0, 3).map((skill, idx) => (
             <JobTag key={idx}>{skill}</JobTag>
           ))}
-          {skills.length > 3 && <JobTag>+{skills.length - 3}</JobTag>}
+          {skillsArray.length > 3 && <JobTag>+{skillsArray.length - 3}</JobTag>}
         </JobMeta>
         
         <JobActions>
@@ -1712,6 +2087,19 @@ const Jobs = () => {
             Posted Jobs
             <FilterCount active={activeFilter === 'posted'}>{postedJobs.length}</FilterCount>
           </FilterOption>
+
+          <FilterOption
+            active={activeFilter === 'recommended'}
+            onClick={() => handleFilterChange('recommended')}
+          >
+            <svg viewBox="0 0 24 24" fill={activeFilter === 'recommended' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+            Recommended
+            <FilterCount active={activeFilter === 'recommended'}>
+              {loadingRecommendations ? '...' : recommendedJobs.length}
+            </FilterCount>
+          </FilterOption>
         </SidePanel>
 
         <MainContainer>
@@ -1720,7 +2108,7 @@ const Jobs = () => {
             <JobsSubtitle>{getFilterInfo().subtitle}</JobsSubtitle>
           </JobsHeader>
           <JobsContainer>
-            {loading ? (
+            {loading || (activeFilter === 'recommended' && loadingRecommendations) ? (
               <LoadingSpinner />
             ) : getCurrentJobs().length === 0 ? (
               <EmptyState>
@@ -1730,6 +2118,8 @@ const Jobs = () => {
                   ? 'No remote jobs available'
                   : activeFilter === 'posted'
                   ? 'You haven\'t posted any jobs yet. Click "Post a Job" to get started.'
+                  : activeFilter === 'recommended'
+                  ? 'No personalized recommendations available. Update your profile and preferences to get better matches!'
                   : 'No jobs available at the moment'}
               </EmptyState>
             ) : (
@@ -1908,23 +2298,38 @@ const Jobs = () => {
                           </ApplicantDetailRow>
                         )}
                         
-                        {selectedApplicant.skills && (
-                          <ApplicantDetailRow>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                              <path d="M2 17l10 5 10-5"></path>
-                              <path d="M2 12l10 5 10-5"></path>
-                            </svg>
-                            <ApplicantDetailLabel>Skills:</ApplicantDetailLabel>
-                            <ApplicantDetailValue>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {selectedApplicant.skills.split(',').map((skill, idx) => (
-                                  <JobTag key={idx}>{skill.trim()}</JobTag>
-                                ))}
-                              </div>
-                            </ApplicantDetailValue>
-                          </ApplicantDetailRow>
-                        )}
+                        {selectedApplicant.skills && (() => {
+                          // Parse skills to ensure it's always an array
+                          let applicantSkills = []
+                          if (Array.isArray(selectedApplicant.skills)) {
+                            applicantSkills = selectedApplicant.skills
+                          } else if (typeof selectedApplicant.skills === 'string') {
+                            // Try to parse as JSON first, then fall back to comma-separated
+                            try {
+                              const parsed = JSON.parse(selectedApplicant.skills)
+                              applicantSkills = Array.isArray(parsed) ? parsed : []
+                            } catch {
+                              applicantSkills = selectedApplicant.skills.split(',').map(s => s.trim()).filter(Boolean)
+                            }
+                          }
+                          return applicantSkills.length > 0 && (
+                            <ApplicantDetailRow>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                <path d="M2 17l10 5 10-5"></path>
+                                <path d="M2 12l10 5 10-5"></path>
+                              </svg>
+                              <ApplicantDetailLabel>Skills:</ApplicantDetailLabel>
+                              <ApplicantDetailValue>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {applicantSkills.map((skill, idx) => (
+                                    <JobTag key={idx}>{skill}</JobTag>
+                                  ))}
+                                </div>
+                              </ApplicantDetailValue>
+                            </ApplicantDetailRow>
+                          )
+                        })()}
                         
                         {selectedApplicant.profile_url && (
                           <ApplicantDetailRow>
@@ -2100,8 +2505,11 @@ const Jobs = () => {
                       type="text"
                       value={jobForm.location}
                       onChange={e => setJobForm({...jobForm, location: e.target.value})}
-                      placeholder="e.g. San Francisco, CA"
+                      placeholder="e.g. San Francisco, CA or London, UK"
                     />
+                    <small style={{ fontSize: '0.8em', color: 'var(--text-light)', marginTop: '4px', display: 'block' }}>
+                      Format: City, State/Country (e.g., "New York, NY" or "Toronto, Canada")
+                    </small>
                   </FormGroup>
                 </FormRow>
                 
@@ -2189,19 +2597,23 @@ const Jobs = () => {
 
       {/* Job Detail Side Panel */}
       <JobDetailPanel isOpen={jobDetailPanelOpen}>
-        {selectedJobDetail && (
-          <>
-            <JobDetailHeader>
-              <JobDetailTitle>{selectedJobDetail.title}</JobDetailTitle>
-              <JobDetailCloseButton onClick={handleCloseJobDetailPanel}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </JobDetailCloseButton>
-            </JobDetailHeader>
-            
-            <JobDetailContent>
+        {selectedJobDetail && (() => {
+          const detailSkills = parseSkills(selectedJobDetail.skills_required)
+          const detailSkillsArray = Array.isArray(detailSkills) ? detailSkills : []
+          
+          return (
+            <>
+              <JobDetailHeader>
+                <JobDetailTitle>{selectedJobDetail.title}</JobDetailTitle>
+                <JobDetailCloseButton onClick={handleCloseJobDetailPanel}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </JobDetailCloseButton>
+              </JobDetailHeader>
+              
+              <JobDetailContent>
               <JobDetailSection>
                 <JobDetailInfo>
                   <JobDetailInfoRow>
@@ -2275,7 +2687,7 @@ const Jobs = () => {
                     </JobDetailInfoRow>
                   )}
                   
-                  {selectedJobDetail.match_score && (
+                  {(selectedJobDetail.match_score || selectedJobDetail.composite_score) && (
                     <JobDetailInfoRow>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -2284,8 +2696,76 @@ const Jobs = () => {
                       </svg>
                       <JobDetailInfoLabel>Match Score:</JobDetailInfoLabel>
                       <JobDetailInfoValue>
-                        <MatchScore>{selectedJobDetail.match_score}% Match</MatchScore>
+                        <MatchScore>
+                          {selectedJobDetail.composite_score 
+                            ? `${Math.round(selectedJobDetail.composite_score * 100)}% Match`
+                            : `${selectedJobDetail.match_score}% Match`}
+                        </MatchScore>
                       </JobDetailInfoValue>
+                    </JobDetailInfoRow>
+                  )}
+                  
+                  {/* Detailed Recommendation Scores */}
+                  {selectedJobDetail.composite_score && (
+                    <JobDetailInfoRow style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+                      <JobDetailInfoLabel style={{ marginBottom: '8px' }}>Recommendation Breakdown:</JobDetailInfoLabel>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '8px', 
+                        width: '100%',
+                        padding: '12px',
+                        background: 'var(--bg-light)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Overall Match:</span>
+                          <span style={{ fontSize: '0.95em', fontWeight: '600', color: 'var(--primary)' }}>
+                            {Math.round(selectedJobDetail.composite_score * 100)}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Semantic Similarity:</span>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text)' }}>
+                            {Math.round(selectedJobDetail.similarity_score * 100)}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Skill Match:</span>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text)' }}>
+                            {Math.round(selectedJobDetail.skill_match_score * 100)}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Salary Match:</span>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text)' }}>
+                            {Math.round(selectedJobDetail.salary_match_score * 100)}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Recency:</span>
+                          <span style={{ fontSize: '0.9em', color: 'var(--text)' }}>
+                            {Math.round(selectedJobDetail.recency_score * 100)}%
+                          </span>
+                        </div>
+                        {selectedJobDetail.location_priority && (
+                          <div style={{ 
+                            marginTop: '8px', 
+                            paddingTop: '8px', 
+                            borderTop: '1px solid var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{ fontSize: '0.9em', color: 'var(--text-light)' }}>Location Priority:</span>
+                            <LocationPriorityBadge priority={selectedJobDetail.location_priority}>
+                              {selectedJobDetail.location_priority === 1 ? '📍 City Match' : 
+                               selectedJobDetail.location_priority === 2 ? '🌍 Country Match' : 
+                               '🌐 Remote'}
+                            </LocationPriorityBadge>
+                          </div>
+                        )}
+                      </div>
                     </JobDetailInfoRow>
                   )}
                 </JobDetailInfo>
@@ -2298,11 +2778,11 @@ const Jobs = () => {
                 </JobDetailDescription>
               </JobDetailSection>
               
-              {parseSkills(selectedJobDetail.skills_required).length > 0 && (
+              {detailSkillsArray.length > 0 && (
                 <JobDetailSection>
                   <JobDetailSectionTitle>Required Skills</JobDetailSectionTitle>
                   <JobDetailSkills>
-                    {parseSkills(selectedJobDetail.skills_required).map((skill, idx) => (
+                    {detailSkillsArray.map((skill, idx) => (
                       <JobDetailSkillTag key={idx}>{skill}</JobDetailSkillTag>
                     ))}
                   </JobDetailSkills>
@@ -2360,8 +2840,9 @@ const Jobs = () => {
                 </>
               )}
             </JobDetailActions>
-          </>
-        )}
+            </>
+          )
+        })()}
       </JobDetailPanel>
     </Container>
   )

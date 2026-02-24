@@ -66,11 +66,43 @@ const MainContainer = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   padding: 30px 20px;
+  
+  @media (max-width: 1024px) {
+    padding: 25px 18px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px 15px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 18px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px 12px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px 10px;
+  }
 `
 
 const Header = styled.div`
   margin-bottom: 30px;
   animation: ${slideUp} 0.4s ease-out;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 20px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-bottom: 18px;
+  }
 `
 
 const PageTitle = styled.h1`
@@ -78,11 +110,45 @@ const PageTitle = styled.h1`
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 300;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.8em;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.6em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.4em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.2em;
+  }
 `
 
 const PageSubtitle = styled.p`
   font-size: 1em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const TabContainer = styled.div`
@@ -90,6 +156,26 @@ const TabContainer = styled.div`
   gap: 0;
   margin-bottom: 30px;
   border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  @media (max-width: 768px) {
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 20px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-bottom: 18px;
+  }
 `
 
 const Tab = styled.button`
@@ -106,9 +192,37 @@ const Tab = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+  min-height: 44px; /* Better touch target */
 
   &:hover {
     color: var(--primary);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 20px;
+    font-size: 0.95em;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 10px 16px;
+    font-size: 0.9em;
+    gap: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 14px;
+    font-size: 0.85em;
+    min-height: 40px;
+    gap: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    min-height: 38px;
+    gap: 4px;
   }
 `
 
@@ -164,6 +278,29 @@ const PeopleGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 18px;
+  }
+  
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+  }
 `
 
 const PersonCard = styled.div`
@@ -178,17 +315,61 @@ const PersonCard = styled.div`
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     border-color: var(--primary);
   }
+  
+  @media (max-width: 768px) {
+    border-radius: 12px;
+    
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    border-radius: 10px;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    border-radius: 8px;
+  }
 `
 
 const PersonHeader = styled.div`
   height: 80px;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   position: relative;
+  
+  @media (max-width: 768px) {
+    height: 70px;
+  }
+  
+  @media (max-width: 480px) {
+    height: 60px;
+  }
+  
+  @media (max-width: 360px) {
+    height: 55px;
+  }
 `
 
 const PersonContent = styled.div`
   padding: 60px 20px 20px;
   position: relative;
+  
+  @media (max-width: 768px) {
+    padding: 55px 18px 18px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 50px 16px 16px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 45px 14px 14px;
+  }
 `
 
 const PersonAvatar = styled.div`
@@ -212,6 +393,30 @@ const PersonAvatar = styled.div`
   ${PersonCard}:hover & {
     transform: translateX(-50%) scale(1.05);
   }
+  
+  @media (max-width: 768px) {
+    width: 90px;
+    height: 90px;
+    top: -45px;
+    font-size: 1.8em;
+    border-width: 3.5px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 80px;
+    height: 80px;
+    top: -40px;
+    font-size: 1.6em;
+    border-width: 3px;
+  }
+  
+  @media (max-width: 360px) {
+    width: 70px;
+    height: 70px;
+    top: -35px;
+    font-size: 1.4em;
+    border-width: 2.5px;
+  }
 `
 
 const PersonName = styled.h3`
@@ -220,6 +425,21 @@ const PersonName = styled.h3`
   margin-bottom: 4px;
   font-weight: 400;
   text-align: center;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 1.1em;
+    margin-bottom: 3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.05em;
+    margin-bottom: 2px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const PersonTitle = styled.p`
@@ -227,6 +447,22 @@ const PersonTitle = styled.p`
   color: var(--text-light);
   margin-bottom: 8px;
   text-align: center;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.75em;
+    margin-bottom: 4px;
+  }
 `
 
 const PersonCompany = styled.p`
@@ -282,6 +518,15 @@ const SkillTag = styled.span`
 const ButtonGroup = styled.div`
   display: flex;
   gap: 10px;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+  }
 `
 
 const MessageButton = styled.button`
@@ -298,11 +543,36 @@ const MessageButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 44px; /* Better touch target */
+  flex: 1;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
     background: var(--primary-dark);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 18px;
+    font-size: 0.9em;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 16px;
+    font-size: 0.85em;
+    min-height: 40px;
+    width: 100%;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 14px;
+    font-size: 0.8em;
+    min-height: 38px;
   }
 
   &:active {
@@ -482,13 +752,30 @@ const UserCard = ({ user, onConnect, isPending, isConnected, loading, onMessage 
               )}
             </MutualConnections>
           )}
-          {user.skills?.length > 0 && (
-          <PersonSkills>
-              {user.skills.slice(0, 3).map((skill, idx) => (
-              <SkillTag key={idx}>{skill}</SkillTag>
-            ))}
-          </PersonSkills>
-          )}
+          {(() => {
+            // Parse skills to ensure it's always an array
+            let skillsArray = []
+            if (user.skills) {
+              if (Array.isArray(user.skills)) {
+                skillsArray = user.skills
+              } else if (typeof user.skills === 'string') {
+                // Try to parse as JSON first, then fall back to comma-separated
+                try {
+                  const parsed = JSON.parse(user.skills)
+                  skillsArray = Array.isArray(parsed) ? parsed : []
+                } catch {
+                  skillsArray = user.skills.split(',').map(s => s.trim()).filter(Boolean)
+                }
+              }
+            }
+            return skillsArray.length > 0 && (
+              <PersonSkills>
+                {skillsArray.slice(0, 3).map((skill, idx) => (
+                  <SkillTag key={idx}>{skill}</SkillTag>
+                ))}
+              </PersonSkills>
+            )
+          })()}
           {isConnected ? (
             <ButtonGroup>
               <ConnectButton 

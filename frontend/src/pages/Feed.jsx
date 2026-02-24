@@ -34,6 +34,14 @@ const MainContainer = styled.div`
   gap: 25px;
   padding: 30px 20px;
   
+  @media (max-width: 1400px) {
+    max-width: 100%;
+    margin: 0 auto;
+    grid-template-columns: 260px 260px 1fr;
+    gap: 22px;
+    padding: 28px 18px;
+  }
+  
   @media (max-width: 1200px) {
     max-width: 100%;
     margin: 0 auto;
@@ -48,15 +56,31 @@ const MainContainer = styled.div`
     padding: 20px 15px;
   }
   
+  @media (max-width: 900px) {
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+    padding: 18px 12px;
+  }
+  
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 20px 15px;
   }
   
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
+  
   @media (max-width: 480px) {
     gap: 15px;
     padding: 15px 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+    padding: 12px 10px;
   }
 `
 
@@ -128,18 +152,52 @@ const ProfileName = styled.h3`
   font-size: 1.3em;
   margin-bottom: 10px;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const ProfileHeadline = styled.p`
   color: var(--text-light);
   margin-bottom: 15px;
   font-size: 0.9em;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+    margin-bottom: 12px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+    margin-bottom: 10px;
+  }
 `
 
 const ProfileBio = styled.p`
   color: var(--text-lighter);
   font-size: 0.85em;
   line-height: 1.5;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    line-height: 1.4;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    line-height: 1.4;
+  }
 `
 
 const LeftSidebar = styled.aside`
@@ -428,6 +486,24 @@ const PostCreatorHeader = styled.div`
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+  }
 `
 
 const PostCreatorAvatar = styled.div`
@@ -441,6 +517,25 @@ const PostCreatorAvatar = styled.div`
   color: white;
   font-weight: 500;
   font-size: 1.2em;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    font-size: 1em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9em;
+  }
 `
 
 const PostCreatorInfo = styled.div`
@@ -452,11 +547,37 @@ const PostCreatorTitle = styled.h3`
   color: var(--text);
   margin-bottom: 4px;
   font-weight: 600;
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+    margin-bottom: 3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostCreatorSubtitle = styled.p`
   font-size: 0.85em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.7em;
+  }
 `
 
 const PostInputContainer = styled.div`
@@ -509,6 +630,7 @@ const PostButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px; /* Better touch target */
   
   &:hover {
     background: var(--primary-dark);
@@ -518,12 +640,43 @@ const PostButton = styled.button`
   &:active {
     transform: translateY(0) scale(0.98);
   }
+  
+  @media (max-width: 768px) {
+    padding: 10px 20px;
+    font-size: 0.95em;
+    align-self: stretch;
+    width: 100%;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 16px;
+    font-size: 0.9em;
+    border-radius: 6px;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 14px;
+    font-size: 0.85em;
+  }
 `
 
 const PostsContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  
+  @media (max-width: 768px) {
+    gap: 18px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+  }
 `
 
 const Post = styled.div`
@@ -549,6 +702,16 @@ const PostHeader = styled.div`
   align-items: center;
   gap: 15px;
   margin-bottom: 15px;
+  
+  @media (max-width: 480px) {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
 `
 
 const PostAvatar = styled.div`
@@ -562,6 +725,25 @@ const PostAvatar = styled.div`
   color: white;
   font-weight: 500;
   font-size: 1.2em;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 45px;
+    height: 45px;
+    font-size: 1.1em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    font-size: 1em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9em;
+  }
 `
 
 const PostInfo = styled.div`
@@ -572,23 +754,71 @@ const PostName = styled.h4`
   font-size: 1em;
   margin-bottom: 2px;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 1px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostUsername = styled.div`
   font-size: 0.85em;
   color: var(--text-lighter);
   margin-bottom: 2px;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    margin-bottom: 1px;
+  }
 `
 
 const PostTime = styled.div`
   font-size: 0.8em;
   color: var(--text-lighter);
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+  }
 `
 
 const PostContent = styled.div`
   margin-bottom: 15px;
   line-height: 1.6;
   color: var(--text);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 10px;
+    line-height: 1.5;
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostMedia = styled.div`
@@ -601,6 +831,32 @@ const PostMedia = styled.div`
     width: 100%;
     max-height: 500px;
     object-fit: cover;
+  }
+  
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+    border-radius: 10px;
+    
+    img, video {
+      max-height: 400px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 10px;
+    border-radius: 8px;
+    
+    img, video {
+      max-height: 300px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    border-radius: 6px;
+    
+    img, video {
+      max-height: 250px;
+    }
   }
 `
 
@@ -615,6 +871,32 @@ const MediaPreviewContainer = styled.div`
     width: 100%;
     max-height: 200px;
     object-fit: cover;
+  }
+  
+  @media (max-width: 768px) {
+    max-width: 250px;
+    border-radius: 10px;
+    
+    img, video {
+      max-height: 180px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    max-width: 100%;
+    border-radius: 8px;
+    
+    img, video {
+      max-height: 150px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    border-radius: 6px;
+    
+    img, video {
+      max-height: 120px;
+    }
   }
 `
 
@@ -633,10 +915,26 @@ const MediaRemoveButton = styled.button`
   cursor: pointer;
   color: white;
   transition: all 0.2s ease;
+  min-width: 44px; /* Better touch target */
+  min-height: 44px;
   
   &:hover {
     background: rgba(0, 0, 0, 0.9);
     transform: scale(1.1);
+  }
+  
+  @media (max-width: 480px) {
+    width: 32px;
+    height: 32px;
+    top: 6px;
+    right: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    top: 4px;
+    right: 4px;
   }
 `
 
@@ -650,6 +948,7 @@ const MediaUploadButton = styled.label`
   cursor: pointer;
   color: var(--text-lighter);
   transition: all 0.2s ease;
+  min-height: 44px; /* Better touch target */
   
   &:hover {
     background: var(--accent);
@@ -658,6 +957,29 @@ const MediaUploadButton = styled.label`
   
   input {
     display: none;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 8px 10px;
+    font-size: 0.9em;
+    gap: 5px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 6px 8px;
+    font-size: 0.85em;
+    border-radius: 6px;
+    gap: 4px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 6px;
+    font-size: 0.8em;
   }
 `
 
@@ -1346,8 +1668,20 @@ const Feed = () => {
     
     try {
       const response = await api.get(`/api/user/search?q=${encodeURIComponent(query)}`)
+      // Handle new response format with users, jobs, posts
+      // Extract users array from response
+      let usersData = []
+      if (response && response.data) {
+        // Check if new format (has users property)
+        if (response.data.users && Array.isArray(response.data.users)) {
+          usersData = response.data.users
+        } else if (Array.isArray(response.data)) {
+          // Old format - direct array
+          usersData = response.data
+        }
+      }
       // Normalize user data to have consistent field names
-      const users = (response.data || []).map(u => ({
+      const users = usersData.map(u => ({
         ...u,
         id: u.id || u.uid,
         full_name: u.full_name || u.name || u.username

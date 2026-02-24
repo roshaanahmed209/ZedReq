@@ -15,6 +15,7 @@ from services.context_updater import ContextUpdater
 from services.lms_service import LMSService
 from services.settings_service import SettingsService
 from services.two_factor_service import TwoFactorService
+from services.search_service import SearchService
 from schemas.settings import (
     ProfileUpdate,
     PasswordChange,
@@ -89,6 +90,11 @@ def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
     return TwoFactorService(db)
 
 
+def get_search_service(db: Session = Depends(get_db)) -> SearchService:
+    """Dependency to get search service with ORM session"""
+    return SearchService(db)
+
+
 @router.get("")
 async def get_current_user_profile(
     current_user: dict = Depends(get_current_user),
@@ -132,6 +138,85 @@ async def get_current_user_profile(
         "about": current_user.get("about"),
         "created_at": current_user.get("created_at")
     }
+
+
+@router.get("/search")
+async def search_all(
+    q: str = Query(..., min_length=1, description="Search query"),
+    search_type: Optional[str] = Query(None, alias="type", description="Filter by type: users, jobs, posts, or all"),
+    limit: int = Query(10, ge=1, le=50, description="Results per type"),
+    current_user: dict = Depends(get_current_user),
+    search_service: SearchService = Depends(get_search_service)
+):
+    """
+    LinkedIn-style comprehensive search across users, jobs, and posts
+    
+    Returns results from all types by default, or filter by type parameter.
+    """
+    # Determine search types
+    if search_type and search_type.lower() in ['users', 'jobs', 'posts']:
+        search_types = [search_type.lower()]
+    else:
+        search_types = ['users', 'jobs', 'posts']
+    
+    # Perform search
+    results = search_service.search_all(
+        query=q,
+        current_user_id=current_user["id"],
+        limit_per_type=limit,
+        search_types=search_types
+    )
+    
+    # Format response
+    response = {
+        "query": results["query"],
+        "total_results": results["total_results"],
+        "users": [],
+        "jobs": [],
+        "posts": []
+    }
+    
+    # Format users
+    for u in results.get("users", []):
+        response["users"].append({
+            "uid": u.get("id") or u.get("uid"),
+            "username": u.get("username"),
+            "name": u.get("name") or u.get("full_name"),
+            "email": u.get("email") or u.get("user_email"),
+            "created_at": u.get("created_at")
+        })
+    
+    # Format jobs
+    for j in results.get("jobs", []):
+        response["jobs"].append({
+            "job_id": j.get("job_id"),
+            "title": j.get("title"),
+            "company_name": j.get("company_name"),
+            "location": j.get("location"),
+            "job_type": j.get("job_type"),
+            "is_remote": j.get("is_remote"),
+            "description": j.get("description"),
+            "skills_required": j.get("skills_required"),
+            "created_at": j.get("created_at")
+        })
+    
+    # Format posts
+    for p in results.get("posts", []):
+        response["posts"].append({
+            "id": p.get("id") or p.get("post_id"),
+            "post_id": p.get("post_id"),
+            "user_id": p.get("user_id") or p.get("uid"),
+            "content": p.get("content") or p.get("post_desc"),
+            "username": p.get("username"),
+            "full_name": p.get("full_name") or p.get("name"),
+            "profile_pic": p.get("profile_pic"),
+            "like_count": p.get("like_count") or p.get("likes", 0),
+            "comment_count": p.get("comment_count") or p.get("comments", 0),
+            "is_liked": p.get("is_liked", False),
+            "created_at": p.get("created_at")
+        })
+    
+    return response
 
 
 @router.get("/{user_id}")
@@ -212,27 +297,6 @@ async def get_user_certificates(
         "certificates": certificates,
         "total": len(certificates)
     }
-
-
-@router.get("/search")
-async def search_users(
-    q: str = Query(..., min_length=1, description="Search query"),
-    current_user: dict = Depends(get_current_user),
-    user_service: UserService = Depends(get_user_service)
-):
-    """Search users by username or name"""
-    users = user_service.search_users(q, exclude_user_id=current_user["id"], limit=20)
-    
-    return [
-        {
-            "uid": u.get("id") or u.get("uid"),
-            "username": u.get("username"),
-            "name": u.get("name") or u.get("full_name"),
-            "email": u.get("email") or u.get("user_email"),
-            "created_at": u.get("created_at")
-        }
-        for u in users
-    ]
 
 
 # Settings Endpoints

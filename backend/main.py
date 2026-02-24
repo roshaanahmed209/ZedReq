@@ -131,6 +131,58 @@ async def lifespan(app: FastAPI):
     init_database()
     print("Database initialized")
     
+    # Initialize Firebase (for messaging service)
+    try:
+        from firebase.firebase_client import initialize_firebase, get_firebase_db
+        import logging
+        firebase_logger = logging.getLogger('firebase.firebase_client')
+        firebase_logger.setLevel(logging.INFO)  # Ensure we see Firebase logs
+        
+        print("Initializing Firebase Realtime Database...")
+        
+        # #region agent log
+        import json
+        import os
+        try:
+            with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:141","message":"Server startup: initializing Firebase","data":{"cwd":os.getcwd()},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+        except: pass
+        # #endregion
+        
+        firebase_app = initialize_firebase()
+        
+        # #region agent log
+        try:
+            with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:143","message":"Server startup: Firebase init result","data":{"firebase_app_is_none":firebase_app is None},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+        except: pass
+        # #endregion
+        
+        if firebase_app:
+            print("Firebase Admin SDK app created, getting database reference...")
+            db_ref = get_firebase_db()
+            
+            # #region agent log
+            try:
+                with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:145","message":"Server startup: got db_ref","data":{"db_ref_is_none":db_ref is None},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+            except: pass
+            # #endregion
+            
+            if db_ref:
+                print("✓ Firebase Realtime Database initialized successfully (using Admin SDK)")
+            else:
+                print("⚠ Warning: Firebase app created but database reference unavailable (will use REST API)")
+                print("  This usually means there's an issue with the database connection")
+        else:
+            print("⚠ Warning: Firebase Admin SDK not available (will use REST API fallback)")
+            print("  Check that FIREBASE_CREDENTIALS_PATH is set or credentials.json exists in backend/firebase/")
+    except Exception as e:
+        print(f"⚠ Warning: Firebase initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
+        print("Messaging service will use REST API fallback")
+    
     # Start Vec agent scheduler
     try:
         start_scheduler()

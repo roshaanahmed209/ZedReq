@@ -1,9 +1,16 @@
 """Description (Profile) ORM Model"""
-from sqlalchemy import Column, Integer, String, Text, DateTime
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy import Column, Integer, String, Text, DateTime, TypeDecorator
+from sqlalchemy.orm import relationship, Mapped, deferred
 from sqlalchemy.sql import func
 
 from config.database_orm import Base
+
+
+# Custom type for pgvector - just passes through as text for ORM purposes
+class VectorType(TypeDecorator):
+    """Pass-through type for pgvector - actual vector operations use raw SQL"""
+    impl = Text
+    cache_ok = True
 
 
 class Description(Base):
@@ -20,12 +27,18 @@ class Description(Base):
     role = Column(String(150))
     company = Column(String(150))
     location = Column(String(150))
+    city = Column(String(150), index=True)  # Parsed city from location
+    country = Column(String(150), index=True)  # Parsed country from location
     industry = Column(String(100))
     profile_pic = Column(Text)
     cover_pic = Column(Text)
     resume = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Embedding (pgvector) - deferred to avoid loading in regular queries
+    # This column is managed via raw SQL, not through SQLAlchemy ORM
+    embedding = deferred(Column('embedding', VectorType, nullable=True))
     
     # Relationships
     # Users can reference this via description_id foreign key
@@ -48,6 +61,8 @@ class Description(Base):
             'role': self.role,
             'company': self.company,
             'location': self.location,
+            'city': self.city,
+            'country': self.country,
             'industry': self.industry,
             'profile_pic': self.profile_pic,
             'cover_pic': self.cover_pic,

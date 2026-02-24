@@ -49,15 +49,17 @@ async def websocket_messages(
     except Exception as e:
         logger.error(f"WebSocket authentication failed: {e}", exc_info=True)
         try:
-            # Accept connection first, then close with error
-            await websocket.accept()
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Authentication failed: {str(e)}"
-            })
-            await websocket.close(code=4001, reason=f"Invalid authentication token: {str(e)}")
+            # Only try to accept and close if websocket is still in a valid state
+            if websocket.client_state.name == "CONNECTING":
+                await websocket.accept()
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Authentication failed: {str(e)}"
+                })
+                await websocket.close(code=4001, reason=f"Invalid authentication token: {str(e)}")
         except Exception as close_error:
-            logger.error(f"Error closing WebSocket: {close_error}")
+            # Connection might already be closed, just log it
+            logger.debug(f"WebSocket already closed or in invalid state: {close_error}")
         return
     
     # Accept connection and register with manager
@@ -144,9 +146,10 @@ async def websocket_messages(
                             }
                         )
                     else:
+                        logger.error(f"Failed to send message from {user_id} to {recipient_id}: messaging_service.send_message returned None")
                         await websocket.send_json({
                             "type": "error",
-                            "message": "Failed to send message"
+                            "message": "Failed to send message. Please check Firebase configuration or try again later."
                         })
                 
                 # Handle getting messages

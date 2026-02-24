@@ -16,11 +16,41 @@ class MessagingService:
     """Service for handling messages with Firebase Realtime Database"""
     
     def __init__(self):
+        # #region agent log
+        import json
+        import os
+        import traceback
+        try:
+            with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"messaging_service.py:18","message":"MessagingService.__init__ called","data":{"cwd":os.getcwd(),"caller":traceback.extract_stack()[-2].name if len(traceback.extract_stack()) > 1 else "unknown"},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+        except: pass
+        # #endregion
+        
         try:
             self.db_ref = get_firebase_db()
+            
+            # #region agent log
+            try:
+                with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"messaging_service.py:20","message":"MessagingService got db_ref","data":{"db_ref_is_none":self.db_ref is None},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+            except: pass
+            # #endregion
+            
+            if self.db_ref:
+                logger.info("MessagingService: Using Firebase Admin SDK")
+            else:
+                logger.warning("MessagingService: Firebase Admin SDK not available, will use REST API fallback")
         except Exception as e:
             logger.warning(f"Could not initialize Firebase Admin SDK: {e}")
             logger.warning("Will use REST API fallback")
+            
+            # #region agent log
+            try:
+                with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"messaging_service.py:26","message":"MessagingService init exception","data":{"error":str(e)},"timestamp":int(__import__("time").time()*1000)}) + "\n")
+            except: pass
+            # #endregion
+            
             self.db_ref = None
         
         try:
@@ -30,6 +60,8 @@ class MessagingService:
             raise
         
         self.api_key = get_api_key() or ""
+        if not self.api_key and not self.db_ref:
+            logger.warning("MessagingService: Neither Admin SDK nor API key available - messaging may not work")
         
     def _get_rest_url(self, path: str = "") -> str:
         """Get REST API URL for Firebase Realtime Database"""
@@ -132,8 +164,12 @@ class MessagingService:
             
             if self.db_ref:
                 # Use Firebase Admin SDK
-                ref = self.db_ref.child(messages_path).child(message_id)
-                ref.set(message_data)
+                try:
+                    ref = self.db_ref.child(messages_path).child(message_id)
+                    ref.set(message_data)
+                except Exception as firebase_error:
+                    logger.error(f"Firebase Admin SDK error: {firebase_error}", exc_info=True)
+                    return None
             else:
                 # Use REST API
                 result = await self._firebase_rest_request(
@@ -142,6 +178,7 @@ class MessagingService:
                     data=message_data
                 )
                 if result is None:
+                    logger.error(f"Firebase REST API request failed for message {message_id}")
                     return None
             
             # Update conversation metadata

@@ -43,6 +43,8 @@ class JobPosting(Base):
     description = Column(Text, nullable=False)
     company_name = Column(String(150))
     location = Column(String(150), index=True)
+    city = Column(String(150), index=True)  # Parsed city from location
+    country = Column(String(150), index=True)  # Parsed country from location
     job_link = Column(Text)  # Job link/reference within ZedRec domain
     
     # Type & Requirements
@@ -100,6 +102,8 @@ class JobPosting(Base):
             'description': self.description,
             'company_name': self.company_name,
             'location': self.location,
+            'city': self.city,
+            'country': self.country,
             'job_link': self.job_link,
             'job_type': self.job_type,
             'is_remote': self.is_remote,

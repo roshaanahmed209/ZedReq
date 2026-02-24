@@ -19,12 +19,18 @@ class JobService:
     
     def create_job(self, poster_id: int, job_data: dict) -> JobPosting:
         """Create a new job posting"""
+        # Parse location to extract city and country
+        location = job_data.get('location')
+        city, country = self._parse_location(location) if location else (None, None)
+        
         job = JobPosting(
             poster_id=poster_id,
             title=job_data['title'],
             description=job_data['description'],
             company_name=job_data.get('company_name'),
-            location=job_data.get('location'),
+            location=location,
+            city=city,
+            country=country,
             job_type=job_data.get('job_type', 'full-time'),
             is_remote=job_data.get('is_remote', False),
             experience_level=job_data.get('experience_level'),
@@ -56,6 +62,58 @@ class JobService:
             # Don't fail job creation if embedding fails
         
         return job
+    
+    def _parse_location(self, location_str: str) -> tuple[Optional[str], Optional[str]]:
+        """
+        Parse location string to extract city and country.
+        
+        Expected formats:
+        - "City, State" (e.g., "San Francisco, CA")
+        - "City, Country" (e.g., "London, UK")
+        - "City" (only city)
+        - "Remote" or "Hybrid"
+        
+        Args:
+            location_str: Location string
+            
+        Returns:
+            Tuple of (city, country)
+        """
+        if not location_str:
+            return (None, None)
+        
+        location_str = location_str.strip()
+        
+        # Handle special cases
+        if location_str.lower() in ['remote', 'hybrid']:
+            return (None, None)
+        
+        # Split by comma
+        parts = [p.strip() for p in location_str.split(',')]
+        
+        if len(parts) == 1:
+            # Only city provided
+            return (parts[0], None)
+        elif len(parts) >= 2:
+            # City and state/country
+            city = parts[0]
+            state_or_country = parts[1]
+            
+            # Common US state abbreviations (2 letters)
+            us_states = {'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 
+                        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+                        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+                        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+                        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'}
+            
+            if state_or_country.upper() in us_states:
+                # It's a US state, we'll use the state as country identifier for US
+                return (city, 'USA')
+            else:
+                # Likely a country
+                return (city, state_or_country)
+        
+        return (None, None)
     
     def get_job(self, job_id: int, user_id: int = None) -> Optional[Dict[str, Any]]:
         """Get a job posting with enriched data"""
@@ -209,11 +267,18 @@ class JobService:
                          'job_type', 'is_remote', 'experience_level', 'skills_required',
                          'salary_min', 'salary_max'}
         content_changed = any(key in content_fields for key in job_data.keys())
+        location_changed = 'location' in job_data
         
         # Update fields
         for key, value in job_data.items():
             if value is not None and hasattr(job, key):
                 setattr(job, key, value)
+        
+        # Parse and update city/country if location changed
+        if location_changed and job_data.get('location'):
+            city, country = self._parse_location(job_data['location'])
+            job.city = city
+            job.country = country
         
         self.db.commit()
         self.db.refresh(job)

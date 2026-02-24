@@ -51,7 +51,26 @@ const Shell = styled.div`
   max-width: 900px;
   margin: 0 auto;
   padding: 0 20px 60px;
-  @media (max-width: 480px) { padding: 0 12px 40px; }
+  
+  @media (max-width: 1024px) {
+    padding: 0 18px 50px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0 16px 45px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 0 14px 40px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 12px 40px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 0 10px 35px;
+  }
 `
 
 /* ═══════════════════════════════════════════════════════════════
@@ -74,8 +93,25 @@ const CoverWrap = styled.div`
     background: linear-gradient(to bottom, transparent 40%, color-mix(in srgb, var(--bg-light) 85%, black) 100%);
   }
 
-  @media (max-width: 768px) { height: 200px; }
-  @media (max-width: 480px) { height: 160px; }
+  @media (max-width: 1024px) {
+    height: 240px;
+  }
+  
+  @media (max-width: 768px) {
+    height: 200px;
+  }
+  
+  @media (max-width: 600px) {
+    height: 180px;
+  }
+  
+  @media (max-width: 480px) {
+    height: 160px;
+  }
+  
+  @media (max-width: 360px) {
+    height: 140px;
+  }
 `
 
 const HeaderCard = styled.div`
@@ -87,19 +123,37 @@ const HeaderCard = styled.div`
   -webkit-backdrop-filter: blur(28px) saturate(160%);
   border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   border-radius: 20px;
-  padding: 0 32px 32px;
+  padding: 100px 32px 32px 32px; /* Add top padding to prevent text overlap */
   animation: ${slideUp} 0.55s ease;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 
+  @media (max-width: 1024px) {
+    margin-top: -90px;
+    padding: 90px 28px 28px 28px;
+  }
+
   @media (max-width: 768px) {
     margin-top: -80px;
-    padding: 0 20px 24px;
+    padding: 80px 20px 24px 20px;
     border-radius: 16px;
   }
+  
+  @media (max-width: 600px) {
+    margin-top: -70px;
+    padding: 70px 18px 22px 18px;
+    border-radius: 14px;
+  }
+  
   @media (max-width: 480px) {
     margin-top: -60px;
-    padding: 0 16px 20px;
+    padding: 60px 16px 20px 16px;
     border-radius: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-top: -50px;
+    padding: 50px 14px 18px 14px;
+    border-radius: 12px;
   }
 `
 
@@ -110,17 +164,32 @@ const AvatarRow = styled.div`
   margin-top: -60px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1; /* Ensure avatar row is above background */
 
   @media (max-width: 768px) {
     margin-top: -50px;
     gap: 16px;
+    margin-bottom: 18px;
   }
+  
+  @media (max-width: 600px) {
+    margin-top: -45px;
+    margin-bottom: 16px;
+  }
+  
   @media (max-width: 480px) {
     margin-top: -40px;
     gap: 12px;
     flex-direction: column;
     align-items: center;
     text-align: center;
+    margin-bottom: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-top: -35px;
+    margin-bottom: 12px;
   }
 `
 
@@ -141,8 +210,34 @@ const AvatarCircle = styled.div`
     object-fit: cover;
   }
 
-  @media (max-width: 768px) { width: 110px; height: 110px; }
-  @media (max-width: 480px) { width: 96px; height: 96px; }
+  @media (max-width: 1024px) {
+    width: 120px;
+    height: 120px;
+    border-width: 3.5px;
+  }
+
+  @media (max-width: 768px) {
+    width: 110px;
+    height: 110px;
+    border-width: 3px;
+  }
+  
+  @media (max-width: 600px) {
+    width: 100px;
+    height: 100px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 96px;
+    height: 96px;
+    border-width: 3px;
+  }
+  
+  @media (max-width: 360px) {
+    width: 85px;
+    height: 85px;
+    border-width: 2.5px;
+  }
 `
 
 const AvatarFallback = styled.div`
@@ -163,7 +258,24 @@ const HeaderMeta = styled.div`
   flex: 1;
   min-width: 0;
   padding-top: 16px;
-  @media (max-width: 480px) { padding-top: 8px; }
+  position: relative;
+  z-index: 1; /* Ensure text is above background */
+  
+  @media (max-width: 768px) {
+    padding-top: 14px;
+  }
+  
+  @media (max-width: 600px) {
+    padding-top: 12px;
+  }
+  
+  @media (max-width: 480px) { 
+    padding-top: 10px; 
+  }
+  
+  @media (max-width: 360px) {
+    padding-top: 8px;
+  }
 `
 
 const UserName = styled.h1`
@@ -172,15 +284,56 @@ const UserName = styled.h1`
   color: var(--text);
   margin: 0 0 4px;
   line-height: 1.2;
-  @media (max-width: 768px) { font-size: 1.5em; }
-  @media (max-width: 480px) { font-size: 1.35em; }
+  word-wrap: break-word;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.7em;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.5em;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.4em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.35em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.2em;
+  }
 `
 
 const Headline = styled.p`
   font-size: 1.05em;
   color: var(--text-light);
   margin: 0 0 6px;
-  @media (max-width: 480px) { font-size: 0.95em; }
+  word-wrap: break-word;
+  
+  @media (max-width: 1024px) {
+    font-size: 1em;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.98em;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.95em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.95em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.9em;
+  }
 `
 
 const SubInfo = styled.p`
@@ -247,6 +400,30 @@ const Pill = styled.button`
   font-weight: 500;
   cursor: ${p => p.disabled ? 'not-allowed' : 'pointer'};
   border: ${p => p.$solid ? 'none' : '1px solid var(--primary)'};
+  min-height: 44px; /* Better touch target */
+  transition: all 0.2s ease;
+  
+  @media (max-width: 768px) {
+    padding: 8px 18px;
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 8px 16px;
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 7px 14px;
+    font-size: 0.8em;
+    min-height: 40px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 6px 12px;
+    font-size: 0.75em;
+    min-height: 38px;
+  }
   background: ${p => p.$solid ? 'var(--primary)' : 'transparent'};
   color: ${p => p.$solid ? '#fff' : 'var(--primary)'};
   opacity: ${p => p.disabled ? 0.55 : 1};
@@ -272,9 +449,31 @@ const TabBar = styled.div`
   margin-top: 28px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
-  &::-webkit-scrollbar { display: none; }
+  &::-webkit-scrollbar { 
+    display: none; 
+    width: 0;
+    height: 0;
+  }
+  
+  @media (max-width: 768px) {
+    margin-top: 24px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-top: 20px;
+    /* Ensure tabs are scrollable on mobile */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  @media (max-width: 360px) {
+    margin-top: 18px;
+  }
 `
 
 const Tab = styled.button`
@@ -288,6 +487,8 @@ const Tab = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.2s;
+  flex-shrink: 0; /* Prevent tabs from shrinking */
+  min-height: 44px; /* Better touch target */
 
   &::after {
     content: '';
@@ -304,6 +505,41 @@ const Tab = styled.button`
 
   &:hover {
     color: var(--primary);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 18px;
+    font-size: 0.88em;
+    min-height: 42px;
+    
+    &::after {
+      left: 10px;
+      right: 10px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 16px;
+    font-size: 0.85em;
+    min-height: 40px;
+    scroll-snap-align: start; /* Snap to start of each tab */
+    
+    &::after {
+      left: 8px;
+      right: 8px;
+      height: 2px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px 14px;
+    font-size: 0.8em;
+    min-height: 38px;
+    
+    &::after {
+      left: 6px;
+      right: 6px;
+    }
   }
 `
 
@@ -1208,24 +1444,55 @@ function Profile() {
   const checkConnectionStatus = async () => {
     if (!currentUser || !userId || userId === currentUser.id) return
     try {
-      const connections = await connectionAPI.getConnections()
-      const isConnected = connections.data?.some(c => c.user_id === userId || c.connected_user_id === userId)
-      if (isConnected) { setConnectionStatus('connected'); return }
-      const pending = await connectionAPI.getPendingRequests()
-      const sent = await connectionAPI.getSentRequests()
-      const hasPending = [...(pending.data || []), ...(sent.data || [])].some(
-        r => r.sender_id === userId || r.receiver_id === userId
+      // Check if already connected - API returns list of connected users with id/uid fields
+      const connectionsResponse = await networkAPI.getConnections()
+      const connections = connectionsResponse.data || connectionsResponse || []
+      const isConnected = Array.isArray(connections) && connections.some(
+        c => (c.id === userId || c.uid === userId || c.user_id === userId || c.connected_user_id === userId)
+      )
+      if (isConnected) { 
+        setConnectionStatus('connected')
+        return 
+      }
+      
+      // Check for pending requests
+      const pendingResponse = await connectionAPI.getPendingRequests()
+      const sentResponse = await connectionAPI.getSentRequests()
+      const pending = pendingResponse.data || pendingResponse || []
+      const sent = sentResponse.data || sentResponse || []
+      const hasPending = [...pending, ...sent].some(
+        r => (r.sender_id === userId || r.receiver_id === userId)
       )
       setConnectionStatus(hasPending ? 'pending' : 'none')
-    } catch { setConnectionStatus('none') }
+    } catch (err) {
+      console.error('Error checking connection status:', err)
+      setConnectionStatus('none')
+    }
   }
 
   const handleConnect = async () => {
+    // Don't allow connecting if already connected or pending
+    if (connectionStatus === 'connected' || connectionStatus === 'pending') {
+      return
+    }
+    
     try {
       await connectionAPI.sendRequest(userId)
       setConnectionStatus('pending')
+      // Refresh connection counts
+      loadConnectionCounts()
     } catch (err) {
-      alert(err.response?.data?.detail || err.message || 'Failed to send connection request')
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to send connection request'
+      
+      // If already connected, update status
+      if (errorMessage.toLowerCase().includes('already connected')) {
+        setConnectionStatus('connected')
+        checkConnectionStatus() // Refresh status
+      } else if (errorMessage.toLowerCase().includes('pending')) {
+        setConnectionStatus('pending')
+      } else {
+        alert(errorMessage)
+      }
     }
   }
 

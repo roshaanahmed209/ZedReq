@@ -62,11 +62,9 @@ class UserService:
             if description:
                 result.update({
                     'profile_pic': description.profile_pic,
-                    'cover_pic': description.cover_pic,
                     'short_desc': description.short_desc,
                     'about': description.about,
                     'skills': description.skills,
-                    'certificates': description.certificates,
                     'current_status': description.current_status
                 })
         
@@ -80,20 +78,10 @@ class UserService:
                 raise NotFoundError('User')
             
             # Update fields
-            username_changed = False
             if 'full_name' in update_data:
                 user.name = update_data['full_name']
             if 'username' in update_data:
-                if user.username != update_data['username']:
-                    user.username = update_data['username']
-                    username_changed = True
-            
-            # Regenerate profile path if username changed
-            if username_changed:
-                from utils.profile_url import generate_profile_path
-                profile_path = generate_profile_path(user.uid, user.username)
-                if profile_path:
-                    user.profile_url = profile_path
+                user.username = update_data['username']
             
             self.db.commit()
             self.db.refresh(user)

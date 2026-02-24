@@ -31,14 +31,42 @@ const SettingsContainer = styled.div`
   gap: 30px;
   padding: 30px 20px;
 
+  @media (max-width: 1200px) {
+    gap: 25px;
+    padding: 28px 18px;
+  }
+
   @media (max-width: 1024px) {
     grid-template-columns: 240px 1fr;
     gap: 20px;
+    padding: 25px 16px;
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: 220px 1fr;
+    gap: 18px;
+    padding: 22px 14px;
   }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding: 20px 15px;
+  }
+  
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+    padding: 15px 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+    padding: 12px 10px;
   }
 `
 
@@ -68,6 +96,7 @@ const SidePanelSection = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 44px; /* Better touch target */
 
   &:hover {
     background: var(--hover-bg);
@@ -84,6 +113,49 @@ const SidePanelSection = styled.div`
   svg {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
+  }
+  
+  @media (max-width: 1024px) {
+    padding: 10px 18px;
+    font-size: 0.85em;
+    gap: 10px;
+    min-height: 42px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 16px;
+    font-size: 0.85em;
+    gap: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 14px;
+    font-size: 0.8em;
+    gap: 8px;
+    min-height: 40px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 12px;
+    font-size: 0.75em;
+    gap: 6px;
+    min-height: 38px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
   }
 `
 
@@ -95,8 +167,28 @@ const MainContent = styled.div`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   animation: ${slideIn} 0.4s ease-out;
 
+  @media (max-width: 1024px) {
+    padding: 35px 25px;
+    border-radius: 14px;
+  }
+
   @media (max-width: 768px) {
     padding: 30px 20px;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 25px 18px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 20px 15px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 18px 12px;
+    border-radius: 8px;
   }
 `
 
@@ -107,6 +199,35 @@ const SectionTitle = styled.h2`
   margin-bottom: 30px;
   padding-bottom: 15px;
   border-bottom: 2px solid var(--border);
+  
+  @media (max-width: 1024px) {
+    font-size: 1.6em;
+    margin-bottom: 25px;
+    padding-bottom: 12px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.5em;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.4em;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.3em;
+    margin-bottom: 18px;
+    padding-bottom: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.2em;
+    margin-bottom: 16px;
+  }
 `
 
 const FormGroup = styled.div`
@@ -130,6 +251,7 @@ const Input = styled.input`
   color: var(--text);
   font-size: 0.95em;
   transition: all 0.2s ease;
+  min-height: 44px; /* Better touch target */
 
   &:focus {
     outline: none;
@@ -139,6 +261,25 @@ const Input = styled.input`
 
   &::placeholder {
     color: var(--text-lighter);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 14px;
+    font-size: 0.9em;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 12px;
+    font-size: 0.85em;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    min-height: 38px;
   }
 `
 

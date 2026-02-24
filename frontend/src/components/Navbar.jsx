@@ -492,8 +492,20 @@ function Navbar() {
 
         try {
             const response = await api.get(`/api/user/search?q=${encodeURIComponent(query)}`)
+            // Handle new response format with users, jobs, posts
+            // Extract users array from response
+            let usersData = []
+            if (response && response.data) {
+                // Check if new format (has users property)
+                if (response.data.users && Array.isArray(response.data.users)) {
+                    usersData = response.data.users
+                } else if (Array.isArray(response.data)) {
+                    // Old format - direct array
+                    usersData = response.data
+                }
+            }
             // Normalize user data
-            const users = (response.data || []).map(u => ({
+            const users = usersData.map(u => ({
                 ...u,
                 id: u.id || u.uid,
                 full_name: u.full_name || u.name || u.username

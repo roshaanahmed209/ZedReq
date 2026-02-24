@@ -261,3 +261,115 @@ def store_job_embedding(job_id: int, embedding: List[float], db: Session) -> boo
         import traceback
         traceback.print_exc()
         return False
+
+
+def get_user_embedding(user_id: int, db: Session) -> Optional[List[float]]:
+    """
+    Retrieve stored user profile embedding from database.
+    
+    Args:
+        user_id: User ID
+        db: SQLAlchemy database session
+        
+    Returns:
+        3072-dimensional embedding vector or None if not found
+    """
+    try:
+        from models.orm.user import User
+        from config.database import get_database
+        
+        user = db.query(User).filter(User.uid == user_id).first()
+        if not user or not user.description_id:
+            return None
+        
+        db_raw = get_database()
+        query = """
+        SELECT embedding 
+        FROM description 
+        WHERE desc_id = %s AND embedding IS NOT NULL
+        """
+        
+        result = db_raw.fetch_one(query, (user.description_id,))
+        if not result or not result.get('embedding'):
+            return None
+        
+        # Parse vector string to list
+        embedding_str = result['embedding']
+        if isinstance(embedding_str, str):
+            # Remove brackets and split
+            embedding_str = embedding_str.strip('[]')
+            embedding = [float(x.strip()) for x in embedding_str.split(',')]
+            return embedding
+        
+        return None
+    except Exception as e:
+        logger.error(f"Failed to retrieve embedding for user {user_id}: {e}")
+        return None
+
+
+def store_user_embedding(user_id: int, embedding: List[float], db: Session) -> bool:
+    """
+    Store user profile embedding in PostgreSQL using raw SQL (pgvector support).
+    
+    Args:
+        user_id: User ID
+        embedding: 3072-dimensional embedding vector
+        db: SQLAlchemy database session
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from models.orm.user import User
+        
+        user = db.query(User).filter(User.uid == user_id).first()
+        if not user or not user.description_id:
+            logger.error(f"User {user_id} or description not found")
+            return False
+        
+        # Convert embedding to PostgreSQL vector format
+        embedding_str = '[' + ','.join(map(str, embedding)) + ']'
+        
+        # Use raw SQL to update embedding
+        from config.database import get_database
+        db_raw = get_database()
+        
+        query = """
+        UPDATE description 
+        SET embedding = %s::vector 
+        WHERE desc_id = %s
+        """
+        
+        db_raw.execute(query, (embedding_str, user.description_id))
+        logger.debug(f"Stored embedding for user {user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to store embedding for user {user_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def update_user_embedding_if_needed(user_id: int, db: Session) -> bool:
+    """
+    Generate and store user embedding if it doesn't exist or profile has changed.
+    This should be called after profile updates.
+    
+    Args:
+        user_id: User ID
+        db: SQLAlchemy database session
+        
+    Returns:
+        True if embedding was generated/stored, False otherwise
+    """
+    try:
+        # Generate embedding
+        embedding = generate_user_profile_embedding(user_id, db)
+        if not embedding:
+            return False
+        
+        # Store embedding
+        return store_user_embedding(user_id, embedding, db)
+    except Exception as e:
+        logger.error(f"Failed to update embedding for user {user_id}: {e}")
+        return False

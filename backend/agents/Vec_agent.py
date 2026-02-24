@@ -17,6 +17,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from sqlalchemy import func
+from sqlalchemy.orm import load_only
 
 from config.database_orm import get_db
 from models.orm.job_posting import JobPosting
@@ -744,7 +745,28 @@ class VecAgent:
         
         try:
             # Build base query with join to description
-            base_query = db.query(User, Description).outerjoin(
+            # Explicitly exclude embedding column to avoid errors if migration hasn't run
+            base_query = db.query(
+                User,
+                Description.desc_id,
+                Description.short_desc,
+                Description.about,
+                Description.certificates,
+                Description.proj_id,
+                Description.skills,
+                Description.current_status,
+                Description.role,
+                Description.company,
+                Description.location,
+                Description.city,
+                Description.country,
+                Description.industry,
+                Description.profile_pic,
+                Description.cover_pic,
+                Description.resume,
+                Description.created_at,
+                Description.updated_at
+            ).outerjoin(
                 Description, User.description_id == Description.desc_id
             )
             
@@ -753,8 +775,13 @@ class VecAgent:
                     (User.created_at >= since) | (User.updated_at >= since)
                 )
             
-            # Get total count for progress tracking
-            total_count = base_query.count()
+            # Get total count for progress tracking (query User directly to avoid embedding column)
+            count_query = db.query(func.count(User.uid))
+            if since:
+                count_query = count_query.filter(
+                    (User.created_at >= since) | (User.updated_at >= since)
+                )
+            total_count = count_query.scalar()
             logger.info(f"Starting to index users (total: {total_count}, batch size: {self.batch_size})")
             
             offset = 0
@@ -770,15 +797,46 @@ class VecAgent:
                 batch_chunks = []
                 batch_metadata = []
                 
-                for user, description in results:
+                for row in results:
                     try:
-                        # Get description fields (handle None description)
-                        about = description.about if description else None
-                        short_desc = description.short_desc if description else None
-                        skills = description.skills if description else None
-                        current_status = description.current_status if description else None
-                        certificates = description.certificates if description else None
-                        profile_pic = description.profile_pic if description else None
+                        user = row[0]  # First element is User
+                        # Rest of row is description fields (may be None)
+                        desc_id = row[1] if len(row) > 1 else None
+                        short_desc = row[2] if len(row) > 2 else None
+                        about = row[3] if len(row) > 3 else None
+                        certificates = row[4] if len(row) > 4 else None
+                        proj_id = row[5] if len(row) > 5 else None
+                        skills = row[6] if len(row) > 6 else None
+                        current_status = row[7] if len(row) > 7 else None
+                        role = row[8] if len(row) > 8 else None
+                        company = row[9] if len(row) > 9 else None
+                        location = row[10] if len(row) > 10 else None
+                        city = row[11] if len(row) > 11 else None
+                        country = row[12] if len(row) > 12 else None
+                        industry = row[13] if len(row) > 13 else None
+                        profile_pic = row[14] if len(row) > 14 else None
+                        cover_pic = row[15] if len(row) > 15 else None
+                        resume = row[16] if len(row) > 16 else None
+                        
+                        # Create a mock description object for compatibility
+                        description = type('Description', (), {
+                            'desc_id': desc_id,
+                            'short_desc': short_desc,
+                            'about': about,
+                            'certificates': certificates,
+                            'proj_id': proj_id,
+                            'skills': skills,
+                            'current_status': current_status,
+                            'role': role,
+                            'company': company,
+                            'location': location,
+                            'city': city,
+                            'country': country,
+                            'industry': industry,
+                            'profile_pic': profile_pic,
+                            'cover_pic': cover_pic,
+                            'resume': resume
+                        })() if desc_id else None
                         
                         # Extract interests (optimized - no LLM by default)
                         interests = self._extract_user_interests(

@@ -36,7 +36,7 @@ the last thing that will be left is jobs
 
 also after the user sign in with google auth the procedure should same as signup since the user is logging in with google auth, what database entries are being made how is the user registered in our system?
 
-
+i am planning to fetch users location, and also modifying the recommendation service to keep the locations on first priority, the algorithm for locations that i plan is easy, what we will do is we will first fetch the users location country and city, for recommendation there will levels to it, on first level the jobs which are in the users city will be recommended to user and in the second level we will move to country level, this implementation will on all job section, andin the remote job section the recommendation service will be based on skills as maybe already implemented
 
 
 

@@ -51,6 +51,47 @@ const MessagesContainer = styled.div`
   border: 1px solid var(--border);
   box-shadow: ${props => props.overlay ? '0 4px 20px rgba(0, 0, 0, 0.3)' : '0 4px 20px rgba(0, 0, 0, 0.1)'};
   overflow: hidden;
+  
+  @media (max-width: 1024px) {
+    ${props => !props.overlay ? `
+      margin-top: 15px;
+      margin-bottom: 15px;
+      height: calc(100vh - 90px);
+    ` : ''}
+  }
+  
+  @media (max-width: 768px) {
+    ${props => !props.overlay ? `
+      margin-top: 12px;
+      margin-bottom: 12px;
+      height: calc(100vh - 80px);
+      border-radius: 12px;
+    ` : `
+      border-radius: 12px;
+    `}
+  }
+  
+  @media (max-width: 480px) {
+    ${props => !props.overlay ? `
+      margin-top: 10px;
+      margin-bottom: 10px;
+      height: calc(100vh - 70px);
+      border-radius: 10px;
+    ` : `
+      border-radius: 10px;
+    `}
+  }
+  
+  @media (max-width: 360px) {
+    ${props => !props.overlay ? `
+      margin-top: 8px;
+      margin-bottom: 8px;
+      height: calc(100vh - 65px);
+      border-radius: 8px;
+    ` : `
+      border-radius: 8px;
+    `}
+  }
 `
 
 const MessagesPanelHeader = styled.div`
@@ -61,12 +102,36 @@ const MessagesPanelHeader = styled.div`
   align-items: center;
   background: var(--bg-white);
   flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px;
+  }
 `
 
 const MessagesPanelTitle = styled.h3`
   font-size: 1.2em;
   color: var(--text);
   font-weight: 300;
+  
+  @media (max-width: 768px) {
+    font-size: 1.1em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.95em;
+  }
 `
 
 const CloseButton = styled.button`
@@ -81,6 +146,8 @@ const CloseButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  min-width: 44px; /* Better touch target */
+  min-height: 44px;
 
   &:hover {
     background: var(--hover-bg);
@@ -91,6 +158,36 @@ const CloseButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    width: 36px;
+    height: 36px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    width: 38px;
+    height: 38px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
   }
 `
 
@@ -126,10 +223,38 @@ const ContactItem = styled.div`
   opacity: 1;
   transform: translateX(0);
   background: ${props => props.active ? 'var(--hover-bg)' : 'transparent'};
+  min-height: 60px; /* Better touch target */
 
   &:hover {
     background: var(--hover-bg);
     transform: translateX(4px);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+    gap: 10px;
+    min-height: 58px;
+    
+    &:hover {
+      transform: translateX(2px);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px;
+    gap: 8px;
+    min-height: 56px;
+    border-radius: 6px;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 6px;
+    gap: 6px;
+    min-height: 54px;
   }
 `
 
@@ -146,6 +271,28 @@ const ContactAvatar = styled.div`
   font-weight: 500;
   font-size: 0.9em;
   transition: all 0.3s ease;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 0.75em;
+  }
 
   svg {
     width: 24px;
@@ -168,12 +315,39 @@ const ContactName = styled.div`
   color: var(--text);
   font-weight: 400;
   margin-bottom: 2px;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.8em;
+  }
 `
 
 const ContactStatus = styled.div`
   font-size: 0.8em;
   color: var(--text-lighter);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+  }
   overflow: hidden;
   text-overflow: ellipsis;
 `
@@ -194,6 +368,18 @@ const ChatHeader = styled.div`
   align-items: center;
   background: var(--hover-bg);
   flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    padding: 14px 16px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px 14px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px 12px;
+  }
 `
 
 const ChatHeaderLeft = styled.div`
@@ -202,6 +388,18 @@ const ChatHeaderLeft = styled.div`
   gap: 12px;
   flex: 1;
   min-width: 0;
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+  }
 `
 
 const ChatHeaderName = styled.div`
@@ -211,6 +409,18 @@ const ChatHeaderName = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const ChatMessages = styled.div`
@@ -232,6 +442,21 @@ const ChatMessages = styled.div`
   &::-webkit-scrollbar-thumb {
     background: var(--border);
     border-radius: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    gap: 6px;
   }
 `
 
@@ -273,6 +498,21 @@ const ChatInputContainer = styled.div`
   gap: 10px;
   background: var(--bg-white);
   flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    gap: 5px;
+  }
 `
 
 const ChatInput = styled.input`
@@ -285,6 +525,7 @@ const ChatInput = styled.input`
   font-size: 0.9em;
   font-family: inherit;
   transition: all 0.3s ease;
+  min-height: 44px; /* Better touch target */
 
   &:focus {
     outline: none;
@@ -296,6 +537,29 @@ const ChatInput = styled.input`
 
   &::placeholder {
     color: var(--text-lighter);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 9px 12px;
+    font-size: 0.85em;
+    min-height: 42px;
+    
+    &:focus {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 7px 9px;
+    font-size: 0.75em;
+    min-height: 38px;
   }
 `
 
@@ -311,6 +575,8 @@ const SendButton = styled.button`
   align-items: center;
   justify-content: center;
   opacity: 1;
+  min-height: 44px; /* Better touch target */
+  min-width: 44px;
 
   &:hover {
     transform: translateY(-2px) scale(1.05);
@@ -320,6 +586,38 @@ const SendButton = styled.button`
 
   &:active {
     transform: translateY(0) scale(0.98);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 9px 12px;
+    min-height: 42px;
+    min-width: 42px;
+    
+    &:hover {
+      transform: translateY(-1px) scale(1.03);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 10px;
+    min-height: 40px;
+    min-width: 40px;
+    border-radius: 6px;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 7px 9px;
+    min-height: 38px;
+    min-width: 38px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &:disabled {
