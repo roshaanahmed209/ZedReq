@@ -1,4 +1,5 @@
 """LMS Router - Learning Management System endpoints using SQLAlchemy ORM"""
+import os
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from services.lms_service import LMSService
-from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer
+from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
 from agents.Azel_agent import get_azel_agent
 from agents.Seez_agent import get_seez_agent
 from schemas.lms import (
@@ -183,19 +184,69 @@ async def get_my_courses(
     current_user: dict = Depends(get_current_user),
     service: LMSService = Depends(get_lms_service)
 ):
-    """Get user's courses"""
+    """Get user's courses. If no enrollments exist, checks for recommendations and generates them if needed."""
+    user_id = current_user["id"]
+    logger.info(f"[LMS] get_my_courses: Fetching courses for user_id={user_id}, status={status}, limit={limit}, offset={offset}")
+    
+    # Check if user has any enrollments
+    enrollment_count = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == user_id).count()
+    logger.info(f"[LMS] get_my_courses: User has {enrollment_count} course enrollments in database")
+    
     courses = service.get_user_courses(
-        user_id=current_user["id"],
+        user_id=user_id,
         status=status,
         limit=limit,
         offset=offset
     )
     
+    logger.info(f"[LMS] get_my_courses: Retrieved {len(courses)} courses for user_id={user_id}")
+    
     # Get total count
-    query = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == current_user["id"])
+    query = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == user_id)
     if status:
         query = query.filter(LMSUserCourse.status == status)
     total = query.count()
+    
+    logger.info(f"[LMS] get_my_courses: Total courses count: {total}")
+    
+    # If no enrolled courses, check for recommendations and generate if needed
+    if total == 0:
+        logger.info(f"[LMS] get_my_courses: User has no enrolled courses. Checking for recommendations...")
+        
+        # Check if recommendations exist
+        recommendation_count = service.db.query(LMSRecommendation).filter(
+            LMSRecommendation.user_id == user_id,
+            LMSRecommendation.is_dismissed == False
+        ).count()
+        
+        logger.info(f"[LMS] get_my_courses: User has {recommendation_count} active recommendations")
+        
+        # If no recommendations, try to generate them (if feature enabled)
+        if recommendation_count == 0:
+            recommendation_enabled = os.environ.get('COURSE_RECOMMENDATION_ENABLED', 'true').lower() == 'true'
+            if recommendation_enabled:
+                logger.info(f"[LMS] get_my_courses: No recommendations found. Attempting to generate recommendations...")
+                try:
+                    from agents.Course_recommendation_agent import get_course_recommendation_agent
+                    agent = get_course_recommendation_agent()
+                    
+                    if agent.is_available():
+                        recommendation_limit = int(os.environ.get('COURSE_RECOMMENDATION_LIMIT', '5'))
+                        result = agent.generate_course_recommendations(user_id, limit=recommendation_limit)
+                        
+                        if result.get('success'):
+                            logger.info(f"[LMS] get_my_courses: Generated {result.get('recommendations_created', 0)} recommendations")
+                        else:
+                            logger.warning(f"[LMS] get_my_courses: Failed to generate recommendations: {result.get('error')}")
+                    else:
+                        logger.warning(f"[LMS] get_my_courses: Course Recommendation Agent not available")
+                except Exception as e:
+                    logger.error(f"[LMS] get_my_courses: Error generating recommendations: {e}", exc_info=True)
+            else:
+                logger.info(f"[LMS] get_my_courses: Course recommendation feature is disabled")
+        
+        available_courses_count = service.db.query(LMSCourse).filter(LMSCourse.is_active == True).count()
+        logger.info(f"[LMS] get_my_courses: There are {available_courses_count} active courses available to enroll in.")
     
     return {
         "courses": courses,
@@ -649,6 +700,8 @@ async def trigger_azel_agent(
     5. Creates Qdrant knowledge base (30-minute TTL)
     6. Generates questions with detailed answers
     7. Saves questions to database
+    
+    Note: This is a long-running operation (can take 30-120 seconds)
     """
     try:
         # Verify course exists
@@ -659,37 +712,52 @@ async def trigger_azel_agent(
                 detail="Course not found"
             )
         
-        # Get Azel agent and process
+        # Get Azel agent and check availability
         azel_agent = get_azel_agent()
         
         if not azel_agent.is_available():
+            error_details = []
+            if not azel_agent.qdrant_available:
+                error_details.append("Qdrant vector database is not available")
+            if not azel_agent.openai_available:
+                error_details.append("OpenAI API is not available")
+            
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Azel agent is not available. Please check Qdrant and OpenAI configuration."
+                detail=f"Azel agent is not available. {'; '.join(error_details)}. Please check your configuration."
             )
         
         # Process course context - use 'id' to match other endpoints
         user_id = current_user.get('id') or current_user.get('uid')
+        logger.info(f"Starting Azel agent processing for user_id={user_id}, course_id={course_id}")
+        
         result = azel_agent.process_course_context(
             user_id=user_id,
             course_id=course_id
         )
         
+        # Always return result, even if not fully successful
+        # This allows frontend to show partial results
         if not result.get('success'):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get('error', 'Failed to process course context')
-            )
+            logger.warning(f"Azel agent processing completed with errors: {result.get('error')}")
+            # Return 200 with error details instead of 500, so frontend can handle gracefully
+            return {
+                "message": "Course context processing completed with errors",
+                "result": result,
+                "success": False
+            }
         
+        logger.info(f"Azel agent processing completed successfully for user_id={user_id}, course_id={course_id}")
         return {
             "message": "Course context processed successfully",
-            "result": result
+            "result": result,
+            "success": True
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in trigger_azel_agent: {e}")
+        logger.error(f"Error in trigger_azel_agent: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"

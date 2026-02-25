@@ -1,4 +1,5 @@
 """LMS Service - Business logic for Learning Management System using SQLAlchemy ORM"""
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, desc, func, Integer
@@ -14,6 +15,8 @@ from models.orm import (
 
 # Import cache functions
 from config.cache import get_cached_dashboard, cache_dashboard, invalidate_dashboard_cache
+
+logger = logging.getLogger(__name__)
 
 
 class LMSService:
@@ -159,6 +162,94 @@ class LMSService:
         self.db.refresh(course)
         return course
     
+    def generate_course_from_idea(self, course_idea: dict) -> Optional[LMSCourse]:
+        """
+        Create a new course from a course idea (e.g., from LLM generation)
+        
+        Args:
+            course_idea: Dictionary with course details (title, description, category, difficulty, etc.)
+            
+        Returns:
+            Created LMSCourse or None if creation fails
+        """
+        try:
+            # Generate icon from title (first 2 characters)
+            title = course_idea.get('title', 'Untitled Course')
+            icon = title[:2].upper() if len(title) >= 2 else '📚'
+            
+            course_data = {
+                'title': title,
+                'description': course_idea.get('description', ''),
+                'icon': icon,
+                'lessons': course_idea.get('estimated_lessons', course_idea.get('lessons', 0)),
+                'duration': course_idea.get('duration'),
+                'category': course_idea.get('category', 'General'),
+                'difficulty': course_idea.get('difficulty', 'beginner'),
+                'is_active': course_idea.get('is_active', True)
+            }
+            
+            return self.create_course(course_data)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate course from idea: {e}", exc_info=True)
+            return None
+    
+    def find_similar_courses(self, title: str, category: Optional[str] = None, threshold: float = 0.7) -> List[LMSCourse]:
+        """
+        Find existing courses similar to given title and category
+        
+        Args:
+            title: Course title to match
+            category: Course category to match (optional)
+            threshold: Similarity threshold (0.0 to 1.0, default: 0.7)
+            
+        Returns:
+            List of similar LMSCourse objects
+        """
+        try:
+            from difflib import SequenceMatcher
+            
+            def calculate_similarity(str1: str, str2: str) -> float:
+                return SequenceMatcher(None, str1.lower(), str2.lower()).ratio()
+            
+            # Get all active courses
+            query = self.db.query(LMSCourse).filter(LMSCourse.is_active == True)
+            
+            if category:
+                # First try exact category match
+                category_matches = query.filter(LMSCourse.category == category).all()
+            else:
+                category_matches = query.all()
+            
+            similar_courses = []
+            
+            for course in category_matches:
+                # Calculate title similarity
+                title_score = calculate_similarity(title, course.title)
+                
+                # Calculate category similarity if category provided
+                category_score = 0.0
+                if category and course.category:
+                    category_score = calculate_similarity(category, course.category)
+                
+                # Combined score (title weighted more)
+                combined_score = (title_score * 0.7) + (category_score * 0.3)
+                
+                if combined_score >= threshold:
+                    similar_courses.append(course)
+            
+            # Sort by similarity (highest first)
+            similar_courses.sort(
+                key=lambda c: calculate_similarity(title, c.title),
+                reverse=True
+            )
+            
+            return similar_courses
+            
+        except Exception as e:
+            logger.error(f"Error finding similar courses: {e}", exc_info=True)
+            return []
+    
     def get_course_sections(self, course_id: int) -> List[Dict[str, Any]]:
         """Get sections for a course"""
         sections = (
@@ -186,7 +277,7 @@ class LMSService:
     # ========================================================================
     
     def enroll_in_course(self, user_id: int, course_id: int) -> Optional[LMSUserCourse]:
-        """Enroll user in a course"""
+        """Enroll user in a course. Maximum 5 courses allowed per user."""
         # Check if course exists
         course = self.db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
         if not course:
@@ -208,6 +299,16 @@ class LMSService:
         
         if existing:
             return existing  # Already enrolled
+        
+        # Check enrollment limit (max 5 courses)
+        enrollment_count = (
+            self.db.query(LMSUserCourse)
+            .filter(LMSUserCourse.user_id == user_id)
+            .count()
+        )
+        
+        if enrollment_count >= 5:
+            raise ValueError(f"You have reached the maximum enrollment limit of 5 courses. Please complete or drop a course before enrolling in a new one.")
         
         # Create enrollment
         user_course = LMSUserCourse(

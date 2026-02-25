@@ -224,6 +224,10 @@ const LogoutButton = styled.button`
     background: var(--hover-bg);
     border-color: var(--primary);
   }
+  
+  @media (max-width: 1024px) {
+    display: none;
+  }
 `
 
 const MobileMenuButton = styled.button`
@@ -690,6 +694,22 @@ function Navbar() {
                 </MobileMenuHeader>
 
                 <SidePanel>
+                    <PanelSection>
+                        <PanelItem>
+                            <span className="label">Profile views</span>
+                            <span className="value">142</span>
+                        </PanelItem>
+                    </PanelSection>
+                    
+                    <PanelSection>
+                        <PanelItem>
+                            <span className="label">Post impressions</span>
+                            <span className="value">1,234</span>
+                        </PanelItem>
+                    </PanelSection>
+                    
+                    <PanelDivider />
+                    
                     <PanelSection onClick={() => { navigate('/lms'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -704,7 +724,7 @@ function Navbar() {
                             <span>LMS</span>
                         </PanelLink>
                     </PanelSection>
-
+                    
                     <PanelSection onClick={() => { navigate('/evaluation'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -735,7 +755,7 @@ function Navbar() {
                             <span>AI Mode</span>
                         </PanelLink>
                     </PanelSection>
-
+                    
                     <PanelSection onClick={() => { navigate('/ai-interviews'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -749,7 +769,7 @@ function Navbar() {
                             <span>AI Mock Interviews</span>
                         </PanelLink>
                     </PanelSection>
-
+                    
                     <PanelSection onClick={() => { navigate('/jobs'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -761,7 +781,7 @@ function Navbar() {
                             <span>Jobs</span>
                         </PanelLink>
                     </PanelSection>
-
+                    
                     <PanelSection onClick={() => { user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username)); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -773,23 +793,7 @@ function Navbar() {
                             <span>Profile</span>
                         </PanelLink>
                     </PanelSection>
-
-                    <PanelDivider />
-
-                    <PanelSection>
-                        <PanelLink>
-                            <span className="icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="4" y1="9" x2="20" y2="9"></line>
-                                    <line x1="4" y1="15" x2="20" y2="15"></line>
-                                    <line x1="10" y1="3" x2="8" y2="21"></line>
-                                    <line x1="16" y1="3" x2="14" y2="21"></line>
-                                </svg>
-                            </span>
-                            <span>Followed Hashtags</span>
-                        </PanelLink>
-                    </PanelSection>
-
+                    
                     <PanelSection onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }}>
                         <PanelLink>
                             <span className="icon">
@@ -799,6 +803,21 @@ function Navbar() {
                                 </svg>
                             </span>
                             <span>Settings</span>
+                        </PanelLink>
+                    </PanelSection>
+                    
+                    <PanelDivider />
+                    
+                    <PanelSection onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
+                        <PanelLink>
+                            <span className="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                            </span>
+                            <span>Logout</span>
                         </PanelLink>
                     </PanelSection>
                 </SidePanel>

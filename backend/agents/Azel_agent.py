@@ -808,26 +808,41 @@ Return a JSON array of question objects."""
             'error': None
         }
         
+        import time
+        pipeline_start = time.time()
+        
         try:
             # Step 1: Get Zed context
-            logger.info(f"Processing course context for user_id={user_id}, course_id={course_id}")
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 1: Getting Zed context for user_id={user_id}")
             context = self._get_zed_context(user_id)
+            step_elapsed = time.time() - step_start
             
             if not context:
                 result['error'] = "No Zed context found for user"
-                logger.warning(f"No Zed context found for user_id={user_id}")
+                logger.warning(f"[AZEL-AGENT] Step 1 FAILED: No Zed context found for user_id={user_id} (took {step_elapsed:.2f}s)")
                 return result
             
+            context_length = len(context) if context else 0
+            logger.info(f"[AZEL-AGENT] Step 1 SUCCESS: Retrieved Zed context ({context_length} chars) in {step_elapsed:.2f}s")
+            
             # Step 2: Extract highlighted topics
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 2: Extracting highlighted topics from context")
             highlighted_topics = self._extract_highlighted_topics(context, course_id)
             result['topics_extracted'] = highlighted_topics
+            step_elapsed = time.time() - step_start
             
             if not highlighted_topics:
                 result['error'] = "No highlighted topics extracted"
-                logger.warning(f"No highlighted topics extracted for user_id={user_id}, course_id={course_id}")
+                logger.warning(f"[AZEL-AGENT] Step 2 FAILED: No highlighted topics extracted for user_id={user_id}, course_id={course_id} (took {step_elapsed:.2f}s)")
                 return result
             
+            logger.info(f"[AZEL-AGENT] Step 2 SUCCESS: Extracted {len(highlighted_topics)} topics: {highlighted_topics} (took {step_elapsed:.2f}s)")
+            
             # Step 3: Perform Google searches for each topic (parallelized)
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 3: Starting web searches for topics")
             from concurrent.futures import ThreadPoolExecutor, as_completed
             from utils.rate_limiter import get_google_search_limiter
             from utils.api_retry import retry_with_backoff
@@ -836,11 +851,13 @@ Return a JSON array of question objects."""
             
             all_urls = []
             topics_to_search = highlighted_topics[:3]  # Limit to top 3 topics
+            logger.info(f"[AZEL-AGENT] Step 3: Searching for {len(topics_to_search)} topics: {topics_to_search}")
             
             # Get rate limiter and circuit breaker
             rate_limiter = get_google_search_limiter()
             circuit_breaker = get_circuit_breaker('google_search')
             max_workers = int(os.environ.get('AZEL_WEB_MAX_WORKERS', 3))
+            logger.info(f"[AZEL-AGENT] Step 3: Using {max_workers} workers for parallel searches")
             
             def perform_search_with_protection(topic):
                 """Perform Google search with rate limiting and error handling"""
@@ -875,18 +892,25 @@ Return a JSON array of question objects."""
                     for topic in topics_to_search
                 }
                 
+                completed_searches = 0
                 for future in as_completed(future_to_topic):
                     topic = future_to_topic[future]
                     try:
                         urls = future.result()
                         all_urls.extend(urls)
-                        logger.debug(f"Completed search for topic '{topic}': {len(urls)} URLs found")
+                        completed_searches += 1
+                        logger.info(f"[AZEL-AGENT] Step 3: Completed search for topic '{topic}': {len(urls)} URLs found ({completed_searches}/{len(topics_to_search)} searches done)")
                     except Exception as e:
-                        logger.error(f"Error processing search for topic '{topic}': {e}")
+                        completed_searches += 1
+                        logger.error(f"[AZEL-AGENT] Step 3: Error processing search for topic '{topic}': {e} ({completed_searches}/{len(topics_to_search)} searches done)")
             
+            step_elapsed = time.time() - step_start
             result['urls_found'] = len(all_urls)
+            logger.info(f"[AZEL-AGENT] Step 3 SUCCESS: Found {len(all_urls)} total URLs in {step_elapsed:.2f}s")
             
             # Step 4: Save URLs to database
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 4: Saving {len(all_urls)} URLs to database")
             if all_urls:
                 # Save all URLs
                 for url_data in all_urls:
@@ -897,16 +921,34 @@ Return a JSON array of question objects."""
                         url_data.get('search_query', '')
                     )
                 result['urls_saved'] = len(all_urls)
+            step_elapsed = time.time() - step_start
+            logger.info(f"[AZEL-AGENT] Step 4 SUCCESS: Saved {result['urls_saved']} URLs to database in {step_elapsed:.2f}s")
             
             # Step 5: Create Qdrant knowledge base with TTL
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 5: Creating Qdrant knowledge base with {len(all_urls)} URLs")
             if all_urls:
                 kb_created = self._create_knowledge_base(user_id, course_id, all_urls)
                 result['knowledge_base_created'] = kb_created
+                step_elapsed = time.time() - step_start
+                if kb_created:
+                    logger.info(f"[AZEL-AGENT] Step 5 SUCCESS: Knowledge base created in {step_elapsed:.2f}s")
+                else:
+                    logger.warning(f"[AZEL-AGENT] Step 5 FAILED: Knowledge base creation failed (took {step_elapsed:.2f}s)")
+            else:
+                logger.warning(f"[AZEL-AGENT] Step 5 SKIPPED: No URLs to create knowledge base from")
             
             # Step 6: Extract content from URLs
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 6: Extracting content from {len(all_urls)} URLs")
             knowledge_base_content = self._extract_content_from_urls(all_urls)
+            step_elapsed = time.time() - step_start
+            content_length = len(knowledge_base_content) if knowledge_base_content else 0
+            logger.info(f"[AZEL-AGENT] Step 6 SUCCESS: Extracted {content_length} chars of content in {step_elapsed:.2f}s")
             
             # Step 7: Generate questions
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 7: Generating questions using LLM")
             questions = self._generate_questions(
                 user_id,
                 course_id,
@@ -915,19 +957,32 @@ Return a JSON array of question objects."""
                 knowledge_base_content
             )
             result['questions_generated'] = len(questions)
+            step_elapsed = time.time() - step_start
+            logger.info(f"[AZEL-AGENT] Step 7 SUCCESS: Generated {len(questions)} questions in {step_elapsed:.2f}s")
             
             # Step 8: Save questions
+            step_start = time.time()
+            logger.info(f"[AZEL-AGENT] Step 8: Saving {len(questions)} questions to database")
             if questions:
                 saved = self._save_questions(course_id, questions)
                 if saved:
                     result['questions_saved'] = len(questions)
+                    step_elapsed = time.time() - step_start
+                    logger.info(f"[AZEL-AGENT] Step 8 SUCCESS: Saved {result['questions_saved']} questions to database in {step_elapsed:.2f}s")
+                else:
+                    step_elapsed = time.time() - step_start
+                    logger.error(f"[AZEL-AGENT] Step 8 FAILED: Failed to save questions (took {step_elapsed:.2f}s)")
+            else:
+                logger.warning(f"[AZEL-AGENT] Step 8 SKIPPED: No questions to save")
             
+            total_elapsed = time.time() - pipeline_start
             result['success'] = True
-            logger.info(f"Successfully processed course context for user_id={user_id}, course_id={course_id}")
+            logger.info(f"[AZEL-AGENT] ===== PIPELINE COMPLETE: Successfully processed course context for user_id={user_id}, course_id={course_id} in {total_elapsed:.2f}s =====")
             
         except Exception as e:
+            total_elapsed = time.time() - pipeline_start
             result['error'] = str(e)
-            logger.error(f"Failed to process course context: {e}")
+            logger.error(f"[AZEL-AGENT] ===== PIPELINE FAILED: Error processing course context after {total_elapsed:.2f}s: {e}", exc_info=True)
         
         return result
     

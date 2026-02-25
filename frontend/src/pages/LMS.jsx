@@ -17,6 +17,11 @@ const slideUp = keyframes`
   to { transform: translateY(0); opacity: 1; }
 `
 
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
 const Container = styled.div`
   min-height: 100vh;
   width: 100%;
@@ -162,6 +167,47 @@ const ScrollableContent = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: var(--text-lighter);
   }
+`
+
+const PanelTitle = styled.h3`
+  font-size: 1.2em;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-weight: 400;
+`
+
+const PanelSubtitle = styled.p`
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin: 0;
+`
+
+const EnrollButton = styled.button`
+  padding: 8px 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`
+
+const EmptySubtext = styled.p`
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-top: 8px;
+  text-align: center;
 `
 
 const PanelHeader = styled.div`
@@ -1031,6 +1077,7 @@ const ActivityItem = styled.div`
   border-radius: 8px;
   background: var(--hover-bg);
   margin-bottom: 12px;
+  align-items: center;
   
   &:last-child {
     margin-bottom: 0;
@@ -1064,6 +1111,41 @@ const ActivityTitle = styled.div`
 const ActivityTime = styled.div`
   font-size: 0.8em;
   color: var(--text-lighter);
+`
+
+const RecommendationsScrollContainer = styled.div`
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-top: 8px;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--hover-bg);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-lighter);
+    border-radius: 10px;
+    
+    &:hover {
+      background: var(--text-light);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    max-height: 280px;
+  }
+  
+  @media (max-width: 480px) {
+    max-height: 220px;
+  }
 `
 
 const CoursesGrid = styled.div`
@@ -1264,6 +1346,35 @@ const InfoItem = styled.div`
     width: 14px;
     height: 14px;
   }
+`
+
+const CourseMeta = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+`
+
+const CourseCategory = styled.span`
+  font-size: 0.75em;
+  color: var(--text-light);
+  background: var(--hover-bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+`
+
+const CourseDifficulty = styled.span`
+  font-size: 0.75em;
+  color: var(--text-light);
+  background: var(--hover-bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+`
+
+const CourseAction = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
 `
 
 const ProgressBar = styled.div`
@@ -1650,18 +1761,27 @@ const GenerateQuestionsButton = styled.button`
   justify-content: center;
   gap: 8px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   svg {
     width: 18px;
     height: 18px;
+    
+    &[style*="animation"] {
+      animation: ${spin} 1s linear infinite;
+    }
   }
 
   @media (max-width: 768px) {
@@ -1965,15 +2085,21 @@ const LMS = () => {
 
   // Fetch all data on component mount
   useEffect(() => {
+    console.log('[LMS] ===== PAGE LOAD: LMS page mounted, fetching all data =====')
     fetchAllData()
   }, [])
 
   const fetchAllData = async () => {
+    const startTime = performance.now()
+    console.log('[LMS] ===== fetchAllData START: Fetching all LMS data =====')
+    
     try {
       setLoading(true)
       setError(null)
 
-      // Fetch all data in parallel
+      console.log('[LMS] fetchAllData: Making parallel API calls for 8 endpoints')
+      // Fetch all data in parallel using Promise.allSettled
+      // This allows the page to load even if some endpoints are slow or fail
       const [
         coursesRes,
         dashboardRes,
@@ -1983,7 +2109,7 @@ const LMS = () => {
         recommendationsRes,
         deadlinesRes,
         certificatesRes
-      ] = await Promise.all([
+      ] = await Promise.allSettled([
         lmsAPI.getMyCourses({ limit: 100 }),
         lmsAPI.getDashboard(),
         lmsAPI.getWeeklyPerformance(7),
@@ -1993,60 +2119,154 @@ const LMS = () => {
         lmsAPI.getDeadlines(10),
         lmsAPI.getCertificates()
       ])
+      
+      const fetchTime = performance.now() - startTime
+      console.log(`[LMS] fetchAllData: All API calls completed in ${fetchTime.toFixed(2)}ms`)
 
-      // Set courses
-      if (coursesRes.data && coursesRes.data.courses) {
-        setCourses(coursesRes.data.courses.map(course => ({
-          id: course.id,
-          title: course.title,
-          description: course.description || '',
-          icon: course.icon || course.title.substring(0, 2).toUpperCase(),
-          lessons: course.lessons || 0,
-          duration: course.duration || 'N/A',
-          progress: course.progress || 0,
-          status: course.status || 'not_started',
-          category: course.category,
-          difficulty: course.difficulty
-        })))
+      // Handle each response individually (using Promise.allSettled, so we check status)
+      const failedRequests = []
+
+      // Set courses (critical - page won't work without this)
+      console.log('[LMS] fetchAllData: Processing courses response')
+      if (coursesRes.status === 'fulfilled' && coursesRes.value.data) {
+        const coursesData = coursesRes.value.data.courses || []
+        if (Array.isArray(coursesData) && coursesData.length > 0) {
+          const mappedCourses = coursesData.map(course => {
+            // Backend returns LMSUserCourse with course data in flat structure:
+            // course_title, course_icon, course_description, course_lessons, course_duration
+            // OR nested course object
+            const title = course.course_title || course.title || 'Untitled Course'
+            const icon = course.course_icon || course.icon || (title ? title.substring(0, 2).toUpperCase() : 'CO')
+            const description = course.course_description || course.description || ''
+            const lessons = course.course_lessons !== undefined ? course.course_lessons : (course.lessons || 0)
+            const duration = course.course_duration || course.duration || 'N/A'
+            const category = course.category || 'General'
+            const difficulty = course.difficulty || 'beginner'
+            
+            return {
+              id: course.course_id || course.id,
+              title: title,
+              description: description,
+              icon: icon,
+              lessons: lessons,
+              duration: duration,
+              progress: course.progress || 0,
+              status: course.status || 'not_started',
+              category: category,
+              difficulty: difficulty
+            }
+          })
+          setCourses(mappedCourses)
+          console.log(`[LMS] fetchAllData: SUCCESS - Loaded ${mappedCourses.length} courses`)
+        } else {
+          // Empty courses array - user has no courses enrolled
+          setCourses([])
+          console.log('[LMS] fetchAllData: No courses found for user (empty array)')
+        }
+      } else if (coursesRes.status === 'rejected') {
+        failedRequests.push('courses')
+        console.error('[LMS] fetchAllData: FAILED - Courses request rejected:', coursesRes.reason)
+        // Set empty array on error so page doesn't break
+        setCourses([])
+      } else {
+        // Unknown status - set empty array
+        console.warn('[LMS] fetchAllData: UNKNOWN - Courses response has unknown status')
+        setCourses([])
       }
 
       // Set dashboard
-      if (dashboardRes.data) {
-        setDashboard(dashboardRes.data)
+      if (dashboardRes.status === 'fulfilled' && dashboardRes.value.data) {
+        setDashboard(dashboardRes.value.data)
+        console.log('[LMS] fetchAllData: SUCCESS - Dashboard loaded')
+      } else if (dashboardRes.status === 'rejected') {
+        failedRequests.push('dashboard')
+        console.warn('[LMS] fetchAllData: FAILED - Dashboard:', dashboardRes.reason?.message || dashboardRes.reason)
       }
 
       // Set weekly performance
-      if (weeklyRes.data && weeklyRes.data.performance) {
-        setWeeklyPerformance(weeklyRes.data.performance)
+      if (weeklyRes.status === 'fulfilled' && weeklyRes.value.data && weeklyRes.value.data.performance) {
+        setWeeklyPerformance(weeklyRes.value.data.performance)
+        console.log(`[LMS] fetchAllData: SUCCESS - Weekly performance loaded (${weeklyRes.value.data.performance.length} entries)`)
+      } else if (weeklyRes.status === 'rejected') {
+        failedRequests.push('weekly performance')
+        console.warn('[LMS] fetchAllData: FAILED - Weekly performance:', weeklyRes.reason?.message || weeklyRes.reason)
       }
 
       // Set domain performance
-      if (domainRes.data && domainRes.data.performance) {
-        setDomainPerformance(domainRes.data.performance)
+      if (domainRes.status === 'fulfilled' && domainRes.value.data && domainRes.value.data.performance) {
+        setDomainPerformance(domainRes.value.data.performance)
+        console.log(`[LMS] fetchAllData: SUCCESS - Domain performance loaded (${domainRes.value.data.performance.length} entries)`)
+      } else if (domainRes.status === 'rejected') {
+        failedRequests.push('domain performance')
+        console.warn('[LMS] fetchAllData: FAILED - Domain performance:', domainRes.reason?.message || domainRes.reason)
       }
 
       // Set activities
-      if (activitiesRes.data && activitiesRes.data.activities) {
-        setActivities(activitiesRes.data.activities)
+      if (activitiesRes.status === 'fulfilled' && activitiesRes.value.data && activitiesRes.value.data.activities) {
+        setActivities(activitiesRes.value.data.activities)
+        console.log(`[LMS] fetchAllData: SUCCESS - Activities loaded (${activitiesRes.value.data.activities.length} entries)`)
+      } else if (activitiesRes.status === 'rejected') {
+        failedRequests.push('activities')
+        console.warn('[LMS] fetchAllData: FAILED - Activities:', activitiesRes.reason?.message || activitiesRes.reason)
       }
 
       // Set recommendations
-      if (recommendationsRes.data && recommendationsRes.data.recommendations) {
-        setRecommendations(recommendationsRes.data.recommendations)
+      if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value.data && recommendationsRes.value.data.recommendations) {
+        setRecommendations(recommendationsRes.value.data.recommendations)
+        console.log(`[LMS] fetchAllData: SUCCESS - Recommendations loaded (${recommendationsRes.value.data.recommendations.length} entries)`)
+      } else if (recommendationsRes.status === 'rejected') {
+        failedRequests.push('recommendations')
+        console.warn('[LMS] fetchAllData: FAILED - Recommendations:', recommendationsRes.reason?.message || recommendationsRes.reason)
       }
 
       // Set deadlines
-      if (deadlinesRes.data && deadlinesRes.data.deadlines) {
-        setDeadlines(deadlinesRes.data.deadlines)
+      if (deadlinesRes.status === 'fulfilled' && deadlinesRes.value.data && deadlinesRes.value.data.deadlines) {
+        setDeadlines(deadlinesRes.value.data.deadlines)
+        console.log(`[LMS] fetchAllData: SUCCESS - Deadlines loaded (${deadlinesRes.value.data.deadlines.length} entries)`)
+      } else if (deadlinesRes.status === 'rejected') {
+        failedRequests.push('deadlines')
+        console.warn('[LMS] fetchAllData: FAILED - Deadlines:', deadlinesRes.reason?.message || deadlinesRes.reason)
       }
 
       // Set certificates
-      if (certificatesRes.data && certificatesRes.data.certificates) {
-        setCertificates(certificatesRes.data.certificates)
+      if (certificatesRes.status === 'fulfilled' && certificatesRes.value.data && certificatesRes.value.data.certificates) {
+        setCertificates(certificatesRes.value.data.certificates)
+        console.log(`[LMS] fetchAllData: SUCCESS - Certificates loaded (${certificatesRes.value.data.certificates.length} entries)`)
+      } else if (certificatesRes.status === 'rejected') {
+        failedRequests.push('certificates')
+        console.warn('[LMS] fetchAllData: FAILED - Certificates:', certificatesRes.reason?.message || certificatesRes.reason)
       }
 
+      // Show warning if critical data failed (courses)
+      if (coursesRes.status === 'rejected') {
+        const errorReason = coursesRes.reason?.message || coursesRes.reason?.response?.data?.detail || 'Unknown error'
+        if (errorReason.includes('timeout')) {
+          setError('Courses are taking longer than expected to load. Please refresh the page or try again in a moment.')
+        } else {
+          setError(`Failed to load courses: ${errorReason}. Please refresh the page.`)
+        }
+        console.error('[LMS] fetchAllData: CRITICAL ERROR - Courses failed to load')
+      } else if (failedRequests.length > 0) {
+        // Show info message for non-critical failures
+        const timeoutErrors = failedRequests.filter(req => 
+          req !== 'courses' && 
+          (coursesRes.status === 'rejected' && coursesRes.reason?.message?.includes('timeout'))
+        )
+        
+        if (timeoutErrors.length > 0) {
+          console.warn(`[LMS] fetchAllData: Some data failed to load due to timeouts: ${failedRequests.join(', ')}. The page may not display all information correctly.`)
+        } else {
+          console.warn(`[LMS] fetchAllData: Some data failed to load: ${failedRequests.join(', ')}. The page may not display all information correctly.`)
+        }
+        // Don't set error for non-critical failures - page is still usable
+      }
+
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== fetchAllData END: Completed in ${totalTime.toFixed(2)}ms, ${failedRequests.length} failures =====`)
+
     } catch (err) {
-      console.error('Error fetching LMS data:', err)
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== fetchAllData ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
       setError(err.response?.data?.detail || err.message || 'Failed to load LMS data')
     } finally {
       setLoading(false)
@@ -2056,14 +2276,21 @@ const LMS = () => {
   // Fetch course details when portal opens
   useEffect(() => {
     if (selectedCourse && isPortalOpen) {
+      console.log(`[LMS] ===== PORTAL OPEN: Fetching details for course_id=${selectedCourse.id} =====`)
       fetchCourseDetails(selectedCourse.id)
     }
   }, [selectedCourse, isPortalOpen])
 
-  const fetchCourseDetails = async (courseId) => {
+  const fetchCourseDetails = async (courseId, showLoading = true) => {
+    const startTime = performance.now()
+    console.log(`[LMS] fetchCourseDetails START: course_id=${courseId}, showLoading=${showLoading}`)
+    
     try {
-      setQuestionsLoading(true)
+      if (showLoading) {
+        setQuestionsLoading(true)
+      }
       
+      console.log(`[LMS] fetchCourseDetails: Making API calls for questions, sections, resources`)
       const [questionsRes, sectionsRes, resourcesRes] = await Promise.all([
         lmsAPI.getCourseQuestions(courseId),
         lmsAPI.getCourseSections(courseId),
@@ -2072,20 +2299,31 @@ const LMS = () => {
 
       if (questionsRes.data && questionsRes.data.questions) {
         setCourseQuestions(questionsRes.data.questions)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${questionsRes.data.questions.length} questions`)
+      } else {
+        console.log(`[LMS] fetchCourseDetails: No questions found for course_id=${courseId}`)
       }
 
       if (sectionsRes.data && sectionsRes.data.sections) {
         setCourseSections(sectionsRes.data.sections)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${sectionsRes.data.sections.length} sections`)
       }
 
       if (resourcesRes.data && resourcesRes.data.resources) {
         setCourseResources(resourcesRes.data.resources)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${resourcesRes.data.resources.length} resources`)
       }
 
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== fetchCourseDetails END: Completed in ${totalTime.toFixed(2)}ms =====`)
+
     } catch (err) {
-      console.error('Error fetching course details:', err)
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== fetchCourseDetails ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
     } finally {
-      setQuestionsLoading(false)
+      if (showLoading) {
+        setQuestionsLoading(false)
+      }
     }
   }
 
@@ -2144,6 +2382,37 @@ const LMS = () => {
     setIsPortalOpen(true)
   }
 
+  const handleEnrollCourse = async (courseId) => {
+    if (!courseId) return
+    
+    try {
+      console.log(`[LMS] handleEnrollCourse: Enrolling in course_id=${courseId}`)
+      
+      // Check current enrollment count before attempting enrollment
+      const currentEnrollmentCount = courses.length
+      if (currentEnrollmentCount >= 5) {
+        alert('You have reached the maximum enrollment limit of 5 courses. Please complete or drop a course before enrolling in a new one.')
+        return
+      }
+      
+      await lmsAPI.enrollInCourse(courseId)
+      alert('Successfully enrolled in course!')
+      
+      // Refresh courses list and recommendations
+      await fetchAllData()
+    } catch (err) {
+      console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
+      
+      // Check if error is about enrollment limit
+      if (errorMsg.includes('maximum enrollment limit') || errorMsg.includes('5 courses')) {
+        alert(errorMsg)
+      } else {
+        alert(`Error: ${errorMsg}`)
+      }
+    }
+  }
+
   const handleClosePortal = () => {
     setIsPortalOpen(false)
     setTimeout(() => {
@@ -2162,6 +2431,8 @@ const LMS = () => {
     if (!selectedCourse) return
 
     try {
+      console.log('[LMS] handleSubmitAnswers: Submitting answers without evaluation')
+      
       // Submit all answers
       const submitPromises = Object.entries(answers)
         .filter(([_, answer]) => answer && answer.trim())
@@ -2171,51 +2442,209 @@ const LMS = () => {
 
       await Promise.all(submitPromises)
       
+      console.log('[LMS] handleSubmitAnswers: Answers submitted successfully')
       alert('Answers submitted successfully!')
       setAnswers({})
       handleClosePortal()
       
       // Refresh dashboard to update stats
-      fetchAllData()
+      await fetchAllData()
     } catch (err) {
-      console.error('Error submitting answers:', err)
+      console.error('[LMS] handleSubmitAnswers: Error submitting answers:', err)
       alert('Failed to submit answers. Please try again.')
     }
   }
 
-  const handleGenerateQuestions = async () => {
+  const handleSubmitAndEvaluate = async () => {
     if (!selectedCourse) return
+
+    const startTime = performance.now()
+    console.log(`[LMS] ===== SUBMIT & EVALUATE START: course_id=${selectedCourse.id} =====`)
+
+    try {
+      // Step 1: Submit all answers first
+      console.log('[LMS] handleSubmitAndEvaluate: Step 1 - Submitting answers...')
+      const submitPromises = Object.entries(answers)
+        .filter(([_, answer]) => answer && answer.trim())
+        .map(([questionId, answerText]) =>
+          lmsAPI.submitAnswer(parseInt(questionId), answerText)
+        )
+
+      if (submitPromises.length === 0) {
+        alert('Please provide at least one answer before submitting.')
+        return
+      }
+
+      await Promise.all(submitPromises)
+      console.log(`[LMS] handleSubmitAndEvaluate: Step 1 SUCCESS - Submitted ${submitPromises.length} answer(s)`)
+      
+      // Step 2: Trigger Seez agent to evaluate the answers
+      console.log('[LMS] handleSubmitAndEvaluate: Step 2 - Triggering Seez agent evaluation...')
+      const evaluateResponse = await lmsAPI.triggerSeezEvaluateCourse(selectedCourse.id)
+      
+      const evaluationTime = performance.now() - startTime
+      console.log(`[LMS] handleSubmitAndEvaluate: Step 2 completed in ${evaluationTime.toFixed(2)}ms`)
+      
+      if (evaluateResponse.data && evaluateResponse.data.result) {
+        const result = evaluateResponse.data.result
+        const success = result.success !== false
+        const evaluatedCount = result.evaluated_count || 0
+        const averageScore = result.average_score !== undefined ? result.average_score : null
+        
+        if (success) {
+          let successMsg = `Answers submitted and evaluated successfully!\n\n`
+          successMsg += `Evaluated ${evaluatedCount} answer(s)`
+          if (averageScore !== null) {
+            successMsg += `\nAverage Score: ${averageScore.toFixed(1)}/10`
+          }
+          
+          console.log(`[LMS] handleSubmitAndEvaluate: SUCCESS - Evaluated ${evaluatedCount} answers, avg score: ${averageScore}`)
+          alert(successMsg)
+        } else {
+          const errorMsg = result.error || 'Evaluation completed with errors'
+          console.warn(`[LMS] handleSubmitAndEvaluate: Evaluation completed with errors: ${errorMsg}`)
+          alert(`Answers submitted, but evaluation had issues:\n${errorMsg}`)
+        }
+      } else {
+        console.log('[LMS] handleSubmitAndEvaluate: Evaluation response received but no result data')
+        alert('Answers submitted successfully! Evaluation is in progress.')
+      }
+      
+      setAnswers({})
+      handleClosePortal()
+      
+      // Refresh dashboard to update stats
+      console.log('[LMS] handleSubmitAndEvaluate: Refreshing dashboard data...')
+      await fetchAllData()
+      
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== SUBMIT & EVALUATE END: Completed in ${totalTime.toFixed(2)}ms =====`)
+    } catch (err) {
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== SUBMIT & EVALUATE ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
+      
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to submit and evaluate answers'
+      
+      // Check if it's a timeout error
+      if (err.code === 'ECONNABORTED' || errorMsg.includes('timeout')) {
+        alert(`Request timed out. Your answers were submitted, but evaluation may still be processing. Please check back later.`)
+      } else {
+        alert(`Error: ${errorMsg}`)
+      }
+    }
+  }
+
+  const handleGenerateQuestions = async () => {
+    if (!selectedCourse) {
+      console.warn('[LMS] handleGenerateQuestions: No course selected')
+      return
+    }
+
+    const startTime = performance.now()
+    console.log(`[LMS] ===== GENERATE QUESTIONS START: User clicked button for course_id=${selectedCourse.id} =====`)
 
     try {
       // Show loading state
       setQuestionsLoading(true)
+      console.log('[LMS] handleGenerateQuestions: Button disabled, loading state set')
       
       // Call Azel agent to process course and generate questions
+      // This is a long-running operation (30-150 seconds)
+      console.log(`[LMS] handleGenerateQuestions: Making API call to trigger Azel agent`)
       const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id)
       
-      if (response.data && response.data.result) {
-        const result = response.data.result
+      const apiTime = performance.now() - startTime
+      console.log(`[LMS] handleGenerateQuestions: API call completed in ${apiTime.toFixed(2)}ms`)
+      
+      if (response.data) {
+        const result = response.data.result || {}
+        const success = response.data.success !== false && result.success !== false
         
-        if (result.success) {
-          // Show success message
-          alert(`Successfully generated ${result.questions_saved || 0} questions!`)
+        console.log(`[LMS] handleGenerateQuestions: Response received, success=${success}`)
+        console.log(`[LMS] handleGenerateQuestions: Result - topics=${result.topics_extracted?.length || 0}, urls=${result.urls_saved || 0}, questions=${result.questions_saved || 0}`)
+        
+        if (success) {
+          // Show detailed success message
+          const questionsCount = result.questions_saved || 0
+          const topicsCount = result.topics_extracted?.length || 0
+          const urlsCount = result.urls_saved || 0
+          
+          let successMsg = `Successfully generated ${questionsCount} question${questionsCount !== 1 ? 's' : ''}!`
+          if (topicsCount > 0) {
+            successMsg += `\n\nFound ${topicsCount} topic${topicsCount !== 1 ? 's' : ''} of interest`
+          }
+          if (urlsCount > 0) {
+            successMsg += `\nSearched ${urlsCount} educational resource${urlsCount !== 1 ? 's' : ''}`
+          }
+          
+          console.log(`[LMS] handleGenerateQuestions: SUCCESS - Showing success message to user`)
+          alert(successMsg)
           
           // Refetch course questions to display newly generated ones
-          await fetchCourseDetails(selectedCourse.id)
+          // Don't show loading state again since we're already in loading state
+          console.log(`[LMS] handleGenerateQuestions: Auto-refreshing questions list`)
+          await fetchCourseDetails(selectedCourse.id, false)
+          
+          const totalTime = performance.now() - startTime
+          console.log(`[LMS] ===== GENERATE QUESTIONS END (SUCCESS): Completed in ${totalTime.toFixed(2)}ms =====`)
         } else {
-          // Show error from agent
-          const errorMsg = result.error || 'Failed to generate questions'
-          alert(`Question generation failed: ${errorMsg}`)
+          // Show detailed error message
+          const errorMsg = result.error || response.data.message || 'Failed to generate questions'
+          
+          console.error(`[LMS] handleGenerateQuestions: FAILED - ${errorMsg}`)
+          
+          let errorDetails = `Question generation failed:\n${errorMsg}`
+          
+          // Provide helpful suggestions based on error
+          if (errorMsg.includes('Zed context') || errorMsg.includes('No Zed context')) {
+            errorDetails += '\n\nTip: Make sure you have updated your profile and interests so the system can understand what topics you want to learn about.'
+          } else if (errorMsg.includes('topics')) {
+            errorDetails += '\n\nTip: The system couldn\'t find highlighted topics in your profile. Try updating your interests and preferences.'
+          } else if (errorMsg.includes('Qdrant') || errorMsg.includes('OpenAI')) {
+            errorDetails += '\n\nTip: There may be a configuration issue with the AI services. Please contact support if this persists.'
+          }
+          
+          alert(errorDetails)
+          
+          const totalTime = performance.now() - startTime
+          console.log(`[LMS] ===== GENERATE QUESTIONS END (FAILED): Completed in ${totalTime.toFixed(2)}ms =====`)
         }
       } else {
-        alert('Question generation completed, but no questions were generated. Please check your Zed context.')
+        console.warn(`[LMS] handleGenerateQuestions: No response data received`)
+        alert('Question generation completed, but no questions were generated. Please check your Zed context and try again.')
       }
     } catch (err) {
-      console.error('Error generating questions:', err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to generate questions. Please try again.'
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== GENERATE QUESTIONS ERROR: Exception after ${totalTime.toFixed(2)}ms:`, err)
+      
+      let errorMsg = 'Failed to generate questions. Please try again.'
+      
+      if (err.response) {
+        // Server responded with error
+        errorMsg = err.response.data?.detail || err.response.data?.message || err.message
+        console.error(`[LMS] handleGenerateQuestions: Server error response:`, err.response.data)
+      } else if (err.request) {
+        // Request made but no response
+        if (err.code === 'ECONNABORTED') {
+          errorMsg = 'Request timed out. The question generation process takes 30-150 seconds. Please try again.'
+          console.error(`[LMS] handleGenerateQuestions: Request timeout after ${totalTime.toFixed(2)}ms`)
+        } else if (err.code === 'ERR_NETWORK') {
+          errorMsg = 'Network error. Please check your connection and try again.'
+          console.error(`[LMS] handleGenerateQuestions: Network error`)
+        } else {
+          errorMsg = 'Network error. Please try again.'
+          console.error(`[LMS] handleGenerateQuestions: Unknown network error:`, err.code)
+        }
+      } else {
+        errorMsg = err.message || errorMsg
+        console.error(`[LMS] handleGenerateQuestions: Client error:`, err.message)
+      }
+      
       alert(`Error: ${errorMsg}`)
     } finally {
       setQuestionsLoading(false)
+      const finalTime = performance.now() - startTime
+      console.log(`[LMS] ===== GENERATE QUESTIONS FINALLY: Total time ${finalTime.toFixed(2)}ms, loading state cleared =====`)
     }
   }
 
@@ -2262,6 +2691,53 @@ const LMS = () => {
                     <AnimatedCourseCard key={course.id} course={course} index={index} onCourseClick={handleCourseClick} />
                   ))}
                 </CoursesGrid>
+              ) : recommendations.length > 0 ? (
+                // Show recommended courses if no enrolled courses
+                <>
+                  <PanelHeader>
+                    <PanelTitle>Recommended Courses</PanelTitle>
+                    <PanelSubtitle>Based on your interests and learning goals</PanelSubtitle>
+                  </PanelHeader>
+                  <CoursesGrid>
+                    {recommendations.map((rec) => {
+                      // Backend returns flat structure: course_id, course_title, course_icon, course_description
+                      // OR nested: rec.course (if include_relations returns full course object)
+                      const courseId = rec.course_id || (rec.course && rec.course.id)
+                      const courseTitle = rec.course_title || (rec.course && rec.course.title) || 'Recommended Course'
+                      const courseIcon = rec.course_icon || (rec.course && rec.course.icon) || (courseTitle ? courseTitle.substring(0, 2).toUpperCase() : 'RC')
+                      const courseDescription = rec.course_description || (rec.course && rec.course.description) || rec.reason || 'A course recommended for you'
+                      const courseCategory = (rec.course && rec.course.category) || 'General'
+                      const courseDifficulty = (rec.course && rec.course.difficulty) || 'beginner'
+                      
+                      if (!courseId) {
+                        console.warn('[LMS] Recommendation missing course_id:', rec)
+                        return null
+                      }
+                      
+                      return (
+                        <CourseCard
+                          key={rec.id || courseId}
+                          onClick={() => {
+                            handleEnrollCourse(courseId)
+                          }}
+                        >
+                          <CourseIcon>{courseIcon}</CourseIcon>
+                          <CourseContent>
+                            <CourseTitle>{courseTitle}</CourseTitle>
+                            <CourseDescription>{courseDescription}</CourseDescription>
+                            <CourseMeta>
+                              <CourseCategory>{courseCategory}</CourseCategory>
+                              <CourseDifficulty>{courseDifficulty}</CourseDifficulty>
+                            </CourseMeta>
+                            <CourseAction>
+                              <EnrollButton>Enroll</EnrollButton>
+                            </CourseAction>
+                          </CourseContent>
+                        </CourseCard>
+                      )
+                    }).filter(Boolean)}
+                  </CoursesGrid>
+                </>
               ) : (
                 <EmptyState>
                   <EmptyIcon>
@@ -2271,6 +2747,7 @@ const LMS = () => {
                     </svg>
                   </EmptyIcon>
                   <EmptyText>No courses found</EmptyText>
+                  <EmptySubtext>Course recommendations will appear here based on your interests</EmptySubtext>
                 </EmptyState>
               )}
             </ScrollableContent>
@@ -2518,25 +2995,51 @@ const LMS = () => {
                 </svg>
                 AI Recommendations
               </CardTitle>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
-              ) : recommendations.length > 0 ? (
-                recommendations.map((rec) => (
-                  <ActivityItem key={rec.id}>
-                    <ActivityIcon>
-                      {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
-                    </ActivityIcon>
-                    <ActivityContent>
-                      <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
-                      <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
-                    </ActivityContent>
-                  </ActivityItem>
-                ))
-              ) : (
-                <EmptyState>
-                  <EmptyText>No recommendations available</EmptyText>
-                </EmptyState>
-              )}
+              <RecommendationsScrollContainer>
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+                ) : recommendations.length > 0 ? (
+                  recommendations.map((rec) => {
+                    const courseId = rec.course_id || (rec.course && rec.course.id)
+                    const canEnroll = courses.length < 5
+                    
+                    return (
+                      <ActivityItem key={rec.id}>
+                        <ActivityIcon>
+                          {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
+                        </ActivityIcon>
+                        <ActivityContent>
+                          <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
+                          <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
+                        </ActivityContent>
+                        {courseId && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                            {canEnroll ? (
+                              <EnrollButton
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEnrollCourse(courseId)
+                                }}
+                                style={{ padding: '6px 12px', fontSize: '0.85em' }}
+                              >
+                                Enroll
+                              </EnrollButton>
+                            ) : (
+                              <span style={{ fontSize: '0.8em', color: 'var(--text-light)', padding: '6px 12px' }}>
+                                Limit Reached
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </ActivityItem>
+                    )
+                  })
+                ) : (
+                  <EmptyState>
+                    <EmptyText>No recommendations available</EmptyText>
+                  </EmptyState>
+                )}
+              </RecommendationsScrollContainer>
             </DashboardCard>
 
             {/* Learning Streak */}
@@ -2689,19 +3192,33 @@ const LMS = () => {
                   )}
                 </SidePanelSection>
 
-                <GenerateQuestionsButton onClick={handleGenerateQuestions}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3v3"></path>
-                    <path d="M12 18v3"></path>
-                    <path d="M5.5 5.5l2.1 2.1"></path>
-                    <path d="M16.4 16.4l2.1 2.1"></path>
-                    <path d="M3 12h3"></path>
-                    <path d="M18 12h3"></path>
-                    <path d="M5.5 18.5l2.1-2.1"></path>
-                    <path d="M16.4 7.6l2.1-2.1"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                  Generate Questions
+                <GenerateQuestionsButton 
+                  onClick={handleGenerateQuestions}
+                  disabled={questionsLoading}
+                >
+                  {questionsLoading ? (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                      </svg>
+                      Generating Questions...
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3v3"></path>
+                        <path d="M12 18v3"></path>
+                        <path d="M5.5 5.5l2.1 2.1"></path>
+                        <path d="M16.4 16.4l2.1 2.1"></path>
+                        <path d="M3 12h3"></path>
+                        <path d="M18 12h3"></path>
+                        <path d="M5.5 18.5l2.1-2.1"></path>
+                        <path d="M16.4 7.6l2.1-2.1"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      Generate Questions
+                    </>
+                  )}
                 </GenerateQuestionsButton>
               </PortalSidePanel>
 
@@ -2755,10 +3272,10 @@ const LMS = () => {
                 )}
 
                 <ButtonContainer>
-                  <SubmitButton onClick={handleSubmitAnswers}>
+                  <SubmitButton onClick={handleSubmitAnswers} disabled={Object.keys(answers).length === 0}>
                     Submit Answers
                   </SubmitButton>
-                  <EvaluateButton onClick={handleSubmitAnswers} disabled={Object.keys(answers).length === 0}>
+                  <EvaluateButton onClick={handleSubmitAndEvaluate} disabled={Object.keys(answers).length === 0}>
                     Submit & Evaluate
                   </EvaluateButton>
                 </ButtonContainer>
