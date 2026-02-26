@@ -76,5 +76,6 @@ class LMSUserAnswer(Base):
             data['question_text'] = self.question.question_text
             data['question_type'] = self.question.question_type
             data['points'] = self.question.points
+            data['course_id'] = self.question.course_id
         
         return data

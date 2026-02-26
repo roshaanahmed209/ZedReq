@@ -350,9 +350,8 @@ const TopBanner = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  background: var(--bg-white);
-  border-radius: 16px;
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
   margin-bottom: 20px;
 
   @media (max-width: 1024px) {
@@ -1111,6 +1110,37 @@ const ActivityTitle = styled.div`
 const ActivityTime = styled.div`
   font-size: 0.8em;
   color: var(--text-lighter);
+`
+
+const ActivityScrollContainer = styled.div`
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-top: 8px;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--hover-bg);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-lighter);
+    border-radius: 10px;
+    
+    &:hover {
+      background: var(--text-light);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    max-height: 280px;
+  }
 `
 
 const RecommendationsScrollContainer = styled.div`
@@ -2961,17 +2991,19 @@ const LMS = () => {
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
               ) : activities.length > 0 ? (
-                activities.map((activity) => (
-                  <ActivityItem key={activity.id}>
-                    <ActivityIcon>
-                      {activity.course_icon || activity.activity_type?.substring(0, 2).toUpperCase() || 'AC'}
-                    </ActivityIcon>
-                    <ActivityContent>
-                      <ActivityTitle>{activity.description || activity.activity_type || 'Activity'}</ActivityTitle>
-                      <ActivityTime>{formatDate(activity.created_at)}</ActivityTime>
-                    </ActivityContent>
-                  </ActivityItem>
-                ))
+                <ActivityScrollContainer>
+                  {activities.map((activity) => (
+                    <ActivityItem key={activity.id}>
+                      <ActivityIcon>
+                        {activity.course_icon || activity.activity_type?.substring(0, 2).toUpperCase() || 'AC'}
+                      </ActivityIcon>
+                      <ActivityContent>
+                        <ActivityTitle>{activity.description || activity.activity_type || 'Activity'}</ActivityTitle>
+                        <ActivityTime>{formatDate(activity.created_at)}</ActivityTime>
+                      </ActivityContent>
+                    </ActivityItem>
+                  ))}
+                </ActivityScrollContainer>
               ) : (
                 <EmptyState>
                   <EmptyText>No recent activity</EmptyText>
@@ -3004,16 +3036,18 @@ const LMS = () => {
                     const canEnroll = courses.length < 5
                     
                     return (
-                      <ActivityItem key={rec.id}>
-                        <ActivityIcon>
-                          {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
-                        </ActivityIcon>
-                        <ActivityContent>
-                          <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
-                          <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
-                        </ActivityContent>
+                      <ActivityItem key={rec.id} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', width: '100%', alignItems: 'center', gap: '12px' }}>
+                          <ActivityIcon>
+                            {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
+                          </ActivityIcon>
+                          <ActivityContent style={{ flex: 1 }}>
+                            <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
+                            <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
+                          </ActivityContent>
+                        </div>
                         {courseId && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          <div style={{ width: '100%', marginTop: '8px', paddingLeft: '52px' }}>
                             {canEnroll ? (
                               <EnrollButton
                                 onClick={(e) => {

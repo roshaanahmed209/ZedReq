@@ -89,13 +89,20 @@ class AzelAgent:
         qdrant_api_key = qdrant_api_key or os.environ.get('QDRANT_API_KEY')
         
         try:
+            # Get timeout from environment or default to 150 seconds
+            qdrant_timeout = float(os.environ.get('QDRANT_TIMEOUT', 150.0))
+            
             if qdrant_api_key:
                 self.qdrant_client = QdrantClient(
                     url=qdrant_url,
-                    api_key=qdrant_api_key
+                    api_key=qdrant_api_key,
+                    timeout=qdrant_timeout
                 )
             else:
-                self.qdrant_client = QdrantClient(url=qdrant_url)
+                self.qdrant_client = QdrantClient(
+                    url=qdrant_url,
+                    timeout=qdrant_timeout
+                )
             
             # Test connection
             self.qdrant_client.get_collections()

@@ -607,6 +607,254 @@ const TrendLabel = styled.div`
   margin-top: 8px;
 `
 
+// My Answers View Styled Components
+const ViewToggle = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+`
+
+const ViewToggleButton = styled.button`
+  padding: 10px 20px;
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.active ? 'white' : 'var(--text-light)'};
+  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: ${props => props.active ? '500' : '300'};
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.active ? 'var(--primary)' : 'rgba(10, 102, 194, 0.1)'};
+    border-color: var(--primary);
+    color: ${props => props.active ? 'white' : 'var(--primary)'};
+  }
+`
+
+const AnswersHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+`
+
+const FilterSortContainer = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+`
+
+const Select = styled.select`
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-white);
+  color: var(--text);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+`
+
+const AnswerCard = styled.div`
+  background: var(--bg-white);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(10, 102, 194, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+`
+
+const AnswerCardHeader = styled.div`
+  padding: 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: ${props => props.expanded ? 'rgba(10, 102, 194, 0.05)' : 'transparent'};
+  transition: background 0.2s ease;
+`
+
+const AnswerCardLeft = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const AnswerQuestion = styled.div`
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.5;
+`
+
+const AnswerMeta = styled.div`
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+  color: var(--text-light);
+`
+
+const AnswerMetaItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`
+
+const ScoreBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+  background: ${props => props.color}20;
+  color: ${props => props.color};
+  border: 1px solid ${props => props.color}40;
+`
+
+const CorrectBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.8em;
+  font-weight: 500;
+  background: ${props => props.correct ? '#10b98120' : '#ef444420'};
+  color: ${props => props.correct ? '#10b981' : '#ef4444'};
+  border: 1px solid ${props => props.correct ? '#10b98140' : '#ef444440'};
+`
+
+const ExpandIcon = styled.div`
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  transition: transform 0.2s ease;
+  transform: ${props => props.expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`
+
+const AnswerCardContent = styled.div`
+  padding: 0 20px;
+  max-height: ${props => props.expanded ? '2000px' : '0'};
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: ${props => props.expanded ? '0 20px 20px 20px' : '0 20px'};
+`
+
+const AnswerSection = styled.div`
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+`
+
+const AnswerSectionTitle = styled.div`
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`
+
+const AnswerText = styled.div`
+  font-size: 0.9em;
+  color: var(--text-light);
+  line-height: 1.7;
+  padding: 12px;
+  background: var(--hover-bg);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+`
+
+const FeedbackText = styled.div`
+  font-size: 0.9em;
+  color: var(--text);
+  line-height: 1.7;
+  padding: 12px;
+  background: rgba(10, 102, 194, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+`
+
+const SuggestionsList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+`
+
+const SuggestionItem = styled.li`
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(10, 102, 194, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
+  font-size: 0.9em;
+  color: var(--text);
+  line-height: 1.6;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &::before {
+    content: '💡';
+    margin-right: 8px;
+  }
+`
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light);
+`
+
+const EmptyStateIcon = styled.div`
+  font-size: 3em;
+  margin-bottom: 16px;
+`
+
+const EmptyStateText = styled.div`
+  font-size: 1.1em;
+  margin-bottom: 8px;
+  color: var(--text);
+`
+
+const EmptyStateSubtext = styled.div`
+  font-size: 0.9em;
+  color: var(--text-light);
+`
+
 const Evaluation = () => {
   const [selectedCourseId, setSelectedCourseId] = useState(null)
   const [courses, setCourses] = useState([])
@@ -614,8 +862,15 @@ const Evaluation = () => {
   const [weeklyPerformance, setWeeklyPerformance] = useState([])
   const [domainPerformance, setDomainPerformance] = useState([])
   const [coursePerformance, setCoursePerformance] = useState(null)
+  const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [evaluating, setEvaluating] = useState(false)
+  const [viewMode, setViewMode] = useState('performance') // 'performance' or 'answers'
+  const [answers, setAnswers] = useState([])
+  const [answersLoading, setAnswersLoading] = useState(false)
+  const [expandedAnswers, setExpandedAnswers] = useState(new Set())
+  const [sortBy, setSortBy] = useState('date') // 'date', 'score', 'course'
+  const [filterCourseId, setFilterCourseId] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
   const { logout } = useAuth()
@@ -631,6 +886,13 @@ const Evaluation = () => {
       fetchPerformanceData()
     }
   }, [selectedCourseId])
+
+  // Fetch answers when view mode changes to 'answers'
+  useEffect(() => {
+    if (viewMode === 'answers') {
+      fetchAnswers()
+    }
+  }, [viewMode, filterCourseId])
 
   const fetchCourses = async () => {
     try {
@@ -658,17 +920,51 @@ const Evaluation = () => {
     
     try {
       setLoading(true)
-      const [dashboardRes, weeklyRes, domainRes, coursePerfRes] = await Promise.all([
-        lmsAPI.getDashboard(),
-        lmsAPI.getWeeklyPerformance(7),
-        lmsAPI.getDomainPerformance(),
-        lmsAPI.getCoursePerformance(selectedCourseId)
+      
+      // Fetch all data with individual error handling to prevent one failure from blocking others
+      const [dashboardRes, weeklyRes, domainRes, coursePerfRes, recommendationsRes] = await Promise.allSettled([
+        lmsAPI.getDashboard().catch(err => {
+          console.warn('Error fetching dashboard:', err)
+          return { data: null }
+        }),
+        lmsAPI.getWeeklyPerformance(7).catch(err => {
+          console.warn('Error fetching weekly performance:', err)
+          return { data: { performance: [] } }
+        }),
+        lmsAPI.getDomainPerformance().catch(err => {
+          console.warn('Error fetching domain performance:', err)
+          return { data: { domains: [] } }
+        }),
+        lmsAPI.getCoursePerformance(selectedCourseId).catch(err => {
+          console.warn('Error fetching course performance:', err)
+          return { data: null }
+        }),
+        lmsAPI.getRecommendations(5).catch(err => {
+          console.warn('Error fetching recommendations:', err)
+          return { data: { recommendations: [] } }
+        })
       ])
 
-      if (dashboardRes.data) setDashboard(dashboardRes.data)
-      if (weeklyRes.data && weeklyRes.data.performance) setWeeklyPerformance(weeklyRes.data.performance)
-      if (domainRes.data && domainRes.data.domains) setDomainPerformance(domainRes.data.domains)
-      if (coursePerfRes.data) setCoursePerformance(coursePerfRes.data)
+      // Extract data from settled promises
+      if (dashboardRes.status === 'fulfilled' && dashboardRes.value?.data) {
+        setDashboard(dashboardRes.value.data)
+      }
+      
+      if (weeklyRes.status === 'fulfilled' && weeklyRes.value?.data?.performance) {
+        setWeeklyPerformance(weeklyRes.value.data.performance)
+      }
+      
+      if (domainRes.status === 'fulfilled' && domainRes.value?.data?.domains) {
+        setDomainPerformance(domainRes.value.data.domains)
+      }
+      
+      if (coursePerfRes.status === 'fulfilled' && coursePerfRes.value?.data) {
+        setCoursePerformance(coursePerfRes.value.data)
+      }
+      
+      if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value?.data?.recommendations) {
+        setRecommendations(recommendationsRes.value.data.recommendations)
+      }
     } catch (err) {
       console.error('Error fetching performance data:', err)
     } finally {
@@ -683,12 +979,27 @@ const Evaluation = () => {
       setEvaluating(true)
       const response = await lmsAPI.triggerSeezEvaluateCourse(selectedCourseId)
       
-      if (response.data && response.data.result && response.data.result.success) {
-        alert(`Evaluation completed! Evaluated ${response.data.result.evaluated_count} answers.`)
-        // Refetch performance data to show updated metrics
+      if (response.data) {
+        const result = response.data.result || {}
+        const message = response.data.message || ''
+        
+        // Check if no answers were found (this is now a success response, not an error)
+        if (message.includes('No unevaluated answers found') || 
+            (result.error && result.error.includes('No unevaluated answers found'))) {
+          alert('All answers for this course have already been evaluated. No new evaluations needed.')
+        } else if (result.success) {
+          alert(`Evaluation completed! Evaluated ${result.evaluated_count || 0} answer(s).`)
+        } else {
+          alert('Evaluation completed, but some answers may not have been evaluated.')
+        }
+        
+        // Always refetch performance data to show updated metrics
         await fetchPerformanceData()
-      } else {
-        alert('Evaluation completed, but some answers may not have been evaluated.')
+        
+        // Refresh answers if in answers view
+        if (viewMode === 'answers') {
+          await fetchAnswers()
+        }
       }
     } catch (err) {
       console.error('Error running evaluation:', err)
@@ -707,6 +1018,117 @@ const Evaluation = () => {
     navigate('/feed')
   }
 
+  // Security: Escape HTML to prevent XSS attacks
+  const escapeHtml = (text) => {
+    if (!text) return ''
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+  }
+
+  // Fetch user answers with evaluation data
+  const fetchAnswers = async () => {
+    try {
+      setAnswersLoading(true)
+      const params = {}
+      if (filterCourseId) {
+        // We'll filter by course on the frontend since API doesn't support course filter directly
+        // For now, fetch all and filter client-side
+      }
+      const response = await lmsAPI.getMyAnswers(params)
+      if (response.data && response.data.answers) {
+        let fetchedAnswers = response.data.answers
+        
+        // Filter by course if selected
+        if (filterCourseId) {
+          // We need to get course_id from question, but it's not in the answer response
+          // For now, we'll show all answers and let user filter visually
+          // TODO: Enhance API to include course_id in answer response
+        }
+        
+        setAnswers(fetchedAnswers)
+      }
+    } catch (err) {
+      console.error('Error fetching answers:', err)
+    } finally {
+      setAnswersLoading(false)
+    }
+  }
+
+  // Toggle answer expansion
+  const toggleAnswer = (answerId) => {
+    const newExpanded = new Set(expandedAnswers)
+    if (newExpanded.has(answerId)) {
+      newExpanded.delete(answerId)
+    } else {
+      newExpanded.add(answerId)
+    }
+    setExpandedAnswers(newExpanded)
+  }
+
+  // Get score color based on score value
+  const getScoreColor = (score) => {
+    if (score >= 8) return '#10b981' // green
+    if (score >= 6) return '#f59e0b' // yellow
+    return '#ef4444' // red
+  }
+
+  // Get score badge text
+  const getScoreBadgeText = (score) => {
+    if (score >= 8) return 'Excellent'
+    if (score >= 6) return 'Good'
+    if (score >= 4) return 'Fair'
+    return 'Needs Improvement'
+  }
+
+  // Sort answers
+  const getSortedAnswers = () => {
+    const sorted = [...answers]
+    switch (sortBy) {
+      case 'score':
+        return sorted.sort((a, b) => {
+          // Calculate score from points_earned and question points
+          const scoreA = a.points_earned && a.points ? (a.points_earned / a.points) * 10 : 0
+          const scoreB = b.points_earned && b.points ? (b.points_earned / b.points) * 10 : 0
+          return scoreB - scoreA
+        })
+      case 'course':
+        return sorted.sort((a, b) => {
+          const courseA = a.course_title || ''
+          const courseB = b.course_title || ''
+          return courseA.localeCompare(courseB)
+        })
+      case 'date':
+      default:
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.submitted_at || 0)
+          const dateB = new Date(b.submitted_at || 0)
+          return dateB - dateA
+        })
+    }
+  }
+
+  // Parse improvement suggestions from feedback
+  const parseImprovementSuggestions = (feedback) => {
+    if (!feedback) return []
+    const suggestionsMatch = feedback.match(/Improvement Suggestions:\s*([\s\S]*?)(?:\n\n|$)/i)
+    if (suggestionsMatch) {
+      const suggestionsText = suggestionsMatch[1]
+      // Split by bullet points or new lines
+      return suggestionsText
+        .split(/\n|•|-\s*/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+    }
+    return []
+  }
+
+  // Get feedback without improvement suggestions
+  const getFeedbackWithoutSuggestions = (feedback) => {
+    if (!feedback) return ''
+    return feedback.replace(/Improvement Suggestions:[\s\S]*/i, '').trim()
+  }
+
   const selectedCourse = courses.find(c => c.id === selectedCourseId)
   
   // Calculate overall score from course performance or dashboard
@@ -714,12 +1136,37 @@ const Evaluation = () => {
     ? (coursePerformance.accuracy_percentage / 100) * 10 
     : dashboard?.overall_accuracy 
       ? (dashboard.overall_accuracy / 100) * 10 
-      : 8.4
+      : 0
   
-  // Calculate metrics
-  const questionsAttempted = coursePerformance?.questions_answered || dashboard?.total_questions || 127
-  const correctAnswers = coursePerformance?.correct_answers || dashboard?.correct_answers || 98
-  const accuracyRate = coursePerformance?.accuracy_percentage || dashboard?.overall_accuracy || 77.2
+  // Calculate metrics - use real data or 0
+  const questionsAttempted = coursePerformance?.questions_answered || dashboard?.total_questions || 0
+  const correctAnswers = coursePerformance?.correct_answers || dashboard?.correct_answers || 0
+  const accuracyRate = coursePerformance?.accuracy_percentage || dashboard?.overall_accuracy || 0
+  
+  // Get areas for improvement (lowest performing domains)
+  const areasForImprovement = domainPerformance
+    .filter(d => d.accuracy_percentage !== null && d.accuracy_percentage !== undefined)
+    .sort((a, b) => (a.accuracy_percentage || 0) - (b.accuracy_percentage || 0))
+    .slice(0, 3)
+  
+  // Calculate weekly trend from real data
+  const weeklyTrendData = weeklyPerformance
+    .slice(0, 4)
+    .reverse()
+    .map((week, index) => {
+      const accuracy = week.accuracy_percentage || 0
+      const score = (accuracy / 100) * 10
+      return {
+        week: `Week ${index + 1}`,
+        score: score,
+        height: Math.max(20, Math.min(100, (score / 10) * 100))
+      }
+    })
+  
+  // Calculate improvement percentage if we have trend data
+  const improvementPercentage = weeklyTrendData.length >= 2
+    ? ((weeklyTrendData[weeklyTrendData.length - 1].score - weeklyTrendData[0].score) / weeklyTrendData[0].score * 100).toFixed(1)
+    : null
 
   return (
     <Container>
@@ -783,6 +1230,185 @@ const Evaluation = () => {
 
         <MainContent>
           <EvaluationContainer>
+            {/* View Toggle */}
+            <ViewToggle>
+              <ViewToggleButton
+                active={viewMode === 'performance'}
+                onClick={() => setViewMode('performance')}
+              >
+                Performance Overview
+              </ViewToggleButton>
+              <ViewToggleButton
+                active={viewMode === 'answers'}
+                onClick={() => setViewMode('answers')}
+              >
+                My Answers
+              </ViewToggleButton>
+            </ViewToggle>
+
+            {viewMode === 'answers' ? (
+              /* My Answers View */
+              <>
+                <AnswersHeader>
+                  <div style={{ fontSize: '1.2em', fontWeight: '400', color: 'var(--text)' }}>
+                    Answer History
+                  </div>
+                  <FilterSortContainer>
+                    <Select
+                      value={filterCourseId || ''}
+                      onChange={(e) => setFilterCourseId(e.target.value ? parseInt(e.target.value) : null)}
+                    >
+                      <option value="">All Courses</option>
+                      {courses.map(course => (
+                        <option key={course.id} value={course.id}>{course.title}</option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                    >
+                      <option value="date">Sort by Date</option>
+                      <option value="score">Sort by Score</option>
+                      <option value="course">Sort by Course</option>
+                    </Select>
+                  </FilterSortContainer>
+                </AnswersHeader>
+
+                {answersLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                    Loading answers...
+                  </div>
+                ) : getSortedAnswers().length === 0 ? (
+                  <EmptyState>
+                    <EmptyStateIcon>📝</EmptyStateIcon>
+                    <EmptyStateText>No answers found</EmptyStateText>
+                    <EmptyStateSubtext>
+                      {filterCourseId 
+                        ? 'No evaluated answers for this course yet. Submit answers and run evaluation to see results here.'
+                        : 'You haven\'t submitted any answers yet. Go to the LMS page to answer questions and get them evaluated.'}
+                    </EmptyStateSubtext>
+                  </EmptyState>
+                ) : (
+                  getSortedAnswers()
+                    .filter(answer => {
+                      // Filter by course if selected
+                      if (filterCourseId && answer.course_id) {
+                        return answer.course_id === filterCourseId
+                      }
+                      return true
+                    })
+                    .map((answer) => {
+                      const isExpanded = expandedAnswers.has(answer.id)
+                      const evaluated = answer.evaluated_at !== null
+                      // Calculate score from points_earned and question points
+                      const score = answer.points_earned && answer.points 
+                        ? Math.round((answer.points_earned / answer.points) * 10) 
+                        : null
+                      const scoreColor = score !== null ? getScoreColor(score) : '#6b7280'
+                      const improvementSuggestions = parseImprovementSuggestions(answer.feedback)
+                      const feedbackWithoutSuggestions = getFeedbackWithoutSuggestions(answer.feedback)
+
+                      return (
+                        <AnswerCard key={answer.id}>
+                          <AnswerCardHeader
+                            expanded={isExpanded}
+                            onClick={() => toggleAnswer(answer.id)}
+                          >
+                            <AnswerCardLeft>
+                              <AnswerQuestion>
+                                {escapeHtml(answer.question_text || 'Question not available')}
+                              </AnswerQuestion>
+                              <AnswerMeta>
+                                <AnswerMetaItem>
+                                  <span>📅</span>
+                                  <span>
+                                    {answer.submitted_at 
+                                      ? new Date(answer.submitted_at).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric'
+                                        })
+                                      : 'N/A'}
+                                  </span>
+                                </AnswerMetaItem>
+                                {evaluated && score !== null && (
+                                  <>
+                                    <AnswerMetaItem>
+                                      <ScoreBadge color={scoreColor}>
+                                        {score}/10 - {getScoreBadgeText(score)}
+                                      </ScoreBadge>
+                                    </AnswerMetaItem>
+                                    <AnswerMetaItem>
+                                      <CorrectBadge correct={answer.is_correct}>
+                                        {answer.is_correct ? '✓ Correct' : '✗ Incorrect'}
+                                      </CorrectBadge>
+                                    </AnswerMetaItem>
+                                    <AnswerMetaItem>
+                                      <span>Points: {answer.points_earned || 0}/{answer.points || 0}</span>
+                                    </AnswerMetaItem>
+                                  </>
+                                )}
+                                {!evaluated && (
+                                  <AnswerMetaItem>
+                                    <span style={{ color: '#f59e0b' }}>⏳ Not Evaluated</span>
+                                  </AnswerMetaItem>
+                                )}
+                              </AnswerMeta>
+                            </AnswerCardLeft>
+                            <ExpandIcon expanded={isExpanded}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                              </svg>
+                            </ExpandIcon>
+                          </AnswerCardHeader>
+                          <AnswerCardContent expanded={isExpanded}>
+                            <AnswerSection>
+                              <AnswerSectionTitle>Your Answer</AnswerSectionTitle>
+                              <AnswerText>
+                                {escapeHtml(answer.answer_text || 'No answer provided')}
+                              </AnswerText>
+                            </AnswerSection>
+
+                            {evaluated && answer.feedback && (
+                              <>
+                                <AnswerSection>
+                                  <AnswerSectionTitle>Feedback</AnswerSectionTitle>
+                                  <FeedbackText>
+                                    {escapeHtml(feedbackWithoutSuggestions)}
+                                  </FeedbackText>
+                                </AnswerSection>
+
+                                {improvementSuggestions.length > 0 && (
+                                  <AnswerSection>
+                                    <AnswerSectionTitle>Improvement Suggestions</AnswerSectionTitle>
+                                    <SuggestionsList>
+                                      {improvementSuggestions.map((suggestion, idx) => (
+                                        <SuggestionItem key={idx}>
+                                          {escapeHtml(suggestion)}
+                                        </SuggestionItem>
+                                      ))}
+                                    </SuggestionsList>
+                                  </AnswerSection>
+                                )}
+                              </>
+                            )}
+
+                            {evaluated && !answer.feedback && (
+                              <AnswerSection>
+                                <div style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>
+                                  No feedback available for this answer.
+                                </div>
+                              </AnswerSection>
+                            )}
+                          </AnswerCardContent>
+                        </AnswerCard>
+                      )
+                    })
+                )}
+              </>
+            ) : (
+              /* Performance Overview View */
+              <>
             {/* Overall Performance */}
             <GridContainer>
               <EvaluationCard>
@@ -811,11 +1437,11 @@ const Evaluation = () => {
                       cy="90" 
                       r="70" 
                       circumference={2 * Math.PI * 70}
-                      offset={2 * Math.PI * 70 * (1 - overallScore / 10)}
+                      offset={2 * Math.PI * 70 * (1 - Math.max(0, overallScore) / 10)}
                     />
                   </svg>
                   <CircleText>
-                    <CircleValue>{overallScore.toFixed(1)}</CircleValue>
+                    <CircleValue>{overallScore > 0 ? overallScore.toFixed(1) : '0.0'}</CircleValue>
                     <CircleLabel>out of 10</CircleLabel>
                   </CircleText>
                 </ProgressCircle>
@@ -851,7 +1477,7 @@ const Evaluation = () => {
                       <SkillPercentage>{correctAnswers}</SkillPercentage>
                     </SkillHeader>
                     <SkillProgressBar>
-                      <SkillProgressFill width={Math.min(100, (correctAnswers / questionsAttempted) * 100)} />
+                      <SkillProgressFill width={questionsAttempted > 0 ? Math.min(100, (correctAnswers / questionsAttempted) * 100) : 0} />
                     </SkillProgressBar>
                   </SkillBar>
                   <SkillBar>
@@ -931,32 +1557,34 @@ const Evaluation = () => {
                 </CardHeader>
 
                 <div>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Advanced Hooks</SkillName>
-                      <SkillPercentage>58%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={58} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Testing & Debugging</SkillName>
-                      <SkillPercentage>45%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={45} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  
-                  <AnalysisList className="analysis-list-spaced">
-                    <AnalysisItem>
-                      <AnalysisText>
-                        Focus on completing the "Advanced Hooks" and "Testing with Jest" modules to improve these areas. Practice exercises are available in the LMS portal.
-                      </AnalysisText>
-                    </AnalysisItem>
-                  </AnalysisList>
+                  {areasForImprovement.length > 0 ? (
+                    <>
+                      {areasForImprovement.map((domain, index) => (
+                        <SkillBar key={domain.id || index}>
+                          <SkillHeader>
+                            <SkillName>{domain.domain_name || 'Domain'}</SkillName>
+                            <SkillPercentage>{domain.accuracy_percentage?.toFixed(1) || 0}%</SkillPercentage>
+                          </SkillHeader>
+                          <SkillProgressBar>
+                            <SkillProgressFill width={domain.accuracy_percentage || 0} />
+                          </SkillProgressBar>
+                        </SkillBar>
+                      ))}
+                      {areasForImprovement.length > 0 && (
+                        <AnalysisList className="analysis-list-spaced">
+                          <AnalysisItem>
+                            <AnalysisText>
+                              Focus on improving these areas to enhance your overall performance. Practice exercises are available in the LMS portal.
+                            </AnalysisText>
+                          </AnalysisItem>
+                        </AnalysisList>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                      No domain performance data available to identify improvement areas.
+                    </div>
+                  )}
                 </div>
               </EvaluationCard>
             </GridContainer>
@@ -976,43 +1604,47 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
 
-                <TrendChart>
-                  <div className="trend-bar-wrapper">
-                    <TrendBar height={65}>
-                      <TrendValue>6.5</TrendValue>
-                    </TrendBar>
-                    <TrendLabel>Week 1</TrendLabel>
-                  </div>
-                  <div className="trend-bar-wrapper">
-                    <TrendBar height={72}>
-                      <TrendValue>7.2</TrendValue>
-                    </TrendBar>
-                    <TrendLabel>Week 2</TrendLabel>
-                  </div>
-                  <div className="trend-bar-wrapper">
-                    <TrendBar height={78}>
-                      <TrendValue>7.8</TrendValue>
-                    </TrendBar>
-                    <TrendLabel>Week 3</TrendLabel>
-                  </div>
-                  <div className="trend-bar-wrapper">
-                    <TrendBar height={84}>
-                      <TrendValue>8.4</TrendValue>
-                    </TrendBar>
-                    <TrendLabel>Week 4</TrendLabel>
-                  </div>
-                </TrendChart>
+                {weeklyTrendData.length > 0 ? (
+                  <>
+                    <TrendChart>
+                      {weeklyTrendData.map((week, index) => (
+                        <div key={index} className="trend-bar-wrapper">
+                          <TrendBar height={week.height}>
+                            <TrendValue>{week.score.toFixed(1)}</TrendValue>
+                          </TrendBar>
+                          <TrendLabel>{week.week}</TrendLabel>
+                        </div>
+                      ))}
+                    </TrendChart>
 
-                <AnalysisList className="analysis-list-spaced">
-                  <AnalysisItem>
-                    <AnalysisTitle>
-                      Consistent Improvement
-                    </AnalysisTitle>
-                    <AnalysisText>
-                      Your performance has improved by 15% over the last 4 weeks. You're showing steady progress in understanding core concepts.
-                    </AnalysisText>
-                  </AnalysisItem>
-                </AnalysisList>
+                    <AnalysisList className="analysis-list-spaced">
+                      <AnalysisItem>
+                        <AnalysisTitle>
+                          {improvementPercentage && parseFloat(improvementPercentage) > 0 
+                            ? 'Performance Improvement' 
+                            : improvementPercentage && parseFloat(improvementPercentage) < 0
+                            ? 'Performance Review'
+                            : 'Performance Tracking'}
+                        </AnalysisTitle>
+                        <AnalysisText>
+                          {improvementPercentage && parseFloat(improvementPercentage) > 0
+                            ? `Your performance has improved by ${Math.abs(parseFloat(improvementPercentage)).toFixed(1)}% over the last ${weeklyTrendData.length} week${weeklyTrendData.length > 1 ? 's' : ''}. You're showing steady progress in understanding core concepts.`
+                            : improvementPercentage && parseFloat(improvementPercentage) < 0
+                            ? `Your performance has decreased by ${Math.abs(parseFloat(improvementPercentage)).toFixed(1)}% over the last ${weeklyTrendData.length} week${weeklyTrendData.length > 1 ? 's' : ''}. Consider reviewing the material and practicing more.`
+                            : `Tracking your performance over the last ${weeklyTrendData.length} week${weeklyTrendData.length > 1 ? 's' : ''}. Keep up the consistent effort!`}
+                        </AnalysisText>
+                      </AnalysisItem>
+                    </AnalysisList>
+                  </>
+                ) : (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                    <div style={{ fontSize: '2em', marginBottom: '12px' }}>📊</div>
+                    <div>No weekly performance data available yet.</div>
+                    <div style={{ fontSize: '0.9em', marginTop: '8px' }}>
+                      Complete more questions to see your performance trend.
+                    </div>
+                  </div>
+                )}
               </EvaluationCard>
 
               {/* AI Recommendations */}
@@ -1028,26 +1660,28 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
 
-                <AnalysisList>
-                  <AnalysisItem>
-                    <AnalysisTitle>
-                      Next Course to Take
-                    </AnalysisTitle>
-                    <AnalysisText>
-                      Based on your current skill level and progress, we recommend taking "Testing with Jest" next to strengthen your weak areas.
-                    </AnalysisText>
-                  </AnalysisItem>
-                  <AnalysisItem>
-                    <AnalysisTitle>
-                      Practice Focus
-                    </AnalysisTitle>
-                    <AnalysisText>
-                      Complete 5 more practice exercises on advanced hooks this week. Focus on useCallback dependencies and useMemo optimization scenarios.
-                    </AnalysisText>
-                  </AnalysisItem>
-                </AnalysisList>
+                {recommendations.length > 0 ? (
+                  <AnalysisList>
+                    {recommendations.slice(0, 3).map((rec, index) => (
+                      <AnalysisItem key={rec.id || index}>
+                        <AnalysisTitle>
+                          {rec.title || rec.recommendation_type || 'Recommendation'}
+                        </AnalysisTitle>
+                        <AnalysisText>
+                          {rec.description || rec.message || 'No description available.'}
+                        </AnalysisText>
+                      </AnalysisItem>
+                    ))}
+                  </AnalysisList>
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                    No recommendations available at this time. Complete more courses and questions to receive personalized recommendations.
+                  </div>
+                )}
               </EvaluationCard>
             </GridContainer>
+              </>
+            )}
 
           </EvaluationContainer>
         </MainContent>

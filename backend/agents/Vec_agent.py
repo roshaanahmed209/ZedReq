@@ -3,6 +3,15 @@ Vec Agent - Vector Database Population Agent
 AI-powered agent that populates Qdrant vector database with embeddings from jobs, users, and posts
 """
 
+# Setup Python path for direct script execution
+import sys
+from pathlib import Path
+if __name__ == "__main__" or (len(sys.argv) > 0 and sys.argv[0].endswith('Vec_agent.py')):
+    # Add backend directory to path when running as script
+    backend_dir = Path(__file__).parent.parent  # Go up from agents/ to backend/
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+
 import os
 import logging
 import hashlib
@@ -68,13 +77,20 @@ class VecAgent:
         qdrant_api_key = qdrant_api_key or os.environ.get('QDRANT_API_KEY')
         
         try:
+            # Get timeout from environment or default to 150 seconds
+            qdrant_timeout = float(os.environ.get('QDRANT_TIMEOUT', 150.0))
+            
             if qdrant_api_key:
                 self.qdrant_client = QdrantClient(
                     url=qdrant_url,
-                    api_key=qdrant_api_key
+                    api_key=qdrant_api_key,
+                    timeout=qdrant_timeout
                 )
             else:
-                self.qdrant_client = QdrantClient(url=qdrant_url)
+                self.qdrant_client = QdrantClient(
+                    url=qdrant_url,
+                    timeout=qdrant_timeout
+                )
             
             # Test connection
             self.qdrant_client.get_collections()
@@ -1192,3 +1208,157 @@ def get_vec_agent() -> VecAgent:
         _agent_instance = VecAgent()
     
     return _agent_instance
+
+
+# ============================================================================
+# Main Entry Point - Run Vec Agent Directly
+# ============================================================================
+def main():
+        import argparse
+        
+        parser = argparse.ArgumentParser(
+            description="Vec Agent - Populate Qdrant Vector Database",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
+    Examples:
+    # Index only new/updated entities (last 24 hours)
+    python -m backend.agents.Vec_agent
+    
+    # Force re-index all entities
+    python -m backend.agents.Vec_agent --force
+    
+    # Index only jobs
+    python -m backend.agents.Vec_agent --jobs-only
+    
+    # Index only users
+    python -m backend.agents.Vec_agent --users-only
+    
+    # Index only posts
+    python -m backend.agents.Vec_agent --posts-only
+            """
+        )
+        
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force re-index all entities (ignore timestamps)'
+        )
+        
+        parser.add_argument(
+            '--jobs-only',
+            action='store_true',
+            help='Index only jobs'
+        )
+        
+        parser.add_argument(
+            '--users-only',
+            action='store_true',
+            help='Index only users'
+        )
+        
+        parser.add_argument(
+            '--posts-only',
+            action='store_true',
+            help='Index only posts'
+        )
+        
+        args = parser.parse_args()
+        
+        # Initialize Vec Agent
+        print("=" * 80)
+        print("Vec Agent - Vector Database Population")
+        print("=" * 80)
+        print()
+        
+        try:
+            vec_agent = VecAgent()
+            
+            # Check availability
+            if not vec_agent.is_available():
+                print("❌ ERROR: Vec Agent is not available!")
+                print()
+                if not vec_agent.qdrant_available:
+                    print("  - Qdrant connection failed")
+                if not vec_agent.openai_available:
+                    print("  - OpenAI API key not found or invalid")
+                print()
+                print("Please check:")
+                print("  1. Qdrant is running and accessible")
+                print("  2. QDRANT_URL environment variable is set correctly")
+                print("  3. OPENAI_API_KEY environment variable is set")
+                sys.exit(1)
+            
+            print("✅ Vec Agent initialized successfully")
+            print(f"   - Qdrant: {vec_agent.qdrant_available}")
+            print(f"   - OpenAI: {vec_agent.openai_available}")
+            print(f"   - Embedding Model: text-embedding-3-small (1536 dimensions)")
+            print()
+            
+            # Determine what to index
+            since = None if args.force else datetime.now() - timedelta(days=1)
+            force_msg = "all entities" if args.force else "entities updated in last 24 hours"
+            
+            if args.jobs_only:
+                print(f"📊 Indexing jobs ({force_msg})...")
+                print()
+                count = vec_agent.index_jobs(limit=None, since=since)
+                print()
+                print(f"✅ Completed: {count} jobs indexed")
+                
+            elif args.users_only:
+                print(f"👥 Indexing users ({force_msg})...")
+                print()
+                count = vec_agent.index_users(limit=None, since=since)
+                print()
+                print(f"✅ Completed: {count} users indexed")
+                
+            elif args.posts_only:
+                print(f"📝 Indexing posts ({force_msg})...")
+                print()
+                count = vec_agent.index_posts(limit=None, since=since)
+                print()
+                print(f"✅ Completed: {count} posts indexed")
+                
+            else:
+                # Index all entities
+                print(f"🚀 Starting full sync ({force_msg})...")
+                print()
+                result = vec_agent.sync_all_entities(force=args.force)
+                print()
+                print("=" * 80)
+                print("📊 SYNC RESULTS")
+                print("=" * 80)
+                print(f"   Jobs indexed:   {result['jobs_indexed']}")
+                print(f"   Users indexed:  {result['users_indexed']}")
+                print(f"   Posts indexed:  {result['posts_indexed']}")
+                print(f"   Total indexed:  {result['total_indexed']}")
+                print(f"   Time taken:     {result['total_time_seconds']:.2f} seconds")
+                print()
+                
+                if result.get('success'):
+                    print("✅ Sync completed successfully!")
+                else:
+                    print("⚠️  Sync completed with errors:")
+                    for entity_type, error in result.get('errors', {}).items():
+                        print(f"   - {entity_type}: {error}")
+                print()
+            
+            print("=" * 80)
+            print("✨ Vec Agent execution completed!")
+            print("=" * 80)
+            
+        except KeyboardInterrupt:
+            print()
+            print()
+            print("⚠️  Interrupted by user")
+            sys.exit(1)
+            
+        except Exception as e:
+            print()
+            print(f"❌ ERROR: {e}")
+            logger.exception("Vec Agent execution failed")
+            sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

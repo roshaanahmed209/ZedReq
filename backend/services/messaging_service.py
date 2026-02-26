@@ -292,6 +292,11 @@ class MessagingService:
                 
                 if all_conversations:
                     for conv_key, conv_data in all_conversations.items():
+                        # Skip if conv_data is not a dictionary (could be a string or other type)
+                        if not isinstance(conv_data, dict):
+                            logger.warning(f"Skipping conversation {conv_key}: expected dict, got {type(conv_data).__name__}")
+                            continue
+                        
                         participants = conv_data.get("participants", [])
                         if user_id in participants:
                             # Get the other participant
@@ -316,6 +321,11 @@ class MessagingService:
                 
                 if all_conversations:
                     for conv_key, conv_data in all_conversations.items():
+                        # Skip if conv_data is not a dictionary (could be a string or other type)
+                        if not isinstance(conv_data, dict):
+                            logger.warning(f"Skipping conversation {conv_key}: expected dict, got {type(conv_data).__name__}")
+                            continue
+                        
                         participants = conv_data.get("participants", [])
                         if user_id in participants:
                             other_id = [p for p in participants if p != user_id]

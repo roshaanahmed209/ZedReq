@@ -29,6 +29,8 @@ class StatusResponse(BaseModel):
     success: bool
     available: bool
     collections: Dict[str, bool]
+    point_counts: Optional[Dict[str, int]] = None  # Collection name -> point count
+    total_points: Optional[int] = None  # Total points across all collections
     message: str
 
 
@@ -62,9 +64,14 @@ async def trigger_vec_sync(
         # Run sync (can be background task if needed)
         result = vec_agent.sync_all_entities(force=request.force or False)
         
+        # Log detailed results for debugging
+        logger.info(f"Vec sync result: {result}")
+        if result.get('errors'):
+            logger.warning(f"Vec sync had errors: {result.get('errors')}")
+        
         return SyncResponse(
             success=result.get('success', True),
-            message=f"Sync completed: {result.get('total_indexed', 0)} entities indexed",
+            message=f"Sync completed: {result.get('total_indexed', 0)} entities indexed. Jobs: {result.get('jobs_indexed', 0)}, Users: {result.get('users_indexed', 0)}, Posts: {result.get('posts_indexed', 0)}",
             result=result
         )
         
@@ -133,27 +140,52 @@ async def get_vec_status(
         
         available = vec_agent.is_available()
         
-        # Check collection existence
+        # Check collection existence and point counts
         collections_status = {}
+        point_counts = {}
+        total_points = 0
+        
         if vec_agent.qdrant_available and vec_agent.qdrant_client:
             try:
                 existing_collections = vec_agent.qdrant_client.get_collections()
                 existing_names = [col.name for col in existing_collections.collections]
                 
+                # Get point counts for each collection
                 for name in vec_agent.collections.values():
                     collections_status[name] = name in existing_names
+                    
+                    if name in existing_names:
+                        try:
+                            # Get collection info to retrieve point count
+                            collection_info = vec_agent.qdrant_client.get_collection(name)
+                            point_count = collection_info.points_count if hasattr(collection_info, 'points_count') else 0
+                            point_counts[name] = point_count
+                            total_points += point_count
+                        except Exception as e:
+                            # Collection might not exist yet (404 error is OK)
+                            if '404' in str(e) or 'not found' in str(e).lower():
+                                logger.debug(f"Collection {name} does not exist yet")
+                            else:
+                                logger.warning(f"Failed to get point count for collection {name}: {e}")
+                            point_counts[name] = 0
+                    else:
+                        point_counts[name] = 0
             except Exception as e:
                 logger.error(f"Failed to check collections: {e}")
                 for name in vec_agent.collections.values():
                     collections_status[name] = False
+                    point_counts[name] = 0
         else:
             for name in vec_agent.collections.values():
                 collections_status[name] = False
+                point_counts[name] = 0
         
         return StatusResponse(
             success=True,
             available=available,
             collections=collections_status,
+            point_counts=point_counts,
+            total_points=total_points,
             message="Vec agent status retrieved successfully"
         )
         

@@ -10,7 +10,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 second timeout (increased for slower endpoints)
+  timeout: 150000, // 150 second default timeout (increased for LLM and complex queries)
 })
 
 // Token management functions
@@ -516,14 +516,14 @@ export const lmsAPI = {
   
   // Course performance endpoint
   getCoursePerformance: (courseId) =>
-    api.get(`/api/lms/dashboard/courses/${courseId}`),
+    api.get(`/api/lms/dashboard/courses/${courseId}`, { timeout: 150000 }), // 150 seconds
   
-  // Seez Agent endpoints
+  // Seez Agent endpoints (longer timeout for LLM evaluation calls)
   triggerSeezEvaluateCourse: (courseId) =>
-    api.post(`/api/lms/seez/evaluate-course/${courseId}`),
+    api.post(`/api/lms/seez/evaluate-course/${courseId}`, {}, { timeout: 150000 }), // 150 seconds timeout
   
-    triggerSeezEvaluateAnswers: (answerIds) =>
-      api.post('/api/lms/seez/evaluate-answers', answerIds),
+  triggerSeezEvaluateAnswers: (answerIds) =>
+    api.post('/api/lms/seez/evaluate-answers', answerIds, { timeout: 150000 }), // 150 seconds timeout
 
     // Course Recommendation endpoints
     generateRecommendations: (limit = 5) =>
@@ -532,6 +532,12 @@ export const lmsAPI = {
 
 // Nemz API methods
 export const nemzAPI = {
+  chat: ({ message, sessionId }) =>
+    api.post('/api/nemz/chat', { message, session_id: sessionId }),
+  
+  deleteSession: (sessionId) =>
+    api.delete(`/api/nemz/chat/session/${sessionId}`),
+  
   searchAll: ({ query, searchType, limit = 10 }) =>
     api.post('/api/nemz/search', { query, search_type: searchType, limit }),
   
@@ -543,6 +549,18 @@ export const nemzAPI = {
   
   searchPosts: ({ query, limit = 10 }) =>
     api.post('/api/nemz/search/posts', { query, limit }),
+}
+
+// Vec API methods (Vector Database Sync)
+export const vecAPI = {
+  sync: (force = false) =>
+    api.post('/api/vec/sync', { force }, { timeout: 300000 }), // 5 minutes timeout
+  
+  syncBackground: (force = false) =>
+    api.post('/api/vec/sync/background', { force }, { timeout: 30000 }),
+  
+  getStatus: () =>
+    api.get('/api/vec/status', { timeout: 30000 }),
 }
 
 // Interview API methods

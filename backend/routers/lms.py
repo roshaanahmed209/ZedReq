@@ -812,11 +812,21 @@ async def trigger_seez_agent_course(
             db_session=db
         )
         
+        # Handle case where no unevaluated answers are found (not an error)
         if not result.get('success'):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get('error', 'Failed to evaluate answers')
-            )
+            error_msg = result.get('error', 'Failed to evaluate answers')
+            if 'No unevaluated answers found' in error_msg:
+                # Return success response with info message
+                return {
+                    "message": "No unevaluated answers found for this course",
+                    "result": result
+                }
+            else:
+                # Actual error occurred
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=error_msg
+                )
         
         return {
             "message": "Answers evaluated successfully",

@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { nemzAPI } from '../services/api'
+import { nemzAPI, vecAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/AIMode.css'
 
@@ -504,6 +504,32 @@ const ChatContainer = styled.div`
   flex-direction: column;
   gap: 16px;
   min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--bg-light);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+    
+    &:hover {
+      background: var(--text-lighter);
+    }
+  }
+  
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
 `
 
 const MessageBubble = styled.div`
@@ -599,7 +625,8 @@ const JobList = styled.div`
   gap: 16px;
 `
 
-const JobCard = styled.div`
+const JobCard = styled.a`
+  display: block;
   padding: 20px;
   background: var(--hover-bg);
   border: 1px solid var(--border);
@@ -609,12 +636,18 @@ const JobCard = styled.div`
   animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation-delay: ${props => props.delay || '0s'};
   animation-fill-mode: both;
+  text-decoration: none;
+  color: inherit;
 
   &:hover {
     border-color: rgba(10, 102, 194, 0.4);
     background: rgba(10, 102, 194, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:visited {
+    color: inherit;
   }
 `
 
@@ -669,7 +702,8 @@ const ProfileList = styled.div`
   gap: 16px;
 `
 
-const ProfileCard = styled.div`
+const ProfileCard = styled.a`
+  display: block;
   padding: 20px;
   background: var(--hover-bg);
   border: 1px solid var(--border);
@@ -679,12 +713,18 @@ const ProfileCard = styled.div`
   animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation-delay: ${props => props.delay || '0s'};
   animation-fill-mode: both;
+  text-decoration: none;
+  color: inherit;
 
   &:hover {
     border-color: rgba(10, 102, 194, 0.4);
     background: rgba(10, 102, 194, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:visited {
+    color: inherit;
   }
 `
 
@@ -714,7 +754,8 @@ const PostList = styled.div`
   gap: 16px;
 `
 
-const PostCard = styled.div`
+const PostCard = styled.a`
+  display: block;
   padding: 20px;
   background: var(--hover-bg);
   border: 1px solid var(--border);
@@ -724,12 +765,18 @@ const PostCard = styled.div`
   animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation-delay: ${props => props.delay || '0s'};
   animation-fill-mode: both;
+  text-decoration: none;
+  color: inherit;
 
   &:hover {
     border-color: rgba(10, 102, 194, 0.4);
     background: rgba(10, 102, 194, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:visited {
+    color: inherit;
   }
 `
 
@@ -900,6 +947,7 @@ const AIMode = () => {
   const [activeSection, setActiveSection] = useState('chat')
   const [message, setMessage] = useState('')
   const [jobFilter, setJobFilter] = useState('all')
+  const [sessionId, setSessionId] = useState(null) // Session management
   const [chatMessages, setChatMessages] = useState([
     {
       id: 1,
@@ -919,8 +967,60 @@ const AIMode = () => {
   const [posts, setPosts] = useState([])
   const [searchType, setSearchType] = useState('all') // Track what type of results we have
   const fileInputRef = React.useRef(null)
+  const chatContainerRef = React.useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const [isCheckingData, setIsCheckingData] = useState(false)
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [chatMessages, isThinking])
+
+  // Check Qdrant collections on page load and populate if empty
+  useEffect(() => {
+    const checkAndPopulateData = async () => {
+      try {
+        setIsCheckingData(true)
+        
+        // Get Vec agent status to check point counts
+        const statusResponse = await vecAPI.getStatus()
+        
+        if (statusResponse.data && statusResponse.data.success) {
+          const totalPoints = statusResponse.data.total_points || 0
+          const pointCounts = statusResponse.data.point_counts || {}
+          
+          // Check if all collections have 0 points
+          const allEmpty = Object.values(pointCounts).every(count => count === 0) && totalPoints === 0
+          
+          if (allEmpty) {
+            console.log('[AIMode] All Qdrant collections are empty. Triggering data population...')
+            
+            // Trigger sync in background (non-blocking)
+            try {
+              await vecAPI.syncBackground(false)
+              console.log('[AIMode] Data population triggered successfully')
+            } catch (syncError) {
+              console.error('[AIMode] Failed to trigger data population:', syncError)
+            }
+          } else {
+            console.log('[AIMode] Qdrant collections have data. Point counts:', pointCounts)
+            console.log('[AIMode] Total points:', totalPoints)
+            console.log('[AIMode] 24-hour scheduler will handle future updates')
+          }
+        }
+      } catch (error) {
+        console.error('[AIMode] Error checking Vec agent status:', error)
+        // Don't block the UI if status check fails
+      } finally {
+        setIsCheckingData(false)
+      }
+    }
+    
+    checkAndPopulateData()
+  }, []) // Run only on mount
 
   const handleBackToFeed = () => {
     navigate('/feed')
@@ -973,147 +1073,192 @@ const AIMode = () => {
       setIsThinking(true)
       
       try {
-        // Call Nemz API to search across all types (jobs, profiles, posts)
-        // Let the backend determine intent or search all types
-        const response = await nemzAPI.searchAll({
-          query: userMessageText,
-          searchType: undefined, // Let backend determine intent based on query
-          limit: 10
+        // Call conversational chat endpoint with session management
+        // Backend handles conversation history via session (no context leakage)
+        const chatResponse = await nemzAPI.chat({
+          message: userMessageText,
+          sessionId: sessionId // Will be null on first call, backend creates session
         })
         
         setIsThinking(false)
         
-        if (response.data && response.data.success) {
-          const results = response.data
-          const foundJobs = results.jobs || []
-          const foundProfiles = results.profiles || []
-          const foundPosts = results.posts || []
-          const detectedType = results.search_type || 'all'
+        if (chatResponse.data && chatResponse.data.success) {
+          const { response, should_search, search_type, search_query, session_id } = chatResponse.data
           
-          setSearchType(detectedType)
-          
-          // Map Nemz job results to display format
-          const mappedJobs = foundJobs.map((job, index) => {
-            const jobData = job.payload || job
-            const matchScore = Math.round((job.score || 0) * 100)
-            
-            return {
-              id: jobData.job_id || jobData.id || index + 1,
-              title: jobData.title || jobData.job_title || 'Job Title',
-              company: jobData.company_name || jobData.company || 'Company',
-              location: jobData.location || jobData.city || 'Location',
-              type: jobData.job_type || jobData.type || 'Full-time',
-              matchScore: matchScore
-            }
-          })
-          
-          // Map Nemz profile results to display format
-          const mappedProfiles = foundProfiles.map((profile, index) => {
-            const profileData = profile.payload || profile
-            const matchScore = Math.round((profile.score || 0) * 100)
-            
-            return {
-              id: profileData.user_id || profileData.id || index + 1,
-              name: profileData.name || profileData.user_name || 'User',
-              about: profileData.about || profileData.short_desc || '',
-              skills: profileData.skills || '',
-              currentStatus: profileData.current_status || '',
-              profileLink: profileData.profile_link || '',
-              matchScore: matchScore
-            }
-          })
-          
-          // Map Nemz post results to display format
-          const mappedPosts = foundPosts.map((post, index) => {
-            const postData = post.payload || post
-            const matchScore = Math.round((post.score || 0) * 100)
-            
-            return {
-              id: postData.post_id || postData.id || index + 1,
-              description: postData.post_desc || postData.description || '',
-              userName: postData.user_name || postData.name || 'User',
-              userId: postData.user_id || null,
-              likes: postData.likes || 0,
-              comments: postData.comments || 0,
-              mediaUrl: postData.media_url || null,
-              mediaType: postData.media_type || null,
-              createdAt: postData.created_at || null,
-              matchScore: matchScore
-            }
-          })
-          
-          setJobs(mappedJobs)
-          setProfiles(mappedProfiles)
-          setPosts(mappedPosts)
-          
-          // Build bot response based on all result types
-          let botResponseText = ''
-          const resultCounts = {
-            jobs: foundJobs.length,
-            profiles: foundProfiles.length,
-            posts: foundPosts.length
-          }
-          const totalResults = resultCounts.jobs + resultCounts.profiles + resultCounts.posts
-          
-          if (totalResults > 0) {
-            const parts = []
-            if (resultCounts.jobs > 0) {
-              parts.push(`${resultCounts.jobs} job${resultCounts.jobs > 1 ? 's' : ''}`)
-            }
-            if (resultCounts.profiles > 0) {
-              parts.push(`${resultCounts.profiles} profile${resultCounts.profiles > 1 ? 's' : ''}`)
-            }
-            if (resultCounts.posts > 0) {
-              parts.push(`${resultCounts.posts} post${resultCounts.posts > 1 ? 's' : ''}`)
-            }
-            
-            botResponseText = `I found ${parts.join(', ')} matching your query! Here are the results below with match scores to help you identify the best matches.`
-          } else {
-            botResponseText = "I couldn't find any results matching your query. Try refining your search terms or check back later."
+          // Store session ID if provided (first message or new session)
+          // This ensures conversation context is maintained per session
+          if (session_id && session_id !== sessionId) {
+            setSessionId(session_id)
           }
           
+          // Add AI conversational response
           const botResponse = {
             id: Date.now() + 1,
-            text: botResponseText,
+            text: response,
             isUser: false,
             time: "Just now"
           }
           setChatMessages(prev => [...prev, botResponse])
           
-          // Show results sections if we have any results
-          if (totalResults > 0) {
-            setIsLoadingJobs(true)
-            setTimeout(() => {
-              setIsLoadingJobs(false)
-              setShowJobs(foundJobs.length > 0)
-              setShowProfiles(foundProfiles.length > 0)
-              setShowPosts(foundPosts.length > 0)
-            }, 500)
+          // If LLM decided to search, perform the search
+          if (should_search && search_query) {
+            setIsThinking(true)
+            
+            try {
+              // Call Nemz API to search based on LLM's decision
+              const searchResponse = await nemzAPI.searchAll({
+                query: search_query,
+                searchType: search_type || undefined, // Use LLM's determined search type
+                limit: 10
+              })
+            
+            setIsThinking(false)
+            
+            if (searchResponse.data && searchResponse.data.success) {
+              const results = searchResponse.data
+              const foundJobs = results.jobs || []
+              const foundProfiles = results.profiles || []
+              const foundPosts = results.posts || []
+              const detectedType = results.search_type || 'all'
+              
+              setSearchType(detectedType)
+              
+              // Map Nemz job results to display format
+              const mappedJobs = foundJobs.map((job, index) => {
+                const matchScore = Math.round((job.match_score || job.score || 0) * 100)
+                const jobData = job.payload || job
+                
+                return {
+                  id: jobData.job_id || job.job_id || jobData.id || index + 1,
+                  title: jobData.title || job.title || jobData.job_title || 'Job Title',
+                  company: jobData.company_name || job.company_name || jobData.company || 'Company',
+                  location: jobData.location || job.location || jobData.city || 'Location',
+                  type: jobData.job_type || job.job_type || jobData.type || 'Full-time',
+                  jobLink: jobData.job_link || job.job_link || '',
+                  matchScore: matchScore
+                }
+              })
+              
+              // Map Nemz profile results to display format
+              const mappedProfiles = foundProfiles.map((profile, index) => {
+                const matchScore = Math.round((profile.match_score || profile.score || 0) * 100)
+                const profileData = profile.payload || profile
+                
+                return {
+                  id: profileData.user_id || profile.user_id || profileData.id || index + 1,
+                  name: profileData.name || profile.name || profileData.user_name || 'User',
+                  about: profileData.about || profile.about || profileData.short_desc || '',
+                  skills: profileData.skills || profile.skills || '',
+                  currentStatus: profileData.current_status || profile.current_status || '',
+                  profileLink: profileData.profile_link || profile.profile_link || '',
+                  matchScore: matchScore
+                }
+              })
+              
+              // Map Nemz post results to display format
+              const mappedPosts = foundPosts.map((post, index) => {
+                const matchScore = Math.round((post.match_score || post.score || 0) * 100)
+                const postData = post.payload || post
+                
+                return {
+                  id: postData.post_id || post.post_id || postData.id || index + 1,
+                  description: postData.post_desc || post.post_desc || postData.description || '',
+                  userName: postData.user_name || post.user_name || postData.name || 'User',
+                  userId: postData.user_id || post.user_id || null,
+                  postLink: postData.post_link || post.post_link || '',
+                  likes: postData.likes || post.likes || 0,
+                  comments: postData.comments || post.comments || 0,
+                  mediaUrl: postData.media_url || post.media_url || null,
+                  mediaType: postData.media_type || post.media_type || null,
+                  createdAt: postData.created_at || post.created_at || null,
+                  matchScore: matchScore
+                }
+              })
+              
+              setJobs(mappedJobs)
+              setProfiles(mappedProfiles)
+              setPosts(mappedPosts)
+              
+              // Build bot response based on all result types
+              let botResponseText = ''
+              const resultCounts = {
+                jobs: foundJobs.length,
+                profiles: foundProfiles.length,
+                posts: foundPosts.length
+              }
+              const totalResults = resultCounts.jobs + resultCounts.profiles + resultCounts.posts
+              
+              if (totalResults > 0) {
+                const parts = []
+                if (resultCounts.jobs > 0) {
+                  parts.push(`${resultCounts.jobs} job${resultCounts.jobs > 1 ? 's' : ''}`)
+                }
+                if (resultCounts.profiles > 0) {
+                  parts.push(`${resultCounts.profiles} profile${resultCounts.profiles > 1 ? 's' : ''}`)
+                }
+                if (resultCounts.posts > 0) {
+                  parts.push(`${resultCounts.posts} post${resultCounts.posts > 1 ? 's' : ''}`)
+                }
+                
+                botResponseText = `I found ${parts.join(', ')} matching your query! Here are the results below with match scores to help you identify the best matches.`
+              } else {
+                botResponseText = "I couldn't find any results matching your query. Try refining your search terms or check back later."
+              }
+              
+              const searchResultResponse = {
+                id: Date.now() + 2,
+                text: botResponseText,
+                isUser: false,
+                time: "Just now"
+              }
+              setChatMessages(prev => [...prev, searchResultResponse])
+              
+              // Show results sections if we have any results
+              if (totalResults > 0) {
+                setIsLoadingJobs(true)
+                setTimeout(() => {
+                  setIsLoadingJobs(false)
+                  setShowJobs(foundJobs.length > 0)
+                  setShowProfiles(foundProfiles.length > 0)
+                  setShowPosts(foundPosts.length > 0)
+                }, 500)
+              }
+            } else {
+              // Handle error or no results
+              const errorResponse = {
+                id: Date.now() + 2,
+                text: "I encountered an issue searching. Please try again or rephrase your query.",
+                isUser: false,
+                time: "Just now"
+              }
+              setChatMessages(prev => [...prev, errorResponse])
+            }
+          } catch (searchErr) {
+            setIsThinking(false)
+            console.error('Error performing search:', searchErr)
+            const errorResponse = {
+              id: Date.now() + 2,
+              text: "I'm having trouble connecting to the search service. Please try again in a moment.",
+              isUser: false,
+              time: "Just now"
+            }
+            setChatMessages(prev => [...prev, errorResponse])
           }
-        } else {
-          // Handle error or no results
-          const botResponse = {
-            id: Date.now() + 1,
-            text: "I encountered an issue searching. Please try again or rephrase your query.",
-            isUser: false,
-            time: "Just now"
-          }
-          setChatMessages(prev => [...prev, botResponse])
         }
+      }
       } catch (err) {
         setIsThinking(false)
-        console.error('Error searching jobs:', err)
-        const botResponse = {
+        console.error('Error in chat:', err)
+        const errorResponse = {
           id: Date.now() + 1,
-          text: "I'm having trouble connecting to the search service. Please try again in a moment.",
+          text: "I'm having trouble processing your message. Please try again in a moment.",
           isUser: false,
           time: "Just now"
         }
-        setChatMessages(prev => [...prev, botResponse])
+        setChatMessages(prev => [...prev, errorResponse])
       }
     }
   }
-
 
   return (
     <Container>
@@ -1224,7 +1369,7 @@ const AIMode = () => {
                 </CardHeaderLeft>
               </CardHeader>
 
-              <ChatContainer>
+              <ChatContainer ref={chatContainerRef}>
                 {chatMessages.map((msg) => (
                   <MessageBubble key={msg.id} isUser={msg.isUser}>
                     <MessageText>{msg.text}</MessageText>
@@ -1282,7 +1427,18 @@ const AIMode = () => {
                   ) : (
                     <JobList>
                       {jobs.length > 0 ? jobs.map((job, index) => (
-                        <JobCard key={job.id} delay={`${index * 0.1}s`}>
+                        <JobCard 
+                          key={job.id} 
+                          delay={`${index * 0.1}s`}
+                          href={job.jobLink || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            if (!job.jobLink) {
+                              e.preventDefault()
+                            }
+                          }}
+                        >
                           <JobTitle>{job.title}</JobTitle>
                           <JobCompany>{job.company}</JobCompany>
                           <JobMeta>
@@ -1331,7 +1487,18 @@ const AIMode = () => {
                   ) : (
                     <ProfileList>
                       {profiles.length > 0 ? profiles.map((profile, index) => (
-                        <ProfileCard key={profile.id} delay={`${index * 0.1}s`}>
+                        <ProfileCard 
+                          key={profile.id} 
+                          delay={`${index * 0.1}s`}
+                          href={profile.profileLink || `#`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            if (!profile.profileLink) {
+                              e.preventDefault()
+                            }
+                          }}
+                        >
                           <ProfileName>{profile.name}</ProfileName>
                           {profile.about && <ProfileAbout>{profile.about}</ProfileAbout>}
                           {profile.skills && <ProfileSkills><strong>Skills:</strong> {profile.skills}</ProfileSkills>}
@@ -1370,7 +1537,18 @@ const AIMode = () => {
                   ) : (
                     <PostList>
                       {posts.length > 0 ? posts.map((post, index) => (
-                        <PostCard key={post.id} delay={`${index * 0.1}s`}>
+                        <PostCard 
+                          key={post.id} 
+                          delay={`${index * 0.1}s`}
+                          href={post.postLink || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            if (!post.postLink) {
+                              e.preventDefault()
+                            }
+                          }}
+                        >
                           <PostAuthor><strong>{post.userName}</strong></PostAuthor>
                           <PostContent>{post.description}</PostContent>
                           <PostMeta>
