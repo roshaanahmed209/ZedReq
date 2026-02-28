@@ -17,6 +17,7 @@ from utils.job_embeddings import (
     update_user_embedding_if_needed
 )
 from services.user_preferences_service import UserPreferencesService
+from services.recommendation_cache_service import RecommendationCacheService
 from config.database import get_database
 
 logger = setup_logger(__name__)
@@ -186,6 +187,8 @@ class RecommendationService:
         """
         Get personalized job recommendations for a user.
         
+        Checks cache first, then generates recommendations if cache is invalid/missing.
+        
         Location-based priority system:
         1. First level: Jobs in user's city
         2. Second level: Jobs in user's country (if not enough from city)
@@ -202,6 +205,18 @@ class RecommendationService:
             List of job recommendations with scores
         """
         try:
+            # Step 0: Check cache first
+            cache_service = RecommendationCacheService(self.db)
+            cached_recommendations = cache_service.get_cached_recommendations(user_id)
+            
+            if cached_recommendations is not None:
+                # Return cached results (limit if needed)
+                logger.debug(f"Returning cached recommendations for user {user_id}")
+                return cached_recommendations[:limit]
+            
+            # Cache miss or invalid - generate recommendations
+            logger.debug(f"Cache miss for user {user_id}, generating recommendations")
+            
             # Step 1: Get user location (city and country)
             user_location = self._get_user_location(user_id)
             user_city = user_location.get('city')
@@ -366,6 +381,11 @@ class RecommendationService:
                 })
             
             logger.info(f"Generated {len(recommendations)} job recommendations for user {user_id} (City: {user_city}, Country: {user_country})")
+            
+            # Step 8: Store in cache for future requests
+            if recommendations:
+                cache_service.store_recommendations(user_id, recommendations)
+            
             return recommendations
             
         except Exception as e:

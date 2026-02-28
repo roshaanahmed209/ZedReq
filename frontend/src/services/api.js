@@ -53,16 +53,30 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     
-    // Handle specific error codes
-    if (error.response) {
-      const { status } = error.response
-      
-      // Log error for debugging
-      console.error('API Error:', {
-        status,
-        url: error.config?.url,
-        message: error.response?.data?.detail || error.response?.data?.message
-      })
+      // Handle specific error codes
+      if (error.response) {
+        const { status } = error.response
+        
+        // Log error for debugging
+        console.error('API Error:', {
+          status,
+          url: error.config?.url,
+          message: error.response?.data?.detail || error.response?.data?.message || error.response?.data?.error
+        })
+        
+        // Handle rate limiting (429)
+        if (status === 429) {
+          const retryAfter = error.response.headers?.['retry-after'] || error.response.headers?.['Retry-After'] || 60
+          const rateLimitInfo = error.response.data?.detail || error.response.data?.message
+          
+          // Enhance error object with rate limit info
+          error.rateLimitInfo = {
+            retryAfter: parseInt(retryAfter),
+            remaining: error.response.data?.remaining || 0,
+            limit: error.response.headers?.['x-ratelimit-limit'] || error.response.headers?.['X-RateLimit-Limit'] || null,
+            message: rateLimitInfo
+          }
+        }
       
       // Handle 401 Unauthorized - try to refresh token
       if (status === 401 && !originalRequest._retry) {

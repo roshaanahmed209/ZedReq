@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from dependencies.auth import get_current_user
+from dependencies.rate_limit import RateLimiter
 from config.database_orm import get_db
 from services.interview_service import InterviewService
 from services.recommendation_service import RecommendationService
@@ -17,6 +18,96 @@ from schemas.interview import (
 )
 
 router = APIRouter()
+
+# Rate limiters for interview endpoints
+# Interview operations are resource-intensive (LLM calls, external API calls)
+_interview_start_limiter = RateLimiter(requests_per_minute=10)  # Start interview: 10 req/min
+_interview_complete_limiter = RateLimiter(requests_per_minute=5)  # Complete interview: 5 req/min
+_riz_refresh_limiter = RateLimiter(requests_per_minute=3)  # Refresh Riz feedback: 3 req/min
+
+
+def interview_start_rate_limit(current_user: dict = Depends(get_current_user)):
+    """Rate limit for starting interviews"""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    if not _interview_start_limiter.is_allowed(user_id):
+        remaining = _interview_start_limiter.get_remaining(user_id)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "message": "Too many interview start requests. Please wait before starting another interview.",
+                "retry_after": 60,
+                "remaining": remaining
+            },
+            headers={
+                "X-RateLimit-Limit": str(_interview_start_limiter.requests_per_minute),
+                "X-RateLimit-Remaining": str(remaining),
+                "Retry-After": "60"
+            }
+        )
+    
+    return current_user
+
+
+def interview_complete_rate_limit(current_user: dict = Depends(get_current_user)):
+    """Rate limit for completing interviews"""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    if not _interview_complete_limiter.is_allowed(user_id):
+        remaining = _interview_complete_limiter.get_remaining(user_id)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "message": "Too many interview completion requests. Please wait before completing another interview.",
+                "retry_after": 60,
+                "remaining": remaining
+            },
+            headers={
+                "X-RateLimit-Limit": str(_interview_complete_limiter.requests_per_minute),
+                "X-RateLimit-Remaining": str(remaining),
+                "Retry-After": "60"
+            }
+        )
+    
+    return current_user
+
+
+def riz_refresh_rate_limit(current_user: dict = Depends(get_current_user)):
+    """Rate limit for refreshing Riz feedback"""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    if not _riz_refresh_limiter.is_allowed(user_id):
+        remaining = _riz_refresh_limiter.get_remaining(user_id)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "message": "Too many Riz feedback refresh requests. Please wait before refreshing again.",
+                "retry_after": 60,
+                "remaining": remaining
+            },
+            headers={
+                "X-RateLimit-Limit": str(_riz_refresh_limiter.requests_per_minute),
+                "X-RateLimit-Remaining": str(remaining),
+                "Retry-After": "60"
+            }
+        )
+    
+    return current_user
 
 
 def get_interview_service(db: Session = Depends(get_db)) -> InterviewService:
@@ -36,7 +127,7 @@ def get_recommendation_service(db: Session = Depends(get_db)) -> RecommendationS
 @router.post("/start", response_model=InterviewStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_interview(
     request: InterviewStartRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(interview_start_rate_limit),
     service: InterviewService = Depends(get_interview_service)
 ):
     """Start a new mock interview for a job"""
@@ -79,7 +170,7 @@ async def get_interview(
 @router.post("/{interview_id}/complete", response_model=InterviewCompleteResponse)
 async def complete_interview(
     interview_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(interview_complete_rate_limit),
     service: InterviewService = Depends(get_interview_service)
 ):
     """Complete an interview and get analysis results"""
@@ -236,7 +327,7 @@ async def get_riz_feedback(
 @router.post("/{interview_id}/riz-feedback/refresh")
 async def refresh_riz_feedback(
     interview_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(riz_refresh_rate_limit),
     service: InterviewService = Depends(get_interview_service),
     db: Session = Depends(get_db)
 ):

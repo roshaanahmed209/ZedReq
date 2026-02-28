@@ -540,6 +540,9 @@ const MessageBubble = styled.div`
   font-size: 0.9em;
   line-height: 1.5;
   word-wrap: break-word;
+  border: ${props => props.isQuestion ? '1px solid var(--primary)' : 'none'};
+  background: ${props => props.isQuestion ? 'rgba(10, 102, 194, 0.1)' : props.isUser ? 'var(--primary)' : 'var(--hover-bg)'};
+  color: ${props => props.isQuestion ? 'var(--primary)' : props.isUser ? 'white' : 'var(--text)'};
 
   @media (max-width: 768px) {
     max-width: 75%;
@@ -552,6 +555,15 @@ const MessageBubble = styled.div`
     padding: 10px 12px;
     font-size: 0.85em;
   }
+`
+
+const Spinning = styled.div`
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  animation: spin 1s linear infinite;
 `
 
 const ChatInputContainer = styled.div`
@@ -888,6 +900,43 @@ const MatchScore = styled.div`
   }
 `
 
+const ResultsContainer = styled.div`
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(10, 102, 194, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(10, 102, 194, 0.2);
+  animation: ${slideUp} 0.3s ease-out;
+`
+
+const RizFeedbackContainer = styled.div`
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(10, 102, 194, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(10, 102, 194, 0.2);
+`
+
+const RefreshButton = styled.button`
+  fontSize: 0.75em;
+  padding: 4px 8px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--secondary);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`
+
 const AIInterviews = () => {
   const [selectedJob, setSelectedJob] = useState(null)
   const [interviews, setInterviews] = useState([])
@@ -904,6 +953,11 @@ const AIInterviews = () => {
   const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [messages, setMessages] = useState([])
   const [inputMessage, setInputMessage] = useState('')
+  const [currentInterview, setCurrentInterview] = useState(null)
+  const [interviewQuestions, setInterviewQuestions] = useState([])
+  const [startingInterview, setStartingInterview] = useState(false)
+  const [completingInterview, setCompletingInterview] = useState(false)
+  const [tavusConversationId, setTavusConversationId] = useState(null)
   const videoRef = useRef(null)
   const messagesEndRef = useRef(null)
   const navigate = useNavigate()
@@ -998,6 +1052,11 @@ const AIInterviews = () => {
 
   const handleJobSelect = (job) => {
     setSelectedJob(job)
+    setCurrentInterview(null)
+    setInterviewQuestions([])
+    setTavusConversationId(null)
+    setInterviewResults(null)
+    setRizFeedback(null)
     if (videoRef.current) {
       videoRef.current.currentTime = 0
     }
@@ -1006,7 +1065,7 @@ const AIInterviews = () => {
     setMessages([
       {
         id: 1,
-        text: `Hello! Welcome to your AI mock interview for the ${job.title} position at ${companyName}. I'm your AI interviewer today. Are you ready to begin?`,
+        text: `Hello! Welcome to your AI mock interview for the ${job.title} position at ${companyName}. I'm your AI interviewer today. Click "Start Interview" to begin!`,
         isUser: false,
         timestamp: new Date()
       }
@@ -1017,12 +1076,82 @@ const AIInterviews = () => {
     navigate('/feed')
   }
 
-  const handleStartInterview = () => {
-    if (videoRef.current && selectedJob) {
-      videoRef.current.play()
-      setIsPlaying(true)
-    } else if (!selectedJob) {
+  const handleStartInterview = async () => {
+    if (!selectedJob) {
       alert('Please select a job from the right panel first')
+      return
+    }
+
+    if (currentInterview) {
+      alert('An interview is already in progress. Please complete it first.')
+      return
+    }
+
+    try {
+      setStartingInterview(true)
+      const response = await interviewAPI.startInterview(selectedJob.job_id || selectedJob.id)
+      
+      if (response.data) {
+        const interview = response.data
+        setCurrentInterview(interview)
+        setTavusConversationId(interview.tavus_conversation_id)
+        setInterviewQuestions(interview.questions || [])
+        
+        // Display questions in chat
+        const questionMessages = (interview.questions || []).map((q, idx) => ({
+          id: idx + 2,
+          text: `Question ${idx + 1}: ${q.question_text || q.text || 'Question'}`,
+          isUser: false,
+          timestamp: new Date(),
+          isQuestion: true
+        }))
+        
+        setMessages(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            text: 'Interview started! Here are your questions:',
+            isUser: false,
+            timestamp: new Date()
+          },
+          ...questionMessages,
+          {
+            id: prev.length + questionMessages.length + 2,
+            text: 'Please complete the interview via the Tavus platform using the conversation ID provided. After completion, click "Complete Interview" to get your results.',
+            isUser: false,
+            timestamp: new Date()
+          }
+        ])
+        
+        // Show Tavus conversation info
+        if (interview.tavus_conversation_id) {
+          alert(`Interview started successfully!\n\nTavus Conversation ID: ${interview.tavus_conversation_id}\n\nPlease complete the interview on the Tavus platform, then click "Complete Interview" to get your results.`)
+        } else {
+          alert('Interview started successfully!')
+        }
+        
+        // Refresh interview list
+        await fetchInterviews()
+        
+        if (videoRef.current) {
+          videoRef.current.play()
+          setIsPlaying(true)
+        }
+      }
+    } catch (err) {
+      console.error('Error starting interview:', err)
+      const errorDetail = err.response?.data?.detail || err.message || 'Failed to start interview'
+      
+      // Handle rate limiting
+      if (err.response?.status === 429) {
+        const retryAfter = err.response?.headers?.['retry-after'] || 60
+        const remaining = err.response?.data?.remaining || 0
+        alert(`Rate limit exceeded. Please wait ${retryAfter} seconds before starting another interview.\n\nRemaining requests: ${remaining}`)
+      } else {
+        alert(`Error starting interview: ${errorDetail}`)
+      }
+    } finally {
+      setStartingInterview(false)
     }
   }
 
@@ -1042,6 +1171,120 @@ const AIInterviews = () => {
     if (videoRef.current) {
       videoRef.current.pause()
       setIsPlaying(false)
+    }
+  }
+
+  const handleCompleteInterview = async () => {
+    if (!currentInterview) {
+      alert('No interview in progress. Please start an interview first.')
+      return
+    }
+
+    if (currentInterview.status === 'completed') {
+      alert('This interview has already been completed.')
+      return
+    }
+
+    const confirmComplete = window.confirm(
+      'Are you sure you want to complete this interview? This will analyze your responses and generate feedback.'
+    )
+
+    if (!confirmComplete) return
+
+    try {
+      setCompletingInterview(true)
+      const response = await interviewAPI.completeInterview(currentInterview.interview_id)
+      
+      if (response.data) {
+        const results = response.data
+        setInterviewResults(results)
+        setCurrentInterview({ ...currentInterview, status: 'completed' })
+        
+        // Fetch Riz feedback if available
+        if (results.riz_feedback) {
+          setRizFeedback(results.riz_feedback)
+        } else {
+          // Try to fetch Riz feedback separately
+          try {
+            const rizRes = await interviewAPI.getInterviewRizFeedback(currentInterview.interview_id)
+            if (rizRes.data?.riz_feedback) {
+              setRizFeedback(rizRes.data.riz_feedback)
+            }
+          } catch (err) {
+            console.log('Riz feedback not available yet:', err)
+          }
+        }
+        
+        // Show results
+        let resultMessage = `Interview completed!\n\n`
+        resultMessage += `Overall Score: ${results.overall_score}/100\n\n`
+        
+        if (results.score_breakdown) {
+          resultMessage += `Score Breakdown:\n`
+          resultMessage += `- Technical: ${results.score_breakdown.technical_score}/100\n`
+          resultMessage += `- Communication: ${results.score_breakdown.communication_score}/100\n`
+          resultMessage += `- Problem Solving: ${results.score_breakdown.problem_solving_score}/100\n`
+          resultMessage += `- Domain Knowledge: ${results.score_breakdown.domain_knowledge_score}/100\n\n`
+        }
+        
+        if (results.strengths && results.strengths.length > 0) {
+          resultMessage += `Strengths:\n${results.strengths.map(s => `- ${s}`).join('\n')}\n\n`
+        }
+        
+        if (results.weaknesses && results.weaknesses.length > 0) {
+          resultMessage += `Areas for Improvement:\n${results.weaknesses.map(w => `- ${w}`).join('\n')}\n\n`
+        }
+        
+        if (results.riz_feedback) {
+          resultMessage += `\nRiz Coaching Feedback is available below!`
+        }
+        
+        alert(resultMessage)
+        
+        // Refresh interview list
+        await fetchInterviews()
+      }
+    } catch (err) {
+      console.error('Error completing interview:', err)
+      const errorDetail = err.response?.data?.detail || err.message || 'Failed to complete interview'
+      
+      // Handle rate limiting
+      if (err.response?.status === 429) {
+        const retryAfter = err.response?.headers?.['retry-after'] || 60
+        const remaining = err.response?.data?.remaining || 0
+        alert(`Rate limit exceeded. Please wait ${retryAfter} seconds before completing another interview.\n\nRemaining requests: ${remaining}`)
+      } else {
+        alert(`Error completing interview: ${errorDetail}`)
+      }
+    } finally {
+      setCompletingInterview(false)
+    }
+  }
+
+  const handleRefreshRizFeedback = async () => {
+    if (!currentInterview || currentInterview.status !== 'completed') {
+      alert('Interview must be completed before refreshing Riz feedback.')
+      return
+    }
+
+    try {
+      const response = await interviewAPI.refreshRizFeedback(currentInterview.interview_id)
+      
+      if (response.data?.riz_feedback) {
+        setRizFeedback(response.data.riz_feedback)
+        alert('Riz feedback refreshed successfully!')
+      }
+    } catch (err) {
+      console.error('Error refreshing Riz feedback:', err)
+      const errorDetail = err.response?.data?.detail || err.message || 'Failed to refresh Riz feedback'
+      
+      // Handle rate limiting
+      if (err.response?.status === 429) {
+        const retryAfter = err.response?.headers?.['retry-after'] || 60
+        alert(`Rate limit exceeded. Please wait ${retryAfter} seconds before refreshing again.`)
+      } else {
+        alert(`Error refreshing Riz feedback: ${errorDetail}`)
+      }
     }
   }
 
@@ -1082,6 +1325,13 @@ const AIInterviews = () => {
     }
   }
 
+  // Auto-scroll chat when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages.length])
+
   return (
     <Container>
       <Navbar />
@@ -1119,13 +1369,63 @@ const AIInterviews = () => {
 
           <CallControls>
             <CallButtonWrapper>
-              <StartButton onClick={handleStartInterview}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
+              <StartButton 
+                onClick={handleStartInterview}
+                disabled={startingInterview || !selectedJob || !!currentInterview}
+                style={{ 
+                  opacity: (startingInterview || !selectedJob || !!currentInterview) ? 0.6 : 1,
+                  cursor: (startingInterview || !selectedJob || !!currentInterview) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {startingInterview ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spinning">
+                    <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32">
+                      <animate attributeName="stroke-dasharray" dur="2s" values="0 32;16 16;0 32;0 32" repeatCount="indefinite"/>
+                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-16;-32;-32" repeatCount="indefinite"/>
+                    </circle>
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                )}
               </StartButton>
-              <CallButtonLabel>Start</CallButtonLabel>
+              <CallButtonLabel>
+                {startingInterview ? 'Starting...' : currentInterview ? 'In Progress' : 'Start Interview'}
+              </CallButtonLabel>
             </CallButtonWrapper>
+
+            {currentInterview && currentInterview.status !== 'completed' && (
+              <CallButtonWrapper>
+                <StartButton 
+                  onClick={handleCompleteInterview}
+                  disabled={completingInterview}
+                  style={{ 
+                    background: '#f59e0b',
+                    borderColor: '#f59e0b',
+                    opacity: completingInterview ? 0.6 : 1,
+                    cursor: completingInterview ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {completingInterview ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spinning">
+                      <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32">
+                        <animate attributeName="stroke-dasharray" dur="2s" values="0 32;16 16;0 32;0 32" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-16;-32;-32" repeatCount="indefinite"/>
+                      </circle>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  )}
+                </StartButton>
+                <CallButtonLabel>
+                  {completingInterview ? 'Completing...' : 'Complete Interview'}
+                </CallButtonLabel>
+              </CallButtonWrapper>
+            )}
 
             <CallButtonWrapper>
               <CallButton active={isMuted} onClick={toggleMute}>
@@ -1197,7 +1497,14 @@ const AIInterviews = () => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
-                <ChatTitle>Interview Chat - {selectedJob.title}</ChatTitle>
+                <ChatTitle>
+                  Interview Chat - {selectedJob.title}
+                  {tavusConversationId && (
+                    <span style={{ fontSize: '0.75em', marginLeft: '8px', color: 'var(--text-light)' }}>
+                      (ID: {tavusConversationId.substring(0, 8)}...)
+                    </span>
+                  )}
+                </ChatTitle>
               </ChatHeader>
               
               <ChatMessages>
@@ -1206,7 +1513,7 @@ const AIInterviews = () => {
                     <MessageAvatar isUser={message.isUser}>
                       {message.isUser ? 'You' : 'AI'}
                     </MessageAvatar>
-                    <MessageBubble isUser={message.isUser}>
+                    <MessageBubble isUser={message.isUser} isQuestion={message.isQuestion}>
                       {message.text}
                     </MessageBubble>
                   </Message>
@@ -1284,23 +1591,86 @@ const AIInterviews = () => {
                     )}
                   </JobDetails>
                   {interview.status === 'completed' && interviewResults && interviewResults.interview_id === interview.interview_id && (
-                    <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(10, 102, 194, 0.1)', borderRadius: '8px' }}>
+                    <ResultsContainer>
+                      {interviewResults.overall_score !== null && (
+                        <div style={{ fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>
+                          Overall Score: <span style={{ color: 'var(--primary)', fontSize: '1.1em' }}>{interviewResults.overall_score}/100</span>
+                        </div>
+                      )}
                       {interviewResults.score_breakdown && (
                         <div style={{ fontSize: '0.85em', marginBottom: '8px' }}>
-                          <div>Technical: {interviewResults.score_breakdown.technical_score}/100</div>
-                          <div>Communication: {interviewResults.score_breakdown.communication_score}/100</div>
-                          <div>Problem Solving: {interviewResults.score_breakdown.problem_solving_score}/100</div>
+                          <div style={{ marginBottom: '4px' }}>Technical: {interviewResults.score_breakdown.technical_score}/100</div>
+                          <div style={{ marginBottom: '4px' }}>Communication: {interviewResults.score_breakdown.communication_score}/100</div>
+                          <div style={{ marginBottom: '4px' }}>Problem Solving: {interviewResults.score_breakdown.problem_solving_score}/100</div>
+                          <div>Domain Knowledge: {interviewResults.score_breakdown.domain_knowledge_score}/100</div>
                         </div>
                       )}
                       {rizFeedback && (
-                        <div style={{ marginTop: '8px', fontSize: '0.85em' }}>
-                          <strong>Riz Feedback:</strong>
-                          <div style={{ marginTop: '4px', fontStyle: 'italic' }}>
-                            {rizFeedback.summary || 'No summary available'}
+                        <RizFeedbackContainer>
+                          <div style={{ fontSize: '0.85em', fontWeight: '500', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Riz Coaching Feedback</span>
+                            <RefreshButton
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRefreshRizFeedback()
+                              }}
+                            >
+                              Refresh
+                            </RefreshButton>
                           </div>
+                          {rizFeedback.summary && (
+                            <div style={{ fontSize: '0.85em', marginBottom: '8px', fontStyle: 'italic', color: 'var(--text)' }}>
+                              {rizFeedback.summary}
+                            </div>
+                          )}
+                          {rizFeedback.strengths && rizFeedback.strengths.length > 0 && (
+                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                              <strong style={{ color: '#22c55e' }}>Strengths:</strong>
+                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                {rizFeedback.strengths.map((s, idx) => (
+                                  <li key={idx}>{s}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {rizFeedback.weaknesses && rizFeedback.weaknesses.length > 0 && (
+                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                              <strong style={{ color: '#f59e0b' }}>Areas for Improvement:</strong>
+                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                {rizFeedback.weaknesses.map((w, idx) => (
+                                  <li key={idx}>{w}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {rizFeedback.recommendations && rizFeedback.recommendations.length > 0 && (
+                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                              <strong style={{ color: 'var(--primary)' }}>Recommendations:</strong>
+                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                {rizFeedback.recommendations.map((r, idx) => (
+                                  <li key={idx}>{r}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {rizFeedback.next_steps && rizFeedback.next_steps.length > 0 && (
+                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                              <strong style={{ color: 'var(--primary)' }}>Next Steps:</strong>
+                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                {rizFeedback.next_steps.map((ns, idx) => (
+                                  <li key={idx}>{ns}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </RizFeedbackContainer>
+                      )}
+                      {!rizFeedback && interview.status === 'completed' && (
+                        <div style={{ marginTop: '8px', fontSize: '0.8em', color: 'var(--text-light)' }}>
+                          Riz feedback not available. Click "Refresh" to generate.
                         </div>
                       )}
-                    </div>
+                    </ResultsContainer>
                   )}
                 </JobCard>
               ))}

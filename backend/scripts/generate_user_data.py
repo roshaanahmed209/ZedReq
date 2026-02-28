@@ -173,6 +173,184 @@ def get_existing_job_postings(db: Database) -> List[Dict[str, Any]]:
     return db.fetch_all("SELECT job_id FROM job_postings WHERE status = 'active'")
 
 
+def generate_resume_text(db: Database, user_id: int, user_name: str) -> str:
+    """Generate realistic resume text for a user based on their profile data"""
+    # Get user's experience, education, projects, and skills
+    experiences = db.fetch_all(
+        "SELECT title, company, location, start_date, end_date, is_current, description FROM user_experience WHERE user_id = %s ORDER BY start_date DESC",
+        (user_id,)
+    ) or []
+    
+    educations = db.fetch_all(
+        "SELECT school, degree, field_of_study, start_year, end_year, grade FROM user_education WHERE user_id = %s ORDER BY start_year DESC",
+        (user_id,)
+    ) or []
+    
+    projects = db.fetch_all(
+        "SELECT title, description, technologies, associated_with FROM user_projects WHERE user_id = %s LIMIT 5",
+        (user_id,)
+    ) or []
+    
+    # Get skills from description if available
+    desc = db.fetch_one("SELECT skills FROM description WHERE desc_id = (SELECT description_id FROM users WHERE uid = %s)", (user_id,))
+    if desc and desc.get('skills'):
+        skills_list = desc['skills'].split(', ') if isinstance(desc['skills'], str) else desc['skills']
+    else:
+        skills_list = random.sample(SKILLS, 8)
+    
+    # Build resume text
+    resume_parts = []
+    
+    # Header
+    resume_parts.append(f"{user_name.upper()}")
+    resume_parts.append("=" * 50)
+    resume_parts.append("")
+    
+    # Professional Summary
+    current_role = experiences[0]['title'] if experiences else random.choice(JOB_TITLES)
+    years_exp = len(experiences) if experiences else random.randint(2, 8)
+    if isinstance(skills_list, list):
+        top_skills = skills_list[:5]
+    else:
+        top_skills = skills_list.split(', ')[:5] if isinstance(skills_list, str) else []
+    
+    resume_parts.append("PROFESSIONAL SUMMARY")
+    resume_parts.append("-" * 50)
+    resume_parts.append(f"Experienced {current_role} with {years_exp}+ years of experience in software development. ")
+    resume_parts.append(f"Proficient in {', '.join(top_skills) if top_skills else ', '.join(random.sample(SKILLS, 5))}. ")
+    resume_parts.append("Passionate about building scalable applications and solving complex technical challenges.")
+    resume_parts.append("")
+    
+    # Professional Experience
+    if experiences:
+        resume_parts.append("PROFESSIONAL EXPERIENCE")
+        resume_parts.append("-" * 50)
+        for exp in experiences[:3]:  # Limit to top 3 experiences
+            title = exp.get('title', random.choice(JOB_TITLES))
+            company = exp.get('company', random.choice(COMPANIES))
+            location = exp.get('location', '')
+            start_date = exp['start_date'].strftime('%B %Y') if exp.get('start_date') else ''
+            end_date = exp['end_date'].strftime('%B %Y') if exp.get('end_date') else 'Present' if exp.get('is_current') else ''
+            date_range = f"{start_date} - {end_date}" if end_date else start_date
+            
+            resume_parts.append(f"{title}")
+            resume_parts.append(f"{company} | {location}" if location else f"{company}")
+            resume_parts.append(f"{date_range}")
+            if exp.get('description'):
+                resume_parts.append(f"  • {exp['description']}")
+            else:
+                resume_parts.append(f"  • Developed and maintained {random.choice(['web applications', 'mobile apps', 'APIs', 'cloud infrastructure'])}")
+                resume_parts.append(f"  • Collaborated with cross-functional teams to deliver high-quality software solutions")
+                resume_parts.append(f"  • Implemented best practices for code quality, testing, and deployment")
+            resume_parts.append("")
+    else:
+        # Generate placeholder experience if none exists
+        resume_parts.append("PROFESSIONAL EXPERIENCE")
+        resume_parts.append("-" * 50)
+        title = random.choice(JOB_TITLES)
+        company = random.choice(COMPANIES)
+        years_ago = random.randint(1, 5)
+        start_date = (date.today() - timedelta(days=years_ago * 365)).strftime('%B %Y')
+        resume_parts.append(f"{title}")
+        resume_parts.append(f"{company}")
+        resume_parts.append(f"{start_date} - Present")
+        resume_parts.append(f"  • Developed and maintained {random.choice(['web applications', 'mobile apps', 'APIs', 'cloud infrastructure'])}")
+        resume_parts.append(f"  • Collaborated with cross-functional teams to deliver high-quality software solutions")
+        resume_parts.append(f"  • Implemented best practices for code quality, testing, and deployment")
+        resume_parts.append("")
+    
+    # Education
+    if educations:
+        resume_parts.append("EDUCATION")
+        resume_parts.append("-" * 50)
+        for edu in educations[:2]:  # Limit to top 2 educations
+            degree = edu.get('degree', random.choice(DEGREES))
+            school = edu.get('school', random.choice(SCHOOLS))
+            field = edu.get('field_of_study', '')
+            start_year = edu.get('start_year', '')
+            end_year = edu.get('end_year', '')
+            grade = edu.get('grade', '')
+            
+            resume_parts.append(f"{degree}")
+            if field:
+                resume_parts.append(f"{field}")
+            resume_parts.append(f"{school}")
+            if start_year and end_year:
+                resume_parts.append(f"{start_year} - {end_year}")
+            if grade:
+                resume_parts.append(f"GPA: {grade}")
+            resume_parts.append("")
+    else:
+        # Generate placeholder education if none exists
+        resume_parts.append("EDUCATION")
+        resume_parts.append("-" * 50)
+        degree = random.choice(DEGREES)
+        school = random.choice(SCHOOLS)
+        field = random.choice(FIELDS_OF_STUDY)
+        end_year = random.randint(2018, 2022)
+        start_year = end_year - 4
+        resume_parts.append(f"{degree}")
+        resume_parts.append(f"{field}")
+        resume_parts.append(f"{school}")
+        resume_parts.append(f"{start_year} - {end_year}")
+        resume_parts.append("")
+    
+    # Projects
+    if projects:
+        resume_parts.append("KEY PROJECTS")
+        resume_parts.append("-" * 50)
+        for proj in projects[:3]:  # Limit to top 3 projects
+            title = proj.get('title', random.choice(PROJECT_TITLES))
+            description = proj.get('description', '')
+            tech = proj.get('technologies', '')
+            
+            resume_parts.append(f"{title}")
+            if description:
+                resume_parts.append(f"  • {description}")
+            if tech:
+                if isinstance(tech, str):
+                    try:
+                        tech_list = json.loads(tech)
+                        if isinstance(tech_list, list):
+                            resume_parts.append(f"  • Technologies: {', '.join(tech_list)}")
+                    except:
+                        resume_parts.append(f"  • Technologies: {tech}")
+            else:
+                tech_sample = random.choice(TECHNOLOGIES)
+                resume_parts.append(f"  • Technologies: {', '.join(tech_sample)}")
+            resume_parts.append("")
+    else:
+        # Generate placeholder projects if none exists
+        resume_parts.append("KEY PROJECTS")
+        resume_parts.append("-" * 50)
+        for _ in range(2):
+            title = random.choice(PROJECT_TITLES)
+            tech_sample = random.choice(TECHNOLOGIES)
+            resume_parts.append(f"{title}")
+            resume_parts.append(f"  • A {title.lower()} built with modern technologies")
+            resume_parts.append(f"  • Technologies: {', '.join(tech_sample)}")
+            resume_parts.append("")
+    
+    # Technical Skills
+    resume_parts.append("TECHNICAL SKILLS")
+    resume_parts.append("-" * 50)
+    if isinstance(skills_list, list):
+        resume_parts.append(f"Programming Languages & Technologies: {', '.join(skills_list[:8])}")
+    else:
+        resume_parts.append(f"Programming Languages & Technologies: {skills_list}")
+    resume_parts.append("")
+    
+    # Certifications (if any)
+    desc_certs = db.fetch_one("SELECT certificates FROM description WHERE desc_id = (SELECT description_id FROM users WHERE uid = %s)", (user_id,))
+    if desc_certs and desc_certs.get('certificates'):
+        resume_parts.append("CERTIFICATIONS")
+        resume_parts.append("-" * 50)
+        resume_parts.append(desc_certs['certificates'])
+        resume_parts.append("")
+    
+    return "\n".join(resume_parts)
+
+
 def generate_descriptions(db: Database, user_ids: List[int]) -> Dict[int, int]:
     """Generate description records for users"""
     print("\n[1/20] Generating descriptions...")
@@ -181,7 +359,7 @@ def generate_descriptions(db: Database, user_ids: List[int]) -> Dict[int, int]:
     
     for user_id in user_ids:
         # Check if user already has a description_id
-        user = db.fetch_one("SELECT description_id FROM users WHERE uid = %s", (user_id,))
+        user = db.fetch_one("SELECT description_id, name FROM users WHERE uid = %s", (user_id,))
         if user and user.get('description_id'):
             desc_map[user_id] = user['description_id']
             continue
@@ -195,12 +373,16 @@ def generate_descriptions(db: Database, user_ids: List[int]) -> Dict[int, int]:
         status = random.choice(["Available for work", "Open to opportunities", 
                                "Currently employed", "Freelancing"])
         
+        # Generate resume text
+        user_name = user.get('name', 'User') if user else 'User'
+        resume_text = generate_resume_text(db, user_id, user_name)
+        
         try:
             result = db.execute_returning(
-                '''INSERT INTO description (short_desc, about, certificates, skills, current_status)
-                   VALUES (%s, %s, %s, %s, %s)
+                '''INSERT INTO description (short_desc, about, certificates, skills, current_status, resume)
+                   VALUES (%s, %s, %s, %s, %s, %s)
                    RETURNING desc_id''',
-                (short_desc, about, certs, skills, status)
+                (short_desc, about, certs, skills, status, resume_text)
             )
             if result:
                 desc_id = result['desc_id']
@@ -216,6 +398,36 @@ def generate_descriptions(db: Database, user_ids: List[int]) -> Dict[int, int]:
     
     print(f"  ✓ Generated {count} descriptions")
     return desc_map
+
+
+def update_resume_text_for_all_users(db: Database, user_ids: List[int]) -> None:
+    """Update resume text for all users with complete profile data"""
+    print("\n[21/21] Updating resume text for all users...")
+    count = 0
+    
+    for user_id in user_ids:
+        # Get user's description_id
+        user = db.fetch_one("SELECT description_id, name FROM users WHERE uid = %s", (user_id,))
+        if not user or not user.get('description_id'):
+            continue
+        
+        desc_id = user['description_id']
+        user_name = user.get('name', 'User')
+        
+        # Generate resume text with complete user data (experience, education, projects)
+        try:
+            resume_text = generate_resume_text(db, user_id, user_name)
+            
+            # Update description with resume text (regenerate for all to use complete data)
+            db.execute(
+                "UPDATE description SET resume = %s WHERE desc_id = %s",
+                (resume_text, desc_id)
+            )
+            count += 1
+        except Exception as e:
+            print(f"  Error updating resume for user {user_id}: {e}")
+    
+    print(f"  ✓ Updated resume text for {count} users")
 
 
 def generate_posts(db: Database, user_ids: List[int]) -> None:
@@ -1079,6 +1291,7 @@ def main():
         generate_job_applications(db, user_ids)
         generate_job_saved(db, user_ids)
         generate_lms_data(db, user_ids)
+        update_resume_text_for_all_users(db, user_ids)
         
         print("\n" + "=" * 70)
         print("✅ Data generation completed successfully!")

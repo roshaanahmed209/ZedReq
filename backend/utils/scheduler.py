@@ -86,6 +86,20 @@ def start_scheduler():
         )
         logger.info(f"Azel cleanup job added (interval: {cleanup_interval_minutes} minutes)")
     
+    # Add optional job embedding backfill job
+    backfill_enabled = os.environ.get('JOB_EMBEDDING_BACKFILL_ENABLED', 'false').lower() == 'true'
+    if backfill_enabled:
+        backfill_interval_hours = int(os.environ.get('JOB_EMBEDDING_BACKFILL_INTERVAL_HOURS', 24))
+        _scheduler.add_job(
+            func=run_job_embedding_backfill,
+            trigger=IntervalTrigger(hours=backfill_interval_hours),
+            id='job_embedding_backfill_job',
+            name='Job Embedding Backfill',
+            replace_existing=True,
+            max_instances=1  # Prevent overlapping runs
+        )
+        logger.info(f"Job embedding backfill job added (interval: {backfill_interval_hours} hours)")
+    
     _scheduler.start()
     logger.info(f"Vec agent scheduler started (interval: {interval_hours} hours)")
     
@@ -133,6 +147,24 @@ def run_azel_cleanup():
         
     except Exception as e:
         logger.error(f"Error in scheduled Azel cleanup: {e}", exc_info=True)
+
+
+def run_job_embedding_backfill():
+    """Function to backfill job embeddings for jobs missing embeddings"""
+    try:
+        logger.info("Running scheduled job embedding backfill...")
+        
+        # Import here to avoid circular dependencies
+        from scripts.backfill_job_embeddings import backfill_job_embeddings
+        
+        result = backfill_job_embeddings(dry_run=False)
+        logger.info(
+            f"Job embedding backfill completed: {result.get('processed', 0)} processed, "
+            f"{result.get('successful', 0)} successful, {result.get('failed', 0)} failed"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in scheduled job embedding backfill: {e}", exc_info=True)
 
 
 def get_scheduler():

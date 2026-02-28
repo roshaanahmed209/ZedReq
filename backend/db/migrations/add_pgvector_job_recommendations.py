@@ -66,37 +66,63 @@ def run_migration():
     print("=" * 60)
     
     try:
-        # Install pgvector extension
-        print("  [1/5] Installing pgvector extension...")
-        db.execute(INSTALL_PGVECTOR_EXTENSION)
-        print("  [OK] pgvector extension installed")
+        # Check if pgvector extension is available
+        print("  [1/5] Checking for pgvector extension...")
+        try:
+            db.execute(INSTALL_PGVECTOR_EXTENSION)
+            print("  [OK] pgvector extension installed/available")
+            pgvector_available = True
+        except Exception as e:
+            print(f"  [WARNING] pgvector extension not available: {e}")
+            print("  [INFO] Skipping embedding column. Install pgvector to enable embeddings.")
+            print("  [INFO] To install pgvector:")
+            print("         - On Windows: Download from https://github.com/pgvector/pgvector/releases")
+            print("         - On Linux: sudo apt-get install postgresql-XX-pgvector")
+            print("         - On macOS: brew install pgvector")
+            print("         - Or use Docker image: pgvector/pgvector:pg16")
+            print("  [INFO] Continuing with other parts of migration...")
+            pgvector_available = False
         
-        # Add embedding column to job_postings
-        print("  [2/5] Adding embedding column to job_postings...")
-        db.execute(ADD_EMBEDDING_COLUMN)
-        print("  [OK] Embedding column added")
+        # Add embedding column to job_postings (only if pgvector is available)
+        if pgvector_available:
+            print("  [2/5] Adding embedding column to job_postings...")
+            try:
+                db.execute(ADD_EMBEDDING_COLUMN)
+                print("  [OK] Embedding column added")
+            except Exception as e:
+                print(f"  [WARNING] Failed to add embedding column: {e}")
+                pgvector_available = False
+        else:
+            print("  [2/5] Skipping embedding column (pgvector not available)")
         
-        # Create user_job_preferences table
+        # Create user_job_preferences table (always create, doesn't require pgvector)
         print("  [3/5] Creating user_job_preferences table...")
         db.execute(CREATE_USER_JOB_PREFERENCES_TABLE)
         print("  [OK] user_job_preferences table created")
         
-        # Create vector index
-        print("  [4/5] Creating vector index for embeddings...")
-        try:
-            db.execute(CREATE_VECTOR_INDEX)
-            print("  [OK] Vector index created")
-        except Exception as e:
-            print(f"  [WARNING] Vector index creation failed (may need existing data): {e}")
-            print("  [INFO] You can create the index later when there are embeddings")
+        # Create vector index (only if pgvector is available)
+        if pgvector_available:
+            print("  [4/5] Creating vector index for embeddings...")
+            try:
+                db.execute(CREATE_VECTOR_INDEX)
+                print("  [OK] Vector index created")
+            except Exception as e:
+                print(f"  [WARNING] Vector index creation failed (may need existing data): {e}")
+                print("  [INFO] You can create the index later when there are embeddings")
+        else:
+            print("  [4/5] Skipping vector index (pgvector not available)")
         
-        # Create preference indexes
+        # Create preference indexes (always create, doesn't require pgvector)
         print("  [5/5] Creating indexes for user_job_preferences...")
         db.execute(CREATE_PREFERENCES_INDEXES)
         print("  [OK] Preference indexes created")
         
         print("=" * 60)
-        print("Migration completed successfully!")
+        if pgvector_available:
+            print("Migration completed successfully!")
+        else:
+            print("Migration completed (with warnings - pgvector not available)")
+            print("Install pgvector and re-run to enable embedding columns.")
         print("=" * 60)
     except Exception as e:
         print(f"  [ERROR] Migration failed: {e}")

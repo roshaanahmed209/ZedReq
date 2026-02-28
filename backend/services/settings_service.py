@@ -430,13 +430,15 @@ class SettingsService:
                     logger.warning(f"Failed to extract text from resume for user {user_id}")
                     raise ValidationError("Failed to extract text from resume file. Please ensure the file is a valid PDF, Word, or TXT file.")
             
+            # Track if recommendation-relevant fields changed
+            recommendation_changed = False
+            
             # Update location (sanitize input and parse city/country)
-            embedding_changed = False
             if location:
                 sanitized_location = sanitize_text_for_storage(location, max_length=150)
                 description.location = sanitized_location
                 update_data['location'] = sanitized_location
-                embedding_changed = True
+                recommendation_changed = True
                 
                 # Parse and store city/country
                 from services.recommendation_service import RecommendationService
@@ -444,6 +446,10 @@ class SettingsService:
                 parsed_location = rec_service._parse_location(sanitized_location)
                 description.city = parsed_location.get('city')
                 description.country = parsed_location.get('country')
+            
+            # Resume changes also affect recommendations
+            if resume:
+                recommendation_changed = True
             
             # Update interests (sanitize and add to runtime_context)
             if interests:
@@ -455,14 +461,19 @@ class SettingsService:
             self.db.refresh(user)
             self.db.refresh(description)
             
-            # Update user embedding if location changed (affects recommendations)
-            if embedding_changed:
+            # Update user embedding and invalidate cache if recommendation-relevant fields changed
+            if recommendation_changed:
                 try:
                     from utils.job_embeddings import update_user_embedding_if_needed
                     update_user_embedding_if_needed(user_id, self.db)
+                    
+                    # Invalidate recommendation cache and increment profile version
+                    from services.recommendation_cache_service import RecommendationCacheService
+                    cache_service = RecommendationCacheService(self.db)
+                    cache_service.increment_profile_version(user_id)
                 except Exception as e:
-                    logger.warning(f"Failed to update embedding for user {user_id}: {e}")
-                    # Don't fail profile update if embedding fails
+                    logger.warning(f"Failed to update embedding/cache for user {user_id}: {e}")
+                    # Don't fail profile update if embedding/cache update fails
             
             logger.info(f"Profile updated for user {user_id}")
             

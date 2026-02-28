@@ -272,9 +272,10 @@ class ProfileService:
                 description.profile_pic = update_data['profile_pic']
             if 'cover_pic' in update_data:
                 description.cover_pic = update_data['cover_pic']
-            # Track if embedding-relevant fields changed
-            embedding_fields = {'skills', 'current_status', 'role', 'company', 'location', 'about', 'short_desc'}
-            embedding_changed = any(key in embedding_fields for key in update_data.keys())
+            # Track if embedding-relevant fields changed (these affect recommendations)
+            recommendation_fields = {'skills', 'current_status', 'role', 'company', 'location', 'city', 'country', 'about', 'short_desc', 'resume'}
+            recommendation_changed = any(key in recommendation_fields for key in update_data.keys())
+            embedding_changed = recommendation_changed  # Same fields affect embeddings
             
             if 'location' in update_data:
                 description.location = update_data['location']
@@ -292,14 +293,19 @@ class ProfileService:
             self.db.refresh(user)
             self.db.refresh(description)
             
-            # Update user embedding if relevant fields changed
+            # Update user embedding and invalidate cache if relevant fields changed
             if embedding_changed:
                 try:
                     from utils.job_embeddings import update_user_embedding_if_needed
                     update_user_embedding_if_needed(user_id, self.db)
+                    
+                    # Invalidate recommendation cache and increment profile version
+                    from services.recommendation_cache_service import RecommendationCacheService
+                    cache_service = RecommendationCacheService(self.db)
+                    cache_service.increment_profile_version(user_id)
                 except Exception as e:
-                    logger.warning(f"Failed to update embedding for user {user_id}: {e}")
-                    # Don't fail profile update if embedding fails
+                    logger.warning(f"Failed to update embedding/cache for user {user_id}: {e}")
+                    # Don't fail profile update if embedding/cache update fails
             
             logger.info(f"Profile updated for user {user_id}")
             

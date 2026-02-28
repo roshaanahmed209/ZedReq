@@ -15,8 +15,40 @@ from services.interview_question_service import InterviewQuestionService
 from agents.Tav_check_agent import TavCheckAgent
 from agents.Riz_agent import get_riz_agent
 from config.settings import settings
+from utils.api_security import sanitize_text_for_storage, sanitize_dict_for_logging
 
 logger = logging.getLogger(__name__)
+
+
+# Custom exception classes for better error handling
+class InterviewError(Exception):
+    """Base exception for interview-related errors"""
+    pass
+
+
+class InterviewNotFoundError(InterviewError):
+    """Interview not found"""
+    pass
+
+
+class InterviewStateError(InterviewError):
+    """Invalid interview state transition"""
+    pass
+
+
+class JobNotFoundError(InterviewError):
+    """Job not found"""
+    pass
+
+
+class JobNotActiveError(InterviewError):
+    """Job is not active"""
+    pass
+
+
+class TavusServiceError(InterviewError):
+    """Tavus service error"""
+    pass
 
 
 class InterviewService:
@@ -38,45 +70,82 @@ class InterviewService:
             
         Returns:
             Dictionary with interview details
+            
+        Raises:
+            JobNotFoundError: If job not found
+            JobNotActiveError: If job is not active
+            TavusServiceError: If Tavus service fails
+            ValueError: If configuration is invalid
         """
+        # Validate inputs
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise ValueError("user_id must be a positive integer")
+        if not isinstance(job_id, int) or job_id <= 0:
+            raise ValueError("job_id must be a positive integer")
+        
         try:
+            # Log security event
+            logger.info(f"Interview start requested: user_id={user_id}, job_id={job_id}")
+            
             # Get job details
             job = self.db.query(JobPosting).filter(JobPosting.job_id == job_id).first()
             if not job:
-                raise ValueError(f"Job {job_id} not found")
+                logger.warning(f"Job not found: job_id={job_id}, user_id={user_id}")
+                raise JobNotFoundError(f"Job {job_id} not found")
             
             if job.status != 'active':
-                raise ValueError("Job is not active")
+                logger.warning(f"Job not active: job_id={job_id}, status={job.status}, user_id={user_id}")
+                raise JobNotActiveError("Job is not active")
             
             # Calculate attempt number
             attempt_number = self.get_interview_attempt_number(user_id, job_id) + 1
+            logger.debug(f"Interview attempt number: {attempt_number} for user {user_id}, job {job_id}")
             
             # Generate interview questions
+            logger.debug("Generating interview questions...")
             questions = self.question_service.generate_interview_questions(job)
             if not questions:
+                logger.error(f"Failed to generate interview questions for job {job_id}")
                 raise ValueError("Failed to generate interview questions")
+            
+            logger.info(f"Generated {len(questions)} interview questions")
             
             # Generate system prompt
             system_prompt = self.question_service.generate_system_prompt(job, questions)
             
-            # Create Tavus conversation
-            replica_id = settings.TAVUS_REPLICA_ID
+            # Create Tavus conversation - randomly select replica ID from list
+            replica_id = settings.get_random_tavus_replica_id()
             if not replica_id:
-                raise ValueError("TAVUS_REPLICA_ID not configured")
+                logger.error("TAVUS_REPLICA_ID or TAVUS_REPLICA_IDS not configured")
+                raise ValueError("TAVUS_REPLICA_ID or TAVUS_REPLICA_IDS not configured")
             
-            conversation_name = f"{job.title} Interview - Attempt {attempt_number}"
+            logger.debug(f"Selected replica ID: {replica_id} (from {len(settings.get_tavus_replica_ids())} available)")
+            
+            # Sanitize conversation name
+            conversation_name = sanitize_text_for_storage(
+                f"{job.title} Interview - Attempt {attempt_number}",
+                max_length=255
+            )
             first_message = "Hello! Welcome to your mock interview. I'm here to help you practice for this position. Let's begin with a few questions. Are you ready?"
             
-            tavus_response = self.tavus_service.create_conversation(
-                replica_id=replica_id,
-                conversation_name=conversation_name,
-                system_prompt=system_prompt,
-                first_message=first_message
-            )
+            logger.debug("Creating Tavus conversation...")
+            try:
+                tavus_response = self.tavus_service.create_conversation(
+                    replica_id=replica_id,
+                    conversation_name=conversation_name,
+                    system_prompt=system_prompt,
+                    first_message=first_message
+                )
+            except Exception as e:
+                logger.error(f"Tavus service error: {e}", exc_info=True)
+                raise TavusServiceError(f"Failed to create Tavus conversation: {str(e)}")
             
             tavus_conversation_id = tavus_response.get('conversation_id')
             if not tavus_conversation_id:
-                raise ValueError("Failed to create Tavus conversation")
+                logger.error("Tavus conversation created but no conversation_id returned")
+                raise TavusServiceError("Failed to create Tavus conversation: no conversation_id")
+            
+            logger.info(f"Tavus conversation created: {tavus_conversation_id}")
             
             # Create interview record
             interview = LiveInterview(
@@ -94,7 +163,11 @@ class InterviewService:
             self.db.commit()
             self.db.refresh(interview)
             
-            logger.info(f"Started interview {interview.interview_id} for user {user_id}, job {job_id}")
+            # Log success (sanitized)
+            logger.info(
+                f"Interview started successfully: interview_id={interview.interview_id}, "
+                f"user_id={user_id}, job_id={job_id}, attempt={attempt_number}"
+            )
             
             return {
                 'interview_id': interview.interview_id,
@@ -106,8 +179,11 @@ class InterviewService:
                 'company_name': job.company_name
             }
             
+        except (JobNotFoundError, JobNotActiveError, TavusServiceError):
+            self.db.rollback()
+            raise
         except Exception as e:
-            logger.error(f"Failed to start interview: {e}")
+            logger.error(f"Failed to start interview: user_id={user_id}, job_id={job_id}, error={e}", exc_info=True)
             self.db.rollback()
             raise
     
@@ -120,30 +196,62 @@ class InterviewService:
             
         Returns:
             Dictionary with scores and feedback
+            
+        Raises:
+            InterviewNotFoundError: If interview not found
+            InterviewStateError: If interview is in invalid state
+            TavusServiceError: If Tavus service fails
         """
+        # Validate input
+        if not isinstance(interview_id, int) or interview_id <= 0:
+            raise ValueError("interview_id must be a positive integer")
+        
         try:
+            # Log security event
+            logger.info(f"Interview completion requested: interview_id={interview_id}")
+            
             # Get interview
             interview = self.db.query(LiveInterview).filter(
                 LiveInterview.interview_id == interview_id
             ).first()
             
             if not interview:
-                raise ValueError(f"Interview {interview_id} not found")
+                logger.warning(f"Interview not found: interview_id={interview_id}")
+                raise InterviewNotFoundError(f"Interview {interview_id} not found")
             
+            # Validate interview state
             if interview.status == 'completed':
-                # Return existing results
+                logger.info(f"Interview already completed, returning existing results: interview_id={interview_id}")
                 return self._format_complete_response(interview)
+            
+            if interview.status not in ['in_progress', 'pending']:
+                logger.warning(
+                    f"Invalid interview state for completion: interview_id={interview_id}, "
+                    f"status={interview.status}"
+                )
+                raise InterviewStateError(
+                    f"Cannot complete interview in '{interview.status}' state. "
+                    f"Interview must be 'in_progress' or 'pending'."
+                )
             
             # Get Tavus transcript
             if not interview.tavus_conversation_id:
+                logger.error(f"Tavus conversation ID not found: interview_id={interview_id}")
                 raise ValueError("Tavus conversation ID not found")
             
-            transcript = self.tavus_service.get_conversation_transcript(
-                interview.tavus_conversation_id
-            )
+            logger.debug(f"Fetching Tavus transcript: conversation_id={interview.tavus_conversation_id}")
+            try:
+                transcript = self.tavus_service.get_conversation_transcript(
+                    interview.tavus_conversation_id
+                )
+            except Exception as e:
+                logger.error(f"Tavus service error: {e}", exc_info=True)
+                raise TavusServiceError(f"Failed to get Tavus transcript: {str(e)}")
             
             # Extract user responses from transcript
+            logger.debug("Extracting user responses from transcript...")
             user_responses = self._extract_user_responses(transcript)
+            logger.info(f"Extracted {len(user_responses)} user responses")
             
             # Get job context
             job = self.db.query(JobPosting).filter(
@@ -153,21 +261,34 @@ class InterviewService:
             job_context = self.question_service._build_job_context(job) if job else ""
             
             # Analyze responses using Tav_check_agent
-            analysis = self.check_agent.analyze_interview_responses(
-                questions=interview.questions or [],
-                user_responses=user_responses,
-                job_context=job_context
+            logger.debug("Analyzing interview responses...")
+            try:
+                analysis = self.check_agent.analyze_interview_responses(
+                    questions=interview.questions or [],
+                    user_responses=user_responses,
+                    job_context=job_context
+                )
+                logger.info(f"Analysis complete: overall_score={analysis.get('overall_score')}")
+            except Exception as e:
+                logger.error(f"Failed to analyze interview responses: {e}", exc_info=True)
+                raise ValueError(f"Failed to analyze interview responses: {str(e)}")
+            
+            # Sanitize feedback before storage
+            detailed_feedback = sanitize_text_for_storage(
+                analysis.get('detailed_feedback', ''),
+                max_length=10000
             )
             
             # Update interview record
             interview.user_responses = user_responses
             interview.overall_score = analysis['overall_score']
             interview.score_breakdown = analysis['score_breakdown']
-            interview.feedback = analysis['detailed_feedback']
+            interview.feedback = detailed_feedback
             interview.status = 'completed'
             interview.completed_at = datetime.now()
             
             # Generate Riz coaching feedback
+            logger.debug("Generating Riz coaching feedback...")
             try:
                 riz_agent = get_riz_agent()
                 if riz_agent.is_available():
@@ -180,27 +301,31 @@ class InterviewService:
                         user_responses=user_responses,
                         overall_score=analysis['overall_score'],
                         score_breakdown=analysis['score_breakdown'],
-                        tav_check_feedback=analysis['detailed_feedback']
+                        tav_check_feedback=detailed_feedback
                     )
                     interview.riz_feedback = riz_feedback
                     logger.info(f"Generated Riz coaching feedback for interview {interview_id}")
                 else:
                     logger.warning("Riz agent not available, skipping coaching feedback generation")
             except Exception as e:
-                logger.error(f"Failed to generate Riz coaching feedback: {e}")
+                logger.error(f"Failed to generate Riz coaching feedback: {e}", exc_info=True)
                 # Don't fail the interview completion if Riz fails
             
             self.db.commit()
             self.db.refresh(interview)
             
-            logger.info(f"Completed interview {interview_id}. Score: {analysis['overall_score']}")
+            # Log success (sanitized)
+            logger.info(
+                f"Interview completed successfully: interview_id={interview_id}, "
+                f"score={analysis['overall_score']}, user_id={interview.user_id}"
+            )
             
             result = {
                 'interview_id': interview.interview_id,
                 'overall_score': analysis['overall_score'],
                 'score_breakdown': analysis['score_breakdown'],
                 'question_scores': analysis.get('question_scores', []),
-                'detailed_feedback': analysis['detailed_feedback'],
+                'detailed_feedback': detailed_feedback,
                 'strengths': analysis.get('strengths', []),
                 'weaknesses': analysis.get('weaknesses', []),
                 'improvement_suggestions': analysis.get('improvement_suggestions', []),
@@ -214,8 +339,11 @@ class InterviewService:
             
             return result
             
+        except (InterviewNotFoundError, InterviewStateError, TavusServiceError):
+            self.db.rollback()
+            raise
         except Exception as e:
-            logger.error(f"Failed to complete interview {interview_id}: {e}")
+            logger.error(f"Failed to complete interview {interview_id}: {e}", exc_info=True)
             self.db.rollback()
             raise
     
@@ -318,28 +446,103 @@ class InterviewService:
         """
         Extract user responses from Tavus transcript
         
+        Supports multiple transcript formats and provides fallback parsing strategies.
+        
         Args:
-            transcript: Tavus conversation transcript
+            transcript: Tavus conversation transcript (dict or list)
             
         Returns:
-            List of user response dictionaries
+            List of user response dictionaries with sanitized content
         """
-        # Tavus transcript structure may vary
-        # This is a generic extraction - adjust based on actual Tavus API response format
         responses = []
         
+        if not transcript:
+            logger.warning("Empty transcript provided")
+            return responses
+        
+        # Strategy 1: Try 'messages' array (most common format)
         if isinstance(transcript, dict):
-            # Try common transcript formats
-            messages = transcript.get('messages', transcript.get('transcript', []))
+            messages = transcript.get('messages', transcript.get('transcript', transcript.get('data', [])))
+        elif isinstance(transcript, list):
+            messages = transcript
+        else:
+            logger.warning(f"Unexpected transcript type: {type(transcript)}")
+            return responses
+        
+        if not isinstance(messages, list):
+            logger.warning(f"Messages is not a list: {type(messages)}")
+            return responses
+        
+        logger.debug(f"Processing {len(messages)} messages from transcript")
+        
+        # Extract user responses
+        for idx, msg in enumerate(messages):
+            if not isinstance(msg, dict):
+                logger.debug(f"Skipping non-dict message at index {idx}")
+                continue
             
-            for msg in messages:
-                if isinstance(msg, dict):
-                    role = msg.get('role', '').lower()
-                    if role in ['user', 'candidate', 'interviewee']:
+            # Try different role field names
+            role = (
+                msg.get('role', '') or 
+                msg.get('speaker', '') or 
+                msg.get('type', '')
+            ).lower()
+            
+            # Check if this is a user/candidate message
+            if role in ['user', 'candidate', 'interviewee', 'participant']:
+                # Try different content field names
+                content = (
+                    msg.get('content') or 
+                    msg.get('text') or 
+                    msg.get('message') or 
+                    msg.get('transcript') or 
+                    msg.get('value') or 
+                    ''
+                )
+                
+                # Sanitize content
+                if content:
+                    content = sanitize_text_for_storage(str(content), max_length=5000)
+                    
+                    response_dict = {
+                        'response': content,
+                        'timestamp': msg.get('timestamp') or msg.get('time') or msg.get('created_at')
+                    }
+                    
+                    # Add question index if available
+                    if 'question_index' in msg:
+                        response_dict['question_index'] = msg.get('question_index')
+                    
+                    responses.append(response_dict)
+                    logger.debug(f"Extracted response {len(responses)}: {len(content)} chars")
+        
+        # Strategy 2: If no responses found, try alternative structure
+        if not responses and isinstance(transcript, dict):
+            # Try 'responses' array
+            alt_responses = transcript.get('responses', transcript.get('user_responses', []))
+            if isinstance(alt_responses, list):
+                logger.debug("Trying alternative response structure")
+                for idx, resp in enumerate(alt_responses):
+                    if isinstance(resp, dict):
+                        content = resp.get('text') or resp.get('content') or resp.get('response') or ''
+                        if content:
+                            content = sanitize_text_for_storage(str(content), max_length=5000)
+                            responses.append({
+                                'response': content,
+                                'timestamp': resp.get('timestamp')
+                            })
+                    elif isinstance(resp, str):
+                        content = sanitize_text_for_storage(resp, max_length=5000)
                         responses.append({
-                            'response': msg.get('content', msg.get('text', '')),
-                            'timestamp': msg.get('timestamp')
+                            'response': content,
+                            'timestamp': None
                         })
+        
+        logger.info(f"Extracted {len(responses)} user responses from transcript")
+        
+        if not responses:
+            logger.warning("No user responses found in transcript. Transcript structure may be unexpected.")
+            logger.debug(f"Transcript keys: {list(transcript.keys()) if isinstance(transcript, dict) else 'N/A'}")
         
         return responses
     

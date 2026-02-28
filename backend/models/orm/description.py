@@ -35,6 +35,7 @@ class Description(Base):
     resume = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    profile_version = Column(Integer, default=1, index=True)  # Increment when profile changes affect recommendations
     
     # Embedding (pgvector) - deferred to avoid loading in regular queries
     # This column is managed via raw SQL, not through SQLAlchemy ORM
@@ -67,6 +68,7 @@ class Description(Base):
             'profile_pic': self.profile_pic,
             'cover_pic': self.cover_pic,
             'resume': self.resume,
+            'profile_version': self.profile_version,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

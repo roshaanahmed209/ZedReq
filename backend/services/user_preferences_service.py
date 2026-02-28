@@ -120,6 +120,18 @@ class UserPreferencesService:
                     preferences.get('experience_level')
                 )
             )
+            
+            # Invalidate recommendation cache since preferences affect recommendations
+            try:
+                from services.recommendation_cache_service import RecommendationCacheService
+                cache_service = RecommendationCacheService(self.db)
+                cache_service.increment_profile_version(user_id)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to invalidate cache for user {user_id}: {e}")
+                # Don't fail preference update if cache invalidation fails
+            
             return True
         except Exception as e:
             import logging
