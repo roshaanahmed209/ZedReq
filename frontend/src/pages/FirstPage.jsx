@@ -165,45 +165,102 @@ const FirstPage = () => {
       </section>
 
       {/* Showcase Sections */}
-      {/* SHOWCASE 1: JOB MATCHING */}
-      <section className="showcase">
-        <div className="container">
-          <div className="showcase-visual reveal scroll-reveal">
-            <div className="showcase-glow"></div>
-            <div className="showcase-image">
-              <img src="/static/ai_matching.png" alt="AI Matching: Neural network connecting resumes to job opportunities" />
+      {/* Feature Cards */}
+      <section className="features-section-cardswap">
+        <div className="features-content-wrapper">
+          <div className="features-text-section scroll-reveal">
+            <h2 className="features-title">Powerful Features to Accelerate Your Career</h2>
+            <p className="features-description">
+              Our AI-powered platform provides comprehensive tools and assistance to help you navigate every step of your career journey—from finding the perfect role to acing your interviews.
+            </p>
+            <div className="features-highlights">
+              <div className="highlight-item">
+                <span className="highlight-number">01</span>
+                <p>Intelligent matching algorithm connects you with opportunities that truly fit</p>
+              </div>
+              <div className="highlight-item">
+                <span className="highlight-number">02</span>
+                <p>Personalized coaching adapts to your unique career goals and experience</p>
+              </div>
+              <div className="highlight-item">
+                <span className="highlight-number">03</span>
+                <p>Practice and prepare with realistic mock interviews and actionable feedback</p>
+              </div>
             </div>
           </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
-            <span className="section-label">Smart Matching</span>
-            <h2>AI that truly understands your career DNA</h2>
-            <p>Our vector-powered engine doesn't just keyword-match — it understands your skills, ambitions, and work preferences to surface roles you'd actually love.</p>
-            <div className="showcase-points">
-              <div className="showcase-point">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Smart skill parsing from profiles and resumes</span>
-              </div>
-              <div className="showcase-point">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Role-fit scoring with interview readiness indicator</span>
-              </div>
-              <div className="showcase-point">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Curated shortlists — apply faster, with confidence</span>
-              </div>
-            </div>
+          
+          <div className="features-cards-section">
+            <CardSwap
+              width={400}
+              height={500}
+              cardDistance={65}
+              verticalDistance={85}
+              delay={3500}
+              skewAmount={9}
+              pauseOnHover={true}
+            >
+              <Card>
+                <div className="feature-card-content">
+                  <div className="feature-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                      <circle cx="7" cy="7" r="1.5"/>
+                    </svg>
+                  </div>
+                  <h3>AI Job Matching</h3>
+                  <p className="feature-one-liner">Precision matches based on skills, goals, and culture fit.</p>
+                  <ul className="feature-bullets">
+                    <li>Smart skill parsing from CVs and profiles</li>
+                    <li>Role-fit score and interview readiness indicator</li>
+                    <li>Curated shortlists — apply faster</li>
+                  </ul>
+                  <a href="#" className="feature-cta">See Matches</a>
+                </div>
+              </Card>
+              
+              <Card>
+                <div className="feature-card-content">
+                  <div className="feature-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      <path d="M13 8H7"/>
+                      <path d="M17 12H7"/>
+                      <circle cx="18" cy="5" r="3"/>
+                      <path d="M16 3v4M20 3v4M18 1v2M18 7v2"/>
+                    </svg>
+                  </div>
+                  <h3>AI Career Assistant</h3>
+                  <p className="feature-one-liner">Personalized coaching for résumés, cover letters, and applications.</p>
+                  <ul className="feature-bullets">
+                    <li>Interactive profile refinement</li>
+                    <li>Custom application templates & ATS-friendly output</li>
+                    <li>Instant answers to career queries</li>
+                  </ul>
+                  <a href="#" className="feature-cta">Talk to Assistant</a>
+                </div>
+              </Card>
+              
+              <Card>
+                <div className="feature-card-content">
+                  <div className="feature-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" y1="19" x2="12" y2="23"/>
+                      <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                  </div>
+                  <h3>AI Mock Interviews</h3>
+                  <p className="feature-one-liner">Practice with dynamic interviews and receive structured feedback.</p>
+                  <ul className="feature-bullets">
+                    <li>Role-specific question sets</li>
+                    <li>Real-time scoring and tips</li>
+                    <li>Playback + transcript for review</li>
+                  </ul>
+                  <a href="#" className="feature-cta">Start a Mock Interview</a>
+                </div>
+              </Card>
+            </CardSwap>
           </div>
         </div>
       </section>
@@ -333,106 +390,6 @@ const FirstPage = () => {
                 <span>Web-sourced knowledge base for up-to-date content</span>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Cards */}
-      <section className="features-section-cardswap">
-        <div className="features-content-wrapper">
-          <div className="features-text-section scroll-reveal">
-            <h2 className="features-title">Powerful Features to Accelerate Your Career</h2>
-            <p className="features-description">
-              Our AI-powered platform provides comprehensive tools and assistance to help you navigate every step of your career journey—from finding the perfect role to acing your interviews.
-            </p>
-            <div className="features-highlights">
-              <div className="highlight-item">
-                <span className="highlight-number">01</span>
-                <p>Intelligent matching algorithm connects you with opportunities that truly fit</p>
-              </div>
-              <div className="highlight-item">
-                <span className="highlight-number">02</span>
-                <p>Personalized coaching adapts to your unique career goals and experience</p>
-              </div>
-              <div className="highlight-item">
-                <span className="highlight-number">03</span>
-                <p>Practice and prepare with realistic mock interviews and actionable feedback</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="features-cards-section">
-            <CardSwap
-              width={400}
-              height={500}
-              cardDistance={65}
-              verticalDistance={85}
-              delay={3500}
-              skewAmount={9}
-              pauseOnHover={true}
-            >
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                      <circle cx="7" cy="7" r="1.5"/>
-                    </svg>
-                  </div>
-                  <h3>AI Job Matching</h3>
-                  <p className="feature-one-liner">Precision matches based on skills, goals, and culture fit.</p>
-                  <ul className="feature-bullets">
-                    <li>Smart skill parsing from CVs and profiles</li>
-                    <li>Role-fit score and interview readiness indicator</li>
-                    <li>Curated shortlists — apply faster</li>
-                  </ul>
-                  <a href="#" className="feature-cta">See Matches</a>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      <path d="M13 8H7"/>
-                      <path d="M17 12H7"/>
-                      <circle cx="18" cy="5" r="3"/>
-                      <path d="M16 3v4M20 3v4M18 1v2M18 7v2"/>
-                    </svg>
-                  </div>
-                  <h3>AI Career Assistant</h3>
-                  <p className="feature-one-liner">Personalized coaching for résumés, cover letters, and applications.</p>
-                  <ul className="feature-bullets">
-                    <li>Interactive profile refinement</li>
-                    <li>Custom application templates & ATS-friendly output</li>
-                    <li>Instant answers to career queries</li>
-                  </ul>
-                  <a href="#" className="feature-cta">Talk to Assistant</a>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                      <line x1="12" y1="19" x2="12" y2="23"/>
-                      <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
-                  </div>
-                  <h3>AI Mock Interviews</h3>
-                  <p className="feature-one-liner">Practice with dynamic interviews and receive structured feedback.</p>
-                  <ul className="feature-bullets">
-                    <li>Role-specific question sets</li>
-                    <li>Real-time scoring and tips</li>
-                    <li>Playback + transcript for review</li>
-                  </ul>
-                  <a href="#" className="feature-cta">Start a Mock Interview</a>
-                </div>
-              </Card>
-            </CardSwap>
           </div>
         </div>
       </section>
