@@ -44,7 +44,7 @@ i am planning to fetch users location, and also modifying the recommendation ser
 
 
 
-
+i have added a file @ZedReq/to_add.txt  this contains code which needs to be added in the firstpage match the theme and the fontstyle 
 
 
 

@@ -116,61 +116,6 @@ const FirstPage = () => {
     }
   }, [])
 
-  // Special observer for the how-it-works grid with dust particle effect
-  useEffect(() => {
-    const gridObserverOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    }
-
-    const gridObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // Add grid-revealed class to make grid visible
-          entry.target.classList.add('grid-revealed')
-          
-          // Add visible class to individual items with staggered delay
-          const items = entry.target.querySelectorAll('.work-card, .work-stats')
-          items.forEach((item, index) => {
-            setTimeout(() => {
-              item.classList.add('particle-reveal')
-            }, 300 + (index * 100)) // Start after grid starts revealing
-          })
-          
-          gridObserver.unobserve(entry.target)
-        }
-      })
-    }, gridObserverOptions)
-
-    // Use setTimeout to ensure DOM is ready
-    const timer = setTimeout(() => {
-      const gridSection = document.querySelector('.how-it-works-grid')
-      if (gridSection) {
-        gridObserver.observe(gridSection)
-        
-        // Check if already in view (for initial load)
-        const rect = gridSection.getBoundingClientRect()
-        const isInView = rect.top < window.innerHeight && rect.bottom > 0
-        if (isInView) {
-          gridSection.classList.add('grid-revealed')
-          const items = gridSection.querySelectorAll('.work-card, .work-stats')
-          items.forEach((item, index) => {
-            setTimeout(() => {
-              item.classList.add('particle-reveal')
-            }, 300 + (index * 100))
-          })
-        }
-      }
-    }, 100)
-
-    return () => {
-      clearTimeout(timer)
-      const gridSection = document.querySelector('.how-it-works-grid')
-      if (gridSection) {
-        gridObserver.unobserve(gridSection)
-      }
-    }
-  }, [])
 
 
   return (
@@ -215,6 +160,179 @@ const FirstPage = () => {
                 {text}
               </p>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Showcase Sections */}
+      {/* SHOWCASE 1: JOB MATCHING */}
+      <section className="showcase">
+        <div className="container">
+          <div className="showcase-visual reveal scroll-reveal">
+            <div className="showcase-glow"></div>
+            <div className="showcase-image">
+              <img src="/static/ai_matching.png" alt="AI Matching: Neural network connecting resumes to job opportunities" />
+            </div>
+          </div>
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+            <span className="section-label">Smart Matching</span>
+            <h2>AI that truly understands your career DNA</h2>
+            <p>Our vector-powered engine doesn't just keyword-match — it understands your skills, ambitions, and work preferences to surface roles you'd actually love.</p>
+            <div className="showcase-points">
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Smart skill parsing from profiles and resumes</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Role-fit scoring with interview readiness indicator</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Curated shortlists — apply faster, with confidence</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHOWCASE 2: CAREER ASSISTANT */}
+      <section className="showcase reverse">
+        <div className="container">
+          <div className="showcase-visual reveal scroll-reveal">
+            <div className="showcase-glow"></div>
+            <div className="showcase-image showcase-image-large">
+              <img src="/static/Ai mode Ai assistant.png" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
+            </div>
+          </div>
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+            <span className="section-label">Career Assistant</span>
+            <h2>Your personal AI career copilot</h2>
+            <p>Search jobs, discover profiles, optimize your resume, and get instant answers to any career question — all through a natural conversation.</p>
+            <div className="showcase-points">
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Natural language job and profile search</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Interactive profile refinement and ATS-ready output</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Instant, context-aware career guidance</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHOWCASE 3: MOCK INTERVIEWS */}
+      <section className="showcase">
+        <div className="container">
+          <div className="showcase-visual reveal scroll-reveal">
+            <div className="showcase-glow"></div>
+            <div className="showcase-image">
+              <img src="/static/AI mock interview.png" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
+            </div>
+          </div>
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+            <span className="section-label">Mock Interviews</span>
+            <h2>Practice until you're unstoppable</h2>
+            <p>Face realistic, AI-powered video interviews tailored to your target roles. Receive detailed scoring, strengths analysis, and coaching feedback.</p>
+            <div className="showcase-points">
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Role-specific question sets with dynamic difficulty</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Real-time scoring across technical & communication</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>AI coaching feedback with actionable next steps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHOWCASE 4: LEARNING */}
+      <section className="showcase reverse">
+        <div className="container">
+          <div className="showcase-visual reveal scroll-reveal">
+            <div className="showcase-glow"></div>
+            <div className="showcase-image showcase-image-large">
+              <img src="/static/AI powered LMS.png" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
+            </div>
+          </div>
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+            <span className="section-label">Adaptive Learning</span>
+            <h2>Learn exactly what matters for your career</h2>
+            <p>Our intelligent LMS analyzes your interactions — job views, post likes, profile activity — and generates personalized courses to close your skill gaps.</p>
+            <div className="showcase-points">
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>AI-generated courses from your career context</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Domain and weekly performance tracking</span>
+              </div>
+              <div className="showcase-point">
+                <span className="showcase-point-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span>Web-sourced knowledge base for up-to-date content</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -319,58 +437,6 @@ const FirstPage = () => {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="how-it-works" id="how-it-works">
-        <div className="how-it-works-container">
-          <div className="how-it-works-grid dust-particle-grid">
-            <div className="work-card work-card-1 scroll-reveal">
-              <div className="work-card-number">01</div>
-              <div className="work-card-content">
-                <h3>Create your AI profile</h3>
-                <p>Answer a few guided prompts. ZedReq extracts skills, projects and career goals automatically.</p>
-              </div>
-            </div>
-            
-            <div className="work-card work-card-2 scroll-reveal">
-              <div className="work-card-number">02</div>
-              <div className="work-card-content">
-                <h3>Get matched & recommended roles</h3>
-                <p>Receive prioritized matches with role-fit scores and a suggested application checklist.</p>
-              </div>
-            </div>
-            
-            <div className="work-card work-card-3 scroll-reveal">
-              <div className="work-card-number">03</div>
-              <div className="work-card-content">
-                <h3>Practice & apply confidently</h3>
-                <p>Polish your application with the AI assistant and rehearse interviews until you're interview-ready.</p>
-              </div>
-            </div>
-            
-            <div className="work-stats work-stats-1 scroll-reveal">
-              <div className="stat-value">1000+</div>
-              <div className="stat-label">matched roles</div>
-            </div>
-            
-            <div className="work-stats work-stats-2 scroll-reveal">
-              <div className="stat-value">4.8/5</div>
-              <div className="stat-label">average candidate satisfaction</div>
-            </div>
-            
-            <div className="work-stats work-stats-3 scroll-reveal">
-              <div className="stat-value">200</div>
-              <div className="stat-label">hiring partners</div>
-            </div>
-            
-            <div className="work-stats work-stats-4 scroll-reveal">
-              <div className="stat-value">100%</div>
-              <div className="stat-label">privacy & compliance</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
       {/* Testimonials */}
       <section className="testimonials-section">
         <h2 className="section-title scroll-reveal">What Candidates Say</h2>
@@ -448,7 +514,6 @@ const FirstPage = () => {
           <div className="footer-section">
             <h4>Product</h4>
             <ul>
-              <li><a href="#how-it-works">How It Works</a></li>
               <li><a href="#">Features</a></li>
               <li><a href="#">Pricing</a></li>
             </ul>
