@@ -154,22 +154,21 @@ const FirstPage = () => {
   // Scroll-triggered fade-in animation
   useEffect(() => {
     const observerOptions = {
-      threshold: 0.15,
-      rootMargin: '0px 0px -50px 0px'
+      threshold: 0.1,
+      rootMargin: '0px 0px -40px 0px'
     }
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible')
-          
           observer.unobserve(entry.target)
         }
       })
     }, observerOptions)
 
-    // Observe all elements with scroll-reveal class
-    const elements = document.querySelectorAll('.scroll-reveal')
+    // Observe all elements with scroll-reveal, scroll-reveal-left, scroll-reveal-right, scroll-reveal-scale classes
+    const elements = document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-right, .scroll-reveal-scale')
     elements.forEach((el) => observer.observe(el))
 
     return () => {
@@ -235,22 +234,22 @@ const FirstPage = () => {
               Our AI-powered platform provides comprehensive tools and assistance to help you navigate every step of your career journey—from finding the perfect role to acing your interviews.
             </p>
             <div className="features-highlights">
-              <div className="highlight-item">
+              <div className="highlight-item scroll-reveal">
                 <span className="highlight-number">01</span>
                 <p>Intelligent matching algorithm connects you with opportunities that truly fit</p>
               </div>
-              <div className="highlight-item">
+              <div className="highlight-item scroll-reveal">
                 <span className="highlight-number">02</span>
                 <p>Personalized coaching adapts to your unique career goals and experience</p>
               </div>
-              <div className="highlight-item">
+              <div className="highlight-item scroll-reveal">
                 <span className="highlight-number">03</span>
                 <p>Practice and prepare with realistic mock interviews and actionable feedback</p>
               </div>
             </div>
           </div>
           
-          <div className="features-cards-section">
+          <div className="features-cards-section scroll-reveal">
             <CardSwap
               width={400}
               height={500}
@@ -329,18 +328,18 @@ const FirstPage = () => {
       {/* SHOWCASE 2: CAREER ASSISTANT */}
       <section className="showcase reverse">
         <div className="container">
-          <div className="showcase-visual reveal scroll-reveal">
+          <div className="showcase-visual reveal scroll-reveal-right">
             <div className="showcase-glow"></div>
             <div className="showcase-image showcase-image-large">
               <img src="/static/Ai mode Ai assistant.png" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
             </div>
           </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-left">
             <span className="section-label">Career Assistant</span>
             <h2>Your personal AI career copilot</h2>
             <p>Search jobs, discover profiles, optimize your resume, and get instant answers to any career question — all through a natural conversation.</p>
             <div className="showcase-points">
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -348,7 +347,7 @@ const FirstPage = () => {
                 </span>
                 <span>Natural language job and profile search</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -356,7 +355,7 @@ const FirstPage = () => {
                 </span>
                 <span>Interactive profile refinement and ATS-ready output</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -372,18 +371,18 @@ const FirstPage = () => {
       {/* SHOWCASE 3: MOCK INTERVIEWS */}
       <section className="showcase">
         <div className="container">
-          <div className="showcase-visual reveal scroll-reveal">
+          <div className="showcase-visual reveal scroll-reveal-left">
             <div className="showcase-glow"></div>
             <div className="showcase-image">
               <img src="/static/AI mock interview.png" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
             </div>
           </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-right">
             <span className="section-label">Mock Interviews</span>
             <h2>Practice until you're unstoppable</h2>
             <p>Face realistic, AI-powered video interviews tailored to your target roles. Receive detailed scoring, strengths analysis, and coaching feedback.</p>
             <div className="showcase-points">
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -391,7 +390,7 @@ const FirstPage = () => {
                 </span>
                 <span>Role-specific question sets with dynamic difficulty</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -399,7 +398,7 @@ const FirstPage = () => {
                 </span>
                 <span>Real-time scoring across technical & communication</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -415,18 +414,18 @@ const FirstPage = () => {
       {/* SHOWCASE 4: LEARNING */}
       <section className="showcase reverse">
         <div className="container">
-          <div className="showcase-visual reveal scroll-reveal">
+          <div className="showcase-visual reveal scroll-reveal-right">
             <div className="showcase-glow"></div>
             <div className="showcase-image showcase-image-large">
               <img src="/static/AI powered LMS.png" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
             </div>
           </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal">
+          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-left">
             <span className="section-label">Adaptive Learning</span>
             <h2>Learn exactly what matters for your career</h2>
             <p>Our intelligent LMS analyzes your interactions — job views, post likes, profile activity — and generates personalized courses to close your skill gaps.</p>
             <div className="showcase-points">
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -434,7 +433,7 @@ const FirstPage = () => {
                 </span>
                 <span>AI-generated courses from your career context</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -442,7 +441,7 @@ const FirstPage = () => {
                 </span>
                 <span>Domain and weekly performance tracking</span>
               </div>
-              <div className="showcase-point">
+              <div className="showcase-point scroll-reveal">
                 <span className="showcase-point-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M20 6 9 17l-5-5"/>
@@ -463,14 +462,14 @@ const FirstPage = () => {
         <div className="trust-grid-overlay" />
         <div className="trust-particles" />
         <div className="trust-container">
-          <header className="trust-header">
+          <header className="trust-header scroll-reveal">
             <h2 id="trust-title">Your Data. Your Career. Fully Protected.</h2>
             <p>Built with enterprise-grade security, privacy-first architecture, and bias-aware AI systems.</p>
             <div className="trust-divider" />
           </header>
 
           <div className="trust-cards-grid">
-            <article className="trust-card scroll-reveal">
+            <article className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="End-to-end encryption icon">
@@ -491,7 +490,7 @@ const FirstPage = () => {
               </div>
             </article>
 
-            <article className="trust-card scroll-reveal">
+            <article className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Anonymous candidate matching icon">
@@ -519,7 +518,7 @@ const FirstPage = () => {
               </div>
             </article>
 
-            <article className="trust-card scroll-reveal">
+            <article className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Bias-aware AI systems icon">
@@ -545,32 +544,32 @@ const FirstPage = () => {
             </article>
           </div>
 
-          <div className="trust-badge-row">
-            <div className="trust-badge-item">
+          <div className="trust-badge-row scroll-reveal">
+            <div className="trust-badge-item scroll-reveal">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
               <span>GDPR-ready architecture</span>
             </div>
-            <div className="trust-badge-item">
+            <div className="trust-badge-item scroll-reveal">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h12M8 19V9l4-4 4 4v10" /></svg>
               <span>Secure cloud infrastructure</span>
             </div>
-            <div className="trust-badge-item">
+            <div className="trust-badge-item scroll-reveal">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M7 14l3-3 2 2 5-5" /></svg>
               <span>Transparent AI scoring</span>
             </div>
-            <div className="trust-badge-item">
+            <div className="trust-badge-item scroll-reveal">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12M6 12h8M6 18h10" /></svg>
               <span>Data minimization policy</span>
             </div>
-            <div className="trust-badge-item">
+            <div className="trust-badge-item scroll-reveal">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" /><circle cx="16" cy="16" r="3" /><path d="M10.5 10.5l3 3" /></svg>
               <span>Human-in-the-loop validation</span>
             </div>
           </div>
 
-          <div className="trust-faq">
+          <div className="trust-faq scroll-reveal">
             {trustFaqs.map((faq, index) => (
-              <div key={faq.question} className={`trust-faq-item ${activeTrustFaq === index ? 'open' : ''}`}>
+              <div key={faq.question} className={`trust-faq-item scroll-reveal ${activeTrustFaq === index ? 'open' : ''}`}>
                 <button
                   id={`trust-faq-button-${index}`}
                   className="trust-faq-trigger"
@@ -628,36 +627,172 @@ const FirstPage = () => {
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(13, 13, 13, 0.3)', zIndex: 1, pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 2 }}>
           <h2 className="section-title scroll-reveal">Simple, Transparent Pricing</h2>
+          <p className="pricing-subtitle scroll-reveal">Start free. Upgrade when you're ready. Every plan includes our core AI engine.</p>
           <div className="pricing-grid">
-            <div className="pricing-card scroll-reveal">
-              <h3>Starter</h3>
-              <div className="price">Free</div>
-              <p>Personal profile, basic matching, limited mock interviews.</p>
-              <Link to="/landing" className="btn-primary">Create Free Account</Link>
+
+            {/* Starter Plan */}
+            <div className="pricing-card scroll-reveal-scale">
+              <div className="pricing-card-header">
+                <h3>Starter</h3>
+                <p className="pricing-card-desc">Perfect for exploring the platform and getting your AI profile set up.</p>
+              </div>
+              <div className="price">
+                $0<span className="price-period">/month</span>
+              </div>
+              <Link to="/landing" className="btn-primary pricing-btn">Get Started Free</Link>
+              <div className="pricing-divider"></div>
+              <ul className="pricing-features">
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  AI-generated smart profile
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Basic job matching (up to 10/week)
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  3 mock interviews per month
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Career assistant chat (limited)
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Community support
+                </li>
+                <li className="pricing-feature-item excluded">
+                  <span className="pricing-x">✕</span>
+                  Priority job matches
+                </li>
+                <li className="pricing-feature-item excluded">
+                  <span className="pricing-x">✕</span>
+                  Advanced analytics & reports
+                </li>
+                <li className="pricing-feature-item excluded">
+                  <span className="pricing-x">✕</span>
+                  Resume & cover letter builder
+                </li>
+              </ul>
             </div>
-            <div className="pricing-card featured scroll-reveal">
+
+            {/* Pro Plan */}
+            <div className="pricing-card featured scroll-reveal-scale">
               <span className="badge">Most Popular</span>
-              <h3>Pro</h3>
-              <div className="price">For job seekers</div>
-              <p>Unlimited mock interviews, personalized coaching, priority matches.</p>
-              <a href="#" className="btn-primary">Upgrade to Pro</a>
+              <div className="pricing-card-header">
+                <h3>Pro</h3>
+                <p className="pricing-card-desc">Everything you need to land your dream role — faster and smarter.</p>
+              </div>
+              <div className="price">
+                $9<span className="price-period">.99/month</span>
+              </div>
+              <a href="#" className="btn-primary pricing-btn">Upgrade to Pro</a>
+              <div className="pricing-divider"></div>
+              <p className="pricing-includes">Everything in Starter, plus:</p>
+              <ul className="pricing-features">
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Unlimited AI job matching
+                </li>
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Unlimited mock interviews with AI feedback
+                </li>
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Personalized career coaching sessions
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Priority matching & shortlists
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Interview playback & transcript review
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  AI resume & cover letter builder
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Performance analytics dashboard
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Access to all AI agents (Zed, Riz, Seez & more)
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Priority email support
+                </li>
+              </ul>
             </div>
-            <div className="pricing-card scroll-reveal">
-              <h3>Enterprise</h3>
-              <div className="price">For teams</div>
-              <p>Custom integrations, bulk screening, privacy controls.</p>
-              <a href="#" className="btn-secondary">Contact Sales</a>
+
+            {/* Enterprise Plan */}
+            <div className="pricing-card scroll-reveal-scale">
+              <div className="pricing-card-header">
+                <h3>Enterprise</h3>
+                <p className="pricing-card-desc">For teams and organizations that need scale, security, and control.</p>
+              </div>
+              <div className="price">
+                Custom
+              </div>
+              <a href="#" className="btn-secondary pricing-btn">Contact Sales</a>
+              <div className="pricing-divider"></div>
+              <p className="pricing-includes">Everything in Pro, plus:</p>
+              <ul className="pricing-features">
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Bulk candidate screening & ranking
+                </li>
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Custom AI agent configuration
+                </li>
+                <li className="pricing-feature-item included highlight">
+                  <span className="pricing-check">✓</span>
+                  Team management dashboard
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  SSO & advanced privacy controls
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Custom API integrations
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  Dedicated account manager
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  SLA & uptime guarantee
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  On-premise deployment option
+                </li>
+                <li className="pricing-feature-item included">
+                  <span className="pricing-check">✓</span>
+                  White-label & branding
+                </li>
+              </ul>
             </div>
+
           </div>
+          <p className="pricing-note scroll-reveal">All plans include 256-bit encryption, GDPR compliance, and 99.9% uptime. Cancel anytime.</p>
         </div>
       </section>
 
       {/* CTA Band */}
       <section className="cta-band scroll-reveal">
         <div className="cta-content">
-          <h2>Ready to level up your career?</h2>
-          <p>Create your AI profile in minutes — get matched today.</p>
-          <div className="cta-buttons">
+          <h2 className="scroll-reveal">Ready to level up your career?</h2>
+          <p className="scroll-reveal">Create your AI profile in minutes — get matched today.</p>
+          <div className="cta-buttons scroll-reveal">
             <Link to="/landing" className="btn-primary large">Create Free Profile</Link>
           </div>
         </div>
@@ -670,16 +805,16 @@ const FirstPage = () => {
       />
 
       {/* Footer */}
-      <footer className="footer">
+      <footer className="footer scroll-reveal">
         <div className="footer-content">
-          <div className="footer-section">
+          <div className="footer-section scroll-reveal">
             <h4>Product</h4>
             <ul>
               <li><a href="#">Features</a></li>
               <li><a href="#">Pricing</a></li>
             </ul>
           </div>
-          <div className="footer-section">
+          <div className="footer-section scroll-reveal">
             <h4>Company</h4>
             <ul>
               <li><a href="#">About</a></li>
@@ -687,7 +822,7 @@ const FirstPage = () => {
               <li><a href="#">Contact</a></li>
             </ul>
           </div>
-          <div className="footer-section">
+          <div className="footer-section scroll-reveal">
             <h4>Resources</h4>
             <ul>
               <li><a href="#">Blog</a></li>
@@ -695,7 +830,7 @@ const FirstPage = () => {
               <li><a href="#">Privacy Policy</a></li>
             </ul>
           </div>
-          <div className="footer-section">
+          <div className="footer-section scroll-reveal">
             <h4>Legal</h4>
             <ul>
               <li><a href="#">Terms of Service</a></li>
@@ -704,7 +839,7 @@ const FirstPage = () => {
             </ul>
           </div>
         </div>
-        <div className="footer-bottom">
+        <div className="footer-bottom scroll-reveal">
           <p>&copy; 2024 ZedReq — All rights reserved.</p>
         </div>
       </footer>
