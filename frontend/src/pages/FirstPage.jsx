@@ -4,12 +4,16 @@ import DarkVeil from '../components/DarkVeil'
 import Beams from '../components/Beams'
 import CardSwap, { Card } from '../components/CardSwap'
 import ReserveSeatModal from '../components/ReserveSeatModal'
+import SkillGapHeatmap from '../components/SkillGapHeatmap'
 import '../css/pages/FirstPage.css'
 
 const FirstPage = () => {
   const [activeLoop, setActiveLoop] = useState(0)
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [showReserveModal, setShowReserveModal] = useState(false)
+  const [activeTrustFaq, setActiveTrustFaq] = useState(0)
+  const [matchPercent, setMatchPercent] = useState(0)
+  const trustSectionRef = useRef(null)
 
   // 3D card tilt effect
   const handleCardMouseMove = (e) => {
@@ -74,6 +78,29 @@ const FirstPage = () => {
     }
   ]
 
+  const trustFaqs = [
+    {
+      question: 'How is my interview data stored?',
+      answer: 'Interview recordings and transcripts are encrypted in transit and at rest. Access is tightly controlled with role-based permissions and audit logs for every critical action.'
+    },
+    {
+      question: 'Does ZedReq sell my data?',
+      answer: 'No. ZedReq does not sell personal data. Your information is used only to deliver platform features like matching, coaching, and analytics that you explicitly use.'
+    },
+    {
+      question: 'How does bias detection work?',
+      answer: 'Our scoring pipelines are continuously monitored with fairness checks across demographic and experience segments. Detected drifts are flagged for review and model adjustments.'
+    },
+    {
+      question: 'Can I permanently delete my data?',
+      answer: 'Yes. You can request permanent deletion of account data. Deletion workflows remove profile, activity, and related artifacts according to platform retention policy.'
+    },
+    {
+      question: 'Who can access my profile?',
+      answer: 'Profile visibility follows your privacy settings and platform permissions. Sensitive data remains protected and is not exposed to unauthorized users or systems.'
+    }
+  ]
+
   useEffect(() => {
     const loopInterval = setInterval(() => {
       setActiveLoop((prev) => (prev + 1) % loopTexts.length)
@@ -88,6 +115,40 @@ const FirstPage = () => {
     }, 5000)
 
     return () => clearInterval(testimonialInterval)
+  }, [])
+
+  useEffect(() => {
+    const section = trustSectionRef.current
+    if (!section) return undefined
+
+    let counterInterval
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+
+          let current = 0
+          counterInterval = setInterval(() => {
+            current += 2
+            if (current >= 94) {
+              current = 94
+              clearInterval(counterInterval)
+            }
+            setMatchPercent(current)
+          }, 30)
+
+          observer.unobserve(entry.target)
+        })
+      },
+      { threshold: 0.25 }
+    )
+
+    observer.observe(section)
+
+    return () => {
+      if (counterInterval) clearInterval(counterInterval)
+      observer.disconnect()
+    }
   }, [])
 
   // Scroll-triggered fade-in animation
@@ -391,6 +452,149 @@ const FirstPage = () => {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Skill Gap Heatmap */}
+      <SkillGapHeatmap />
+
+      {/* Trust and Privacy */}
+      <section className="trust-section scroll-reveal" ref={trustSectionRef} aria-labelledby="trust-title">
+        <div className="trust-grid-overlay" />
+        <div className="trust-particles" />
+        <div className="trust-container">
+          <header className="trust-header">
+            <h2 id="trust-title">Your Data. Your Career. Fully Protected.</h2>
+            <p>Built with enterprise-grade security, privacy-first architecture, and bias-aware AI systems.</p>
+            <div className="trust-divider" />
+          </header>
+
+          <div className="trust-cards-grid">
+            <article className="trust-card scroll-reveal">
+              <div className="trust-card-head">
+                <div className="trust-icon-wrap" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="img" aria-label="End-to-end encryption icon">
+                    <path d="M12 2l7 3v6c0 5-3.2 8.7-7 10-3.8-1.3-7-5-7-10V5l7-3z" />
+                    <rect x="9" y="11" width="6" height="5" rx="1" />
+                    <path d="M10 11V9a2 2 0 1 1 4 0v2" />
+                  </svg>
+                </div>
+                <h3>End-to-End Encryption</h3>
+              </div>
+              <p>All personal data, conversations, and interview recordings are encrypted in transit and at rest using modern cryptographic standards.</p>
+              <div className="trust-micro trust-micro-encryption" aria-hidden="true">
+                <span className="trust-node">User</span>
+                <span className="trust-link" />
+                <span className="trust-lock-core" />
+                <span className="trust-link" />
+                <span className="trust-node">DB</span>
+              </div>
+            </article>
+
+            <article className="trust-card scroll-reveal">
+              <div className="trust-card-head">
+                <div className="trust-icon-wrap" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="img" aria-label="Anonymous candidate matching icon">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c1.8-4 5-6 8-6s6.2 2 8 6" />
+                    <path d="M8 9.5h8" />
+                  </svg>
+                </div>
+                <h3>Anonymous Candidate Matching</h3>
+              </div>
+              <p>Hiring managers evaluate skills and experience first, minimizing unconscious bias during early-stage screening.</p>
+              <div className="trust-micro trust-micro-anon" aria-hidden="true">
+                <div className="trust-profile-card trust-profile-faded">
+                  <span className="trust-line short" />
+                  <span className="trust-line" />
+                  <span className="trust-line short" />
+                </div>
+                <div className="trust-profile-link" />
+                <div className="trust-profile-card trust-profile-skill">
+                  <span className="trust-line active" />
+                  <span className="trust-line active short" />
+                  <span className="trust-line active" />
+                </div>
+                <div className="trust-counter">{matchPercent}% match</div>
+              </div>
+            </article>
+
+            <article className="trust-card scroll-reveal">
+              <div className="trust-card-head">
+                <div className="trust-icon-wrap" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="img" aria-label="Bias-aware AI systems icon">
+                    <path d="M12 4v16" />
+                    <path d="M5 7h14" />
+                    <path d="M7 7l-2 5h4l-2-5z" />
+                    <path d="M17 7l-2 5h4l-2-5z" />
+                    <circle cx="12" cy="16.5" r="2.2" />
+                  </svg>
+                </div>
+                <h3>Bias-Aware AI Systems</h3>
+              </div>
+              <p>Our AI models are continuously evaluated to ensure balanced scoring and fairness across diverse candidate backgrounds.</p>
+              <div className="trust-micro trust-micro-fairness" aria-hidden="true">
+                <div className="trust-radar">
+                  <span className="ring ring-1" />
+                  <span className="ring ring-2" />
+                  <span className="ring ring-3" />
+                  <span className="radar-fill" />
+                </div>
+                <span className="trust-fairness-badge">Fairness Check</span>
+              </div>
+            </article>
+          </div>
+
+          <div className="trust-badge-row">
+            <div className="trust-badge-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+              <span>GDPR-ready architecture</span>
+            </div>
+            <div className="trust-badge-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h12M8 19V9l4-4 4 4v10" /></svg>
+              <span>Secure cloud infrastructure</span>
+            </div>
+            <div className="trust-badge-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M7 14l3-3 2 2 5-5" /></svg>
+              <span>Transparent AI scoring</span>
+            </div>
+            <div className="trust-badge-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12M6 12h8M6 18h10" /></svg>
+              <span>Data minimization policy</span>
+            </div>
+            <div className="trust-badge-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" /><circle cx="16" cy="16" r="3" /><path d="M10.5 10.5l3 3" /></svg>
+              <span>Human-in-the-loop validation</span>
+            </div>
+          </div>
+
+          <div className="trust-faq">
+            {trustFaqs.map((faq, index) => (
+              <div key={faq.question} className={`trust-faq-item ${activeTrustFaq === index ? 'open' : ''}`}>
+                <button
+                  id={`trust-faq-button-${index}`}
+                  className="trust-faq-trigger"
+                  aria-expanded={activeTrustFaq === index}
+                  aria-controls={`trust-faq-panel-${index}`}
+                  onClick={() => setActiveTrustFaq(index)}
+                >
+                  <span>{faq.question}</span>
+                  <span className="trust-faq-chevron" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+                  </span>
+                </button>
+                <div
+                  id={`trust-faq-panel-${index}`}
+                  role="region"
+                  aria-labelledby={`trust-faq-button-${index}`}
+                  className="trust-faq-panel"
+                >
+                  <p>{faq.answer}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </section>
 
