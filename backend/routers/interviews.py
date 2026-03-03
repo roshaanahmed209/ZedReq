@@ -149,6 +149,24 @@ async def start_interview(
         )
 
 
+@router.get("/my-interviews", response_model=InterviewListResponse)
+async def get_my_interviews(
+    job_id: Optional[int] = Query(None, description="Filter by job ID"),
+    current_user: dict = Depends(get_current_user),
+    service: InterviewService = Depends(get_interview_service)
+):
+    """Get current user's interview history"""
+    interviews = service.get_user_interview_history(
+        user_id=current_user["id"],
+        job_id=job_id
+    )
+    
+    return {
+        "interviews": interviews,
+        "total": len(interviews)
+    }
+
+
 @router.get("/{interview_id}", response_model=InterviewResponse)
 async def get_interview(
     interview_id: int,
@@ -195,24 +213,6 @@ async def complete_interview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to complete interview: {str(e)}"
         )
-
-
-@router.get("/my-interviews", response_model=InterviewListResponse)
-async def get_my_interviews(
-    job_id: Optional[int] = Query(None, description="Filter by job ID"),
-    current_user: dict = Depends(get_current_user),
-    service: InterviewService = Depends(get_interview_service)
-):
-    """Get current user's interview history"""
-    interviews = service.get_user_interview_history(
-        user_id=current_user["id"],
-        job_id=job_id
-    )
-    
-    return {
-        "interviews": interviews,
-        "total": len(interviews)
-    }
 
 
 @router.get("/recommendations/{user_id}")

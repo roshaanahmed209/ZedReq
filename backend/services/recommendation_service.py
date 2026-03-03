@@ -276,11 +276,13 @@ class RecommendationService:
                         job_ids_seen.add(job_data['job_id'])
             
             # Remote jobs: Skill-based recommendations
+            # Always include remote jobs, even if user has location (for more options)
+            remote_limit = max(limit - len(all_candidate_jobs), limit // 2)  # Get at least half limit for remote
             remote_jobs = self._get_remote_job_recommendations(
                 user_embedding,
                 user_skills,
                 preferences,
-                candidate_limit=limit - len(all_candidate_jobs)
+                candidate_limit=remote_limit
             )
             for job_data in remote_jobs:
                 if job_data['job_id'] not in job_ids_seen:
@@ -288,8 +290,28 @@ class RecommendationService:
                     all_candidate_jobs.append(job_data)
                     job_ids_seen.add(job_data['job_id'])
             
+            # If no location-based jobs found, try getting any jobs with embeddings (fallback)
             if not all_candidate_jobs:
-                logger.info(f"No candidate jobs found for user {user_id}")
+                logger.info(f"No location-based or remote jobs found for user {user_id}, trying fallback: any jobs with embeddings")
+                # Fallback: Get any jobs with embeddings, regardless of location
+                fallback_jobs = self._vector_similarity_search(
+                    user_embedding,
+                    preferences,
+                    location_filter=None,
+                    candidate_limit=limit * 2,
+                    exclude_remote=False
+                )
+                for job_data in fallback_jobs:
+                    if job_data['job_id'] not in job_ids_seen:
+                        job_data['location_priority'] = 4  # Fallback level
+                        all_candidate_jobs.append(job_data)
+                        job_ids_seen.add(job_data['job_id'])
+            
+            if not all_candidate_jobs:
+                logger.warning(
+                    f"No candidate jobs found for user {user_id}. "
+                    f"This might indicate: no jobs in database, no jobs with embeddings, or vector search issue."
+                )
                 return []
             
             # Step 6: Calculate composite scores for each candidate
@@ -382,9 +404,18 @@ class RecommendationService:
             
             logger.info(f"Generated {len(recommendations)} job recommendations for user {user_id} (City: {user_city}, Country: {user_country})")
             
-            # Step 8: Store in cache for future requests
+            # Step 8: Store in cache for future requests (only if we have recommendations)
+            # Don't cache empty results to allow retry on next request
             if recommendations:
                 cache_service.store_recommendations(user_id, recommendations)
+            else:
+                # Log why no recommendations were found for debugging
+                logger.warning(
+                    f"No recommendations generated for user {user_id}. "
+                    f"Location: city={user_city}, country={user_country}. "
+                    f"Candidates found: {len(all_candidate_jobs)}. "
+                    f"User embedding exists: {user_embedding is not None}"
+                )
             
             return recommendations
             
@@ -555,6 +586,8 @@ class RecommendationService:
             
             # Build query using pgvector cosine distance operator (<=>)
             # 1 - (embedding <=> user_embedding) gives similarity (0 to 1)
+            # NOTE: %s placeholders are positional, so params order must match
+            # SQL order: embedding (SELECT), ...where_params... (WHERE), embedding (ORDER BY), limit
             query = f"""
             SELECT 
                 job_id,
@@ -566,14 +599,13 @@ class RecommendationService:
             LIMIT %s
             """
             
-            # Add embedding twice (for WHERE and ORDER BY) and limit
-            params.append(embedding_str)
-            params.append(embedding_str)
-            params.append(candidate_limit)
+            # Build final params in the correct order matching %s positions:
+            # 1st %s = embedding (in SELECT), then WHERE params, then embedding (ORDER BY), then LIMIT
+            final_params = [embedding_str] + params + [embedding_str, candidate_limit]
             
             # Execute query using raw database connection
             db_raw = get_database()
-            results = db_raw.fetch_all(query, tuple(params))
+            results = db_raw.fetch_all(query, tuple(final_params))
             
             candidates = []
             for row in results:

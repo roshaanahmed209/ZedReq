@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS live_interviews (
     overall_score INTEGER,
     score_breakdown JSONB,
     feedback TEXT,
+    riz_feedback JSONB,
     attempt_number INTEGER NOT NULL DEFAULT 1,
     status VARCHAR(20) DEFAULT 'pending',
     started_at TIMESTAMP,
@@ -32,6 +33,11 @@ CREATE TABLE IF NOT EXISTS live_interviews (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+'''
+
+ADD_RIZ_FEEDBACK_COLUMN = '''
+ALTER TABLE live_interviews 
+ADD COLUMN IF NOT EXISTS riz_feedback JSONB;
 '''
 
 CREATE_LIVE_INTERVIEWS_INDEXES = '''
@@ -63,12 +69,17 @@ def run_migration():
     
     try:
         # Create table
-        print("  [1/2] Creating live_interviews table...")
+        print("  [1/3] Creating live_interviews table...")
         db.execute(CREATE_LIVE_INTERVIEWS_TABLE)
         print("  [OK] live_interviews table created")
         
+        # Add riz_feedback column (for existing tables that don't have it)
+        print("  [2/3] Adding riz_feedback column (if missing)...")
+        db.execute(ADD_RIZ_FEEDBACK_COLUMN)
+        print("  [OK] riz_feedback column ensured")
+        
         # Create indexes
-        print("  [2/2] Creating indexes...")
+        print("  [3/3] Creating indexes...")
         db.execute(CREATE_LIVE_INTERVIEWS_INDEXES)
         print("  [OK] Indexes created")
         

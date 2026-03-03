@@ -180,6 +180,25 @@ class TavusService:
                 else:
                     logger.error(f"Tavus API timeout after {self.max_retries + 1} attempts")
                     
+            except (httpx.ConnectError, httpx.NetworkError, OSError) as e:
+                # Network/DNS errors - more specific handling
+                last_exception = e
+                error_type = "network"
+                if "getaddrinfo" in str(e).lower() or "name resolution" in str(e).lower():
+                    error_type = "DNS resolution"
+                elif "connection" in str(e).lower():
+                    error_type = "connection"
+                
+                if attempt < self.max_retries:
+                    wait_time = (2 ** attempt) * 0.5
+                    logger.warning(
+                        f"Tavus API {error_type} error (attempt {attempt + 1}/{self.max_retries + 1}), "
+                        f"retrying in {wait_time}s: {str(e)[:200]}"
+                    )
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Tavus API {error_type} error after {self.max_retries + 1} attempts: {str(e)[:200]}")
+                    
             except httpx.HTTPError as e:
                 last_exception = e
                 if attempt < self.max_retries:
@@ -195,7 +214,16 @@ class TavusService:
         # If we get here, all retries failed
         error_msg = f"Tavus API error after {self.max_retries + 1} attempts"
         if last_exception:
-            error_msg += f": {str(last_exception)[:200]}"
+            error_str = str(last_exception)
+            # Provide user-friendly error messages for common network issues
+            if "getaddrinfo" in error_str.lower() or "name resolution" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: DNS resolution failed. Please check your internet connection and ensure the API URL ({self.api_url}) is correct."
+            elif "connection" in error_str.lower() and "refused" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: Connection refused. The API server may be down or unreachable."
+            elif "timeout" in error_str.lower():
+                error_msg = f"Tavus API request timed out after {self.timeout} seconds. The API may be slow or unavailable."
+            else:
+                error_msg += f": {error_str[:200]}"
         raise Exception(error_msg)
     
     def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
@@ -274,6 +302,25 @@ class TavusService:
                 else:
                     logger.error(f"Tavus API timeout after {self.max_retries + 1} attempts")
                     
+            except (httpx.ConnectError, httpx.NetworkError, OSError) as e:
+                # Network/DNS errors - more specific handling
+                last_exception = e
+                error_type = "network"
+                if "getaddrinfo" in str(e).lower() or "name resolution" in str(e).lower():
+                    error_type = "DNS resolution"
+                elif "connection" in str(e).lower():
+                    error_type = "connection"
+                
+                if attempt < self.max_retries:
+                    wait_time = (2 ** attempt) * 0.5
+                    logger.warning(
+                        f"Tavus API {error_type} error (attempt {attempt + 1}/{self.max_retries + 1}), "
+                        f"retrying in {wait_time}s: {str(e)[:200]}"
+                    )
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Tavus API {error_type} error after {self.max_retries + 1} attempts: {str(e)[:200]}")
+                    
             except httpx.HTTPError as e:
                 last_exception = e
                 if attempt < self.max_retries:
@@ -289,7 +336,16 @@ class TavusService:
         # If we get here, all retries failed
         error_msg = f"Tavus API error after {self.max_retries + 1} attempts"
         if last_exception:
-            error_msg += f": {str(last_exception)[:200]}"
+            error_str = str(last_exception)
+            # Provide user-friendly error messages for common network issues
+            if "getaddrinfo" in error_str.lower() or "name resolution" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: DNS resolution failed. Please check your internet connection and ensure the API URL ({self.api_url}) is correct."
+            elif "connection" in error_str.lower() and "refused" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: Connection refused. The API server may be down or unreachable."
+            elif "timeout" in error_str.lower():
+                error_msg = f"Tavus API request timed out after {self.timeout} seconds. The API may be slow or unavailable."
+            else:
+                error_msg += f": {error_str[:200]}"
         raise Exception(error_msg)
     
     def get_conversation_transcript(self, conversation_id: str) -> Dict[str, Any]:
@@ -379,6 +435,25 @@ class TavusService:
                 else:
                     logger.error(f"Tavus API timeout after {self.max_retries + 1} attempts")
                     
+            except (httpx.ConnectError, httpx.NetworkError, OSError) as e:
+                # Network/DNS errors - more specific handling
+                last_exception = e
+                error_type = "network"
+                if "getaddrinfo" in str(e).lower() or "name resolution" in str(e).lower():
+                    error_type = "DNS resolution"
+                elif "connection" in str(e).lower():
+                    error_type = "connection"
+                
+                if attempt < self.max_retries:
+                    wait_time = (2 ** attempt) * 0.5
+                    logger.warning(
+                        f"Tavus API {error_type} error (attempt {attempt + 1}/{self.max_retries + 1}), "
+                        f"retrying in {wait_time}s: {str(e)[:200]}"
+                    )
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Tavus API {error_type} error after {self.max_retries + 1} attempts: {str(e)[:200]}")
+                    
             except httpx.HTTPError as e:
                 last_exception = e
                 if attempt < self.max_retries:
@@ -394,5 +469,14 @@ class TavusService:
         # If we get here, all retries failed
         error_msg = f"Tavus API error after {self.max_retries + 1} attempts"
         if last_exception:
-            error_msg += f": {str(last_exception)[:200]}"
+            error_str = str(last_exception)
+            # Provide user-friendly error messages for common network issues
+            if "getaddrinfo" in error_str.lower() or "name resolution" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: DNS resolution failed. Please check your internet connection and ensure the API URL ({self.api_url}) is correct."
+            elif "connection" in error_str.lower() and "refused" in error_str.lower():
+                error_msg = f"Unable to connect to Tavus API: Connection refused. The API server may be down or unreachable."
+            elif "timeout" in error_str.lower():
+                error_msg = f"Tavus API request timed out after {self.timeout} seconds. The API may be slow or unavailable."
+            else:
+                error_msg += f": {error_str[:200]}"
         raise Exception(error_msg)

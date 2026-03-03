@@ -5,6 +5,7 @@ import Beams from '../components/Beams'
 import CardSwap, { Card } from '../components/CardSwap'
 import ReserveSeatModal from '../components/ReserveSeatModal'
 import SkillGapHeatmap from '../components/SkillGapHeatmap'
+import { Timeline } from '../components/Timeline'
 import '../css/pages/FirstPage.css'
 
 const FirstPage = () => {
@@ -325,134 +326,99 @@ const FirstPage = () => {
         </div>
       </section>
 
-      {/* SHOWCASE 2: CAREER ASSISTANT */}
-      <section className="showcase reverse">
-        <div className="container">
-          <div className="showcase-visual reveal scroll-reveal-right">
-            <div className="showcase-glow"></div>
-            <div className="showcase-image showcase-image-large">
-              <img src="/static/Ai mode Ai assistant.png" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
-            </div>
-          </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-left">
-            <span className="section-label">Career Assistant</span>
-            <h2>Your personal AI career copilot</h2>
-            <p>Search jobs, discover profiles, optimize your resume, and get instant answers to any career question — all through a natural conversation.</p>
-            <div className="showcase-points">
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Natural language job and profile search</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Interactive profile refinement and ATS-ready output</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Instant, context-aware career guidance</span>
+      {/* SHOWCASE TIMELINE — images change as you scroll through features */}
+      <Timeline data={[
+        {
+          title: "AI Career Assistant",
+          content: (
+            <div className="timeline-content">
+              <span className="timeline-label">Career Assistant</span>
+              <h4>Your personal AI career copilot</h4>
+              <p>
+                Search jobs, discover profiles, optimize your resume, and get instant answers
+                to any career question — all through a natural conversation.
+              </p>
+              <ul className="timeline-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Natural language job and profile search
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Interactive profile refinement and ATS-ready output
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Instant, context-aware career guidance
+                </li>
+              </ul>
+              <div className="timeline-image-grid">
+                <img className="timeline-image" src="/static/Ai mode Ai assistant.png" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SHOWCASE 3: MOCK INTERVIEWS */}
-      <section className="showcase">
-        <div className="container">
-          <div className="showcase-visual reveal scroll-reveal-left">
-            <div className="showcase-glow"></div>
-            <div className="showcase-image">
-              <img src="/static/AI mock interview.png" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
-            </div>
-          </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-right">
-            <span className="section-label">Mock Interviews</span>
-            <h2>Practice until you're unstoppable</h2>
-            <p>Face realistic, AI-powered video interviews tailored to your target roles. Receive detailed scoring, strengths analysis, and coaching feedback.</p>
-            <div className="showcase-points">
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Role-specific question sets with dynamic difficulty</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Real-time scoring across technical & communication</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>AI coaching feedback with actionable next steps</span>
+          ),
+        },
+        {
+          title: "Mock Interviews",
+          content: (
+            <div className="timeline-content">
+              <span className="timeline-label">Mock Interviews</span>
+              <h4>Practice until you&apos;re unstoppable</h4>
+              <p>
+                Face realistic, AI-powered video interviews tailored to your target roles.
+                Receive detailed scoring, strengths analysis, and coaching feedback.
+              </p>
+              <ul className="timeline-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Role-specific question sets with dynamic difficulty
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Real-time scoring across technical &amp; communication
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  AI coaching feedback with actionable next steps
+                </li>
+              </ul>
+              <div className="timeline-image-grid">
+                <img className="timeline-image" src="/static/AI mock interview.png" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SHOWCASE 4: LEARNING */}
-      <section className="showcase reverse">
-        <div className="container">
-          <div className="showcase-visual reveal scroll-reveal-right">
-            <div className="showcase-glow"></div>
-            <div className="showcase-image showcase-image-large">
-              <img src="/static/AI powered LMS.png" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
-            </div>
-          </div>
-          <div className="showcase-text reveal reveal-delay-1 scroll-reveal-left">
-            <span className="section-label">Adaptive Learning</span>
-            <h2>Learn exactly what matters for your career</h2>
-            <p>Our intelligent LMS analyzes your interactions — job views, post likes, profile activity — and generates personalized courses to close your skill gaps.</p>
-            <div className="showcase-points">
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>AI-generated courses from your career context</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Domain and weekly performance tracking</span>
-              </div>
-              <div className="showcase-point scroll-reveal">
-                <span className="showcase-point-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                </span>
-                <span>Web-sourced knowledge base for up-to-date content</span>
+          ),
+        },
+        {
+          title: "Adaptive Learning",
+          content: (
+            <div className="timeline-content">
+              <span className="timeline-label">Adaptive Learning</span>
+              <h4>Learn exactly what matters for your career</h4>
+              <p>
+                Our intelligent LMS analyzes your interactions — job views, post likes,
+                profile activity — and generates personalized courses to close your skill gaps.
+              </p>
+              <ul className="timeline-features">
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  AI-generated courses from your career context
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Domain and weekly performance tracking
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Web-sourced knowledge base for up-to-date content
+                </li>
+              </ul>
+              <div className="timeline-image-grid">
+                <img className="timeline-image" src="/static/AI powered LMS.png" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          ),
+        },
+      ]} />
 
       {/* Skill Gap Heatmap */}
       <SkillGapHeatmap />
@@ -493,15 +459,16 @@ const FirstPage = () => {
             <article className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" role="img" aria-label="Anonymous candidate matching icon">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 20c1.8-4 5-6 8-6s6.2 2 8 6" />
-                    <path d="M8 9.5h8" />
+                  <svg viewBox="0 0 24 24" role="img" aria-label="Smart recommendations icon">
+                    <circle cx="12" cy="8" r="3.5" />
+                    <path d="M5 20c1.5-4 4.2-6 7-6s5.5 2 7 6" />
+                    <path d="M17 8l2 2-2 2" />
+                    <path d="M19 10h-4" />
                   </svg>
                 </div>
-                <h3>Anonymous Candidate Matching</h3>
+                <h3>Smart Recommendations</h3>
               </div>
-              <p>Hiring managers evaluate skills and experience first, minimizing unconscious bias during early-stage screening.</p>
+              <p>AI-driven suggestions tailored to your profile, skills, and activity history — so every match gets more accurate over time.</p>
               <div className="trust-micro trust-micro-anon" aria-hidden="true">
                 <div className="trust-profile-card trust-profile-faded">
                   <span className="trust-line short" />

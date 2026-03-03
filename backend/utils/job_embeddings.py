@@ -129,7 +129,13 @@ def generate_job_embedding(job: JobPosting) -> Optional[List[float]]:
 
 def generate_user_profile_embedding(user_id: int, db: Session) -> Optional[List[float]]:
     """
-    Generate embedding for a user profile based on skills, preferences, and experience.
+    Generate embedding for a user profile based on comprehensive profile data.
+    
+    Includes:
+    - Resume/CV text (parsed from uploaded documents)
+    - About section and short description
+    - Skills, certifications, current role/company
+    - Job preferences (location, remote, salary, experience level)
     
     Args:
         user_id: User ID
@@ -154,31 +160,69 @@ def generate_user_profile_embedding(user_id: int, db: Session) -> Optional[List[
             logger.error(f"User {user_id} not found")
             return None
         
-        # Get user description/skills
-        skills = ""
+        # Get user description/profile data (fetch once, reuse)
+        description = None
         if user.description_id:
             description = db.query(Description).filter(Description.desc_id == user.description_id).first()
-            if description and description.skills:
-                skills = description.skills
         
         # Get user preferences
         prefs_service = UserPreferencesService(db)
         preferences = prefs_service.get_user_preferences(user_id)
         
-        # Build user profile text
+        # Build user profile text with comprehensive information
         parts = []
         
-        # Skills
-        if skills:
-            parts.append(f"Skills: {skills}")
+        # Resume/CV text (most comprehensive - includes experience, education, projects, etc.)
+        # Limit to ~3000 chars to avoid token limits while keeping key information
+        if description and description.resume:
+            resume_text = description.resume.strip()
+            if len(resume_text) > 3000:
+                # Truncate but try to keep complete sentences
+                truncated = resume_text[:3000]
+                last_period = truncated.rfind('.')
+                if last_period > 2500:  # Only truncate at sentence if we have enough content
+                    resume_text = truncated[:last_period + 1]
+                else:
+                    resume_text = truncated + "..."
+            parts.append(f"Resume/CV: {resume_text}")
         
-        # Experience Level
+        # About section (user's self-description)
+        if description and description.about:
+            about_text = description.about.strip()
+            if len(about_text) > 1000:
+                about_text = about_text[:1000] + "..."
+            parts.append(f"About: {about_text}")
+        
+        # Short description
+        if description and description.short_desc:
+            parts.append(f"Summary: {description.short_desc.strip()}")
+        
+        # Current role and company
+        if description:
+            role_parts = []
+            if description.role:
+                role_parts.append(description.role)
+            if description.company:
+                role_parts.append(f"at {description.company}")
+            if role_parts:
+                parts.append(f"Current Position: {' '.join(role_parts)}")
+        
+        # Skills (from description)
+        if description and description.skills:
+            parts.append(f"Skills: {description.skills.strip()}")
+        
+        # Certifications
+        if description and description.certificates:
+            certs_text = description.certificates.strip()
+            if len(certs_text) > 500:
+                certs_text = certs_text[:500] + "..."
+            parts.append(f"Certifications: {certs_text}")
+        
+        # Current status/experience level
         if preferences.get('experience_level'):
             parts.append(f"Experience Level: {preferences['experience_level']}")
-        elif user.description_id:
-            description = db.query(Description).filter(Description.desc_id == user.description_id).first()
-            if description and description.current_status:
-                parts.append(f"Current Status: {description.current_status}")
+        elif description and description.current_status:
+            parts.append(f"Current Status: {description.current_status}")
         
         # Preferred Job Type
         if preferences.get('preferred_job_type'):
@@ -201,11 +245,11 @@ def generate_user_profile_embedding(user_id: int, db: Session) -> Optional[List[
                 salary_parts.append(f"${preferences['salary_expectation_max']:,}")
             parts.append(f"Salary Expectation: {' - '.join(salary_parts)}")
         
-        # If no preferences, use basic profile
+        # Fallback if no profile data at all
         if not parts:
             parts.append(f"User Profile: {user.name or 'User'}")
-            if skills:
-                parts.append(f"Skills: {skills}")
+            if description and description.skills:
+                parts.append(f"Skills: {description.skills.strip()}")
         
         user_profile_text = "\n".join(parts) if parts else "User profile"
         

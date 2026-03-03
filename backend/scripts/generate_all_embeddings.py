@@ -79,11 +79,12 @@ def generate_job_embeddings_batch(
             }
         
         # Find jobs missing embeddings using raw SQL (embedding column managed via raw SQL)
+        # Note: We only check for NULL, not empty vectors (pgvector doesn't allow empty vectors)
         count_query = """
         SELECT COUNT(*) as count
         FROM job_postings
         WHERE status = 'active'
-        AND (embedding IS NULL OR embedding = '[]'::vector)
+        AND embedding IS NULL
         """
         
         if limit:
@@ -114,11 +115,12 @@ def generate_job_embeddings_batch(
             }
         
         # Get jobs missing embeddings
+        # Note: We only check for NULL, not empty vectors (pgvector doesn't allow empty vectors)
         query = """
         SELECT job_id
         FROM job_postings
         WHERE status = 'active'
-        AND (embedding IS NULL OR embedding = '[]'::vector)
+        AND embedding IS NULL
         ORDER BY job_id
         """
         
@@ -238,11 +240,12 @@ def generate_user_embeddings_batch(
                 'error': 'embedding_column_missing'
             }
         
+        # Note: We only check for NULL, not empty vectors (pgvector doesn't allow empty vectors)
         count_query = """
         SELECT COUNT(*) as count
         FROM users u
         INNER JOIN description d ON u.description_id = d.desc_id
-        WHERE (d.embedding IS NULL OR d.embedding = '[]'::vector)
+        WHERE d.embedding IS NULL
         """
         
         if limit:
@@ -273,11 +276,12 @@ def generate_user_embeddings_batch(
             }
         
         # Get user IDs missing embeddings
+        # Note: We only check for NULL, not empty vectors (pgvector doesn't allow empty vectors)
         query = """
         SELECT u.uid as user_id
         FROM users u
         INNER JOIN description d ON u.description_id = d.desc_id
-        WHERE (d.embedding IS NULL OR d.embedding = '[]'::vector)
+        WHERE d.embedding IS NULL
         ORDER BY u.uid
         """
         

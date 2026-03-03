@@ -1,8 +1,9 @@
 """User Router - User profile endpoints using ORM"""
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import logging
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -303,21 +304,147 @@ async def get_user_certificates(
 
 @router.put("/profile")
 async def update_profile(
-    profile_data: ProfileUpdate,
+    request: Request,
     current_user: dict = Depends(write_rate_limit),
     settings_service: SettingsService = Depends(get_settings_service)
 ):
-    """Update user profile settings"""
+    """
+    Update user profile settings.
+    Supports both JSON (application/json) and multipart/form-data (file uploads).
+    """
     try:
-        updated_profile = settings_service.update_profile(
-            user_id=current_user["id"],
-            profile_pic=profile_data.profile_pic,
-            cover_pic=profile_data.cover_pic,
-            resume=profile_data.resume,
-            interests=profile_data.interests,
-            location=profile_data.location
-        )
-        return updated_profile
+        content_type = request.headers.get("content-type", "")
+        
+        # Handle multipart/form-data (file uploads)
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            
+            resume_url = None
+            profile_pic_url = None
+            cover_pic_url = None
+            
+            # Upload resume file if provided
+            resume_file = form.get("resume")
+            if resume_file and hasattr(resume_file, 'filename') and resume_file.filename:
+                # Files from request.form() are already UploadFile objects, use directly
+                # But we need to ensure it's properly handled
+                if isinstance(resume_file, UploadFile):
+                    resume_upload = resume_file
+                else:
+                    # Create a wrapper for non-UploadFile objects (shouldn't happen, but just in case)
+                    class FormFileWrapper:
+                        def __init__(self, form_file):
+                            self.filename = form_file.filename
+                            self._file = form_file
+                            self.content_type = getattr(form_file, 'content_type', 'application/octet-stream')
+                            self._content = None
+                        
+                        async def read(self):
+                            if self._content is None:
+                                if hasattr(self._file, 'read'):
+                                    read_result = self._file.read()
+                                    # If it's a coroutine, await it
+                                    if inspect.iscoroutine(read_result):
+                                        self._content = await read_result
+                                    else:
+                                        self._content = read_result
+                                    
+                                    # Ensure content is bytes
+                                    if isinstance(self._content, str):
+                                        self._content = self._content.encode()
+                                    elif not isinstance(self._content, bytes):
+                                        self._content = b''
+                                else:
+                                    self._content = b''
+                            return self._content
+                        
+                        async def seek(self, position):
+                            if hasattr(self._file, 'seek'):
+                                seek_result = self._file.seek(position)
+                                if inspect.iscoroutine(seek_result):
+                                    await seek_result
+                            self._content = None  # Reset cache
+                        
+                        @property
+                        def file(self):
+                            return self._file
+                    
+                    resume_upload = FormFileWrapper(resume_file)
+                
+                resume_url = await settings_service.upload_resume_file(
+                    resume_file=resume_upload,
+                    user_id=current_user["id"]
+                )
+            
+            # Upload profile picture if provided (keep existing Cloudinary upload from frontend for now)
+            profile_pic_file = form.get("profile_pic")
+            if profile_pic_file and hasattr(profile_pic_file, 'filename') and profile_pic_file.filename:
+                # Files from request.form() are already UploadFile objects, use directly
+                if isinstance(profile_pic_file, UploadFile):
+                    profile_pic_upload = profile_pic_file
+                else:
+                    # Fallback: create UploadFile from form file
+                    profile_pic_upload = UploadFile(
+                        filename=profile_pic_file.filename,
+                        file=profile_pic_file.file if hasattr(profile_pic_file, 'file') else None
+                    )
+                profile_pic_url = await settings_service.upload_image_file(
+                    image_file=profile_pic_upload,
+                    file_type='profile_pic'
+                )
+            
+            # Upload cover picture if provided (keep existing Cloudinary upload from frontend for now)
+            cover_pic_file = form.get("cover_pic")
+            if cover_pic_file and hasattr(cover_pic_file, 'filename') and cover_pic_file.filename:
+                # Files from request.form() are already UploadFile objects, use directly
+                if isinstance(cover_pic_file, UploadFile):
+                    cover_pic_upload = cover_pic_file
+                else:
+                    # Fallback: create UploadFile from form file
+                    cover_pic_upload = UploadFile(
+                        filename=cover_pic_file.filename,
+                        file=cover_pic_file.file if hasattr(cover_pic_file, 'file') else None
+                    )
+                cover_pic_url = await settings_service.upload_image_file(
+                    image_file=cover_pic_upload,
+                    file_type='cover_pic'
+                )
+            
+            # Get other form fields (can be strings or files)
+            interests = form.get("interests")
+            location = form.get("location")
+            
+            # Handle profile_pic and cover_pic - they might be URLs (strings) from frontend Cloudinary upload
+            profile_pic_value = form.get("profile_pic")
+            cover_pic_value = form.get("cover_pic")
+            
+            # If they're strings (URLs), use them directly; if they're files, use uploaded URL
+            final_profile_pic = profile_pic_url or (profile_pic_value if isinstance(profile_pic_value, str) else None)
+            final_cover_pic = cover_pic_url or (cover_pic_value if isinstance(cover_pic_value, str) else None)
+            
+            updated_profile = settings_service.update_profile(
+                user_id=current_user["id"],
+                profile_pic=final_profile_pic,
+                cover_pic=final_cover_pic,
+                resume=resume_url,
+                interests=interests,
+                location=location
+            )
+            return updated_profile
+        
+        # Handle JSON (application/json) - backward compatibility
+        else:
+            profile_data = await request.json()
+            updated_profile = settings_service.update_profile(
+                user_id=current_user["id"],
+                profile_pic=profile_data.get('profile_pic'),
+                cover_pic=profile_data.get('cover_pic'),
+                resume=profile_data.get('resume'),
+                interests=profile_data.get('interests'),
+                location=profile_data.get('location')
+            )
+            return updated_profile
+            
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

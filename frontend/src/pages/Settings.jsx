@@ -504,6 +504,8 @@ const Settings = () => {
   const [coverPic, setCoverPic] = useState(null)
   const [coverPicPreview, setCoverPicPreview] = useState(user?.cover_pic || '')
   const [resume, setResume] = useState(null)
+  const [resumeUploaded, setResumeUploaded] = useState(false) // Track if resume was just uploaded
+  const [resumeFileName, setResumeFileName] = useState(null) // Store uploaded file name
   const [interests, setInterests] = useState(user?.interests || '')
   const [location, setLocation] = useState(user?.location || '')
 
@@ -650,6 +652,7 @@ const Settings = () => {
     }
 
     setResume(file)
+    setResumeUploaded(false) // Reset upload status when new file selected
     setError('') // Clear previous errors
   }
 
@@ -685,20 +688,10 @@ const Settings = () => {
         }
       }
 
-      // Validate and upload resume
+      // Handle resume upload - send file directly to backend
       if (resume) {
-        try {
-          // Determine resource type based on file extension
-          const fileExtension = resume.name.split('.').pop().toLowerCase()
-          const resourceType = fileExtension === 'pdf' ? 'raw' : 
-                              ['doc', 'docx'].includes(fileExtension) ? 'raw' : 'raw'
-          const url = await uploadToCloudinary(resume, resourceType === 'raw' ? 'pdf' : 'image')
-          updateData.resume = url
-        } catch (uploadError) {
-          setError('Failed to upload resume. Please ensure the file is valid.')
-          setLoading(false)
-          return
-        }
+        setResumeFileName(resume.name) // Store file name for display
+        // Resume will be sent as multipart/form-data
       }
 
       // Validate and sanitize interests (client-side validation)
@@ -723,18 +716,67 @@ const Settings = () => {
         updateData.location = trimmedLocation
       }
 
-      if (Object.keys(updateData).length > 0) {
-        const response = await api.put('/api/user/profile', updateData)
+      // Check if we have resume file to upload (multipart/form-data) or just data (JSON)
+      // Note: profile_pic and cover_pic still use frontend Cloudinary upload for now
+      const hasResumeFile = resume
+      
+      if (hasResumeFile || Object.keys(updateData).length > 0) {
+        let response
+        
+        if (hasResumeFile) {
+          // Use multipart/form-data for resume file upload
+          const formData = new FormData()
+          
+          // Send resume file directly to backend
+          formData.append('resume', resume)
+          
+          // Include other fields
+          if (interests && interests.trim()) {
+            formData.append('interests', interests.trim())
+          }
+          if (location && location.trim()) {
+            formData.append('location', location.trim())
+          }
+          
+          // Also include profile_pic and cover_pic URLs if they were uploaded to Cloudinary
+          if (updateData.profile_pic) {
+            formData.append('profile_pic', updateData.profile_pic)
+          }
+          if (updateData.cover_pic) {
+            formData.append('cover_pic', updateData.cover_pic)
+          }
+          
+          response = await api.put('/api/user/profile', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+        } else {
+          // Use JSON for non-file updates
+          response = await api.put('/api/user/profile', updateData)
+        }
+        
         if (updateUser && response.data) {
           updateUser({ ...user, ...response.data })
         }
-        setSuccess('Profile updated successfully!')
+        
+        // Show specific success message if resume was uploaded
+        if (resume) {
+          setSuccess(`Resume "${resumeFileName}" uploaded and processed successfully! Your profile has been updated.`)
+          setResumeUploaded(true)
+        } else {
+          setSuccess('Profile updated successfully!')
+        }
+        
         setProfilePic(null)
         setCoverPic(null)
-        setResume(null)
+        setResume(null) // Clear file input
         
         // Clear success message after 5 seconds
-        const timeoutId = setTimeout(() => setSuccess(''), 5000)
+        const timeoutId = setTimeout(() => {
+          setSuccess('')
+          setResumeUploaded(false)
+        }, 5000)
         timeoutRefs.current.push(timeoutId)
       } else {
         setError('No changes to save')
@@ -1106,7 +1148,7 @@ const Settings = () => {
             </FormGroup>
 
             <FormGroup>
-              <Label>Resume (PDF)</Label>
+              <Label>Resume (PDF, DOC, DOCX, TXT)</Label>
               <FileUploadArea onClick={() => document.getElementById('resume').click()}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ margin: '0 auto 10px', color: 'var(--text-light)' }}>
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1116,15 +1158,24 @@ const Settings = () => {
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
                 <p>Click to upload resume</p>
-                <InfoText>Max size: 10MB (PDF only)</InfoText>
+                <InfoText>Max size: 10MB (PDF, DOC, DOCX, TXT)</InfoText>
                 <input
                   id="resume"
                   type="file"
-                  accept="application/pdf"
+                  accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                   onChange={handleResumeChange}
                 />
               </FileUploadArea>
-              {resume && <InfoText>Selected: {resume.name}</InfoText>}
+              {resume && (
+                <InfoText style={{ color: 'var(--primary)', fontWeight: '500' }}>
+                  ✓ Selected: {resume.name}
+                </InfoText>
+              )}
+              {resumeUploaded && resumeFileName && (
+                <InfoText style={{ color: '#22c55e', fontWeight: '500', marginTop: '8px' }}>
+                  ✓ Resume "{resumeFileName}" uploaded and processed successfully!
+                </InfoText>
+              )}
             </FormGroup>
 
             <FormGroup>

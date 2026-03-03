@@ -394,6 +394,21 @@ img, video, iframe {
 .pricing-grid .scroll-reveal-scale:nth-child(2) { transition-delay: 0.2s; }
 .pricing-grid .scroll-reveal-scale:nth-child(3) { transition-delay: 0.32s; }
 
+/* Ultra-subtle section divider gradient lines */
+.trust-section::before,
+.pricing-section::before,
+.cta-band::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 180, 216, 0.08) 50%, transparent 100%);
+    pointer-events: none;
+}
+
 @keyframes textLoop {
     0%, 20% { opacity: 0; transform: translateY(20px); }
     25%, 45% { opacity: 1; transform: translateY(0); }
@@ -484,7 +499,7 @@ img, video, iframe {
     width: 100%;
     padding: 100px 40px;
     position: relative;
-    background: #000000;
+    background: linear-gradient(180deg, #000000 0%, #01010a 50%, #000000 100%);
 }
 
 @media (max-width: 768px) {
@@ -1351,8 +1366,10 @@ img, video, iframe {
 /* Pricing */
 .pricing-section {
     width: 100%;
-    background: #000000;
+    background: radial-gradient(ellipse 50% 35% at 50% 30%, rgba(0, 180, 216, 0.02) 0%, transparent 70%),
+                linear-gradient(180deg, #000000 0%, #020208 50%, #000000 100%);
     padding: 100px 20px;
+    position: relative;
 }
 
 .pricing-subtitle {
@@ -1578,9 +1595,11 @@ img, video, iframe {
 /* CTA Band */
 .cta-band {
     width: 100%;
-    background: #000000;
+    background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(0, 180, 216, 0.025) 0%, transparent 70%),
+                linear-gradient(180deg, #000000 0%, #020209 60%, #000000 100%);
     padding: 100px 20px;
     text-align: center;
+    position: relative;
 }
 
 .cta-content {
@@ -1639,7 +1658,7 @@ img, video, iframe {
 /* Footer */
 .footer {
     width: 100%;
-    background: #0D0D0D;
+    background: linear-gradient(180deg, #0a0a0e 0%, #0D0D0D 40%, #0a0a0a 100%);
     padding: 60px 20px 20px;
     border-top: 1px solid #2a2a2a;
 }
@@ -2563,7 +2582,8 @@ img, video, iframe {
 /* Trust & Privacy Section */
 .trust-section {
     position: relative;
-    background: #000000;
+    background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 180, 216, 0.02) 0%, transparent 70%),
+                linear-gradient(180deg, #000000 0%, #020209 50%, #000000 100%);
     padding: 120px 24px;
     overflow: hidden;
 }
@@ -3048,7 +3068,7 @@ img, video, iframe {
 /* Card Swap Section Layout */
 .features-section-cardswap {
     padding: 100px 40px;
-    background: #000;
+    background: linear-gradient(180deg, #000000 0%, #020208 50%, #000000 100%);
     position: relative;
     overflow: hidden;
 }
@@ -3755,13 +3775,15 @@ img, video, iframe {
 .showcase {
     width: 100%;
     padding: 100px 40px;
-    background: #000000;
+    background: radial-gradient(ellipse 70% 50% at 15% 50%, rgba(0, 180, 216, 0.018) 0%, transparent 60%),
+                linear-gradient(180deg, #000000 0%, #01010a 50%, #000000 100%);
     position: relative;
     overflow: hidden;
 }
 
 .showcase.reverse {
-    background: #000000;
+    background: radial-gradient(ellipse 70% 50% at 85% 50%, rgba(0, 180, 216, 0.018) 0%, transparent 60%),
+                linear-gradient(180deg, #000000 0%, #01010a 50%, #000000 100%);
 }
 
 .showcase .container {
@@ -3919,7 +3941,8 @@ img, video, iframe {
     align-items: center;
     justify-content: center;
     position: relative;
-    background: #000000;
+    background: radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0, 180, 216, 0.015) 0%, transparent 70%),
+                #000000;
 }
 
 .showcase-mission .container {
