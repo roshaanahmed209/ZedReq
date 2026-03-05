@@ -18,11 +18,7 @@ class CostTransaction(Base):
     unit_type = Column(String(20))
     quantity = Column(Numeric(10, 2))
     user_id = Column(Integer, nullable=True, index=True)
-<<<<<<< HEAD
-    metadata = Column(JSONB)
-=======
     extra_metadata = Column('metadata', JSONB)
->>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
     created_at = Column(DateTime, server_default=func.now(), index=True)
     
     def __repr__(self):
@@ -39,10 +35,6 @@ class CostTransaction(Base):
             'unit_type': self.unit_type,
             'quantity': float(self.quantity) if self.quantity else None,
             'user_id': self.user_id,
-<<<<<<< HEAD
-            'metadata': self.metadata,
-=======
             'metadata': self.extra_metadata,
->>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

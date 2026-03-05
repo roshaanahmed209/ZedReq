@@ -5,15 +5,9 @@ from datetime import datetime
 
 
 class AdminLogin(BaseModel):
-<<<<<<< HEAD
-    """Admin login request schema"""
-    username: str = Field(..., min_length=3, max_length=50, description="Username or email")
-    password: str = Field(..., min_length=12, max_length=128, description="Password")
-=======
     """Admin login request schema (password length not enforced here; DB stores strong passwords)"""
     username: str = Field(..., min_length=1, max_length=50, description="Username or email")
     password: str = Field(..., min_length=1, max_length=512, description="Password")
->>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 
 
 class AdminResponse(BaseModel):
@@ -41,11 +35,7 @@ class AdminCreate(BaseModel):
     """Admin creation request schema"""
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-<<<<<<< HEAD
-    password: str = Field(..., min_length=12, max_length=128)
-=======
     password: str = Field(..., min_length=12, max_length=512)
->>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
     role: str = Field(default="admin", pattern="^(admin|super_admin)$")
 
 
