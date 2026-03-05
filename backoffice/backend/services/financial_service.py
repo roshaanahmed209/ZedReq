@@ -46,7 +46,7 @@ class FinancialService:
                 provider_transaction_id=provider_transaction_id,
                 status=status,
                 description=description,
-                metadata=metadata or {}
+                extra_metadata=metadata or {}
             )
             
             self.db.add(transaction)
@@ -149,7 +149,7 @@ class FinancialService:
                 unit_type=unit_type,
                 quantity=quantity,
                 user_id=user_id,
-                metadata=metadata or {}
+                extra_metadata=metadata or {}
             )
             
             self.db.add(transaction)

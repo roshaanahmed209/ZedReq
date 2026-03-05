@@ -1,4 +1,5 @@
 """Admin authentication router"""
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from dependencies.database import get_db

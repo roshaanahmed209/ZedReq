@@ -310,7 +310,7 @@ class AdminService:
             unit_type='token',
             quantity=tokens_used,
             user_id=user_id,
-            metadata={
+            extra_metadata={
                 'model': model,
                 'tokens_used': tokens_used,
                 'cost_per_1k': cost_per_1k_tokens,
@@ -337,7 +337,7 @@ class AdminService:
             unit_type='request',
             quantity=1,
             user_id=user_id,
-            metadata={
+            extra_metadata={
                 'conversation_id': conversation_id,
                 'duration_seconds': duration_seconds
             }
