@@ -2,17 +2,37 @@
 import secrets
 import re
 from typing import Optional, Tuple
+<<<<<<< HEAD
 from passlib.context import CryptContext
+=======
+import bcrypt
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from config.settings import settings
 
+<<<<<<< HEAD
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+=======
+# Bcrypt has a 72-byte limit; we truncate before hashing/verifying
+BCRYPT_MAX_BYTES = 72
+# Max password length allowed by validation/schemas (longer values truncated for hashing)
+MAX_PASSWORD_LENGTH = 512
+
+
+def _to_bcrypt_bytes(password: str) -> bytes:
+    """Return password as bytes, truncated to 72 bytes (UTF-8), so bcrypt never raises."""
+    if not password:
+        return b""
+    encoded = password.encode("utf-8")
+    return encoded[:BCRYPT_MAX_BYTES] if len(encoded) > BCRYPT_MAX_BYTES else encoded
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 
 
 def hash_password(password: str) -> str:
     """
+<<<<<<< HEAD
     Hash a password using bcrypt
     
     Args:
@@ -22,10 +42,17 @@ def hash_password(password: str) -> str:
         Hashed password string
     """
     return pwd_context.hash(password)
+=======
+    Hash a password using bcrypt.
+    Passwords longer than 72 bytes are truncated (bcrypt limit).
+    """
+    return bcrypt.hashpw(_to_bcrypt_bytes(password), bcrypt.gensalt()).decode("ascii")
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
+<<<<<<< HEAD
     Verify a password against a stored hash
     
     Args:
@@ -37,6 +64,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     try:
         return pwd_context.verify(plain_password, hashed_password)
+=======
+    Verify a password against a stored hash.
+    Uses the same 72-byte truncation as hash_password.
+    """
+    try:
+        return bcrypt.checkpw(
+            _to_bcrypt_bytes(plain_password),
+            hashed_password.encode("ascii"),
+        )
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
     except Exception:
         return False
 
@@ -61,8 +98,13 @@ def validate_password_strength(password: str) -> Tuple[bool, Optional[str]]:
     if len(password) < 12:
         return False, "Password must be at least 12 characters long"
     
+<<<<<<< HEAD
     if len(password) > 128:
         return False, "Password is too long (max 128 characters)"
+=======
+    if len(password) > MAX_PASSWORD_LENGTH:
+        return False, f"Password is too long (max {MAX_PASSWORD_LENGTH} characters)"
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
     
     if not re.search(r'[A-Z]', password):
         return False, "Password must contain at least one uppercase letter"

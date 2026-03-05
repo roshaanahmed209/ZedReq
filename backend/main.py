@@ -133,9 +133,15 @@ async def lifespan(app: FastAPI):
     
     # Initialize Firebase (for messaging service)
     try:
+<<<<<<< HEAD
         from utils.firebase_client import initialize_firebase, get_firebase_db
         import logging
         firebase_logger = logging.getLogger('utils.firebase_client')
+=======
+        from firebase.firebase_client import initialize_firebase, get_firebase_db
+        import logging
+        firebase_logger = logging.getLogger('firebase.firebase_client')
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
         firebase_logger.setLevel(logging.INFO)  # Ensure we see Firebase logs
         
         print("Initializing Firebase Realtime Database...")

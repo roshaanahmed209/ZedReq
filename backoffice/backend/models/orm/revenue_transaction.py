@@ -20,7 +20,11 @@ class RevenueTransaction(Base):
     provider_transaction_id = Column(String(255), index=True)
     status = Column(String(20), default='pending', index=True)
     description = Column(Text)
+<<<<<<< HEAD
     metadata = Column(JSONB)
+=======
+    extra_metadata = Column('metadata', JSONB)
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
     created_at = Column(DateTime, server_default=func.now(), index=True)
     completed_at = Column(DateTime)
     
@@ -40,7 +44,11 @@ class RevenueTransaction(Base):
             'provider_transaction_id': self.provider_transaction_id,
             'status': self.status,
             'description': self.description,
+<<<<<<< HEAD
             'metadata': self.metadata,
+=======
+            'metadata': self.extra_metadata,
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
         }

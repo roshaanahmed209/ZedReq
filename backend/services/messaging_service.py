@@ -7,7 +7,11 @@ import logging
 import httpx
 import os
 
+<<<<<<< HEAD
 from utils.firebase_client import get_firebase_db, get_database_url, get_api_key
+=======
+from firebase.firebase_client import get_firebase_db, get_database_url, get_api_key
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 
 logger = logging.getLogger(__name__)
 

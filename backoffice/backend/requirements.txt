@@ -8,7 +8,11 @@ uvicorn[standard]>=0.32.0
 # Authentication & Security
 # ===========================================
 python-jose[cryptography]>=3.3.0
+<<<<<<< HEAD
 passlib[bcrypt]>=1.7.4
+=======
+bcrypt>=4.0.0
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 
 # ===========================================
 # Database

@@ -15,6 +15,10 @@ from models.orm.financial_summary import FinancialSummary
 from models.orm.admin_activity_log import AdminActivityLog
 from services.auth_service import AuthService
 from services.financial_service import FinancialService
+<<<<<<< HEAD
+=======
+from utils.auth import hash_password
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
 from datetime import datetime, timedelta, date
 import random
 import logging
@@ -22,6 +26,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
 
 def create_initial_admin(db: Session):
     """Create initial super_admin user"""
@@ -45,6 +50,39 @@ def create_initial_admin(db: Session):
         return admin_user
     except Exception as e:
         logger.error(f"Error creating admin user: {e}", exc_info=True)
+=======
+# Initial bootstrap admin (bypasses reserved-username check; only used in seed)
+INITIAL_ADMIN_USERNAME = "admin"
+INITIAL_ADMIN_EMAIL = "admin@zedreq.com"
+INITIAL_ADMIN_PASSWORD = "roshaan_admin_zed"  # Change in production after first login
+
+
+def create_initial_admin(db: Session):
+    """Create initial super_admin user (direct ORM to allow reserved username 'admin')."""
+    try:
+        existing = db.query(AdminUser).filter(AdminUser.username == INITIAL_ADMIN_USERNAME).first()
+        if existing:
+            logger.info("Admin user already exists, skipping creation")
+            return existing.to_dict()
+
+        admin_user = AdminUser(
+            username=INITIAL_ADMIN_USERNAME,
+            email=INITIAL_ADMIN_EMAIL,
+            password_hash=hash_password(INITIAL_ADMIN_PASSWORD),
+            role="super_admin",
+            is_active=True,
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+
+        logger.info("✓ Initial super_admin user created")
+        logger.warning("⚠ Default login: %s / %s - CHANGE PASSWORD IN PRODUCTION!", INITIAL_ADMIN_USERNAME, INITIAL_ADMIN_PASSWORD)
+        return admin_user.to_dict()
+    except Exception as e:
+        logger.error("Error creating admin user: %s", e, exc_info=True)
+        db.rollback()
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
         raise
 
 
@@ -88,7 +126,11 @@ def generate_sample_revenue_transactions(db: Session, count: int = 50):
                 provider_transaction_id=f"txn_{random.randint(100000, 999999)}",
                 status=random.choice(statuses),
                 description=f"Sample {transaction_type} transaction",
+<<<<<<< HEAD
                 metadata={'sample': True, 'generated_at': datetime.utcnow().isoformat()},
+=======
+                extra_metadata={'sample': True, 'generated_at': datetime.utcnow().isoformat()},
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
                 created_at=created_at,
                 completed_at=created_at if random.random() > 0.2 else None
             )
@@ -155,7 +197,11 @@ def generate_sample_cost_transactions(db: Session, count: int = 100):
                 unit_type='token' if category == 'openai' else 'request' if category == 'tavus' else 'gb' if category == 'storage' else 'monthly',
                 quantity=quantity,
                 user_id=random.randint(1, 100) if random.random() > 0.5 else None,
+<<<<<<< HEAD
                 metadata={
+=======
+                extra_metadata={
+>>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
                     'sample': True,
                     'generated_at': datetime.utcnow().isoformat(),
                     'category': category
