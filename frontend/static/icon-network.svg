@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gn" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <filter id="glown">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Central node -->
+  <circle cx="100" cy="100" r="16" stroke="url(#gn)" stroke-width="2" filter="url(#glown)" opacity="0.8"/>
+  <circle cx="100" cy="95" r="5" stroke="url(#gn)" stroke-width="1.5" opacity="0.6"/>
+  <path d="M92 108 C92 102 108 102 108 108" stroke="url(#gn)" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <!-- Outer nodes -->
+  <circle cx="55" cy="55" r="12" stroke="url(#gn)" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="145" cy="55" r="12" stroke="url(#gn)" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="55" cy="145" r="12" stroke="url(#gn)" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="145" cy="145" r="12" stroke="url(#gn)" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="100" cy="40" r="10" stroke="url(#gn)" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="100" cy="160" r="10" stroke="url(#gn)" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="40" cy="100" r="10" stroke="url(#gn)" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="160" cy="100" r="10" stroke="url(#gn)" stroke-width="1.5" opacity="0.4"/>
+  <!-- Connection lines -->
+  <line x1="65" y1="63" x2="88" y2="88" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="135" y1="63" x2="112" y2="88" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="65" y1="137" x2="88" y2="112" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="135" y1="137" x2="112" y2="112" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="50" x2="100" y2="84" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="116" x2="100" y2="150" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="50" y1="100" x2="84" y2="100" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <line x1="116" y1="100" x2="150" y2="100" stroke="url(#gn)" stroke-width="1" opacity="0.3"/>
+  <!-- Cross connections -->
+  <line x1="63" y1="55" x2="90" y2="42" stroke="url(#gn)" stroke-width="0.5" opacity="0.15"/>
+  <line x1="110" y1="42" x2="137" y2="55" stroke="url(#gn)" stroke-width="0.5" opacity="0.15"/>
+  <line x1="55" y1="63" x2="42" y2="90" stroke="url(#gn)" stroke-width="0.5" opacity="0.15"/>
+  <line x1="145" y1="63" x2="158" y2="90" stroke="url(#gn)" stroke-width="0.5" opacity="0.15"/>
+  <!-- Pulse circles -->
+  <circle cx="100" cy="100" r="28" stroke="url(#gn)" stroke-width="0.5" opacity="0.15"/>
+  <circle cx="100" cy="100" r="45" stroke="url(#gn)" stroke-width="0.5" opacity="0.08" stroke-dasharray="4 6"/>
+</svg>

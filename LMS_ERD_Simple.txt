@@ -1,0 +1,224 @@
+================================================================================
+                    LMS ENTITY RELATIONSHIP DIAGRAM (TEXT)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CORE ENTITIES                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+users (uid PK)
+    │
+    ├──► lms_user_courses (user_id FK, course_id FK)
+    ├──► lms_user_section_progress (user_id FK, section_id FK)
+    ├──► lms_user_answers (user_id FK, question_id FK)
+    ├──► lms_user_domain_performance (user_id FK, domain_id FK)
+    ├──► lms_activities (user_id FK, course_id FK)
+    ├──► lms_recommendations (user_id FK, course_id FK)
+    ├──► lms_deadlines (user_id FK, course_id FK)
+    ├──► lms_certificates (user_id FK, course_id FK)
+    ├──► lms_dashboard (user_id FK) [1:1]
+    └──► lms_weekly_performance (user_id FK, date)
+
+lms_courses (id PK)
+    │
+    ├──► lms_user_courses (course_id FK)
+    ├──► lms_course_sections (course_id FK)
+    ├──► lms_questions (course_id FK)
+    ├──► lms_course_resources (course_id FK)
+    ├──► lms_activities (course_id FK)
+    ├──► lms_recommendations (course_id FK)
+    ├──► lms_deadlines (course_id FK)
+    └──► lms_certificates (course_id FK)
+
+lms_domains (id PK)
+    │
+    └──► lms_user_domain_performance (domain_id FK)
+
+lms_course_sections (id PK, course_id FK)
+    │
+    ├──► lms_questions (section_id FK)
+    └──► lms_user_section_progress (section_id FK)
+
+lms_questions (id PK, course_id FK, section_id FK)
+    │
+    └──► lms_user_answers (question_id FK)
+
+================================================================================
+                         ENTITY DETAILS
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. lms_courses                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ Attributes: title, description, icon, lessons, duration, category,           │
+│             difficulty, is_active, created_at, updated_at                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. lms_domains                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ Attributes: name (UNIQUE), description, icon, created_at                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. lms_user_courses                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), course_id → lms_courses(id)                      │
+│ Attributes: progress (0-100), status, started_at, completed_at,           │
+│             last_accessed_at                                                │
+│ UNIQUE: (user_id, course_id)                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. lms_course_sections                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: course_id → lms_courses(id)                                            │
+│ Attributes: title, description, order_index, total_items                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. lms_user_section_progress                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), section_id → lms_course_sections(id)             │
+│ Attributes: completed_items, is_completed                                    │
+│ UNIQUE: (user_id, section_id)                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6. lms_questions                                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: course_id → lms_courses(id), section_id → lms_course_sections(id)     │
+│ Attributes: question_text, question_type, options (JSONB),                │
+│             correct_answer, points, order_index                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7. lms_user_answers                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), question_id → lms_questions(id)                 │
+│ Attributes: answer_text, is_correct, points_earned, submitted_at,          │
+│             evaluated_at, feedback                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8. lms_user_domain_performance                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), domain_id → lms_domains(id)                      │
+│ Attributes: questions_answered, correct_answers, accuracy_percentage       │
+│ UNIQUE: (user_id, domain_id)                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 9. lms_activities                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), course_id → lms_courses(id) [nullable]           │
+│ Attributes: activity_type, title, description, icon, created_at             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 10. lms_recommendations                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), course_id → lms_courses(id)                      │
+│ Attributes: reason, priority, is_dismissed, created_at                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 11. lms_deadlines                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), course_id → lms_courses(id) [nullable]           │
+│ Attributes: title, description, due_date, is_completed, completed_at,       │
+│             reminder_sent                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 12. lms_certificates                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid), course_id → lms_courses(id)                      │
+│ Attributes: certificate_number (UNIQUE), title, issued_at, expiry_date,    │
+│             pdf_url                                                         │
+│ UNIQUE: (user_id, course_id)                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 13. lms_course_resources                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: course_id → lms_courses(id)                                            │
+│ Attributes: title, resource_type, url, description, order_index             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 14. lms_dashboard                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid)                                                    │
+│ Attributes: total_questions, correct_answers, wrong_answers,                │
+│             overall_accuracy, day_streak, last_activity_date               │
+│ UNIQUE: (user_id) [1:1 relationship]                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 15. lms_weekly_performance                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PK: id (SERIAL)                                                             │
+│ FK: user_id → users(uid)                                                    │
+│ Attributes: date, questions_answered, correct_answers, wrong_answers,       │
+│             study_time_minutes                                              │
+│ UNIQUE: (user_id, date)                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         RELATIONSHIP SUMMARY
+================================================================================
+
+ONE-TO-MANY (1:N):
+  • users → lms_user_courses
+  • users → lms_user_answers
+  • users → lms_activities
+  • users → lms_recommendations
+  • users → lms_deadlines
+  • users → lms_weekly_performance
+  • lms_courses → lms_course_sections
+  • lms_courses → lms_questions
+  • lms_courses → lms_course_resources
+  • lms_course_sections → lms_questions
+  • lms_questions → lms_user_answers
+
+ONE-TO-ONE (1:1):
+  • users → lms_dashboard
+
+MANY-TO-MANY (M:N via junction tables):
+  • users ↔ lms_courses (via lms_user_courses)
+  • users ↔ lms_domains (via lms_user_domain_performance)
+  • users ↔ lms_course_sections (via lms_user_section_progress)
+
+================================================================================
+                         KEY CONSTRAINTS
+================================================================================
+
+UNIQUE CONSTRAINTS:
+  ✓ lms_user_courses: (user_id, course_id)
+  ✓ lms_user_section_progress: (user_id, section_id)
+  ✓ lms_user_domain_performance: (user_id, domain_id)
+  ✓ lms_certificates: (user_id, course_id)
+  ✓ lms_weekly_performance: (user_id, date)
+  ✓ lms_dashboard: (user_id)
+  ✓ lms_domains: (name)
+
+FOREIGN KEY CASCADE RULES:
+  • ON DELETE CASCADE: Most user-related tables
+  • ON DELETE SET NULL: Optional course references in activities/deadlines
+
+================================================================================

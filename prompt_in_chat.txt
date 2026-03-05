@@ -1,0 +1,83 @@
+so here is the use case i have my main agent in which is zed and what i want from this is, this agent will be specific for each user, there will be a TTL based knowledge base for this agent, this agent keeps the context for the user, the interest of user, like if the user likes a post what content does the post talks about, this agent will be maintaining all the context like field, in which job field the user is interested in, which domain, like HR, mechanical engr, computer science, what languages like python node js, react and so on, the work of this agent is to only maintain the context of user, and save  this in the database,
+
+
+so now we move to @backend/agents/Azel_agent.py this Azel agent will use the information for saved from zed using this information azel will create questions along with answers and these questions will be saved in the database with the answers
+
+now here is what will happen once the context is updated from zed it will inform Azel and then the Azel pipeline will start:
+
+1- analyzes the context from azel 
+2- use google search and find relevenat data which aligns with the context 
+3- since we will be using free acounts for now i want that for each search it also keeps the URLS saved in the DB for that course, like for example the agent analyzed the context and triggers the  google search now for return of search there will be URLS so for that course use the UUID(user id), Course id, URL id and URL to save in the DB.
+4- use those URLS to create TTL based knowledge base here is a description of how  i plan to use the knowledge base: since there will be many users and each user can have max 5 courses and we cannot afford to maintain all the knowledge bases considering a large user base so i plan that we will use the URLS to create knowledge base on qdrant and after the questions and answers(detailed answers) are created just save those questions in the DB 
+
+
+move this :
+
+Profile Information
+Member since
+January 2026
+Email
+admin@roshaan.com
+,
+
+Featured
+,
+Interests
+Recommendations
+
+
+all of these components in a new column just beside the main one, the main column width should not be changed at all
+
+
+i have added URL links of the profiles in the database in the users table so this can be used by vec_agent.
+now we will proceed to posts and posts link creation, i also have to verify first that how and when the links are saved in the database for the user profiles.
+the last thing that will be left is jobs 
+
+
+also after the user sign in with google auth the procedure should same as signup since the user is logging in with google auth, what database entries are being made how is the user registered in our system?
+
+i am planning to fetch users location, and also modifying the recommendation service to keep the locations on first priority, the algorithm for locations that i plan is easy, what we will do is we will first fetch the users location country and city, for recommendation there will levels to it, on first level the jobs which are in the users city will be recommended to user and in the second level we will move to country level, this implementation will on all job section, andin the remote job section the recommendation service will be based on skills as maybe already implemented
+
+
+
+
+
+
+
+i have added a file @ZedReq/to_add.txt  this contains code which needs to be added in the firstpage match the theme and the fontstyle 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

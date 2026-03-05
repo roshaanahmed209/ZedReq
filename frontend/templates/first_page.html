@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZedReq — AI-Powered Career Platform for Smarter Hiring & Growth</title>
+    <meta name="description" content="ZedReq matches talent to opportunity with intelligent job-matching, an AI career assistant, and real-time mock interviews. Minimal, secure, and privacy-first platform to accelerate your next career move.">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="ZedReq — AI-Powered Career Platform">
+    <meta property="og:description" content="Match with jobs, polish applications with an AI assistant, and practice interviews with instant feedback. Join ZedReq today.">
+    <meta property="og:type" content="website">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/first_page.css') }}">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-watermark">ZedReq</div>
+        <div class="hero-content">
+            <div class="logo-container">
+                <h1 class="main-logo">
+                    <span class="typewriter-text">ZedReq</span>
+                </h1>
+            </div>
+            <h2 class="hero-headline">Find the role that fits you — faster, smarter, with AI.</h2>
+            <p class="hero-subheadline">AI job matching • Intelligent career assistant • Realistic mock interviews</p>
+            <div class="hero-cta">
+                <a href="/landing" class="btn-primary" aria-label="Start ZedReq job matching">Get Matched — It's Free</a>
+                <a href="#platform-tour" class="btn-secondary">Reserve A Seat</a>
+            </div>
+            <p class="hero-microcopy">No résumé required — AI builds a smart profile in minutes.</p>
+            
+            <!-- Text Loop -->
+            <div class="text-loop">
+                <p class="loop-item active">Curated to your skills.</p>
+                <p class="loop-item">Optimized for hiring managers.</p>
+                <p class="loop-item">Practice until you ace it.</p>
+                <p class="loop-item">Private, secure, and bias-aware.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Cards -->
+    <section class="features-section">
+        <div class="feature-card scroll-reveal-scale">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <circle cx="7" cy="7" r="1.5"/>
+                </svg>
+            </div>
+            <h3>AI Job Matching</h3>
+            <p class="feature-one-liner">Precision matches based on skills, goals, and culture fit.</p>
+            <ul class="feature-bullets">
+                <li>Smart skill parsing from CVs and profiles</li>
+                <li>Role-fit score and interview readiness indicator</li>
+                <li>Curated shortlists — apply faster</li>
+            </ul>
+            <a href="#" class="feature-cta">See Matches</a>
+        </div>
+        
+        <div class="feature-card scroll-reveal-scale">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M13 8H7"/>
+                    <path d="M17 12H7"/>
+                    <circle cx="18" cy="5" r="3"/>
+                    <path d="M16 3v4M20 3v4M18 1v2M18 7v2"/>
+                </svg>
+            </div>
+            <h3>AI Career Assistant</h3>
+            <p class="feature-one-liner">Personalized coaching for résumés, cover letters, and applications.</p>
+            <ul class="feature-bullets">
+                <li>Interactive profile refinement</li>
+                <li>Custom application templates & ATS-friendly output</li>
+                <li>Instant answers to career queries</li>
+            </ul>
+            <a href="#" class="feature-cta">Talk to Assistant</a>
+        </div>
+        
+        <div class="feature-card scroll-reveal-scale">
+            <div class="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </div>
+            <h3>AI Mock Interviews</h3>
+            <p class="feature-one-liner">Practice with dynamic interviews and receive structured feedback.</p>
+            <ul class="feature-bullets">
+                <li>Role-specific question sets</li>
+                <li>Real-time scoring and tips</li>
+                <li>Playback + transcript for review</li>
+            </ul>
+            <a href="#" class="feature-cta">Start a Mock Interview</a>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <h2 class="section-title scroll-reveal">How It Works</h2>
+        <div class="timeline">
+            <div class="timeline-step scroll-reveal-scale">
+                <div class="step-number">1</div>
+                <h3>Create your AI profile</h3>
+                <p>Answer a few guided prompts. ZedReq extracts skills, projects and career goals automatically.</p>
+            </div>
+            <div class="timeline-step scroll-reveal-scale">
+                <div class="step-number">2</div>
+                <h3>Get matched & recommended roles</h3>
+                <p>Receive prioritized matches with role-fit scores and a suggested application checklist.</p>
+            </div>
+            <div class="timeline-step scroll-reveal-scale">
+                <div class="step-number">3</div>
+                <h3>Practice & apply confidently</h3>
+                <p>Polish your application with the AI assistant and rehearse interviews until you're interview-ready.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Metrics -->
+    <section class="metrics-section">
+        <div class="metrics-grid">
+            <div class="metric-item scroll-reveal">
+                <div class="metric-number" data-count="1000">1000</div>
+                <p class="metric-label">matched roles</p>
+            </div>
+            <div class="metric-item scroll-reveal">
+                <div class="metric-number" data-count="4.8/5">4.8/5</div>
+                <p class="metric-label">average candidate satisfaction</p>
+            </div>
+            <div class="metric-item scroll-reveal">
+                <div class="metric-number" data-count="200">200</div>
+                <p class="metric-label">hiring partners</p>
+            </div>
+            <div class="metric-item scroll-reveal">
+                <div class="metric-number">100%</div>
+                <p class="metric-label">privacy & compliance</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials-section">
+        <h2 class="section-title scroll-reveal">What Candidates Say</h2>
+        <div class="testimonials-carousel scroll-reveal" role="region" aria-label="testimonial carousel">
+            <div class="testimonial-card active">
+                <p class="testimonial-quote">"ZedReq helped me find the right role in two weeks — perfect fit and smooth process."</p>
+                <p class="testimonial-author">— Ayesha K., Data Analyst</p>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"The mock interviews made all the difference; the feedback was actionable and specific."</p>
+                <p class="testimonial-author">— Bilal R., Software Engineer</p>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"AI-powered matching saved me hours of searching — precise recommendations every time."</p>
+                <p class="testimonial-author">— Sarah M., Product Manager</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing-section">
+        <h2 class="section-title scroll-reveal">Simple, Transparent Pricing</h2>
+        <p class="pricing-subtitle scroll-reveal">Start free. Upgrade when you're ready. Every plan includes our core AI engine.</p>
+        <div class="pricing-grid">
+
+            <!-- Starter Plan -->
+            <div class="pricing-card scroll-reveal-scale">
+                <div class="pricing-card-header">
+                    <h3>Starter</h3>
+                    <p class="pricing-card-desc">Perfect for exploring the platform and getting your AI profile set up.</p>
+                </div>
+                <div class="price">$0<span class="price-period">/month</span></div>
+                <a href="/landing" class="btn-primary pricing-btn">Get Started Free</a>
+                <div class="pricing-divider"></div>
+                <ul class="pricing-features">
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> AI-generated smart profile</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Basic job matching (up to 10/week)</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> 3 mock interviews per month</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Career assistant chat (limited)</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Community support</li>
+                    <li class="pricing-feature-item excluded"><span class="pricing-x">✕</span> Priority job matches</li>
+                    <li class="pricing-feature-item excluded"><span class="pricing-x">✕</span> Advanced analytics & reports</li>
+                    <li class="pricing-feature-item excluded"><span class="pricing-x">✕</span> Resume & cover letter builder</li>
+                </ul>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured scroll-reveal-scale">
+                <span class="badge">Most Popular</span>
+                <div class="pricing-card-header">
+                    <h3>Pro</h3>
+                    <p class="pricing-card-desc">Everything you need to land your dream role — faster and smarter.</p>
+                </div>
+                <div class="price">$9<span class="price-period">.99/month</span></div>
+                <a href="#" class="btn-primary pricing-btn">Upgrade to Pro</a>
+                <div class="pricing-divider"></div>
+                <p class="pricing-includes">Everything in Starter, plus:</p>
+                <ul class="pricing-features">
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Unlimited AI job matching</li>
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Unlimited mock interviews with AI feedback</li>
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Personalized career coaching sessions</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Priority matching & shortlists</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Interview playback & transcript review</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> AI resume & cover letter builder</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Performance analytics dashboard</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Access to all AI agents (Zed, Riz, Seez & more)</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Priority email support</li>
+                </ul>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card scroll-reveal-scale">
+                <div class="pricing-card-header">
+                    <h3>Enterprise</h3>
+                    <p class="pricing-card-desc">For teams and organizations that need scale, security, and control.</p>
+                </div>
+                <div class="price">Custom</div>
+                <a href="#" class="btn-secondary pricing-btn">Contact Sales</a>
+                <div class="pricing-divider"></div>
+                <p class="pricing-includes">Everything in Pro, plus:</p>
+                <ul class="pricing-features">
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Bulk candidate screening & ranking</li>
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Custom AI agent configuration</li>
+                    <li class="pricing-feature-item included highlight"><span class="pricing-check">✓</span> Team management dashboard</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> SSO & advanced privacy controls</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Custom API integrations</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> Dedicated account manager</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> SLA & uptime guarantee</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> On-premise deployment option</li>
+                    <li class="pricing-feature-item included"><span class="pricing-check">✓</span> White-label & branding</li>
+                </ul>
+            </div>
+
+        </div>
+        <p class="pricing-note scroll-reveal">All plans include 256-bit encryption, GDPR compliance, and 99.9% uptime. Cancel anytime.</p>
+    </section>
+
+    <!-- CTA Band -->
+    <section class="cta-band scroll-reveal">
+        <div class="cta-content">
+            <h2 class="scroll-reveal">Ready to level up your career?</h2>
+            <p class="scroll-reveal">Create your AI profile in minutes — get matched today.</p>
+            <div class="cta-buttons scroll-reveal">
+                <a href="/landing" class="btn-primary large">Create Free Profile</a>
+                <a href="#" class="btn-secondary">Watch Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer scroll-reveal">
+        <div class="footer-content">
+            <div class="footer-section scroll-reveal">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#">Features</a></li>
+                    <li><a href="#">Pricing</a></li>
+                </ul>
+            </div>
+            <div class="footer-section scroll-reveal">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section scroll-reveal">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-section scroll-reveal">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Cookie Policy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom scroll-reveal">
+            <p>&copy; 2024 ZedReq — All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/first_page.js') }}"></script>
+</body>
+</html>

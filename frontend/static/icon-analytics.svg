@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="ga2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <filter id="glowa2">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Chart frame -->
+  <line x1="40" y1="40" x2="40" y2="155" stroke="url(#ga2)" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+  <line x1="40" y1="155" x2="165" y2="155" stroke="url(#ga2)" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+  <!-- Grid lines -->
+  <line x1="40" y1="120" x2="165" y2="120" stroke="url(#ga2)" stroke-width="0.5" opacity="0.1" stroke-dasharray="4 4"/>
+  <line x1="40" y1="85" x2="165" y2="85" stroke="url(#ga2)" stroke-width="0.5" opacity="0.1" stroke-dasharray="4 4"/>
+  <line x1="40" y1="50" x2="165" y2="50" stroke="url(#ga2)" stroke-width="0.5" opacity="0.1" stroke-dasharray="4 4"/>
+  <!-- Bar chart -->
+  <rect x="52" y="110" width="16" height="45" rx="3" fill="url(#ga2)" opacity="0.3"/>
+  <rect x="76" y="85" width="16" height="70" rx="3" fill="url(#ga2)" opacity="0.4"/>
+  <rect x="100" y="95" width="16" height="60" rx="3" fill="url(#ga2)" opacity="0.5"/>
+  <rect x="124" y="65" width="16" height="90" rx="3" fill="url(#ga2)" opacity="0.7" filter="url(#glowa2)"/>
+  <rect x="148" y="75" width="16" height="80" rx="3" fill="url(#ga2)" opacity="0.5"/>
+  <!-- Trend line -->
+  <polyline points="60,105 84,80 108,88 132,58 156,68" stroke="#10b981" stroke-width="2" fill="none" filter="url(#glowa2)" opacity="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Trend dots -->
+  <circle cx="60" cy="105" r="3" fill="#10b981" opacity="0.9"/>
+  <circle cx="84" cy="80" r="3" fill="#10b981" opacity="0.9"/>
+  <circle cx="108" cy="88" r="3" fill="#10b981" opacity="0.9"/>
+  <circle cx="132" cy="58" r="4" fill="#10b981" filter="url(#glowa2)" opacity="1"/>
+  <circle cx="156" cy="68" r="3" fill="#10b981" opacity="0.9"/>
+  <!-- Arrow up -->
+  <path d="M150 38 L155 30 L160 38" stroke="#10b981" stroke-width="2" fill="none" opacity="0.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="155" y1="30" x2="155" y2="48" stroke="#10b981" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+</svg>

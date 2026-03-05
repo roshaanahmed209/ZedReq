@@ -1,0 +1,308 @@
+================================================================================
+                    ZedReq JOB PORTAL - DATABASE SCHEMA
+                         Discussion Summary
+                         Date: January 21, 2025
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. Overview
+2. Existing Tables (Before Restructure)
+3. New Schema Design
+4. Table Relationships
+5. Example Data
+6. Common Queries
+7. Indexes
+8. Next Steps
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+The job portal feature allows users to:
+- Post job listings
+- Apply to jobs
+- Save/bookmark jobs for later
+- Track application status
+- View AI-matched job recommendations
+
+================================================================================
+2. EXISTING TABLES (Before Restructure)
+================================================================================
+
+The old `job` table was basic and had limitations:
+
+    CREATE TABLE job (
+        job_id SERIAL PRIMARY KEY,
+        job_desc TEXT NOT NULL,
+        designation VARCHAR(100),
+        uid INTEGER REFERENCES users(uid),  -- Was unclear (poster or applicant?)
+        created_at TIMESTAMP,
+        updated_at TIMESTAMP
+    );
+
+ISSUES:
+- No clear distinction between job poster and applicant
+- One job could only have one applicant per row
+- Missing fields for proper job portal (salary, location, type, etc.)
+
+================================================================================
+3. NEW SCHEMA DESIGN
+================================================================================
+
+-------------------------------------------------------------------------------
+TABLE 1: job_postings (Core Job Listings)
+-------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS job_postings (
+    job_id SERIAL PRIMARY KEY,
+    poster_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    
+    -- Core Job Info
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    company_name VARCHAR(150),
+    location VARCHAR(150),
+    
+    -- Type & Requirements
+    job_type VARCHAR(50) DEFAULT 'full-time',  -- full-time, part-time, contract, internship
+    is_remote BOOLEAN DEFAULT FALSE,
+    experience_level VARCHAR(50),               -- entry, mid, senior
+    skills_required TEXT,                       -- Comma-separated skills
+    
+    -- Salary (optional)
+    salary_min INTEGER,
+    salary_max INTEGER,
+    
+    -- Status
+    status VARCHAR(20) DEFAULT 'active',        -- active, closed, draft
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COLUMNS (13 total):
+    - job_id         : Unique identifier for the job posting
+    - poster_id      : User who posted the job (FK to users.uid)
+    - title          : Job title (e.g., "Senior Software Engineer")
+    - description    : Full job description
+    - company_name   : Name of the hiring company
+    - location       : Job location (e.g., "San Francisco, CA")
+    - job_type       : full-time, part-time, contract, internship
+    - is_remote      : Whether job allows remote work
+    - experience_level: entry, mid, senior
+    - skills_required: Comma-separated list of required skills
+    - salary_min     : Minimum salary offered
+    - salary_max     : Maximum salary offered
+    - status         : active, closed, or draft
+    - created_at     : When job was posted
+    - updated_at     : Last update timestamp
+
+-------------------------------------------------------------------------------
+TABLE 2: job_applications (Track Who Applied to What)
+-------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS job_applications (
+    application_id SERIAL PRIMARY KEY,
+    job_id INTEGER NOT NULL REFERENCES job_postings(job_id) ON DELETE CASCADE,
+    applicant_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    
+    status VARCHAR(30) DEFAULT 'pending',       -- pending, reviewed, shortlisted, rejected, hired
+    cover_letter TEXT,
+    match_score INTEGER,                        -- AI match percentage (0-100)
+    
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(job_id, applicant_id)                -- One application per user per job
+);
+
+COLUMNS (7 total):
+    - application_id : Unique identifier for the application
+    - job_id         : Which job was applied to (FK to job_postings.job_id)
+    - applicant_id   : Who applied (FK to users.uid)
+    - status         : Application status (pending, reviewed, shortlisted, rejected, hired)
+    - cover_letter   : Optional cover letter text
+    - match_score    : AI-calculated match percentage (0-100)
+    - applied_at     : When the application was submitted
+
+CONSTRAINT:
+    - UNIQUE(job_id, applicant_id) prevents duplicate applications
+
+-------------------------------------------------------------------------------
+TABLE 3: job_saved (Bookmarked/Saved Jobs)
+-------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS job_saved (
+    saved_id SERIAL PRIMARY KEY,
+    job_id INTEGER NOT NULL REFERENCES job_postings(job_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(job_id, user_id)
+);
+
+COLUMNS (4 total):
+    - saved_id  : Unique identifier
+    - job_id    : Which job was saved (FK to job_postings.job_id)
+    - user_id   : Who saved it (FK to users.uid)
+    - saved_at  : When it was saved
+
+================================================================================
+4. TABLE RELATIONSHIPS
+================================================================================
+
+                    ┌─────────────────┐
+                    │     users       │
+                    │                 │
+                    │  uid (PK)       │
+                    │  username       │
+                    │  name           │
+                    │  ...            │
+                    └────────┬────────┘
+                             │
+            ┌────────────────┼────────────────┐
+            │                │                │
+            │ (poster_id)    │ (applicant_id) │ (user_id)
+            ▼                ▼                ▼
+    ┌───────────────┐  ┌──────────────┐  ┌───────────┐
+    │ job_postings  │  │    job_      │  │ job_saved │
+    │               │  │ applications │  │           │
+    │ job_id (PK)   │  │              │  │ job_id    │
+    │ poster_id(FK) │  │ job_id (FK)──┼──│ user_id   │
+    │ title         │  │ applicant_id │  └───────────┘
+    │ description   │  │ status       │
+    │ ...           │  │ match_score  │
+    └───────┬───────┘  └──────────────┘
+            │                 ▲
+            │                 │
+            └─────────────────┘
+              (job_id FK)
+
+RELATIONSHIPS:
+    - One user can post MANY jobs (users → job_postings: 1:N)
+    - One user can apply to MANY jobs (users → job_applications: 1:N)
+    - One job can have MANY applications (job_postings → job_applications: 1:N)
+    - One user can save MANY jobs (users → job_saved: 1:N)
+
+================================================================================
+5. EXAMPLE DATA
+================================================================================
+
+-- job_postings
+| job_id | poster_id | title              | company_name | location        | job_type  | is_remote | status |
+|--------|-----------|--------------------|--------------|-----------------|-----------|-----------| -------|
+| 1      | 5         | Senior Developer   | TechCorp     | San Francisco   | full-time | false     | active |
+| 2      | 5         | Data Analyst       | TechCorp     | New York        | full-time | false     | active |
+| 3      | 8         | UI/UX Designer     | DesignCo     | Remote          | full-time | true      | active |
+| 4      | 12        | Backend Engineer   | StartupXYZ   | Austin, TX      | contract  | true      | active |
+
+-- job_applications
+| application_id | job_id | applicant_id | status      | match_score | applied_at |
+|----------------|--------|--------------|-------------|-------------|------------|
+| 1              | 1      | 10           | pending     | 85          | 2025-01-20 |
+| 2              | 1      | 12           | reviewed    | 92          | 2025-01-19 |
+| 3              | 1      | 15           | shortlisted | 78          | 2025-01-18 |
+| 4              | 2      | 10           | pending     | 70          | 2025-01-20 |
+| 5              | 3      | 12           | hired       | 95          | 2025-01-15 |
+
+-- job_saved
+| saved_id | job_id | user_id | saved_at   |
+|----------|--------|---------|------------|
+| 1        | 1      | 10      | 2025-01-19 |
+| 2        | 2      | 10      | 2025-01-19 |
+| 3        | 4      | 15      | 2025-01-20 |
+
+================================================================================
+6. COMMON QUERIES
+================================================================================
+
+-- 1. Get all active job postings
+SELECT * FROM job_postings WHERE status = 'active' ORDER BY created_at DESC;
+
+-- 2. Get all applicants for a specific job
+SELECT u.uid, u.name, u.username, ja.status, ja.match_score, ja.applied_at
+FROM job_applications ja
+JOIN users u ON ja.applicant_id = u.uid
+WHERE ja.job_id = 1
+ORDER BY ja.applied_at DESC;
+
+-- 3. Get all jobs a user has applied to
+SELECT jp.job_id, jp.title, jp.company_name, jp.location, ja.status, ja.applied_at
+FROM job_applications ja
+JOIN job_postings jp ON ja.job_id = jp.job_id
+WHERE ja.applicant_id = 10
+ORDER BY ja.applied_at DESC;
+
+-- 4. Get jobs posted by a specific user
+SELECT * FROM job_postings WHERE poster_id = 5 ORDER BY created_at DESC;
+
+-- 5. Check if user already applied to a job
+SELECT EXISTS(
+    SELECT 1 FROM job_applications 
+    WHERE job_id = 1 AND applicant_id = 10
+);
+
+-- 6. Get saved jobs for a user
+SELECT jp.*, js.saved_at
+FROM job_saved js
+JOIN job_postings jp ON js.job_id = jp.job_id
+WHERE js.user_id = 10
+ORDER BY js.saved_at DESC;
+
+-- 7. Get application count per job
+SELECT jp.job_id, jp.title, COUNT(ja.application_id) as application_count
+FROM job_postings jp
+LEFT JOIN job_applications ja ON jp.job_id = ja.job_id
+GROUP BY jp.job_id, jp.title;
+
+-- 8. Update application status
+UPDATE job_applications 
+SET status = 'shortlisted' 
+WHERE application_id = 1;
+
+-- 9. Get remote jobs only
+SELECT * FROM job_postings WHERE is_remote = TRUE AND status = 'active';
+
+-- 10. Search jobs by skill
+SELECT * FROM job_postings 
+WHERE skills_required ILIKE '%React%' AND status = 'active';
+
+================================================================================
+7. INDEXES
+================================================================================
+
+-- Job Postings Indexes
+CREATE INDEX idx_job_postings_poster ON job_postings(poster_id);
+CREATE INDEX idx_job_postings_status ON job_postings(status);
+CREATE INDEX idx_job_postings_created ON job_postings(created_at DESC);
+CREATE INDEX idx_job_postings_location ON job_postings(location);
+CREATE INDEX idx_job_postings_remote ON job_postings(is_remote) WHERE is_remote = TRUE;
+CREATE INDEX idx_job_postings_type ON job_postings(job_type);
+
+-- Job Applications Indexes
+CREATE INDEX idx_job_applications_job ON job_applications(job_id);
+CREATE INDEX idx_job_applications_applicant ON job_applications(applicant_id);
+CREATE INDEX idx_job_applications_status ON job_applications(status);
+
+-- Job Saved Indexes
+CREATE INDEX idx_job_saved_user ON job_saved(user_id);
+CREATE INDEX idx_job_saved_job ON job_saved(job_id);
+
+================================================================================
+8. NEXT STEPS
+================================================================================
+
+[ ] 1. Create migration script to add new tables
+[ ] 2. Create Python models (job_posting.py, job_application.py, job_saved.py)
+[ ] 3. Create FastAPI routers for job endpoints
+[ ] 4. Create services layer for business logic
+[ ] 5. Create Pydantic schemas for request/response validation
+[ ] 6. Update frontend Jobs.jsx to use real API data
+[ ] 7. Implement AI job matching algorithm
+[ ] 8. Add job search functionality
+[ ] 9. Decide what to do with old `job` table (migrate data or drop)
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================

@@ -1,0 +1,67 @@
+.banner-description-strong {
+  color: white;
+  font-weight: 500;
+}
+
+.job-header-content {
+  flex: 1;
+}
+
+.job-details-spaced {
+  margin-top: 8px;
+}
+
+/* Spinning animation for loading states */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Interview results display */
+.interview-results-container {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(10, 102, 194, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(10, 102, 194, 0.2);
+}
+
+.riz-feedback-container {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(10, 102, 194, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(10, 102, 194, 0.2);
+}
+
+.score-breakdown-item {
+  margin-bottom: 4px;
+  font-size: 0.85em;
+}
+
+.riz-feedback-section {
+  margin-top: 6px;
+  font-size: 0.8em;
+}
+
+.riz-feedback-section strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.riz-feedback-section ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.riz-feedback-section li {
+  margin-bottom: 2px;
+}

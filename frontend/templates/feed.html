@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed - ZedReq</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <h1 class="logo">ZedReq</h1>
+            </div>
+            <div class="nav-center">
+                <input type="text" id="searchInput" placeholder="Search people..." class="search-input">
+                <div id="searchResults" class="search-results"></div>
+            </div>
+            <div class="nav-right">
+                <button class="btn-icon" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="profile-card">
+                <div class="profile-avatar" id="profileAvatar">👤</div>
+                <h3 id="profileName">Loading...</h3>
+                <p id="profileHeadline" class="profile-headline"></p>
+                <p id="profileBio" class="profile-bio"></p>
+            </div>
+        </aside>
+
+        <main class="feed">
+            <div class="post-creator">
+                <div class="post-input-container">
+                    <textarea id="postContent" placeholder="Share something with your network..." rows="3"></textarea>
+                    <button class="btn-post" id="createPostBtn">Post</button>
+                </div>
+            </div>
+
+            <div id="postsContainer" class="posts-container">
+                <div class="loading">Loading posts...</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/feed.js') }}"></script>
+</body>
+</html>
