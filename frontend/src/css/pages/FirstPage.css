@@ -2909,6 +2909,24 @@ img, video, iframe {
 
 .trust-faq-item {
     border-bottom: 1px solid rgba(0, 180, 216, 0.2);
+    /* Ensure FAQ items are always visible (not affected by scroll-reveal on parent) */
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* Ensure FAQ trigger text is always visible */
+.trust-faq-item .trust-faq-trigger,
+.trust-faq-item .trust-faq-trigger span {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+
+/* Force visibility for all FAQ items regardless of parent scroll-reveal state */
+.trust-faq .trust-faq-item {
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 .trust-faq-item:last-child {
@@ -2929,6 +2947,7 @@ img, video, iframe {
     font-size: 1em;
     font-family: inherit;
     font-weight: 400;
+    opacity: 1 !important; /* Ensure question text is always visible */
 }
 
 .trust-faq-trigger:focus-visible {

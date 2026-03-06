@@ -81,4 +81,49 @@ export const activityAPI = {
   getLogById: (logId) => api.get(`/admin/activity/logs/${logId}`),
 }
 
+// Monitoring API
+export const monitoringApi = {
+  // Uptime
+  getUptime: (days = 30) => api.get('/monitoring/uptime', { params: { days } }),
+  
+  // Infrastructure
+  getInfrastructure: (hours = 24, serverName = 'main') => 
+    api.get('/monitoring/infrastructure', { params: { hours, server_name: serverName } }),
+  
+  // Performance
+  getPerformance: (hours = 24, endpoint = null) => 
+    api.get('/monitoring/performance', { params: { hours, endpoint } }),
+  
+  // Users
+  getUsers: (days = 30) => api.get('/monitoring/users', { params: { days } }),
+  
+  // Pages
+  getPages: (days = 7) => api.get('/monitoring/pages', { params: { days } }),
+  
+  // Interactions
+  getInteractions: (days = 7) => api.get('/monitoring/interactions', { params: { days } }),
+  
+  // Links
+  getLinks: (days = 7) => api.get('/monitoring/links', { params: { days } }),
+  
+  // Errors
+  getErrors: (days = 7) => api.get('/monitoring/errors', { params: { days } }),
+  
+  // Security
+  getSecurity: (days = 7) => api.get('/monitoring/security', { params: { days } }),
+  
+  // Database
+  getDatabase: (hours = 24) => api.get('/monitoring/database', { params: { hours } }),
+  
+  // Growth
+  getGrowth: (days = 30) => api.get('/monitoring/growth', { params: { days } }),
+  
+  // Alerts
+  getAlertRules: () => api.get('/monitoring/alerts/rules'),
+  createAlertRule: (ruleData) => api.post('/monitoring/alerts/rules', ruleData),
+  getAlertHistory: (ruleId = null, limit = 50) => 
+    api.get('/monitoring/alerts/history', { params: { rule_id: ruleId, limit } }),
+  checkAlerts: () => api.post('/monitoring/alerts/check'),
+}
+
 export default api

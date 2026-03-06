@@ -17,6 +17,7 @@ const menuItems = [
   { path: '/costs', label: 'Costs', icon: TrendingUp },
   { path: '/cash-flow', label: 'Cash Flow', icon: DollarSign },
   { path: '/activity', label: 'Activity Logs', icon: Activity },
+  { path: '/monitoring', label: 'Monitoring', icon: Activity },
 ]
 
 const Sidebar = () => {

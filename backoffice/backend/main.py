@@ -12,6 +12,13 @@ import subprocess
 import sys
 import traceback
 import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from dependencies.database import get_db
+from services.infrastructure_collector import InfrastructureCollector
+from services.uptime_monitor import UptimeMonitor
+from services.database_collector import DatabaseCollector
+from services.alerting_service import AlertingService
 
 # Import settings with error handling
 try:
@@ -30,6 +37,8 @@ from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from routers.financial import router as financial_router
 from routers.activity import router as activity_router
+from routers.monitoring import router as monitoring_router
+from routers.collector import router as collector_router
 from middleware.security import (
     SecurityHeadersMiddleware,
     RateLimitMiddleware,
@@ -123,6 +132,93 @@ async def lifespan(app: FastAPI):
         init_orm_tables()
         logger.info("ORM tables initialized")
         
+        # Start background collectors
+        scheduler = AsyncIOScheduler()
+        
+        # Infrastructure collector
+        def collect_infrastructure():
+            try:
+                from config.database_orm import SessionLocal
+                db = SessionLocal()
+                try:
+                    collector = InfrastructureCollector(db)
+                    collector.collect_metrics()
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Error collecting infrastructure metrics: {e}")
+        
+        scheduler.add_job(
+            collect_infrastructure,
+            trigger=IntervalTrigger(seconds=settings.INFRASTRUCTURE_COLLECTION_INTERVAL),
+            id='infrastructure_collector',
+            replace_existing=True
+        )
+        
+        # Uptime monitor
+        def check_uptime():
+            try:
+                from config.database_orm import SessionLocal
+                db = SessionLocal()
+                try:
+                    monitor = UptimeMonitor(db)
+                    monitor.check_health()
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Error checking uptime: {e}")
+        
+        scheduler.add_job(
+            check_uptime,
+            trigger=IntervalTrigger(seconds=settings.UPTIME_CHECK_INTERVAL),
+            id='uptime_monitor',
+            replace_existing=True
+        )
+        
+        # Database collector
+        def collect_database():
+            try:
+                from config.database_orm import SessionLocal
+                db = SessionLocal()
+                try:
+                    collector = DatabaseCollector(db)
+                    collector.collect_metrics()
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Error collecting database metrics: {e}")
+        
+        scheduler.add_job(
+            collect_database,
+            trigger=IntervalTrigger(seconds=settings.DATABASE_COLLECTION_INTERVAL),
+            id='database_collector',
+            replace_existing=True
+        )
+        
+        # Alert checker
+        def check_alerts():
+            try:
+                from config.database_orm import SessionLocal
+                db = SessionLocal()
+                try:
+                    alerting = AlertingService(db)
+                    alerting.check_alerts()
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Error checking alerts: {e}")
+        
+        scheduler.add_job(
+            check_alerts,
+            trigger=IntervalTrigger(seconds=settings.ALERT_CHECK_INTERVAL),
+            id='alert_checker',
+            replace_existing=True
+        )
+        
+        scheduler.start()
+        logger.info("Background collectors started")
+        app.state.scheduler = scheduler
+        
     except Exception as e:
         logger.error(f"Database initialization error: {e}", exc_info=True)
         print(f"Warning: Database initialization failed: {e}")
@@ -131,6 +227,12 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down Backoffice FastAPI application...")
+    
+    # Stop scheduler
+    if hasattr(app.state, 'scheduler'):
+        app.state.scheduler.shutdown()
+        logger.info("Background collectors stopped")
+    
     db = get_database()
     if db:
         db.close()
@@ -166,8 +268,8 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key", "Accept"],
+    expose_headers=["Content-Type", "X-Request-ID"],
     max_age=3600,
 )
 
@@ -248,12 +350,24 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+# Health check endpoint (must be before catch-all route)
+@app.get("/health")
+async def health_check():
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "service": "backoffice",
+        "version": "1.0.0"
+    }
+
 # Register routers
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(analytics_router)
 app.include_router(financial_router)
 app.include_router(activity_router)
+app.include_router(monitoring_router)
+app.include_router(collector_router)
 
 # Serve static files from frontend build
 backoffice_root = Path(__file__).parent.parent
@@ -267,23 +381,39 @@ if frontend_dist.exists() and (frontend_dist / "index.html").exists():
     static_files = StaticFiles(directory=str(frontend_dist), html=True)
     app.mount("/static", static_files, name="static")
     
+    # Explicit route for root path
+    @app.get("/")
+    async def serve_root():
+        """Serve index.html for root path"""
+        index_path = frontend_dist / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        raise HTTPException(status_code=404, detail="Frontend not found")
+    
     # Catch-all route to serve index.html for React Router
+    # Note: This will only match if no other route matches (FastAPI matches specific routes first)
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str, request: Request):
         """
         Serve React app for all non-API routes.
         This allows React Router to handle client-side routing.
         """
-        # Don't serve frontend for API routes
-        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
+        # Don't serve frontend for FastAPI docs routes (these are handled by FastAPI)
+        if full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
             raise HTTPException(status_code=404, detail="Not found")
+        
+        # Handle empty path (shouldn't happen due to root route, but just in case)
+        if not full_path or full_path == "/":
+            index_path = frontend_dist / "index.html"
+            if index_path.exists():
+                return FileResponse(str(index_path))
         
         # Check if it's a file request (has extension)
         file_path = frontend_dist / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
         
-        # Otherwise serve index.html for React Router
+        # Otherwise serve index.html for React Router (SPA routing)
         index_path = frontend_dist / "index.html"
         if index_path.exists():
             return FileResponse(str(index_path))
@@ -294,16 +424,6 @@ if frontend_dist.exists() and (frontend_dist / "index.html").exists():
 else:
     logger.warning(f"Frontend build not found at {frontend_dist}. Frontend will not be served.")
     logger.warning("Run 'npm run build' in the frontend directory to build the frontend.")
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Detailed health check"""
-    return {
-        "status": "healthy",
-        "service": "backoffice",
-        "version": "1.0.0"
-    }
 
 
 if __name__ == "__main__":

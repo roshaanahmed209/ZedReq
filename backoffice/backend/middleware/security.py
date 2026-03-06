@@ -83,8 +83,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return request.client.host
         return "unknown"
     
-    def _check_rate_limit(self, client_id: str) -> bool:
+    def _check_rate_limit(self, client_id: str, limit: int = None) -> bool:
         """Check if client has exceeded rate limit"""
+        if limit is None:
+            limit = self.requests_per_minute
+        
         current_time = time.time()
         window_start = current_time - 60  # 1 minute window
         
@@ -95,7 +98,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
         
         # Check if limit exceeded
-        if len(_rate_limit_store[client_id]) >= self.requests_per_minute:
+        if len(_rate_limit_store[client_id]) >= limit:
             return False
         
         # Record this request
@@ -136,19 +139,29 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
     ]
     
     async def dispatch(self, request: Request, call_next):
-        # Only sanitize POST, PUT, PATCH requests
-        if request.method in ["POST", "PUT", "PATCH"]:
+        # Only sanitize POST, PUT, PATCH requests with body
+        # Skip for collector endpoints (they use Pydantic validation)
+        if request.method in ["POST", "PUT", "PATCH"] and not request.url.path.startswith("/api/collect"):
             try:
                 # Get request body
                 body = await request.body()
                 
+                # Limit request size to prevent DoS (10MB max)
+                if len(body) > 10 * 1024 * 1024:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Request body too large (max 10MB)"
+                    )
+                
                 if body:
                     body_str = body.decode('utf-8', errors='ignore')
                     
-                    # Check for SQL injection
+                    # Check for SQL injection (only if contains suspicious patterns)
                     for pattern in self.SQL_INJECTION_PATTERNS:
                         if re.search(pattern, body_str, re.IGNORECASE):
-                            logger.warning(f"Potential SQL injection detected from {request.client.host if request.client else 'unknown'}")
+                            client_ip = request.client.host if request.client else 'unknown'
+                            logger.warning(f"Potential SQL injection detected from {client_ip}")
+                            # Log security event
                             raise HTTPException(
                                 status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Invalid input detected"
@@ -157,7 +170,8 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
                     # Check for XSS
                     for pattern in self.XSS_PATTERNS:
                         if re.search(pattern, body_str, re.IGNORECASE):
-                            logger.warning(f"Potential XSS detected from {request.client.host if request.client else 'unknown'}")
+                            client_ip = request.client.host if request.client else 'unknown'
+                            logger.warning(f"Potential XSS detected from {client_ip}")
                             raise HTTPException(
                                 status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Invalid input detected"
@@ -173,6 +187,7 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
                 raise
             except Exception as e:
                 logger.error(f"Error in input sanitization: {e}")
+                # Don't block request if sanitization fails, but log it
         
         response = await call_next(request)
         return response

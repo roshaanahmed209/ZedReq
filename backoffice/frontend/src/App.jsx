@@ -10,6 +10,8 @@ import Revenue from './pages/Revenue'
 import Costs from './pages/Costs'
 import CashFlow from './pages/CashFlow'
 import Activity from './pages/Activity'
+import Monitoring from './pages/Monitoring'
+import Monitoring from './pages/Monitoring'
 
 function App() {
   return (
@@ -73,6 +75,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Activity />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monitoring"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Monitoring />
                 </Layout>
               </ProtectedRoute>
             }

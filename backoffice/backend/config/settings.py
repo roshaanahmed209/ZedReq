@@ -40,6 +40,39 @@ class Settings(BaseSettings):
     # Frontend Configuration
     BACKOFFICE_FRONTEND_URL: str = "http://localhost:3001"
     
+    # Main App Connection (for monitoring)
+    MAIN_APP_DB_HOST: str = "localhost"
+    MAIN_APP_DB_PORT: int = 5432
+    MAIN_APP_DB_NAME: str = "zedreq"
+    MAIN_APP_DB_USER: str = "postgres"
+    MAIN_APP_DB_PASSWORD: str = ""
+    MAIN_APP_API_URL: str = "http://localhost:5000"
+    
+    # Collection Intervals (in seconds)
+    INFRASTRUCTURE_COLLECTION_INTERVAL: int = 300  # 5 minutes
+    UPTIME_CHECK_INTERVAL: int = 60  # 1 minute
+    DATABASE_COLLECTION_INTERVAL: int = 300  # 5 minutes
+    ALERT_CHECK_INTERVAL: int = 60  # 1 minute
+    
+    # Alert Thresholds (defaults)
+    ALERT_CPU_THRESHOLD: float = 85.0
+    ALERT_RAM_THRESHOLD: float = 85.0
+    ALERT_DISK_THRESHOLD: float = 90.0
+    ALERT_ERROR_RATE_THRESHOLD: float = 5.0  # percentage
+    ALERT_RESPONSE_TIME_THRESHOLD: int = 2000  # milliseconds
+    ALERT_UPTIME_THRESHOLD: float = 99.9  # percentage
+    
+    # Email SMTP Settings (for alerts)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_TO_EMAILS: str = ""  # Comma-separated
+    
+    # Collector API Authentication
+    COLLECTOR_API_KEY: str = ""  # Secret key for collector endpoints
+    
     class Config:
         env_file = str(_env_file)
         env_file_encoding = "utf-8"
@@ -63,6 +96,14 @@ class Settings(BaseSettings):
     def get_cors_origins(self) -> List[str]:
         """Parse CORS origins from comma-separated string"""
         return [origin.strip() for origin in self.BACKOFFICE_CORS_ORIGINS.split(",") if origin.strip()]
+    
+    def get_main_app_database_url(self) -> str:
+        """Get main app database connection string (read-only)"""
+        return f"host={self.MAIN_APP_DB_HOST} port={self.MAIN_APP_DB_PORT} dbname={self.MAIN_APP_DB_NAME} user={self.MAIN_APP_DB_USER} password={self.MAIN_APP_DB_PASSWORD}"
+    
+    def get_smtp_to_emails(self) -> List[str]:
+        """Parse SMTP recipient emails from comma-separated string"""
+        return [email.strip() for email in self.SMTP_TO_EMAILS.split(",") if email.strip()]
 
 
 @lru_cache()

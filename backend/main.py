@@ -43,6 +43,8 @@ from routers import (
     context_router
 )
 from routers.reserved_seats import router as reserved_seats_router
+from routers.monitoring import router as monitoring_router
+from middleware.monitoring_middleware import MonitoringMiddleware
 
 
 def build_frontend():
@@ -133,15 +135,9 @@ async def lifespan(app: FastAPI):
     
     # Initialize Firebase (for messaging service)
     try:
-<<<<<<< HEAD
         from utils.firebase_client import initialize_firebase, get_firebase_db
         import logging
         firebase_logger = logging.getLogger('utils.firebase_client')
-=======
-        from firebase.firebase_client import initialize_firebase, get_firebase_db
-        import logging
-        firebase_logger = logging.getLogger('firebase.firebase_client')
->>>>>>> d402dd046008aff3e043894ed95943e6112c0cfe
         firebase_logger.setLevel(logging.INFO)  # Ensure we see Firebase logs
         
         print("Initializing Firebase Realtime Database...")
@@ -243,6 +239,13 @@ if not cors_origins:
 
 print(f"CORS configured with origins: {cors_origins}")
 print("Note: Make sure CORS_ORIGINS in .env includes the server's own origin (e.g., http://localhost:5000) if frontend is served from the same server")
+
+# Add monitoring middleware (before CORS to track all requests)
+app.add_middleware(
+    MonitoringMiddleware,
+    collector_url=os.getenv("BACKOFFICE_COLLECTOR_URL", "http://localhost:5001/api/collect"),
+    api_key=os.getenv("COLLECTOR_API_KEY", "")
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -349,6 +352,7 @@ app.include_router(interviews_router, prefix="/api/interviews", tags=["Interview
 app.include_router(profile_features_router, prefix="/api/profile", tags=["Profile Features"])
 app.include_router(context_router, prefix="/api/context", tags=["Context"])
 app.include_router(reserved_seats_router)
+app.include_router(monitoring_router)
 
 
 # Get paths for static files

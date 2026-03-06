@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import FirstPage from './pages/FirstPage'
@@ -16,12 +16,30 @@ import Messages from './pages/Messages'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
+import { initAnalytics, trackPageView } from './utils/analytics'
+
+// Component to track route changes
+function RouteTracker() {
+  const location = useLocation()
+  
+  useEffect(() => {
+    trackPageView(location.pathname + location.search)
+  }, [location])
+  
+  return null
+}
 
 function App() {
+  useEffect(() => {
+    // Initialize analytics on app load
+    initAnalytics()
+  }, [])
+  
   return (
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <RouteTracker />
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />

@@ -536,7 +536,7 @@ const FirstPage = () => {
 
           <div className="trust-faq scroll-reveal">
             {trustFaqs.map((faq, index) => (
-              <div key={faq.question} className={`trust-faq-item scroll-reveal ${activeTrustFaq === index ? 'open' : ''}`}>
+              <div key={faq.question} className={`trust-faq-item ${activeTrustFaq === index ? 'open' : ''}`}>
                 <button
                   id={`trust-faq-button-${index}`}
                   className="trust-faq-trigger"
