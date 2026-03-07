@@ -2,7 +2,7 @@
 import os
 from typing import Generator
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from dotenv import load_dotenv
 
@@ -70,3 +70,57 @@ def get_db() -> Generator[Session, None, None]:
 def init_orm_tables():
     """Create all ORM tables (if they don't exist)"""
     Base.metadata.create_all(bind=engine)
+
+
+# Main App Database Connection (Read-Only)
+def get_main_app_database_url() -> str:
+    """Build PostgreSQL database URL for main app (read-only)"""
+    from config.settings import settings
+    
+    host = settings.MAIN_APP_DB_HOST
+    port = settings.MAIN_APP_DB_PORT
+    db = settings.MAIN_APP_DB_NAME
+    user = settings.MAIN_APP_DB_USER
+    password = settings.MAIN_APP_DB_PASSWORD
+    
+    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+
+# Main app database engine (read-only, separate connection pool)
+_main_app_engine = None
+
+def get_main_app_engine():
+    """Get or create main app database engine (read-only)"""
+    global _main_app_engine
+    if _main_app_engine is None:
+        from config.settings import settings
+        main_app_url = get_main_app_database_url()
+        _main_app_engine = create_engine(
+            main_app_url,
+            pool_size=5,  # Smaller pool for read-only
+            max_overflow=10,
+            pool_timeout=30,
+            pool_recycle=3600,
+            pool_pre_ping=True,
+            echo=False
+        )
+    return _main_app_engine
+
+
+def get_main_app_db() -> Generator[Session, None, None]:
+    """
+    Dependency that provides a read-only session to main app database.
+    Use with FastAPI's Depends().
+    
+    Usage:
+        @router.get("/items")
+        def get_items(db: Session = Depends(get_main_app_db)):
+            return db.execute(text("SELECT * FROM users")).fetchall()
+    """
+    engine = get_main_app_engine()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

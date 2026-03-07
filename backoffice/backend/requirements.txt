@@ -7,10 +7,9 @@ uvicorn[standard]>=0.32.0
 # ===========================================
 # Authentication & Security
 # ===========================================
-python-jose[cryptography
+python-jose[cryptography]>=3.3.0
 psutil>=5.9.0
 APScheduler>=3.10.0
-httpx>=0.27.0]>=3.3.0
 bcrypt>=4.0.0
 
 # ===========================================
@@ -31,5 +30,4 @@ email-validator>=2.1.0
 # ===========================================
 # Utilities
 # ===========================================
-httpx>=0.27.0
 python-multipart>=0.0.12

@@ -17,7 +17,6 @@ const menuItems = [
   { path: '/costs', label: 'Costs', icon: TrendingUp },
   { path: '/cash-flow', label: 'Cash Flow', icon: DollarSign },
   { path: '/activity', label: 'Activity Logs', icon: Activity },
-  { path: '/monitoring', label: 'Monitoring', icon: Activity },
 ]
 
 const Sidebar = () => {
@@ -42,9 +41,12 @@ const Sidebar = () => {
         )}
       >
         <div className="h-full flex flex-col">
-          <div className="p-6 border-b border-border">
-            <h1 className="text-2xl font-bold text-foreground">ZedReq</h1>
-            <p className="text-sm text-muted-foreground">Backoffice</p>
+          <div className="p-6 border-b border-border flex items-center gap-3">
+            <img src="/logo.svg" alt="ZedReq Logo" className="h-8 w-8" />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">ZedReq</h1>
+              <p className="text-sm text-muted-foreground">BackOffice</p>
+            </div>
           </div>
           
           <nav className="flex-1 p-4 space-y-2">

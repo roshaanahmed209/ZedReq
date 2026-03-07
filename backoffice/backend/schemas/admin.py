@@ -49,10 +49,56 @@ class UserListResponse(BaseModel):
 
 
 class UserDetailsResponse(BaseModel):
-    """User details response schema"""
-    user: dict
-    payment: Optional[dict] = None
-    stats: dict
+    """User details response schema - accepts the full user dict from admin_service"""
+    id: int
+    username: str
+    email: str
+    full_name: Optional[str] = None
+    profile_url: Optional[str] = None
+    subscription: Optional[dict] = None
+    stats: Optional[dict] = None
+    last_login: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ChangePlanRequest(BaseModel):
+    """Request schema for changing a user's plan"""
+    plan: str = Field(..., pattern="^(free|pro|premium)$", description="New plan: free, pro, or premium")
+
+
+class CancelSubscriptionRequest(BaseModel):
+    """Request schema for cancelling a subscription"""
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for cancellation")
+
+
+class SuspendRequest(BaseModel):
+    """Request schema for suspending a user"""
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for suspension")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request schema for resetting a user's password"""
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password for the user")
+
+
+class Disable2FARequest(BaseModel):
+    """Request schema for disabling 2FA"""
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for disabling 2FA")
+
+
+class DeleteUserRequest(BaseModel):
+    """Request schema for deleting (soft) a user"""
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for deletion")
+
+
+class SendNotificationRequest(BaseModel):
+    """Request schema for sending a notification to a user"""
+    subject: str = Field(..., min_length=1, max_length=200, description="Notification subject")
+    message: str = Field(..., min_length=1, max_length=2000, description="Notification message")
 
 
 class RevenueAnalyticsResponse(BaseModel):

@@ -51,9 +51,26 @@ export const usersAPI = {
   getById: (userId) => api.get(`/admin/users/${userId}`),
   updateRole: (userId, newRole) =>
     api.put(`/admin/users/${userId}/role`, null, { params: { new_role: newRole } }),
+  changePlan: (userId, plan) =>
+    api.put(`/admin/users/${userId}/plan`, { plan }),
+  cancelSubscription: (userId, reason) =>
+    api.post(`/admin/users/${userId}/cancel-subscription`, { reason }),
   suspend: (userId, reason) =>
     api.post(`/admin/users/${userId}/suspend`, { reason }),
-  delete: (userId) => api.delete(`/admin/users/${userId}`),
+  unsuspend: (userId) =>
+    api.post(`/admin/users/${userId}/unsuspend`),
+  resetPassword: (userId, newPassword) =>
+    api.post(`/admin/users/${userId}/reset-password`, { new_password: newPassword }),
+  forceLogout: (userId) =>
+    api.post(`/admin/users/${userId}/force-logout`),
+  disable2fa: (userId, reason) =>
+    api.post(`/admin/users/${userId}/disable-2fa`, { reason }),
+  exportData: (userId) =>
+    api.get(`/admin/users/${userId}/export`),
+  sendNotification: (userId, subject, message) =>
+    api.post(`/admin/users/${userId}/notify`, { subject, message }),
+  delete: (userId, reason) =>
+    api.delete(`/admin/users/${userId}`, { data: { reason: reason || 'Admin deletion' } }),
 }
 
 // Analytics API

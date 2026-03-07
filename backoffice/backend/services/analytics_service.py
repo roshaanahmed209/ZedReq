@@ -71,7 +71,13 @@ class AnalyticsService:
                 "disk_max": round(max(disk_values), 2),
                 "network_in_total": sum(float(m.network_in_mb or 0) for m in metrics),
                 "network_out_total": sum(float(m.network_out_mb or 0) for m in metrics),
-                "data_points": [m.to_dict() for m in metrics[:100]]  # Limit to 100 points
+                "data_points": [
+                    {
+                        **m.to_dict(),
+                        'timestamp': m.timestamp.isoformat() + 'Z' if m.timestamp else None
+                    }
+                    for m in metrics[:100]
+                ]  # Limit to 100 points
             }
         except Exception as e:
             logger.error(f"Error getting infrastructure metrics: {e}", exc_info=True)

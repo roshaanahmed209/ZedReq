@@ -17,7 +17,7 @@ class UserInteraction(Base):
     element_id = Column(String(255))
     element_type = Column(String(50))
     page_path = Column(String(500))
-    metadata = Column(JSONB)
+    interaction_metadata = Column('metadata', JSONB)  # Column name 'metadata' in DB, but 'interaction_metadata' in ORM
     timestamp = Column(DateTime, server_default=func.now(), nullable=False, index=True)
     
     __table_args__ = (
@@ -40,6 +40,6 @@ class UserInteraction(Base):
             'element_id': self.element_id,
             'element_type': self.element_type,
             'page_path': self.page_path,
-            'metadata': self.metadata,
+            'metadata': self.interaction_metadata,  # Map to 'metadata' in API response
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
         }

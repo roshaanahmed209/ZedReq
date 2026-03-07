@@ -20,50 +20,37 @@ class DatabaseCollector:
     def collect_metrics(self) -> bool:
         """Collect current database metrics"""
         try:
-            # Get connection pool stats
+            # --- Connection pool stats (in-memory, no DB query needed) ---
             pool = engine.pool
             pool_size = pool.size()
-            checked_in = pool.checkedin()
             checked_out = pool.checkedout()
-            overflow = pool.overflow()
             active_connections = checked_out
             connection_pool_usage = int((checked_out / pool_size * 100)) if pool_size > 0 else 0
             
-            # Get database size
-            size_query = text("""
-                SELECT pg_database_size(current_database()) / (1024 * 1024) as size_mb
-            """)
-            result = self.db.execute(size_query)
-            database_size_mb = result.scalar() or 0
-            
-            # Get slow queries count (queries > 1 second in last hour)
-            # Note: This requires pg_stat_statements extension
+            # --- Optional: pg_stat_statements queries (may not be enabled) ---
             slow_queries_count = 0
-            try:
-                slow_query = text("""
-                    SELECT COUNT(*) 
-                    FROM pg_stat_statements 
-                    WHERE mean_exec_time > 1000
-                    AND query_start > NOW() - INTERVAL '1 hour'
-                """)
-                slow_queries_count = self.db.execute(slow_query).scalar() or 0
-            except Exception:
-                # pg_stat_statements might not be enabled
-                pass
-            
-            # Average query time (if available)
             query_time_ms = None
             try:
-                avg_query = text("""
-                    SELECT AVG(mean_exec_time)
-                    FROM pg_stat_statements
-                    WHERE query_start > NOW() - INTERVAL '1 hour'
-                """)
-                query_time_ms = self.db.execute(avg_query).scalar()
+                slow_queries_count = self.db.execute(
+                    text("SELECT COUNT(*) FROM pg_stat_statements WHERE mean_exec_time > 1000")
+                ).scalar() or 0
+                query_time_ms = self.db.execute(
+                    text("SELECT AVG(mean_exec_time) FROM pg_stat_statements")
+                ).scalar()
             except Exception:
-                pass
+                # pg_stat_statements extension not installed — clear failed transaction
+                self.db.rollback()
             
-            # Create metric record
+            # --- Database size (safe query, run after any rollback) ---
+            database_size_mb = 0
+            try:
+                database_size_mb = self.db.execute(
+                    text("SELECT pg_database_size(current_database()) / (1024 * 1024)")
+                ).scalar() or 0
+            except Exception:
+                self.db.rollback()
+            
+            # --- Persist metric ---
             metric = DatabaseMetric(
                 query_time_ms=query_time_ms,
                 slow_queries_count=slow_queries_count,

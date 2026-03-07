@@ -435,7 +435,7 @@ async def collect_events(
                     element_id=sanitize_string(event.element_id or "", max_length=255) if event.element_id else None,
                     element_type=sanitize_string(event.element_type or "", max_length=50) if event.element_type else None,
                     page_path=sanitize_string(event.page_path or "", max_length=500) if event.page_path else None,
-                    metadata=event.metadata
+                    interaction_metadata=event.metadata
                 )
                 db.add(interaction)
         
