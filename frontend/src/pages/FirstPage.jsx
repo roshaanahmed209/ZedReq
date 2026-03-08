@@ -433,7 +433,7 @@ const FirstPage = () => {
         <div className="trust-particles" />
         <div className="trust-container">
           <header className="trust-header scroll-reveal">
-            <h2 id="trust-title">Your Data. Your Career. Fully Protected.</h2>
+            <h2 id="trust-title">Your Data. Your Career.<br />Fully Protected.</h2>
             <p>Built with enterprise-grade security, privacy-first architecture, and bias-aware AI systems.</p>
             <div className="trust-divider" />
           </header>

@@ -2850,7 +2850,6 @@ img, video, iframe {
     height: 56px;
     background: conic-gradient(rgba(0, 180, 216, 0.7), rgba(0, 180, 216, 0.22), transparent 75%);
     border-radius: 50%;
-    animation: trustRadarFill 3.2s ease-in-out infinite;
 }
 
 .trust-fairness-badge {
@@ -2862,8 +2861,7 @@ img, video, iframe {
     background: rgba(0, 180, 216, 0.12);
     color: #a7ecff;
     font-size: 0.78em;
-    opacity: 0;
-    animation: trustBadgeFade 3.2s ease-in-out infinite;
+    opacity: 1;
 }
 
 .trust-badge-row {
