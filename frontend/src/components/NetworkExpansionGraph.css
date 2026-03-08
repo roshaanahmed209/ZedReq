@@ -1,0 +1,455 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Network Expansion Graph Section — Radial Layout
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.network-expansion-section {
+    width: 100%;
+    background: transparent;
+    padding: 120px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+
+
+.network-expansion-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Section Header ─────────────────────────────────────────────────────── */
+.network-header {
+    text-align: center;
+    margin-bottom: 64px;
+}
+
+.network-headline {
+    font-size: clamp(2.1em, 5vw, 3.6em);
+    font-weight: 300;
+    line-height: 1.15;
+    margin-bottom: 18px;
+    color: #ffffff;
+    position: relative;
+}
+
+.network-headline-glow {
+    position: relative;
+    display: inline-block;
+    color: #ffffff;
+}
+
+.network-subheading {
+    color: #ffffff;
+    font-size: 1.15em;
+    line-height: 1.8;
+    max-width: 700px;
+    margin: 0 auto;
+    font-weight: 400;
+}
+
+/* ─── Two-Column Layout ──────────────────────────────────────────────────── */
+.network-content {
+    display: grid;
+    grid-template-columns: 65% 35%;
+    gap: 32px;
+    align-items: start;
+}
+
+/* ─── Network Graph Container (no box — graph floats on section bg) ────── */
+.network-graph-wrapper {
+    position: relative;
+}
+
+.network-graph-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 620px;
+}
+
+.network-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* ─── Node Tooltip ───────────────────────────────────────────────────────── */
+.node-tooltip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: rgba(10, 15, 25, 0.95);
+    border: 1px solid rgba(0, 180, 216, 0.4);
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-width: 200px;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 180, 216, 0.15);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.tooltip-avatar-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 180, 216, 0.15);
+    border: 2px solid rgba(0, 180, 216, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tooltip-initials {
+    color: #00B4D8;
+    font-size: 1em;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.tooltip-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.tooltip-name {
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.95em;
+}
+
+.tooltip-role {
+    color: #00B4D8;
+    font-size: 0.85em;
+}
+
+.tooltip-industry {
+    color: #888;
+    font-size: 0.78em;
+}
+
+.tooltip-mutual {
+    color: rgba(0, 180, 216, 0.8);
+    font-size: 0.78em;
+    margin-top: 2px;
+}
+
+.tooltip-connect-btn {
+    margin-top: 6px;
+    padding: 6px 20px;
+    background: #00B4D8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tooltip-connect-btn:hover {
+    background: #0096b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+}
+
+/* ─── Insights Panel ─────────────────────────────────────────────────────── */
+.network-insights-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.insights-card {
+    background: rgba(5, 10, 20, 0.85);
+    border: 1px solid rgba(0, 180, 216, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 180, 216, 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.insights-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 180, 216, 0.1);
+}
+
+.insights-card-title {
+    color: #ffffff;
+    font-size: 1.05em;
+    font-weight: 400;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 180, 216, 0.15);
+}
+
+/* ─── Network Strength ───────────────────────────────────────────────────── */
+.network-strength-indicator {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.strength-circle {
+    width: 100%;
+    height: 100%;
+}
+
+.strength-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.strength-number {
+    font-size: 2em;
+    font-weight: 600;
+    color: #00B4D8;
+    line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(0, 180, 216, 0.4));
+}
+
+.strength-label {
+    font-size: 0.72em;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ─── Industry Bars ──────────────────────────────────────────────────────── */
+.industry-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.industry-bar-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 36px;
+    align-items: center;
+    gap: 10px;
+}
+
+.industry-name {
+    color: #b0c4d8;
+    font-size: 0.82em;
+    font-weight: 400;
+}
+
+.industry-bar-track {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(0, 180, 216, 0.08);
+    overflow: hidden;
+}
+
+.industry-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(0, 180, 216, 0.3);
+}
+
+.industry-value {
+    color: #00B4D8;
+    font-size: 0.78em;
+    font-weight: 500;
+    text-align: right;
+}
+
+/* ─── Suggested Professionals ────────────────────────────────────────────── */
+.suggested-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.suggested-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 180, 216, 0.12);
+    background: rgba(0, 180, 216, 0.03);
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.suggested-card:hover {
+    border-color: rgba(0, 180, 216, 0.35);
+    background: rgba(0, 180, 216, 0.06);
+}
+
+.suggested-avatar-circle {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0, 180, 216, 0.1);
+    border: 1px solid rgba(0, 180, 216, 0.3);
+    flex-shrink: 0;
+}
+
+.suggested-avatar-initials {
+    color: #00B4D8;
+    font-size: 0.82em;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.suggested-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.suggested-name {
+    color: #ffffff;
+    font-size: 0.88em;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggested-role {
+    color: #888;
+    font-size: 0.78em;
+}
+
+.suggested-mutual {
+    color: rgba(0, 180, 216, 0.7);
+    font-size: 0.72em;
+}
+
+.suggested-connect-btn {
+    padding: 5px 14px;
+    background: transparent;
+    color: #00B4D8;
+    border: 1px solid rgba(0, 180, 216, 0.4);
+    border-radius: 6px;
+    font-size: 0.75em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.suggested-connect-btn:hover {
+    background: #00B4D8;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive Design
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+    .network-content {
+        grid-template-columns: 60% 40%;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 968px) {
+    .network-expansion-section {
+        padding: 90px 20px;
+    }
+
+    .network-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .network-graph-container {
+        max-height: 500px;
+    }
+}
+
+@media (max-width: 600px) {
+    .network-expansion-section {
+        padding: 70px 16px;
+    }
+
+    .network-header {
+        margin-bottom: 40px;
+    }
+
+    .network-headline {
+        font-size: 2em;
+    }
+
+    .network-subheading {
+        font-size: 1em;
+    }
+
+    .network-graph-container {
+        max-height: 360px;
+    }
+
+    .insights-card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .network-expansion-section {
+        padding: 50px 12px;
+    }
+
+    .network-headline {
+        font-size: 1.7em;
+    }
+
+    .network-subheading {
+        font-size: 0.92em;
+    }
+
+    .network-graph-container {
+        max-height: 300px;
+    }
+
+    .node-tooltip {
+        min-width: 160px;
+        padding: 10px 12px;
+    }
+
+    .industry-bar-row {
+        grid-template-columns: 70px 1fr 30px;
+        gap: 6px;
+    }
+
+    .industry-name {
+        font-size: 0.75em;
+    }
+}
+
+@media (max-width: 360px) {
+    .network-headline {
+        font-size: 1.5em;
+    }
+
+    .network-graph-container {
+        max-height: 260px;
+    }
+}

@@ -7,7 +7,7 @@
 /* ── section container ─────────────────────────────────────── */
 .sgh-section {
   position: relative;
-  background: #000000;
+  background: transparent;
   padding: 120px 24px;
   overflow: hidden;
 }
@@ -70,7 +70,7 @@
 }
 
 .sgh-header p {
-  color: rgba(132, 194, 235, 0.84);
+  color: #ffffff;
   font-size: 1.1em;
   line-height: 1.8;
   font-weight: 400;

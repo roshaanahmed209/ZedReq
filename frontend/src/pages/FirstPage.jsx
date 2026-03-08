@@ -4,7 +4,8 @@ import DarkVeil from '../components/DarkVeil'
 import Beams from '../components/Beams'
 import CardSwap, { Card } from '../components/CardSwap'
 import ReserveSeatModal from '../components/ReserveSeatModal'
-import SkillGapHeatmap from '../components/SkillGapHeatmap'
+import CombinedSkillGapAndNetwork from '../components/CombinedSkillGapAndNetwork'
+import JobDiscoveryFlow from '../components/JobDiscoveryFlow'
 import { Timeline } from '../components/Timeline'
 import '../css/pages/FirstPage.css'
 
@@ -420,8 +421,11 @@ const FirstPage = () => {
         },
       ]} />
 
-      {/* Skill Gap Heatmap */}
-      <SkillGapHeatmap />
+      {/* Skill Gap Heatmap & Network Expansion (Combined) */}
+      <CombinedSkillGapAndNetwork />
+
+      {/* Job Discovery & Hiring Flow */}
+      <JobDiscoveryFlow />
 
       {/* Trust and Privacy */}
       <section className="trust-section scroll-reveal" ref={trustSectionRef} aria-labelledby="trust-title">
