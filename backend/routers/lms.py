@@ -9,6 +9,7 @@ from typing import Optional, List
 logger = logging.getLogger(__name__)
 
 from dependencies.auth import get_current_user
+from dependencies.subscription import require_lms_quota
 from config.database_orm import get_db
 from services.lms_service import LMSService
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
@@ -162,10 +163,16 @@ async def get_course_resources(
 @router.post("/courses/{course_id}/enroll", response_model=UserCourseResponse, status_code=status.HTTP_201_CREATED)
 async def enroll_in_course(
     course_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_lms_quota),
     service: LMSService = Depends(get_lms_service)
 ):
-    """Enroll in a course"""
+    """
+    Enroll in a course.
+    
+    Security: require_lms_quota dependency atomically checks and increments
+    the monthly course enrollment quota BEFORE this code runs.
+    If quota is exceeded, a 403 is raised and enrollment never proceeds.
+    """
     try:
         user_course = service.enroll_in_course(current_user["id"], course_id)
         return user_course.to_dict(include_relations=True)

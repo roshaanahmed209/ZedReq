@@ -42,6 +42,11 @@ from .profile_analytics import ProfileAnalytics
 from .users_context import UsersContext
 from .payment import Payment
 
+# Subscription & Usage Models
+from .subscription_plan import SubscriptionPlan
+from .user_subscription import UserSubscription
+from .usage_tracking import UsageTracking
+
 __all__ = [
     'User',
     'Connection',
@@ -82,4 +87,8 @@ __all__ = [
     'ProfileAnalytics',
     'UsersContext',
     'Payment',
+    # Subscription & Usage Models
+    'SubscriptionPlan',
+    'UserSubscription',
+    'UsageTracking',
 ]

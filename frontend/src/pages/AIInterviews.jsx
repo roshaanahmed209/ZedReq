@@ -1142,13 +1142,18 @@ const AIInterviews = () => {
       console.error('Error starting interview:', err)
       const errorDetail = err.response?.data?.detail || err.message || 'Failed to start interview'
       
-      // Handle rate limiting
-      if (err.response?.status === 429) {
+      // Handle quota exceeded (403) from server-side subscription check
+      if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'interview_sessions') {
+        const detail = err.response.data.detail
+        alert(`Monthly interview session limit reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan or wait until next month.`)
+      } else if (err.response?.status === 429) {
+        // Handle rate limiting
         const retryAfter = err.response?.headers?.['retry-after'] || 60
         const remaining = err.response?.data?.remaining || 0
         alert(`Rate limit exceeded. Please wait ${retryAfter} seconds before starting another interview.\n\nRemaining requests: ${remaining}`)
       } else {
-        alert(`Error starting interview: ${errorDetail}`)
+        const msg = typeof errorDetail === 'string' ? errorDetail : (errorDetail?.message || 'Failed to start interview')
+        alert(`Error starting interview: ${msg}`)
       }
     } finally {
       setStartingInterview(false)

@@ -9,6 +9,7 @@ import logging
 from agents.Nemz_agent import get_nemz_agent
 from dependencies.auth import get_current_user
 from dependencies.rate_limit import RateLimiter
+from dependencies.subscription import require_ai_quota
 from services.chat_session_manager import get_session_manager
 from utils.input_sanitizer import InputSanitizer
 
@@ -293,7 +294,8 @@ def chat_rate_limit(current_user: dict = Depends(get_current_user)):
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    current_user: dict = Depends(chat_rate_limit)
+    current_user: dict = Depends(chat_rate_limit),
+    _quota_user: dict = Depends(require_ai_quota),
 ):
     """
     Conversational chat endpoint with session management.
@@ -302,15 +304,23 @@ async def chat(
     - Session-based conversation isolation (no context leakage)
     - Automatic session creation if not provided
     - Rate limiting (20 requests/minute per user)
+    - Monthly AI message quota enforcement (plan-based)
     - Input sanitization (OWASP security practices)
     - The AI decides when to use search as a tool
     
+    Security:
+    - Rate limit: 20 requests/minute (burst protection)
+    - Quota: Monthly message limit per subscription plan (server-side atomic check)
+    - Both enforced before any expensive AI call
+    
     This endpoint:
     1. Validates and sanitizes input
-    2. Gets or creates chat session
-    3. Processes user message conversationally
-    4. LLM decides if search is needed
-    5. Returns response and search instructions if needed
+    2. Rate limit check (per-minute)
+    3. Subscription quota check and atomic increment (per-month)
+    4. Gets or creates chat session
+    5. Processes user message conversationally
+    6. LLM decides if search is needed
+    7. Returns response with quota info headers
     """
     try:
         user_id = current_user.get("id")

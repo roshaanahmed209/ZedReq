@@ -71,6 +71,8 @@ export const usersAPI = {
     api.post(`/admin/users/${userId}/notify`, { subject, message }),
   delete: (userId, reason) =>
     api.delete(`/admin/users/${userId}`, { data: { reason: reason || 'Admin deletion' } }),
+  assignEnterprise: (email) =>
+    api.post('/admin/users/assign-enterprise', { email }),
 }
 
 // Analytics API

@@ -277,7 +277,13 @@ class LMSService:
     # ========================================================================
     
     def enroll_in_course(self, user_id: int, course_id: int) -> Optional[LMSUserCourse]:
-        """Enroll user in a course. Maximum 5 courses allowed per user."""
+        """
+        Enroll user in a course.
+        
+        Note: Monthly enrollment quota is enforced by the require_lms_quota
+        FastAPI dependency at the router level (atomic server-side check).
+        This service only validates course existence and duplicate enrollment.
+        """
         # Check if course exists
         course = self.db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
         if not course:
@@ -299,16 +305,6 @@ class LMSService:
         
         if existing:
             return existing  # Already enrolled
-        
-        # Check enrollment limit (max 5 courses)
-        enrollment_count = (
-            self.db.query(LMSUserCourse)
-            .filter(LMSUserCourse.user_id == user_id)
-            .count()
-        )
-        
-        if enrollment_count >= 5:
-            raise ValueError(f"You have reached the maximum enrollment limit of 5 courses. Please complete or drop a course before enrolling in a new one.")
         
         # Create enrollment
         user_course = LMSUserCourse(

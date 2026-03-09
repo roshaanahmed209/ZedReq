@@ -1249,9 +1249,20 @@ const AIMode = () => {
       } catch (err) {
         setIsThinking(false)
         console.error('Error in chat:', err)
+        
+        let errorText = "I'm having trouble processing your message. Please try again in a moment."
+        
+        // Handle quota exceeded (403)
+        if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'ai_messages') {
+          const detail = err.response.data.detail
+          errorText = `You've reached your monthly AI message limit (${detail.used}/${detail.limit} on the ${detail.plan} plan). Upgrade your plan to continue chatting, or wait until next month.`
+        } else if (err.response?.status === 429) {
+          errorText = "You're sending messages too quickly. Please wait a moment before trying again."
+        }
+        
         const errorResponse = {
           id: Date.now() + 1,
-          text: "I'm having trouble processing your message. Please try again in a moment.",
+          text: errorText,
           isUser: false,
           time: "Just now"
         }

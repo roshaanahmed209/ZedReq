@@ -60,13 +60,14 @@ class InterviewService:
         self.question_service = InterviewQuestionService()
         self.check_agent = TavCheckAgent()
     
-    def start_interview(self, user_id: int, job_id: int) -> Dict[str, Any]:
+    def start_interview(self, user_id: int, job_id: int, max_call_duration: Optional[int] = None) -> Dict[str, Any]:
         """
         Start a new interview session
         
         Args:
             user_id: User ID
             job_id: Job ID to interview for
+            max_call_duration: Maximum call duration in seconds (from subscription plan, server-controlled)
             
         Returns:
             Dictionary with interview details
@@ -134,7 +135,8 @@ class InterviewService:
                     replica_id=replica_id,
                     conversation_name=conversation_name,
                     system_prompt=system_prompt,
-                    first_message=first_message
+                    first_message=first_message,
+                    max_call_duration=max_call_duration
                 )
             except Exception as e:
                 logger.error(f"Tavus service error: {e}", exc_info=True)

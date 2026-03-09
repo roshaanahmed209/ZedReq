@@ -228,6 +228,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                       <span className="text-muted-foreground">Plan</span>
                       <p>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          user.subscription.plan === 'enterprise' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
                           user.subscription.plan === 'premium' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
                           user.subscription.plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                           'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
@@ -321,15 +322,27 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                       <option value="free">Free</option>
                       <option value="pro">Pro</option>
                       <option value="premium">Premium</option>
+                      <option value="enterprise">Enterprise</option>
                     </select>
                     <Button
                       size="sm"
-                      onClick={() => handleAction('changePlan', () => usersAPI.changePlan(userId, selectedPlan))}
+                      onClick={() => {
+                        if (selectedPlan === 'enterprise') {
+                          handleAction('changePlan', () => usersAPI.assignEnterprise(user.email))
+                        } else {
+                          handleAction('changePlan', () => usersAPI.changePlan(userId, selectedPlan))
+                        }
+                      }}
                       disabled={actionLoading === 'changePlan' || selectedPlan === (user.subscription?.plan || 'free')}
                     >
                       {actionLoading === 'changePlan' ? 'Updating...' : 'Apply'}
                     </Button>
                   </div>
+                  {selectedPlan === 'enterprise' && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Enterprise plan will be assigned via the subscription system (requires super_admin).
+                    </p>
+                  )}
                 </div>
 
                 {/* Cancel Subscription */}

@@ -1259,3 +1259,100 @@ class AdminService:
             'limit': limit,
             'pages': (total + limit - 1) // limit
         }
+
+    # ========================================================================
+    # Enterprise Plan Assignment
+    # ========================================================================
+
+    def assign_enterprise_plan(
+        self,
+        user_email: str,
+        admin_id: int,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Assign enterprise plan to a user by email.
+        Only callable by super_admin via backoffice.
+        
+        Looks up user in main app DB by email, then upserts
+        user_subscriptions row with enterprise plan.
+        """
+        # 1. Find user by email in main app
+        engine = get_main_app_engine()
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT uid, username, user_email, name FROM users WHERE user_email = :email"),
+                {'email': user_email.strip().lower()}
+            )
+            user_row = result.fetchone()
+
+        if not user_row:
+            raise ValueError(f"No user found with email: {user_email}")
+
+        user_id = user_row[0]
+        username = user_row[1]
+
+        # 2. Find enterprise plan in main app
+        with engine.connect() as conn:
+            plan_result = conn.execute(
+                text("SELECT plan_id FROM subscription_plans WHERE plan_name = 'enterprise' AND is_active = TRUE")
+            )
+            plan_row = plan_result.fetchone()
+
+        if not plan_row:
+            raise ValueError("Enterprise plan not found in database. Ensure subscription plans are seeded.")
+
+        enterprise_plan_id = plan_row[0]
+
+        # 3. Upsert user_subscriptions
+        with engine.begin() as conn:
+            # Check if subscription exists
+            existing = conn.execute(
+                text("SELECT subscription_id FROM user_subscriptions WHERE user_id = :uid"),
+                {'uid': user_id}
+            ).fetchone()
+
+            if existing:
+                conn.execute(
+                    text("""
+                        UPDATE user_subscriptions
+                        SET plan_id = :plan_id, status = 'active', assigned_by = 'admin',
+                            started_at = NOW(), expires_at = NULL, updated_at = NOW()
+                        WHERE user_id = :uid
+                    """),
+                    {'plan_id': enterprise_plan_id, 'uid': user_id}
+                )
+            else:
+                conn.execute(
+                    text("""
+                        INSERT INTO user_subscriptions (user_id, plan_id, status, assigned_by, started_at, created_at, updated_at)
+                        VALUES (:uid, :plan_id, 'active', 'admin', NOW(), NOW(), NOW())
+                    """),
+                    {'uid': user_id, 'plan_id': enterprise_plan_id}
+                )
+
+        # 4. Audit log
+        self._log_admin_activity(
+            admin_id=admin_id,
+            action_type='enterprise_plan_assigned',
+            target_type='user',
+            target_id=user_id,
+            details={
+                'user_email': user_email,
+                'username': username,
+                'plan': 'enterprise'
+            },
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+
+        logger.info(f"Enterprise plan assigned to user {user_email} (uid={user_id}) by admin {admin_id}")
+
+        return {
+            "success": True,
+            "message": f"Enterprise plan assigned to {user_email}",
+            "user_id": user_id,
+            "username": username,
+            "plan": "enterprise"
+        }

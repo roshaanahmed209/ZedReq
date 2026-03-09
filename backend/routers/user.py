@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from dependencies.auth import get_current_user
 from dependencies.rate_limit import write_rate_limit, RateLimiter
+from dependencies.subscription import get_quota_info
 from config.database_orm import get_db
 from services.user_service import UserService
 from services.profile_service import ProfileService
@@ -798,6 +799,23 @@ async def get_subscription(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get subscription information"
         )
+
+
+@router.get("/subscription/usage")
+async def get_subscription_usage(
+    usage_summary: dict = Depends(get_quota_info)
+):
+    """
+    Get current subscription plan and remaining quotas for all features.
+    
+    Returns:
+        Plan info (name, status, limits) and per-feature usage
+        (used/limit/remaining for ai_messages, course_enrollments, interview_sessions).
+    
+    Security: Authenticated via get_current_user (inside get_quota_info dependency).
+    Plan is always fetched fresh from DB, not from JWT or cache.
+    """
+    return usage_summary
 
 
 @router.put("/subscription", response_model=SubscriptionInfo)

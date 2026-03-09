@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import api from '../services/api'
+import api, { userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 
 const fadeIn = keyframes`
@@ -524,11 +524,12 @@ const Settings = () => {
   const [backupCodes, setBackupCodes] = useState([])
   const [showBackupCodes, setShowBackupCodes] = useState(false)
 
-  // Subscription - Hard coded to free plan
-  const [subscriptionPlan] = useState('free') // Always free, cannot be changed
-  const [subscriptionStatus] = useState('active') // Always active for free plan
-  const [subscriptionLoading] = useState(false)
-  const [subscriptionLoaded] = useState(true) // Mark as loaded immediately
+  // Subscription & Quota Usage
+  const [subscriptionPlan, setSubscriptionPlan] = useState('free')
+  const [subscriptionStatus, setSubscriptionStatus] = useState('active')
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
+  const [quotaUsage, setQuotaUsage] = useState(null)
 
   // Refs for timeout cleanup
   const timeoutRefs = useRef([])
@@ -549,8 +550,29 @@ const Settings = () => {
     }
   }, [user])
 
-  // Subscription is hard coded to free plan - no API call needed
-  // Removed subscription loading useEffect - subscription is always 'free'
+  // Load subscription and quota usage from server
+  useEffect(() => {
+    const loadSubscriptionUsage = async () => {
+      try {
+        setSubscriptionLoading(true)
+        const response = await userAPI.getSubscriptionUsage()
+        if (response.data) {
+          const { plan, usage } = response.data
+          setSubscriptionPlan(plan?.plan_name || 'free')
+          setSubscriptionStatus(plan?.status || 'active')
+          setQuotaUsage(usage)
+        }
+      } catch (err) {
+        console.error('Failed to load subscription usage:', err)
+        setSubscriptionPlan('free')
+        setSubscriptionStatus('active')
+      } finally {
+        setSubscriptionLoading(false)
+        setSubscriptionLoaded(true)
+      }
+    }
+    loadSubscriptionUsage()
+  }, [user])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -1439,7 +1461,7 @@ const Settings = () => {
       case 'subscription':
         return (
           <>
-            <SectionTitle>Subscription</SectionTitle>
+            <SectionTitle>Subscription & Usage</SectionTitle>
 
             <FormGroup>
               <Label>Current Plan</Label>
@@ -1449,20 +1471,106 @@ const Settings = () => {
                 borderRadius: '8px',
                 border: '2px solid var(--border)'
               }}>
-                <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>
-                  Free Plan
+                <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)', textTransform: 'capitalize' }}>
+                  {subscriptionPlan} Plan
                 </h3>
                 <p style={{ margin: '0 0 10px 0', color: 'var(--text-light)' }}>
-                  Basic features included
+                  {subscriptionPlan === 'free' ? 'Basic features included' : 
+                   subscriptionPlan === 'pro' ? 'Enhanced features and higher limits' :
+                   subscriptionPlan === 'enterprise' ? 'Unlimited access with premium features' : 
+                   'Basic features included'}
                 </p>
-                <p style={{ margin: 0, fontSize: '0.9em', color: 'var(--success)', fontWeight: 500 }}>
-                  Status: Active
+                <p style={{ margin: 0, fontSize: '0.9em', color: subscriptionStatus === 'active' ? 'var(--success)' : 'var(--error)', fontWeight: 500 }}>
+                  Status: {subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1)}
                 </p>
               </div>
             </FormGroup>
 
+            {/* Monthly Usage Quotas */}
+            {quotaUsage && (
+              <FormGroup>
+                <Label>Monthly Usage</Label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* AI Messages */}
+                  {(() => {
+                    const ai = quotaUsage.ai_messages
+                    const isUnlimited = ai?.limit === -1
+                    const pct = isUnlimited ? 0 : (ai?.limit > 0 ? Math.min(100, Math.round((ai?.used / ai?.limit) * 100)) : 0)
+                    return (
+                      <div style={{ padding: '14px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 500, fontSize: '0.9em' }}>AI Messages (Nemz)</span>
+                          <span style={{ fontSize: '0.85em', color: pct >= 90 && !isUnlimited ? '#e74c3c' : 'var(--text-light)' }}>
+                            {ai?.used ?? 0} / {isUnlimited ? '∞' : (ai?.limit ?? 0)}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : 'var(--primary)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                          </div>
+                        )}
+                        <p style={{ margin: '4px 0 0', fontSize: '0.8em', color: 'var(--text-light)' }}>
+                          {isUnlimited ? 'Unlimited messages' : `${ai?.remaining ?? 0} remaining this month`}
+                        </p>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Course Enrollments */}
+                  {(() => {
+                    const ce = quotaUsage.course_enrollments
+                    const isUnlimited = ce?.limit === -1
+                    const pct = isUnlimited ? 0 : (ce?.limit > 0 ? Math.min(100, Math.round((ce?.used / ce?.limit) * 100)) : 0)
+                    return (
+                      <div style={{ padding: '14px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 500, fontSize: '0.9em' }}>Course Enrollments (LMS)</span>
+                          <span style={{ fontSize: '0.85em', color: pct >= 90 && !isUnlimited ? '#e74c3c' : 'var(--text-light)' }}>
+                            {ce?.used ?? 0} / {isUnlimited ? '∞' : (ce?.limit ?? 0)}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : 'var(--primary)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                          </div>
+                        )}
+                        <p style={{ margin: '4px 0 0', fontSize: '0.8em', color: 'var(--text-light)' }}>
+                          {isUnlimited ? 'Unlimited enrollments' : `${ce?.remaining ?? 0} remaining this month`}
+                        </p>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Interview Sessions */}
+                  {(() => {
+                    const iv = quotaUsage.interview_sessions
+                    const isUnlimited = iv?.limit === -1
+                    const pct = isUnlimited ? 0 : (iv?.limit > 0 ? Math.min(100, Math.round((iv?.used / iv?.limit) * 100)) : 0)
+                    return (
+                      <div style={{ padding: '14px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 500, fontSize: '0.9em' }}>AI Mock Interviews</span>
+                          <span style={{ fontSize: '0.85em', color: pct >= 90 && !isUnlimited ? '#e74c3c' : 'var(--text-light)' }}>
+                            {iv?.used ?? 0} / {isUnlimited ? '∞' : (iv?.limit ?? 0)}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : 'var(--primary)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                          </div>
+                        )}
+                        <p style={{ margin: '4px 0 0', fontSize: '0.8em', color: 'var(--text-light)' }}>
+                          {isUnlimited ? 'Unlimited sessions (max 10 min each)' : `${iv?.remaining ?? 0} remaining this month (max 1 min each)`}
+                        </p>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </FormGroup>
+            )}
+
             <FormGroup>
-              <Label>Plan Selection</Label>
+              <Label>Plan Options</Label>
               <div style={{ 
                 padding: '15px', 
                 background: 'rgba(108, 117, 125, 0.1)', 
@@ -1471,42 +1579,46 @@ const Settings = () => {
                 color: 'var(--text-light)'
               }}>
                 <p style={{ margin: 0, fontSize: '0.9em' }}>
-                  <strong>Note:</strong> Subscription plans are currently locked to the Free Plan. 
-                  Plan upgrades will be available in the future.
+                  <strong>Note:</strong> Plan upgrades will be available in the future. 
+                  Enterprise plans are assigned by administrators.
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px', opacity: 0.5 }}>
+              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>
                 <SecondaryButton 
                   disabled={true}
-                  style={{ borderColor: 'var(--primary)', background: 'rgba(10, 102, 194, 0.1)', cursor: 'not-allowed' }}
+                  style={{ 
+                    borderColor: subscriptionPlan === 'free' ? 'var(--primary)' : 'var(--border)',
+                    background: subscriptionPlan === 'free' ? 'rgba(10, 102, 194, 0.1)' : 'transparent',
+                    cursor: 'not-allowed',
+                    opacity: subscriptionPlan === 'free' ? 1 : 0.5
+                  }}
                 >
-                  Free Plan (Current)
+                  Free Plan {subscriptionPlan === 'free' ? '(Current)' : ''}
                 </SecondaryButton>
                 <SecondaryButton 
                   disabled={true}
-                  style={{ cursor: 'not-allowed' }}
+                  style={{ 
+                    borderColor: subscriptionPlan === 'pro' ? 'var(--primary)' : 'var(--border)',
+                    background: subscriptionPlan === 'pro' ? 'rgba(10, 102, 194, 0.1)' : 'transparent',
+                    cursor: 'not-allowed',
+                    opacity: subscriptionPlan === 'pro' ? 1 : 0.5
+                  }}
                 >
-                  Pro Plan - $9.99/month
+                  Pro Plan {subscriptionPlan === 'pro' ? '(Current)' : '- $9.99/month'}
                 </SecondaryButton>
                 <SecondaryButton 
                   disabled={true}
-                  style={{ cursor: 'not-allowed' }}
+                  style={{ 
+                    borderColor: subscriptionPlan === 'enterprise' ? '#27ae60' : 'var(--border)',
+                    background: subscriptionPlan === 'enterprise' ? 'rgba(39, 174, 96, 0.1)' : 'transparent',
+                    cursor: 'not-allowed',
+                    opacity: subscriptionPlan === 'enterprise' ? 1 : 0.5
+                  }}
                 >
-                  Premium Plan - $19.99/month
+                  Enterprise {subscriptionPlan === 'enterprise' ? '(Current)' : '- Contact Us'}
                 </SecondaryButton>
               </div>
             </FormGroup>
-
-            <Button 
-              disabled={true}
-              style={{ 
-                opacity: 0.5, 
-                cursor: 'not-allowed',
-                marginTop: '10px'
-              }}
-            >
-              Update Subscription (Disabled)
-            </Button>
           </>
         )
 

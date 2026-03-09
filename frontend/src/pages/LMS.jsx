@@ -2418,13 +2418,6 @@ const LMS = () => {
     try {
       console.log(`[LMS] handleEnrollCourse: Enrolling in course_id=${courseId}`)
       
-      // Check current enrollment count before attempting enrollment
-      const currentEnrollmentCount = courses.length
-      if (currentEnrollmentCount >= 5) {
-        alert('You have reached the maximum enrollment limit of 5 courses. Please complete or drop a course before enrolling in a new one.')
-        return
-      }
-      
       await lmsAPI.enrollInCourse(courseId)
       alert('Successfully enrolled in course!')
       
@@ -2432,13 +2425,14 @@ const LMS = () => {
       await fetchAllData()
     } catch (err) {
       console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
       
-      // Check if error is about enrollment limit
-      if (errorMsg.includes('maximum enrollment limit') || errorMsg.includes('5 courses')) {
-        alert(errorMsg)
+      // Handle quota exceeded (403) from server-side subscription check
+      if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'course_enrollments') {
+        const detail = err.response.data.detail
+        alert(`Monthly course enrollment limit reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan or wait until next month.`)
       } else {
-        alert(`Error: ${errorMsg}`)
+        const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
+        alert(`Error: ${typeof errorMsg === 'string' ? errorMsg : errorMsg.message || 'Failed to enroll'}`)
       }
     }
   }

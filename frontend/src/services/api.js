@@ -184,6 +184,8 @@ export const userAPI = {
   searchUsers: (query) => api.get('/api/user/search', { params: { q: query } }),
   getConnectionCounts: (userId) => api.get(`/api/user/${userId}/connections/count`),
   getUserCertificates: (userId) => api.get(`/api/user/${userId}/certificates`),
+  // Subscription & quota usage
+  getSubscriptionUsage: () => api.get('/api/user/subscription/usage'),
 }
 
 // Profile Features API methods

@@ -132,7 +132,25 @@ async def lifespan(app: FastAPI):
     
     init_database()
     print("Database initialized")
-    
+
+    # Initialize ORM tables and seed subscription plans
+    try:
+        from config.database_orm import init_orm_tables, SessionLocal
+        init_orm_tables()
+        print("ORM tables initialized")
+
+        from services.subscription_service import SubscriptionService
+        seed_db = SessionLocal()
+        try:
+            SubscriptionService.seed_plans(seed_db)
+            print("Subscription plans seeded successfully")
+        finally:
+            seed_db.close()
+    except Exception as e:
+        print(f"Warning: Could not seed subscription plans: {e}")
+        import traceback
+        traceback.print_exc()
+
     # Initialize Firebase (for messaging service)
     try:
         from utils.firebase_client import initialize_firebase, get_firebase_db

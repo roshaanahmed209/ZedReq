@@ -17,6 +17,7 @@ from schemas.admin import (
     Disable2FARequest,
     DeleteUserRequest,
     SendNotificationRequest,
+    AssignEnterprisePlanRequest,
 )
 import logging
 
@@ -442,4 +443,40 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete user"
+        )
+
+
+# ============================================================================
+# Enterprise Plan Assignment (super_admin only)
+# ============================================================================
+
+@router.post("/assign-enterprise", dependencies=[Depends(require_super_admin)])
+async def assign_enterprise_plan(
+    body: AssignEnterprisePlanRequest,
+    request: Request,
+    current_admin: dict = Depends(require_admin_role),
+    service: AdminService = Depends(get_admin_service)
+):
+    """
+    Assign enterprise plan to a user by email.
+    Requires super_admin role. Full audit trail.
+    """
+    try:
+        ip_address, user_agent = _extract_request_meta(request)
+        result = service.assign_enterprise_plan(
+            user_email=body.email,
+            admin_id=current_admin["id"],
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error assigning enterprise plan: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to assign enterprise plan"
         )

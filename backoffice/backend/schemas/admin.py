@@ -101,6 +101,11 @@ class SendNotificationRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000, description="Notification message")
 
 
+class AssignEnterprisePlanRequest(BaseModel):
+    """Request schema for assigning enterprise plan to a user by email"""
+    email: EmailStr = Field(..., description="Registered user email to assign enterprise plan")
+
+
 class RevenueAnalyticsResponse(BaseModel):
     """Revenue analytics response schema"""
     revenue_by_period: list[dict]

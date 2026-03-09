@@ -80,7 +80,8 @@ class TavusService:
         replica_id: str,
         conversation_name: str,
         system_prompt: str,
-        first_message: str
+        first_message: str,
+        max_call_duration: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Create a new Tavus conversation
@@ -90,6 +91,7 @@ class TavusService:
             conversation_name: Name for the conversation
             system_prompt: System prompt for the interviewer
             first_message: First message to start the conversation
+            max_call_duration: Maximum call duration in seconds (server-controlled, not client)
             
         Returns:
             Dictionary with conversation details including conversation_id
@@ -118,6 +120,11 @@ class TavusService:
             "system_prompt": system_prompt,
             "first_message": first_message
         }
+        
+        # Add max_call_duration if provided (server-side control, not client-controlled)
+        if max_call_duration is not None and isinstance(max_call_duration, int) and max_call_duration > 0:
+            payload["max_call_duration"] = max_call_duration
+            logger.info(f"Tavus conversation max_call_duration set to {max_call_duration}s")
         
         # Log API call (sanitized)
         safe_log_api_call(
