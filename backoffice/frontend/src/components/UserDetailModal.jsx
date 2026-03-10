@@ -326,13 +326,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                     </select>
                     <Button
                       size="sm"
-                      onClick={() => {
-                        if (selectedPlan === 'enterprise') {
-                          handleAction('changePlan', () => usersAPI.assignEnterprise(user.email))
-                        } else {
-                          handleAction('changePlan', () => usersAPI.changePlan(userId, selectedPlan))
-                        }
-                      }}
+                      onClick={() => handleAction('changePlan', () => usersAPI.changePlan(userId, selectedPlan))}
                       disabled={actionLoading === 'changePlan' || selectedPlan === (user.subscription?.plan || 'free')}
                     >
                       {actionLoading === 'changePlan' ? 'Updating...' : 'Apply'}
@@ -340,7 +334,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                   </div>
                   {selectedPlan === 'enterprise' && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Enterprise plan will be assigned via the subscription system (requires super_admin).
+                      Enterprise plan assignment requires super_admin privileges.
                     </p>
                   )}
                 </div>

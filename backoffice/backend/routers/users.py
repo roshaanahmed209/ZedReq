@@ -168,7 +168,7 @@ async def change_user_plan(
     current_admin: dict = Depends(require_admin_role),
     service: AdminService = Depends(get_admin_service)
 ):
-    """Change a user's subscription plan. 1 UPDATE on payment table."""
+    """Change a user's subscription plan. UPSERT user_subscriptions + sync payment."""
     if user_id < 1:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID")
     try:

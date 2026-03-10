@@ -279,16 +279,25 @@ class AdminService:
         user_agent: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Change a user's subscription plan.
-        Single UPDATE on payment table: subscription_plan + subscription_status.
+        Change a user's subscription plan (payment-first flow).
+        
+        Write order (payment is source of truth):
+        1. Verify user exists + look up plan_id.
+        2. UPSERT payment table FIRST (plan, status).
+        3. UPSERT user_subscriptions (synced from payment, used for quota reads).
+        4. SET payment.subscription_id FK link.
+        
+        All writes happen inside a single engine.begin() transaction.
         """
-        valid_plans = ('free', 'pro', 'premium')
+        valid_plans = ('free', 'pro', 'premium', 'enterprise')
         if new_plan not in valid_plans:
             raise ValueError(f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
         
         engine = get_main_app_engine()
+        new_status = 'active' if new_plan != 'free' else 'inactive'
+        
         with engine.begin() as conn:
-            # Verify user exists first (read-only)
+            # 1. Verify user exists
             user_check = conn.execute(
                 text("SELECT uid FROM users WHERE uid = :uid"),
                 {'uid': user_id}
@@ -296,26 +305,69 @@ class AdminService:
             if not user_check:
                 raise ValueError("User not found")
             
-            # Single UPDATE: 2 columns, 1 row
-            new_status = 'active' if new_plan != 'free' else 'inactive'
-            result = conn.execute(
+            # 2. Look up plan_id from subscription_plans
+            plan_row = conn.execute(
+                text("SELECT plan_id FROM subscription_plans WHERE plan_name = :plan AND is_active = TRUE"),
+                {'plan': new_plan}
+            ).fetchone()
+            if not plan_row:
+                raise ValueError(f"Plan '{new_plan}' not found in subscription_plans. Ensure plans are seeded.")
+            plan_id = plan_row[0]
+            
+            # 3. UPSERT payment FIRST (source of truth)
+            pay_result = conn.execute(
                 text("""
-                    UPDATE payment 
+                    UPDATE payment
                     SET subscription_plan = :plan, subscription_status = :status, updated_at = NOW()
                     WHERE uid = :uid
                 """),
                 {'plan': new_plan, 'status': new_status, 'uid': user_id}
             )
             
-            if result.rowcount == 0:
+            if pay_result.rowcount == 0:
                 # No payment row exists; create one
                 conn.execute(
                     text("""
-                        INSERT INTO payment (uid, subscription_plan, subscription_status, payment_provider, created_at, updated_at)
+                        INSERT INTO payment (uid, subscription_plan, subscription_status,
+                                             payment_provider, created_at, updated_at)
                         VALUES (:uid, :plan, :status, 'admin_override', NOW(), NOW())
                     """),
                     {'uid': user_id, 'plan': new_plan, 'status': new_status}
                 )
+            
+            # 4. UPSERT user_subscriptions (synced from payment, used for quota reads)
+            existing_sub = conn.execute(
+                text("SELECT subscription_id FROM user_subscriptions WHERE user_id = :uid"),
+                {'uid': user_id}
+            ).fetchone()
+            
+            if existing_sub:
+                conn.execute(
+                    text("""
+                        UPDATE user_subscriptions
+                        SET plan_id = :plan_id, status = :status, assigned_by = 'admin',
+                            started_at = NOW(), updated_at = NOW()
+                        WHERE user_id = :uid
+                    """),
+                    {'plan_id': plan_id, 'status': new_status, 'uid': user_id}
+                )
+                subscription_id = existing_sub[0]
+            else:
+                result = conn.execute(
+                    text("""
+                        INSERT INTO user_subscriptions (user_id, plan_id, status, assigned_by, started_at, created_at, updated_at)
+                        VALUES (:uid, :plan_id, :status, 'admin', NOW(), NOW(), NOW())
+                        RETURNING subscription_id
+                    """),
+                    {'uid': user_id, 'plan_id': plan_id, 'status': new_status}
+                )
+                subscription_id = result.fetchone()[0]
+            
+            # 5. SET payment.subscription_id FK link
+            conn.execute(
+                text("UPDATE payment SET subscription_id = :sub_id WHERE uid = :uid"),
+                {'sub_id': subscription_id, 'uid': user_id}
+            )
         
         # Audit log (backoffice DB only)
         self._log_admin_activity(
@@ -323,7 +375,7 @@ class AdminService:
             action_type='change_user_plan',
             target_type='user',
             target_id=user_id,
-            details={'new_plan': new_plan, 'new_status': new_status},
+            details={'new_plan': new_plan, 'new_status': new_status, 'subscription_id': subscription_id},
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -339,12 +391,13 @@ class AdminService:
         user_agent: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Cancel a user's subscription.
-        Single UPDATE on payment table: subscription_status = 'cancelled'.
+        Cancel a user's subscription (payment-first).
+        Payment is updated first (source of truth), then user_subscriptions is synced.
         """
         engine = get_main_app_engine()
         with engine.begin() as conn:
-            result = conn.execute(
+            # 1. Cancel in payment FIRST (source of truth)
+            pay_result = conn.execute(
                 text("""
                     UPDATE payment 
                     SET subscription_status = 'cancelled', updated_at = NOW()
@@ -353,7 +406,17 @@ class AdminService:
                 {'uid': user_id}
             )
             
-            if result.rowcount == 0:
+            # 2. Cancel in user_subscriptions (synced from payment)
+            sub_result = conn.execute(
+                text("""
+                    UPDATE user_subscriptions
+                    SET status = 'cancelled', updated_at = NOW()
+                    WHERE user_id = :uid AND status = 'active'
+                """),
+                {'uid': user_id}
+            )
+            
+            if pay_result.rowcount == 0 and sub_result.rowcount == 0:
                 raise ValueError("No active subscription found for this user")
         
         self._log_admin_activity(
@@ -672,8 +735,8 @@ class AdminService:
         user_agent: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Soft-delete a user: cancel subscription + log deletion intent.
-        Single UPDATE on payment table: subscription_status = 'cancelled'.
+        Soft-delete a user: cancel subscription in both tables + log deletion intent.
+        Payment updated first (source of truth), then user_subscriptions synced.
         No CASCADE DELETE — actual deletion handled by main app flow.
         """
         engine = get_main_app_engine()
@@ -686,12 +749,22 @@ class AdminService:
             if not user_check:
                 raise ValueError("User not found")
             
-            # Cancel any active subscription
+            # Cancel in payment FIRST (source of truth)
             conn.execute(
                 text("""
                     UPDATE payment 
                     SET subscription_status = 'cancelled', updated_at = NOW()
                     WHERE uid = :uid AND subscription_status = 'active'
+                """),
+                {'uid': user_id}
+            )
+            
+            # Cancel in user_subscriptions (synced from payment)
+            conn.execute(
+                text("""
+                    UPDATE user_subscriptions
+                    SET status = 'cancelled', updated_at = NOW()
+                    WHERE user_id = :uid AND status = 'active'
                 """),
                 {'uid': user_id}
             )
@@ -718,44 +791,74 @@ class AdminService:
         end_date: Optional[datetime] = None,
         group_by: str = 'day'  # 'day', 'week', 'month'
     ) -> Dict[str, Any]:
-        """Get revenue analytics"""
-        query = self.db.query(RevenueTransaction).filter(
-            RevenueTransaction.status == 'completed'
-        )
-        
-        if start_date:
-            query = query.filter(RevenueTransaction.created_at >= start_date)
-        if end_date:
-            query = query.filter(RevenueTransaction.created_at <= end_date)
-        
-        # Group by period
-        if group_by == 'day':
-            period = func.date(RevenueTransaction.created_at)
-        elif group_by == 'week':
-            period = func.date_trunc('week', RevenueTransaction.created_at)
-        elif group_by == 'month':
-            period = func.date_trunc('month', RevenueTransaction.created_at)
-        else:
-            period = func.date(RevenueTransaction.created_at)
-        
-        revenue_data = query.with_entities(
-            period.label('period'),
-            func.sum(RevenueTransaction.amount).label('total'),
-            func.count(RevenueTransaction.id).label('count')
-        ).group_by(period).order_by(period).all()
-        
-        return {
-            'revenue_by_period': [
-                {
-                    'period': str(r.period),
-                    'total': float(r.total) if r.total else 0.0,
-                    'count': r.count
+        """Get revenue analytics from main app payment table (authoritative source)"""
+        try:
+            engine = get_main_app_engine()
+            with engine.connect() as conn:
+                # Build date filter
+                date_filter = ""
+                if start_date:
+                    date_filter += f" AND payment_date >= '{start_date.isoformat()}'"
+                if end_date:
+                    date_filter += f" AND payment_date <= '{end_date.isoformat()}'"
+                
+                # Group by period
+                if group_by == 'day':
+                    period_expr = "DATE(payment_date)"
+                elif group_by == 'week':
+                    period_expr = "DATE_TRUNC('week', payment_date)"
+                elif group_by == 'month':
+                    period_expr = "DATE_TRUNC('month', payment_date)"
+                else:
+                    period_expr = "DATE(payment_date)"
+                
+                # Query payment table for revenue data
+                revenue_query = text(f"""
+                    SELECT 
+                        {period_expr} as period,
+                        SUM(amount) as total,
+                        COUNT(*) as count
+                    FROM payment
+                    WHERE amount IS NOT NULL 
+                      AND amount > 0
+                      AND subscription_status = 'active'
+                      {date_filter}
+                    GROUP BY {period_expr}
+                    ORDER BY period
+                """)
+                
+                revenue_results = conn.execute(revenue_query).fetchall()
+                
+                revenue_data = []
+                total_revenue = 0.0
+                total_transactions = 0
+                
+                for row in revenue_results:
+                    period = row.period
+                    total = float(row.total or 0.0)
+                    count = row.count or 0
+                    
+                    revenue_data.append({
+                        'period': str(period),
+                        'total': total,
+                        'count': count
+                    })
+                    total_revenue += total
+                    total_transactions += count
+                
+                return {
+                    'revenue_by_period': revenue_data,
+                    'total_revenue': total_revenue,
+                    'total_transactions': total_transactions
                 }
-                for r in revenue_data
-            ],
-            'total_revenue': sum(float(r.total) if r.total else 0.0 for r in revenue_data),
-            'total_transactions': sum(r.count for r in revenue_data)
-        }
+        except Exception as e:
+            logger.error(f"Error getting revenue analytics from main app: {e}", exc_info=True)
+            # Fallback to empty data
+            return {
+                'revenue_by_period': [],
+                'total_revenue': 0.0,
+                'total_transactions': 0
+            }
     
     def get_cost_analytics(
         self,
@@ -813,7 +916,7 @@ class AdminService:
         }
     
     def _get_main_app_user_data(self) -> Dict[str, Any]:
-        """Query main app database for user and subscription data"""
+        """Query main app database for user and subscription data with payment amounts"""
         try:
             engine = get_main_app_engine()
             with engine.connect() as conn:
@@ -821,12 +924,14 @@ class AdminService:
                 total_users_result = conn.execute(text("SELECT COUNT(*) FROM users"))
                 total_users = total_users_result.scalar() or 0
                 
-                # Get subscription data by plan
+                # Get subscription data by plan with payment amounts
                 subscription_query = text("""
                     SELECT 
                         COALESCE(subscription_plan, 'free') as plan,
                         COUNT(*) as total_count,
-                        COUNT(CASE WHEN subscription_status = 'active' THEN 1 END) as active_count
+                        COUNT(CASE WHEN subscription_status = 'active' THEN 1 END) as active_count,
+                        SUM(CASE WHEN subscription_status = 'active' AND amount IS NOT NULL THEN amount ELSE 0 END) as total_revenue,
+                        AVG(CASE WHEN subscription_status = 'active' AND amount IS NOT NULL THEN amount ELSE NULL END) as avg_amount
                     FROM payment
                     GROUP BY subscription_plan
                 """)
@@ -834,16 +939,23 @@ class AdminService:
                 
                 plans_breakdown = {}
                 total_paid = 0
+                total_revenue = 0.0
                 for row in subscription_results:
                     plan = row.plan or 'free'
                     total_count = row.total_count or 0
                     active_count = row.active_count or 0
+                    plan_revenue = float(row.total_revenue or 0.0)
+                    avg_amount = float(row.avg_amount or 0.0)
+                    
                     plans_breakdown[plan] = {
                         'total': total_count,
-                        'active': active_count
+                        'active': active_count,
+                        'revenue': plan_revenue,
+                        'avg_amount': avg_amount
                     }
                     if plan != 'free' and active_count > 0:
                         total_paid += active_count
+                        total_revenue += plan_revenue
                 
                 # Get free users (users without payment record or with free plan)
                 free_users = total_users - total_paid
@@ -852,6 +964,7 @@ class AdminService:
                     'total_users': total_users,
                     'paid_users': total_paid,
                     'free_users': max(0, free_users),
+                    'total_revenue': total_revenue,
                     'plans_breakdown': plans_breakdown
                 }
         except Exception as e:
@@ -861,57 +974,46 @@ class AdminService:
                 'total_users': 0,
                 'paid_users': 0,
                 'free_users': 0,
+                'total_revenue': 0.0,
                 'plans_breakdown': {}
             }
     
     def get_subscription_metrics(self) -> Dict[str, Any]:
-        """Get subscription metrics from both backoffice and main app"""
-        # Get data from main app database
+        """Get subscription metrics from main app payment table (authoritative source)"""
+        # Get data from main app database (payment table is source of truth)
         main_app_data = self._get_main_app_user_data()
         
-        # Also get revenue transaction data from backoffice
-        active_subscriptions = self.db.query(RevenueTransaction).filter(
-            and_(
-                RevenueTransaction.transaction_type == 'subscription',
-                RevenueTransaction.status == 'completed'
-            )
-        ).count()
-        
-        # Get plans breakdown from revenue transactions
-        plans_breakdown_revenue = self.db.query(
-            RevenueTransaction.plan_type,
-            func.count(RevenueTransaction.id).label('count')
-        ).filter(
-            and_(
-                RevenueTransaction.transaction_type == 'subscription',
-                RevenueTransaction.status == 'completed'
-            )
-        ).group_by(RevenueTransaction.plan_type).all()
-        
-        # Calculate MRR (Monthly Recurring Revenue)
+        # Calculate MRR (Monthly Recurring Revenue) from payment amounts
+        # Use actual payment amounts from payment table, not hardcoded prices
         mrr = 0.0
-        plan_prices = {'free': 0, 'pro': 29.99, 'premium': 99.99}  # Adjust as needed
-        
-        # Merge plan data from main app and revenue transactions
         plans_breakdown = main_app_data.get('plans_breakdown', {}).copy()
-        for plan, count in plans_breakdown_revenue:
-            if plan and plan in plan_prices:
-                if plan not in plans_breakdown:
-                    plans_breakdown[plan] = {'total': 0, 'active': 0}
-                plans_breakdown[plan]['total'] += count
-                mrr += plan_prices[plan] * count
+        
+        # Calculate MRR from actual payment amounts in the payment table
+        for plan, data in plans_breakdown.items():
+            if plan != 'free' and data.get('active', 0) > 0:
+                # If we have revenue data, use it; otherwise calculate from active count * avg amount
+                plan_revenue = data.get('revenue', 0.0)
+                if plan_revenue > 0:
+                    mrr += plan_revenue
+                else:
+                    # Fallback: use average amount if available
+                    avg_amount = data.get('avg_amount', 0.0)
+                    if avg_amount > 0:
+                        mrr += avg_amount * data.get('active', 0)
         
         total_users = main_app_data.get('total_users', 0)
         paid_users = main_app_data.get('paid_users', 0)
         free_users = main_app_data.get('free_users', 0)
+        total_revenue = main_app_data.get('total_revenue', 0.0)
         
         return {
             'total_users': total_users,
             'paid_users': paid_users,
             'free_users': free_users,
-            'active_subscriptions': max(active_subscriptions, paid_users),
+            'active_subscriptions': paid_users,  # Use paid_users from payment table
             'plans_breakdown': plans_breakdown,
             'mrr': mrr,
+            'total_revenue': total_revenue,
             'conversion_rate': (paid_users / total_users * 100) if total_users > 0 else 0.0
         }
     
@@ -987,55 +1089,70 @@ class AdminService:
         end_date: Optional[datetime] = None,
         group_by: str = 'day'  # 'day', 'week', 'month'
     ) -> List[Dict[str, Any]]:
-        """Get revenue over time with proper ISO timestamp formatting"""
-        query = self.db.query(RevenueTransaction).filter(
-            RevenueTransaction.status == 'completed'
-        )
-        
-        if start_date:
-            query = query.filter(RevenueTransaction.created_at >= start_date)
-        if end_date:
-            query = query.filter(RevenueTransaction.created_at <= end_date)
-        
-        # Group by period
-        if group_by == 'day':
-            period = func.date(RevenueTransaction.created_at)
-        elif group_by == 'week':
-            period = func.date_trunc('week', RevenueTransaction.created_at)
-        elif group_by == 'month':
-            period = func.date_trunc('month', RevenueTransaction.created_at)
-        else:
-            period = func.date(RevenueTransaction.created_at)
-        
-        revenue_data = query.with_entities(
-            period.label('period'),
-            func.sum(RevenueTransaction.amount).label('total'),
-            func.count(RevenueTransaction.id).label('count')
-        ).group_by(period).order_by(period).all()
-        
-        # Format with ISO timestamps
-        result = []
-        for r in revenue_data:
-            period_date = r.period
-            if isinstance(period_date, datetime):
-                timestamp = period_date.isoformat() + 'Z'
-            elif hasattr(period_date, 'isoformat'):
-                timestamp = period_date.isoformat() + 'Z'
-            else:
-                # If it's a date, convert to datetime at midnight UTC
-                if hasattr(period_date, 'strftime'):
-                    timestamp = datetime.combine(period_date, datetime.min.time()).isoformat() + 'Z'
+        """Get revenue over time from main app payment table with proper ISO timestamp formatting"""
+        try:
+            engine = get_main_app_engine()
+            with engine.connect() as conn:
+                # Build date filter
+                date_filter = ""
+                if start_date:
+                    date_filter += f" AND payment_date >= '{start_date.isoformat()}'"
+                if end_date:
+                    date_filter += f" AND payment_date <= '{end_date.isoformat()}'"
+                
+                # Group by period
+                if group_by == 'day':
+                    period_expr = "DATE(payment_date)"
+                elif group_by == 'week':
+                    period_expr = "DATE_TRUNC('week', payment_date)"
+                elif group_by == 'month':
+                    period_expr = "DATE_TRUNC('month', payment_date)"
                 else:
-                    timestamp = str(period_date) + 'T00:00:00Z'
-            
-            result.append({
-                'timestamp': timestamp,
-                'date': period_date.isoformat() if hasattr(period_date, 'isoformat') else str(period_date),
-                'revenue': float(r.total) if r.total else 0.0,
-                'transactions': r.count
-            })
-        
-        return result
+                    period_expr = "DATE(payment_date)"
+                
+                # Query payment table for revenue data
+                revenue_query = text(f"""
+                    SELECT 
+                        {period_expr} as period,
+                        SUM(amount) as total,
+                        COUNT(*) as count
+                    FROM payment
+                    WHERE amount IS NOT NULL 
+                      AND amount > 0
+                      AND subscription_status = 'active'
+                      {date_filter}
+                    GROUP BY {period_expr}
+                    ORDER BY period
+                """)
+                
+                revenue_results = conn.execute(revenue_query).fetchall()
+                
+                # Format with ISO timestamps
+                result = []
+                for row in revenue_results:
+                    period_date = row.period
+                    if isinstance(period_date, datetime):
+                        timestamp = period_date.isoformat() + 'Z'
+                    elif hasattr(period_date, 'isoformat'):
+                        timestamp = period_date.isoformat() + 'Z'
+                    else:
+                        # If it's a date, convert to datetime at midnight UTC
+                        if hasattr(period_date, 'strftime'):
+                            timestamp = datetime.combine(period_date, datetime.min.time()).isoformat() + 'Z'
+                        else:
+                            timestamp = str(period_date) + 'T00:00:00Z'
+                    
+                    result.append({
+                        'timestamp': timestamp,
+                        'date': period_date.isoformat() if hasattr(period_date, 'isoformat') else str(period_date),
+                        'revenue': float(row.total or 0.0),
+                        'transactions': row.count or 0
+                    })
+                
+                return result
+        except Exception as e:
+            logger.error(f"Error getting revenue over time from main app: {e}", exc_info=True)
+            return []
     
     def get_dashboard_summary(self) -> Dict[str, Any]:
         """Get comprehensive dashboard summary with all key metrics including DevOps analytics"""
@@ -1272,11 +1389,13 @@ class AdminService:
         user_agent: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Assign enterprise plan to a user by email.
+        Assign enterprise plan to a user by email (payment-first).
         Only callable by super_admin via backoffice.
         
-        Looks up user in main app DB by email, then upserts
-        user_subscriptions row with enterprise plan.
+        Looks up user in main app DB by email, then:
+        1. UPSERT payment (source of truth).
+        2. UPSERT user_subscriptions (synced, used for quota reads).
+        3. SET payment.subscription_id FK link.
         """
         # 1. Find user by email in main app
         engine = get_main_app_engine()
@@ -1305,9 +1424,28 @@ class AdminService:
 
         enterprise_plan_id = plan_row[0]
 
-        # 3. Upsert user_subscriptions
+        # 3. UPSERT payment FIRST (source of truth), then sync user_subscriptions
         with engine.begin() as conn:
-            # Check if subscription exists
+            # 3a. UPSERT payment FIRST (source of truth)
+            pay_result = conn.execute(
+                text("""
+                    UPDATE payment
+                    SET subscription_plan = 'enterprise', subscription_status = 'active', updated_at = NOW()
+                    WHERE uid = :uid
+                """),
+                {'uid': user_id}
+            )
+            if pay_result.rowcount == 0:
+                conn.execute(
+                    text("""
+                        INSERT INTO payment (uid, subscription_plan, subscription_status,
+                                             payment_provider, created_at, updated_at)
+                        VALUES (:uid, 'enterprise', 'active', 'admin_override', NOW(), NOW())
+                    """),
+                    {'uid': user_id}
+                )
+            
+            # 3b. UPSERT user_subscriptions (synced from payment, used for quota reads)
             existing = conn.execute(
                 text("SELECT subscription_id FROM user_subscriptions WHERE user_id = :uid"),
                 {'uid': user_id}
@@ -1323,14 +1461,23 @@ class AdminService:
                     """),
                     {'plan_id': enterprise_plan_id, 'uid': user_id}
                 )
+                subscription_id = existing[0]
             else:
-                conn.execute(
+                result = conn.execute(
                     text("""
                         INSERT INTO user_subscriptions (user_id, plan_id, status, assigned_by, started_at, created_at, updated_at)
                         VALUES (:uid, :plan_id, 'active', 'admin', NOW(), NOW(), NOW())
+                        RETURNING subscription_id
                     """),
                     {'uid': user_id, 'plan_id': enterprise_plan_id}
                 )
+                subscription_id = result.fetchone()[0]
+            
+            # 3c. SET payment.subscription_id FK link
+            conn.execute(
+                text("UPDATE payment SET subscription_id = :sub_id WHERE uid = :uid"),
+                {'sub_id': subscription_id, 'uid': user_id}
+            )
 
         # 4. Audit log
         self._log_admin_activity(

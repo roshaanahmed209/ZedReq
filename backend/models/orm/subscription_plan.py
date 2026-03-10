@@ -9,7 +9,7 @@ from config.database_orm import Base
 class SubscriptionPlan(Base):
     """
     Static plan definitions table.
-    Seeded on startup with free/pro/enterprise rows.
+    Seeded on startup with free/pro/premium/enterprise rows.
     -1 means unlimited for any limit column.
     """
     __tablename__ = 'subscription_plans'

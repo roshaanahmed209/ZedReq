@@ -30,14 +30,20 @@ FEATURE_INTERVIEW_SESSIONS = "interview_sessions"
 PLAN_DEFINITIONS = {
     "free": {
         "ai_messages_per_month": 30,
-        "course_enrollments_per_month": 1,
+        "course_enrollments_per_month": 2,
         "interview_sessions_per_month": 1,
         "interview_max_duration_seconds": 60,
     },
     "pro": {
         "ai_messages_per_month": 100,
-        "course_enrollments_per_month": 5,
+        "course_enrollments_per_month": 3,
         "interview_sessions_per_month": 3,
+        "interview_max_duration_seconds": 60,
+    },
+    "premium": {
+        "ai_messages_per_month": 500,
+        "course_enrollments_per_month": 5,
+        "interview_sessions_per_month": 5,
         "interview_max_duration_seconds": 60,
     },
     "enterprise": {
@@ -62,7 +68,7 @@ class SubscriptionService:
     @staticmethod
     def seed_plans(db: Session) -> None:
         """
-        Upsert free/pro/enterprise plan rows on startup.
+        Upsert free/pro/premium/enterprise plan rows on startup.
         Safe to call multiple times (idempotent).
         """
         for plan_name, limits in PLAN_DEFINITIONS.items():
@@ -141,7 +147,7 @@ class SubscriptionService:
             "plan_id": None,
             "plan_name": "free",
             "ai_messages_per_month": 30,
-            "course_enrollments_per_month": 1,
+            "course_enrollments_per_month": 2,
             "interview_sessions_per_month": 1,
             "interview_max_duration_seconds": 60,
             "subscription_id": None,

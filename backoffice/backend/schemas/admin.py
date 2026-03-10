@@ -67,7 +67,7 @@ class UserDetailsResponse(BaseModel):
 
 class ChangePlanRequest(BaseModel):
     """Request schema for changing a user's plan"""
-    plan: str = Field(..., pattern="^(free|pro|premium)$", description="New plan: free, pro, or premium")
+    plan: str = Field(..., pattern="^(free|pro|premium|enterprise)$", description="New plan: free, pro, premium, or enterprise")
 
 
 class CancelSubscriptionRequest(BaseModel):

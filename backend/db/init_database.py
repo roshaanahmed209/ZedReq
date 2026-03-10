@@ -734,6 +734,25 @@ def create_all_tables(db=None):
     print(f"Index creation complete: {index_success} succeeded, {index_error} failed")
     print("=" * 60)
     
+    # Run incremental migrations for existing databases
+    print("-" * 60)
+    print("Running incremental migrations...")
+    print("-" * 60)
+    try:
+        from db.migrations.add_payment_subscription_id import run_migration as add_payment_sub_id
+        add_payment_sub_id(db)
+        print("  [OK] Ran add_payment_subscription_id migration.")
+    except Exception as e:
+        print(f"  [WARN] Migration add_payment_subscription_id: {e}")
+    
+    # Run add_payment_amount_columns migration
+    try:
+        from db.migrations.add_payment_amount_columns import run_migration as add_payment_amount_cols
+        add_payment_amount_cols(db)
+        print("  [OK] Ran add_payment_amount_columns migration.")
+    except Exception as e:
+        print(f"  [WARN] Migration add_payment_amount_columns: {e}")
+    
     if close_db:
         db.close()
     

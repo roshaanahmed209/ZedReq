@@ -17,6 +17,8 @@ import cloudinary
 import cloudinary.uploader
 
 from models.orm import User, Description, UsersContext, Payment
+from models.orm.subscription_plan import SubscriptionPlan
+from models.orm.user_subscription import UserSubscription
 from services.auth_service import hash_password, verify_password, validate_password_strength, validate_email
 from services.profile_service import ProfileService
 from utils.api_security import sanitize_text_for_storage, validate_url_safe, validate_request_timeout
@@ -882,23 +884,39 @@ class SettingsService:
         return False
     
     def get_subscription_info(self, user_id: int) -> Dict[str, Any]:
-        """Get user subscription information"""
+        """
+        Get user subscription information.
+        Reads from user_subscriptions (authoritative) with fallback to payment.
+        """
         try:
             user = self.db.query(User).filter(User.uid == user_id).first()
             if not user:
                 raise NotFoundError('User')
             
-            # Query payment table using ORM
+            # 1. Check user_subscriptions (authoritative source for quotas)
+            user_sub = (
+                self.db.query(UserSubscription)
+                .filter(UserSubscription.user_id == user_id, UserSubscription.status == 'active')
+                .first()
+            )
+            if user_sub and user_sub.plan:
+                return {
+                    'plan': user_sub.plan.plan_name,
+                    'status': user_sub.status,
+                    'subscription_start': user_sub.started_at.isoformat() if user_sub.started_at else None,
+                    'subscription_end': user_sub.expires_at.isoformat() if user_sub.expires_at else None
+                }
+            
+            # 2. Fallback to payment table (for users not yet migrated)
             if user.pay_id:
                 payment = (
                     self.db.query(Payment)
                     .filter(Payment.pay_id == user.pay_id)
                     .first()
                 )
-                
-                if payment:
+                if payment and payment.subscription_plan:
                     return {
-                        'plan': str(payment.subscription_plan) if payment.subscription_plan else 'free',
+                        'plan': str(payment.subscription_plan),
                         'status': str(payment.subscription_status) if payment.subscription_status else 'inactive',
                         'subscription_start': payment.subscription_start.isoformat() if payment.subscription_start else None,
                         'subscription_end': payment.subscription_end.isoformat() if payment.subscription_end else None
@@ -919,49 +937,75 @@ class SettingsService:
             raise
     
     def update_subscription(self, user_id: int, plan: str) -> Dict[str, Any]:
-        """Update user subscription plan"""
+        """
+        Update user subscription plan (payment-first flow).
+        
+        Write order (payment is source of truth):
+        1. Look up plan_id from subscription_plans.
+        2. UPSERT payment FIRST (plan, status).
+        3. UPSERT user_subscriptions (synced from payment, used for quota reads).
+        4. SET payment.subscription_id FK link.
+        
+        Enterprise plan cannot be self-assigned — admin only.
+        """
         try:
             if plan not in ['free', 'pro', 'premium']:
-                raise ValidationError('Invalid subscription plan')
+                raise ValidationError('Invalid subscription plan. Enterprise is admin-only.')
             
             user = self.db.query(User).filter(User.uid == user_id).first()
             if not user:
                 raise NotFoundError('User')
             
-            # Query or create payment record using ORM
-            if user.pay_id:
-                payment = (
-                    self.db.query(Payment)
-                    .filter(Payment.pay_id == user.pay_id)
-                    .first()
-                )
-            else:
-                payment = (
-                    self.db.query(Payment)
-                    .filter(Payment.uid == user_id)
-                    .first()
-                )
-            
             subscription_status = 'inactive' if plan == 'free' else 'active'
             
+            # 1. Look up plan_id from subscription_plans
+            plan_obj = self.db.query(SubscriptionPlan).filter_by(plan_name=plan, is_active=True).first()
+            if not plan_obj:
+                raise ValidationError(f"Plan '{plan}' not found. Ensure plans are seeded.")
+            
+            # 2. UPSERT payment FIRST (source of truth)
+            if user.pay_id:
+                payment = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
+            else:
+                payment = self.db.query(Payment).filter(Payment.uid == user_id).first()
+            
             if payment:
-                # Update existing payment record
                 payment.subscription_plan = plan
                 payment.subscription_status = subscription_status
             else:
-                # Create new payment record
                 payment = Payment(
                     uid=user_id,
                     subscription_plan=plan,
-                    subscription_status=subscription_status
+                    subscription_status=subscription_status,
                 )
                 self.db.add(payment)
-                self.db.flush()  # Get the pay_id
+                self.db.flush()
                 user.pay_id = payment.pay_id
+            
+            # 3. UPSERT user_subscriptions (synced from payment, used for quota reads)
+            user_sub = self.db.query(UserSubscription).filter_by(user_id=user_id).first()
+            if user_sub:
+                user_sub.plan_id = plan_obj.plan_id
+                user_sub.status = subscription_status
+                user_sub.assigned_by = 'self'
+            else:
+                from datetime import datetime, timezone
+                user_sub = UserSubscription(
+                    user_id=user_id,
+                    plan_id=plan_obj.plan_id,
+                    status=subscription_status,
+                    assigned_by='self',
+                    started_at=datetime.now(timezone.utc),
+                )
+                self.db.add(user_sub)
+                self.db.flush()  # Get subscription_id
+            
+            # 4. SET payment.subscription_id FK link
+            payment.subscription_id = user_sub.subscription_id
             
             self.db.commit()
             
-            logger.info(f"Subscription updated to {plan} for user {user_id}")
+            logger.info(f"Subscription updated to {plan} for user {user_id} (subscription_id={user_sub.subscription_id})")
             
             return self.get_subscription_info(user_id)
             

@@ -151,11 +151,21 @@ CREATE TABLE IF NOT EXISTS payment (
     billing_name VARCHAR(100),
     billing_email VARCHAR(150),
     
-    -- Subscription status
+    -- Subscription status (synced copy — authoritative source is user_subscriptions)
     subscription_status VARCHAR(50) DEFAULT 'inactive',
     subscription_plan VARCHAR(50),
     subscription_start TIMESTAMP,
     subscription_end TIMESTAMP,
+    
+    -- FK link to user_subscriptions (set when plan changes, used for future payment linkage)
+    subscription_id INTEGER REFERENCES user_subscriptions(subscription_id) ON DELETE SET NULL,
+    
+    -- Payment amount and transaction details
+    amount NUMERIC(10, 2),
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_date TIMESTAMP,
+    transaction_id VARCHAR(255),
+    last_payment_date TIMESTAMP,
     
     -- Trial info
     trial_taken BOOLEAN DEFAULT FALSE,
@@ -466,6 +476,9 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_payment_uid ON payment(uid)',
     'CREATE INDEX IF NOT EXISTS idx_payment_provider_customer ON payment(provider_customer_id)',
     'CREATE INDEX IF NOT EXISTS idx_payment_status ON payment(subscription_status)',
+    'CREATE INDEX IF NOT EXISTS idx_payment_subscription_id ON payment(subscription_id)',
+    'CREATE INDEX IF NOT EXISTS idx_payment_transaction_id ON payment(transaction_id)',
+    'CREATE INDEX IF NOT EXISTS idx_payment_payment_date ON payment(payment_date)',
     
     # LMS Dashboard indexes
     'CREATE INDEX IF NOT EXISTS idx_lms_dashboard_user ON lms_dashboard(user_id)',
@@ -535,8 +548,15 @@ TABLES_IN_ORDER = [
     ("likes", LIKES_TABLE),  # Depends on post
     ("connections", CONNECTIONS_TABLE),
     ("network", NETWORK_TABLE),
-    ("payment", PAYMENT_TABLE),
     ("lms_dashboard", LMS_DASHBOARD_TABLE),
+    
+    # Subscription system (must come before payment due to FK)
+    ("subscription_plans", SUBSCRIPTION_PLANS_TABLE),           # Level 0: No deps
+    ("user_subscriptions", USER_SUBSCRIPTIONS_TABLE),           # Level 1: users + subscription_plans
+    ("usage_tracking", USAGE_TRACKING_TABLE),                    # Level 1: users
+    
+    # Payment (depends on users + user_subscriptions via subscription_id FK)
+    ("payment", PAYMENT_TABLE),
     
     # Level 2: Depends on users and lms_courses
     ("lms_user_courses", LMS_USER_COURSES_TABLE),
@@ -561,11 +581,6 @@ TABLES_IN_ORDER = [
     
     # Level 5: Depends on lms_questions
     ("lms_user_answers", LMS_USER_ANSWERS_TABLE),
-
-    # Subscription system
-    ("subscription_plans", SUBSCRIPTION_PLANS_TABLE),           # Level 0: No deps
-    ("user_subscriptions", USER_SUBSCRIPTIONS_TABLE),           # Level 1: users + subscription_plans
-    ("usage_tracking", USAGE_TRACKING_TABLE),                    # Level 1: users
 ]
 
 

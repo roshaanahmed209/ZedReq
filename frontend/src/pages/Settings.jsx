@@ -1477,6 +1477,7 @@ const Settings = () => {
                 <p style={{ margin: '0 0 10px 0', color: 'var(--text-light)' }}>
                   {subscriptionPlan === 'free' ? 'Basic features included' : 
                    subscriptionPlan === 'pro' ? 'Enhanced features and higher limits' :
+                   subscriptionPlan === 'premium' ? 'Advanced features with generous limits' :
                    subscriptionPlan === 'enterprise' ? 'Unlimited access with premium features' : 
                    'Basic features included'}
                 </p>
@@ -1605,6 +1606,17 @@ const Settings = () => {
                   }}
                 >
                   Pro Plan {subscriptionPlan === 'pro' ? '(Current)' : '- $9.99/month'}
+                </SecondaryButton>
+                <SecondaryButton 
+                  disabled={true}
+                  style={{ 
+                    borderColor: subscriptionPlan === 'premium' ? '#8e44ad' : 'var(--border)',
+                    background: subscriptionPlan === 'premium' ? 'rgba(142, 68, 173, 0.1)' : 'transparent',
+                    cursor: 'not-allowed',
+                    opacity: subscriptionPlan === 'premium' ? 1 : 0.5
+                  }}
+                >
+                  Premium Plan {subscriptionPlan === 'premium' ? '(Current)' : '- $49.99/month'}
                 </SecondaryButton>
                 <SecondaryButton 
                   disabled={true}
