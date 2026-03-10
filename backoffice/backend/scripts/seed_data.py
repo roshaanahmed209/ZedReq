@@ -13,6 +13,7 @@ from models.orm.revenue_transaction import RevenueTransaction
 from models.orm.cost_transaction import CostTransaction
 from models.orm.financial_summary import FinancialSummary
 from models.orm.admin_activity_log import AdminActivityLog
+from models.orm.bearable_cost import BearableCost
 from services.auth_service import AuthService
 from services.financial_service import FinancialService
 from utils.auth import hash_password
@@ -263,6 +264,41 @@ def generate_sample_activity_logs(db: Session, count: int = 30):
         raise
 
 
+def seed_bearable_costs(db: Session):
+    """Seed initial bearable costs data"""
+    try:
+        # Check if costs already exist
+        existing = db.query(BearableCost).count()
+        if existing > 0:
+            logger.info("Bearable costs already exist, skipping seed")
+            return
+        
+        # Tavus Session cost (per session)
+        tavus_cost = BearableCost(
+            cost_name="Tavus Session",
+            amount=0.25,
+            is_fixed=False,
+            unit_type="session"
+        )
+        db.add(tavus_cost)
+        
+        # Hosting + Database cost (fixed monthly)
+        hosting_cost = BearableCost(
+            cost_name="Hosting + Database",
+            amount=25.00,
+            is_fixed=True,
+            unit_type="month"
+        )
+        db.add(hosting_cost)
+        
+        db.commit()
+        logger.info("✓ Seeded bearable costs: Tavus Session ($0.25/session), Hosting + Database ($25/month)")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error seeding bearable costs: {e}", exc_info=True)
+        raise
+
+
 def seed_all():
     """Seed all data"""
     logger.info("Starting database seeding...")
@@ -274,6 +310,9 @@ def seed_all():
     try:
         # Create initial admin
         create_initial_admin(db)
+        
+        # Seed bearable costs (must be done before other operations)
+        seed_bearable_costs(db)
         
         # Generate sample data
         generate_sample_revenue_transactions(db, count=50)

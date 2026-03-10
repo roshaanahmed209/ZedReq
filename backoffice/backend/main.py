@@ -36,6 +36,7 @@ from routers.auth import router as auth_router
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from routers.financial import router as financial_router
+from routers.financial_tracking import router as financial_tracking_router
 from routers.activity import router as activity_router
 from routers.monitoring import router as monitoring_router
 from routers.collector import router as collector_router
@@ -365,6 +366,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(analytics_router)
 app.include_router(financial_router)
+app.include_router(financial_tracking_router)
 app.include_router(activity_router)
 app.include_router(monitoring_router)
 app.include_router(collector_router)

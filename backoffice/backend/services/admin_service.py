@@ -896,24 +896,67 @@ class AdminService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> Dict[str, Any]:
-        """Get cash flow analysis"""
-        # Get revenue
-        revenue_data = self.get_revenue_analytics(start_date, end_date, 'day')
-        
-        # Get costs
-        cost_data = self.get_cost_analytics(start_date, end_date)
-        
-        # Calculate net cash flow
-        total_revenue = revenue_data['total_revenue']
-        total_costs = cost_data['total_costs']
-        net_cash_flow = total_revenue - total_costs
-        
-        return {
-            'revenue': revenue_data,
-            'costs': cost_data,
-            'net_cash_flow': net_cash_flow,
-            'profit_margin': (net_cash_flow / total_revenue * 100) if total_revenue > 0 else 0.0
-        }
+        """Get cash flow analysis using FinancialTrackingService"""
+        try:
+            from services.financial_tracking_service import FinancialTrackingService
+            from models.orm.user_payment_summary import UserPaymentSummary
+            
+            financial_service = FinancialTrackingService(self.db)
+            
+            # Check if payment summaries exist, if not, try to sync
+            summary_count = self.db.query(UserPaymentSummary).count()
+            if summary_count == 0:
+                logger.info("No payment summaries found, attempting to sync...")
+                try:
+                    financial_service.sync_user_payment_summary(user_id=None)
+                    logger.info("Payment summaries synced successfully")
+                except Exception as sync_error:
+                    logger.warning(f"Could not sync payment summaries: {sync_error}")
+            
+            # Use the new financial tracking service for accurate profit calculation
+            profit_data = financial_service.calculate_net_profit(start_date, end_date)
+            
+            # Format response to match expected structure
+            return {
+                'revenue': {
+                    'total_revenue': profit_data['total_revenue'],
+                    'revenue_by_period': []  # Can be populated if needed
+                },
+                'costs': {
+                    'total_costs': profit_data['total_costs'],
+                    'costs_by_category': [
+                        {
+                            'category': 'Tavus Sessions',
+                            'total': profit_data['tavus_costs']['total_cost'],
+                            'count': profit_data['tavus_costs']['total_sessions']
+                        }
+                    ] + [
+                        {
+                            'category': cost['cost_name'],
+                            'total': cost['amount'],
+                            'count': 1
+                        }
+                        for cost in profit_data['fixed_costs']['costs']
+                    ]
+                },
+                'net_cash_flow': profit_data['net_profit'],
+                'profit_margin': profit_data['profit_margin']
+            }
+        except Exception as e:
+            logger.error(f"Error getting cash flow from FinancialTrackingService: {e}", exc_info=True)
+            # Fallback to old method if new service fails
+            revenue_data = self.get_revenue_analytics(start_date, end_date, 'day')
+            cost_data = self.get_cost_analytics(start_date, end_date)
+            total_revenue = revenue_data['total_revenue']
+            total_costs = cost_data['total_costs']
+            net_cash_flow = total_revenue - total_costs
+            
+            return {
+                'revenue': revenue_data,
+                'costs': cost_data,
+                'net_cash_flow': net_cash_flow,
+                'profit_margin': (net_cash_flow / total_revenue * 100) if total_revenue > 0 else 0.0
+            }
     
     def _get_main_app_user_data(self) -> Dict[str, Any]:
         """Query main app database for user and subscription data with payment amounts"""
@@ -1160,10 +1203,62 @@ class AdminService:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=30)
         
-        # Financial metrics
-        revenue_data = self.get_revenue_analytics(start_date, end_date, 'day')
-        cost_data = self.get_cost_analytics(start_date, end_date)
-        cash_flow = self.get_cash_flow(start_date, end_date)
+        # Financial metrics - use new FinancialTrackingService
+        try:
+            from services.financial_tracking_service import FinancialTrackingService
+            from models.orm.user_payment_summary import UserPaymentSummary
+            
+            financial_service = FinancialTrackingService(self.db)
+            
+            # Check if payment summaries exist, if not, try to sync
+            summary_count = self.db.query(UserPaymentSummary).count()
+            if summary_count == 0:
+                logger.info("No payment summaries found in dashboard, attempting to sync...")
+                try:
+                    financial_service.sync_user_payment_summary(user_id=None)
+                    logger.info("Payment summaries synced successfully for dashboard")
+                except Exception as sync_error:
+                    logger.warning(f"Could not sync payment summaries: {sync_error}")
+            
+            # Get profit data from new system
+            profit_data = financial_service.calculate_net_profit(start_date, end_date)
+            
+            # Format costs for dashboard
+            costs_by_category = [
+                {
+                    'category': 'Tavus Sessions',
+                    'total': profit_data['tavus_costs']['total_cost'],
+                    'count': profit_data['tavus_costs']['total_sessions']
+                }
+            ] + [
+                {
+                    'category': cost['cost_name'],
+                    'total': cost['amount'],
+                    'count': 1
+                }
+                for cost in profit_data['fixed_costs']['costs']
+            ]
+            
+            # Use new financial data
+            revenue_data = {
+                'total_revenue': profit_data['total_revenue'],
+                'total_transactions': 0  # Can be calculated if needed
+            }
+            cost_data = {
+                'total_costs': profit_data['total_costs'],
+                'costs_by_category': costs_by_category
+            }
+            cash_flow = {
+                'net_cash_flow': profit_data['net_profit'],
+                'profit_margin': profit_data['profit_margin']
+            }
+        except Exception as e:
+            logger.warning(f"Error using FinancialTrackingService, falling back to old method: {e}", exc_info=True)
+            # Fallback to old method
+            revenue_data = self.get_revenue_analytics(start_date, end_date, 'day')
+            cost_data = self.get_cost_analytics(start_date, end_date)
+            cash_flow = self.get_cash_flow(start_date, end_date)
+        
         subscription_metrics = self.get_subscription_metrics()
         revenue_over_time = self.get_revenue_over_time(start_date, end_date, 'day')
         trial_conversion = self.get_trial_conversion_analytics()

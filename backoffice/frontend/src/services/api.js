@@ -94,6 +94,18 @@ export const financialAPI = {
   getCosts: (params) => api.get('/admin/financial/costs', { params }),
 }
 
+// Financial Tracking API
+export const financialTrackingAPI = {
+  getProfit: (params) => api.get('/admin/financial-tracking/profit', { params }),
+  getUserFinancialSummary: (userId) => api.get(`/admin/financial-tracking/users/${userId}/summary`),
+  syncPaymentSummaries: (userId) => api.post('/admin/financial-tracking/sync', { user_id: userId }),
+  syncAllPaymentSummaries: () => api.post('/admin/financial-tracking/sync/all'),
+  getCosts: () => api.get('/admin/financial-tracking/costs'),
+  createCost: (data) => api.post('/admin/financial-tracking/costs', data),
+  updateCost: (costId, data) => api.put(`/admin/financial-tracking/costs/${costId}`, data),
+  deleteCost: (costId) => api.delete(`/admin/financial-tracking/costs/${costId}`),
+}
+
 // Activity API
 export const activityAPI = {
   getLogs: (params) => api.get('/admin/activity/logs', { params }),

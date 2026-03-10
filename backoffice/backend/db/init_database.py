@@ -1,6 +1,13 @@
 """Initialize backoffice database with all required tables"""
-from config.database import get_database, init_database
+import sys
 from pathlib import Path
+
+# Add backend to path
+backend_path = Path(__file__).parent.parent
+if str(backend_path) not in sys.path:
+    sys.path.insert(0, str(backend_path))
+
+from config.database import get_database, init_database
 import logging
 
 logger = logging.getLogger(__name__)
@@ -120,6 +127,36 @@ CREATE TABLE IF NOT EXISTS financial_summaries (
 
 CREATE INDEX IF NOT EXISTS idx_financial_period ON financial_summaries(period_type, period_start DESC);
 CREATE INDEX IF NOT EXISTS idx_financial_start ON financial_summaries(period_start DESC);
+'''
+
+# User payment summary table
+USER_PAYMENT_SUMMARY_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_payment_summary (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE NOT NULL,
+    plan_id INTEGER,
+    total_amount_paid DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    total_refunded DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    last_paid_amount DECIMAL(12, 2),
+    last_payment_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_payment_summary_user_id ON user_payment_summary(user_id);
+'''
+
+# Bearable costs table
+BEARABLE_COSTS_TABLE = '''
+CREATE TABLE IF NOT EXISTS bearable_costs (
+    id SERIAL PRIMARY KEY,
+    cost_name VARCHAR(100) UNIQUE NOT NULL,
+    amount DECIMAL(10, 4) NOT NULL,
+    is_fixed BOOLEAN NOT NULL DEFAULT FALSE,
+    unit_type VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 '''
 
 # Failed login attempts table (for security)
@@ -407,6 +444,8 @@ TABLES = [
     ("revenue_transactions", REVENUE_TRANSACTIONS_TABLE),
     ("cost_transactions", COST_TRANSACTIONS_TABLE),
     ("financial_summaries", FINANCIAL_SUMMARIES_TABLE),
+    ("user_payment_summary", USER_PAYMENT_SUMMARY_TABLE),
+    ("bearable_costs", BEARABLE_COSTS_TABLE),
     ("failed_login_attempts", FAILED_LOGIN_ATTEMPTS_TABLE),
     ("infrastructure_metrics", INFRASTRUCTURE_METRICS_TABLE),
     ("uptime_incidents", UPTIME_INCIDENTS_TABLE),

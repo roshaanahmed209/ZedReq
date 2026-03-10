@@ -18,6 +18,8 @@ from .deployment_log import DeploymentLog
 from .database_metric import DatabaseMetric
 from .alert_rule import AlertRule
 from .alert_history import AlertHistory
+from .user_payment_summary import UserPaymentSummary
+from .bearable_cost import BearableCost
 
 __all__ = [
     "AdminUser",
@@ -39,4 +41,6 @@ __all__ = [
     "DatabaseMetric",
     "AlertRule",
     "AlertHistory",
+    "UserPaymentSummary",
+    "BearableCost",
 ]
