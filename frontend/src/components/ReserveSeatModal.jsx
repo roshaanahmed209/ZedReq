@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import '../css/components/ReserveSeatModal.css'
+import { sendReservationEmail, validateEmail } from '../services/emailjs'
 
 const ReserveSeatModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('')
@@ -13,10 +14,17 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
     e.preventDefault()
     if (!email) return
 
+    // Validate email format
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
+      // Step 1: Reserve seat in backend (stores in database and generates promo code)
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
       const response = await fetch(`${apiUrl}/api/reserved-seats`, {
         method: 'POST',
@@ -32,13 +40,25 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
         throw new Error(data.detail || data.message || 'Failed to reserve seat')
       }
 
-      if (data.success) {
-        setSubmitted(true)
-        setPromoCode(data.promo_code || '')
-        setAlreadyReserved(data.already_reserved || false)
-      } else {
+      if (!data.success) {
         throw new Error(data.message || 'Failed to reserve seat')
       }
+
+      // Step 2: Send email from frontend using EmailJS
+      const promoCodeFromBackend = data.promo_code || ''
+      setPromoCode(promoCodeFromBackend)
+      setAlreadyReserved(data.already_reserved || false)
+
+      // Only send email if it's a new reservation (not already reserved)
+      if (!data.already_reserved && promoCodeFromBackend) {
+        const emailSent = await sendReservationEmail(email, promoCodeFromBackend)
+        if (!emailSent) {
+          console.warn('Email sending failed, but reservation was created. Promo code:', promoCodeFromBackend)
+          // Don't fail the whole process if email fails - reservation is already created
+        }
+      }
+
+      setSubmitted(true)
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
       console.error('Error reserving seat:', err)
@@ -70,10 +90,15 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
         </button>
         {!submitted ? (
           <>
-            <h2 className="modal-title">Reserve Your Seat</h2>
+            <h2 className="modal-title">Reserve Your Seat for Pro Plan</h2>
             <p className="modal-description">
-              Enter your email to reserve your spot and get early access to ZedReq.
+              Enter your email to reserve your spot and get early access to ZedReq Pro Plan.
             </p>
+            <div className="reserve-info-box">
+              <p className="reserve-info-text">
+                <strong>Important:</strong> Please enter your correct email address. A reference code will be generated when you reserve your seat, offering both you and any person you refer a discount on the Pro Plan.
+              </p>
+            </div>
             <form 
               className="reserve-form"
               onSubmit={handleSubmit}
@@ -81,7 +106,7 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
               <input
                 type="email"
                 className="modal-input"
-                placeholder="Enter your email"
+                placeholder="Enter your email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

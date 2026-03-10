@@ -42,19 +42,28 @@ async def reserve_seat(
     - Sends confirmation email
     - Stores in database
     """
+    logger.info(f"Received seat reservation request for email: {request.email[:3]}***")
     try:
         result = service.reserve_seat(request.email)
+        
+        # Log the result
+        if result.get('already_reserved'):
+            logger.info(f"✓ Reservation request completed | Status: Already Reserved | Promo Code: {result.get('promo_code')}")
+        else:
+            email_status = "Email status logged in service"
+            logger.info(f"✓ Reservation request completed | Status: New Reservation | Promo Code: {result.get('promo_code')} | {email_status}")
+        
         return result
     except ValueError as e:
         # ValueError from service contains user-friendly messages
-        logger.debug(f"Reservation validation error: {type(e).__name__}")
+        logger.warning(f"✗ Reservation request failed: Validation error - {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         # Don't expose internal error details
-        logger.error(f"Unexpected error during seat reservation: {type(e).__name__}", exc_info=True)
+        logger.error(f"✗ Reservation request failed: Unexpected error - {type(e).__name__}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to complete reservation. Please try again later."

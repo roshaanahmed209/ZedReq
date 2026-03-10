@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 
 from models.orm.reserved_seat import ReservedSeat
 from models.orm.user import User
-from utils.email_sender import send_reservation_confirmation_email
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -52,6 +51,8 @@ class ReservedSeatService:
         ).first()
         
         if existing_reservation:
+            logger.info(f"Email already reserved | Email: {email[:3]}*** | Promo Code: {existing_reservation.promo_code}")
+            logger.info(f"⚠ No email sent - reservation already exists. User should check their previous email.")
             return {
                 "success": True,
                 "message": "You've already reserved your seat! Check your email for your promo code.",
@@ -125,16 +126,9 @@ class ReservedSeatService:
             logger.error("Failed to create reservation after all retries")
             raise ValueError("Unable to complete reservation. Please try again later.")
         
-        # Send confirmation email
-        email_sent = send_reservation_confirmation_email(email, promo_code)
-        
-        if not email_sent:
-            # Email failed but reservation was created
-            # Log the error but don't fail the request
-            # Don't log PII (email) - log reservation ID instead
-            logger.warning(
-                f"Reservation created (ID: {reservation.id}) but confirmation email failed to send"
-            )
+        # Email is now sent from frontend using EmailJS client-side SDK
+        # Backend only stores the reservation and returns the promo code
+        logger.info(f"✓ Reservation completed successfully | ID: {reservation.id} | Promo Code: {promo_code} | Email will be sent from frontend")
         
         return {
             "success": True,
