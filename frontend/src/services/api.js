@@ -527,12 +527,16 @@ export const lmsAPI = {
     api.put(`/api/lms/sections/${sectionId}/progress`, progressData),
   
   // Azel Agent endpoints (longer timeout for web searches and LLM calls)
-  triggerAzelProcessCourse: (courseId) =>
-    api.post(`/api/lms/azel/process-course/${courseId}`, {}, { timeout: 150000 }), // 150 seconds timeout
+  triggerAzelProcessCourse: (courseId, sectionId = null) =>
+    api.post(`/api/lms/azel/process-course/${courseId}`, sectionId ? { section_id: sectionId } : {}, { timeout: 150000 }), // 150 seconds timeout
   
   // Course performance endpoint
   getCoursePerformance: (courseId) =>
     api.get(`/api/lms/dashboard/courses/${courseId}`, { timeout: 150000 }), // 150 seconds
+
+  // Section-level performance (per-level accuracy breakdown)
+  getSectionPerformance: (courseId) =>
+    api.get(`/api/lms/courses/${courseId}/section-performance`),
   
   // Seez Agent endpoints (longer timeout for LLM evaluation calls)
   triggerSeezEvaluateCourse: (courseId) =>

@@ -2106,7 +2106,31 @@ const LMS = () => {
   const [courseQuestions, setCourseQuestions] = useState([])
   const [courseSections, setCourseSections] = useState([])
   const [courseResources, setCourseResources] = useState([])
+  const [selectedSectionId, setSelectedSectionId] = useState(null)
   const [answers, setAnswers] = useState({}) // questionId -> answer text
+
+  // Derived: title of the currently selected section (avoids repeated .find() in JSX)
+  const selectedSectionTitle = (courseSections.find(s => s.id === selectedSectionId)?.title) || ''
+
+  /**
+   * Shared helper — fetches questions for a given course+section and updates state.
+   * Reused by fetchCourseDetails and handleSectionSelect to avoid duplicating logic.
+   */
+  const fetchSectionQuestions = async (courseId, sectionId) => {
+    try {
+      const questionsRes = await lmsAPI.getCourseQuestions(courseId, sectionId)
+      if (questionsRes.data && questionsRes.data.questions) {
+        setCourseQuestions(questionsRes.data.questions)
+        return questionsRes.data.questions.length
+      }
+      setCourseQuestions([])
+      return 0
+    } catch (err) {
+      console.error(`[LMS] fetchSectionQuestions: Error for course=${courseId}, section=${sectionId}:`, err)
+      setCourseQuestions([])
+      return 0
+    }
+  }
 
   // Loading and error states
   const [loading, setLoading] = useState(true)
@@ -2311,38 +2335,45 @@ const LMS = () => {
     }
   }, [selectedCourse, isPortalOpen])
 
-  const fetchCourseDetails = async (courseId, showLoading = true) => {
+  const fetchCourseDetails = async (courseId, showLoading = true, sectionIdOverride = null) => {
     const startTime = performance.now()
-    console.log(`[LMS] fetchCourseDetails START: course_id=${courseId}, showLoading=${showLoading}`)
+    console.log(`[LMS] fetchCourseDetails START: course_id=${courseId}, showLoading=${showLoading}, sectionIdOverride=${sectionIdOverride}`)
     
     try {
       if (showLoading) {
         setQuestionsLoading(true)
       }
       
-      console.log(`[LMS] fetchCourseDetails: Making API calls for questions, sections, resources`)
-      const [questionsRes, sectionsRes, resourcesRes] = await Promise.all([
-        lmsAPI.getCourseQuestions(courseId),
+      // Fetch sections and resources first (sections call also seeds defaults + backfills)
+      console.log(`[LMS] fetchCourseDetails: Making API calls for sections, resources`)
+      const [sectionsRes, resourcesRes] = await Promise.all([
         lmsAPI.getCourseSections(courseId),
         lmsAPI.getCourseResources(courseId)
       ])
 
-      if (questionsRes.data && questionsRes.data.questions) {
-        setCourseQuestions(questionsRes.data.questions)
-        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${questionsRes.data.questions.length} questions`)
-      } else {
-        console.log(`[LMS] fetchCourseDetails: No questions found for course_id=${courseId}`)
-      }
+      let activeSectionId = sectionIdOverride
 
       if (sectionsRes.data && sectionsRes.data.sections) {
-        setCourseSections(sectionsRes.data.sections)
-        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${sectionsRes.data.sections.length} sections`)
+        const sections = sectionsRes.data.sections
+        setCourseSections(sections)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${sections.length} sections`)
+        
+        // Auto-select first section if nothing selected yet
+        if (!activeSectionId && sections.length > 0) {
+          activeSectionId = sections[0].id
+          setSelectedSectionId(activeSectionId)
+        }
       }
 
       if (resourcesRes.data && resourcesRes.data.resources) {
         setCourseResources(resourcesRes.data.resources)
         console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${resourcesRes.data.resources.length} resources`)
       }
+
+      // Fetch questions scoped to the active section (shared helper)
+      console.log(`[LMS] fetchCourseDetails: Fetching questions for section_id=${activeSectionId}`)
+      const qCount = await fetchSectionQuestions(courseId, activeSectionId)
+      console.log(`[LMS] fetchCourseDetails: Loaded ${qCount} questions for section_id=${activeSectionId}`)
 
       const totalTime = performance.now() - startTime
       console.log(`[LMS] ===== fetchCourseDetails END: Completed in ${totalTime.toFixed(2)}ms =====`)
@@ -2352,6 +2383,22 @@ const LMS = () => {
       console.error(`[LMS] ===== fetchCourseDetails ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
     } finally {
       if (showLoading) {
+        setQuestionsLoading(false)
+      }
+    }
+  }
+  
+  // Handler when user clicks a section in the side panel
+  const handleSectionSelect = async (sectionId) => {
+    if (sectionId === selectedSectionId) return
+    setSelectedSectionId(sectionId)
+    setAnswers({}) // Clear previous answers
+    
+    if (selectedCourse) {
+      try {
+        setQuestionsLoading(true)
+        await fetchSectionQuestions(selectedCourse.id, sectionId)
+      } finally {
         setQuestionsLoading(false)
       }
     }
@@ -2409,6 +2456,8 @@ const LMS = () => {
 
   const handleCourseClick = (course) => {
     setSelectedCourse(course)
+    setSelectedSectionId(null) // Reset section selection for new course
+    setAnswers({}) // Clear previous answers
     setIsPortalOpen(true)
   }
 
@@ -2441,6 +2490,11 @@ const LMS = () => {
     setIsPortalOpen(false)
     setTimeout(() => {
       setSelectedCourse(null)
+      setSelectedSectionId(null)
+      setCourseQuestions([])
+      setCourseSections([])
+      setCourseResources([])
+      setAnswers({})
     }, 400)
   }
 
@@ -2564,18 +2618,21 @@ const LMS = () => {
       return
     }
 
+    const sectionId = selectedSectionId
+    const sectionLabel = selectedSectionTitle || 'Basic'
+
     const startTime = performance.now()
-    console.log(`[LMS] ===== GENERATE QUESTIONS START: User clicked button for course_id=${selectedCourse.id} =====`)
+    console.log(`[LMS] ===== GENERATE QUESTIONS START: course_id=${selectedCourse.id}, section_id=${sectionId} (${sectionLabel}) =====`)
 
     try {
       // Show loading state
       setQuestionsLoading(true)
       console.log('[LMS] handleGenerateQuestions: Button disabled, loading state set')
       
-      // Call Azel agent to process course and generate questions
+      // Call Azel agent to process course and generate questions for the selected section
       // This is a long-running operation (30-150 seconds)
-      console.log(`[LMS] handleGenerateQuestions: Making API call to trigger Azel agent`)
-      const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id)
+      console.log(`[LMS] handleGenerateQuestions: Making API call to trigger Azel agent with section_id=${sectionId}`)
+      const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id, sectionId)
       
       const apiTime = performance.now() - startTime
       console.log(`[LMS] handleGenerateQuestions: API call completed in ${apiTime.toFixed(2)}ms`)
@@ -2604,10 +2661,10 @@ const LMS = () => {
           console.log(`[LMS] handleGenerateQuestions: SUCCESS - Showing success message to user`)
           alert(successMsg)
           
-          // Refetch course questions to display newly generated ones
+          // Refetch course questions for the selected section to display newly generated ones
           // Don't show loading state again since we're already in loading state
-          console.log(`[LMS] handleGenerateQuestions: Auto-refreshing questions list`)
-          await fetchCourseDetails(selectedCourse.id, false)
+          console.log(`[LMS] handleGenerateQuestions: Auto-refreshing questions list for section_id=${sectionId}`)
+          await fetchCourseDetails(selectedCourse.id, false, sectionId)
           
           const totalTime = performance.now() - startTime
           console.log(`[LMS] ===== GENERATE QUESTIONS END (SUCCESS): Completed in ${totalTime.toFixed(2)}ms =====`)
@@ -3190,16 +3247,19 @@ const LMS = () => {
                 </SidePanelSection>
 
                 <SidePanelSection>
-                  <SidePanelTitle>Sections</SidePanelTitle>
+                  <SidePanelTitle>Level / Section</SidePanelTitle>
                   {courseSections.length > 0 ? (
-                    courseSections.map((section, index) => (
-                      <SidePanelItem key={section.id} active={index === 0}>
-                        {section.title || `Section ${section.order_index || index + 1}`}
-                        <ProgressIndicator>
-                          <ProgressDot completed={section.completed || false} />
-                          <ProgressDot completed={section.completed || false} />
-                          <ProgressDot completed={section.completed || false} />
-                        </ProgressIndicator>
+                    courseSections.map((section) => (
+                      <SidePanelItem 
+                        key={section.id} 
+                        active={section.id === selectedSectionId}
+                        onClick={() => handleSectionSelect(section.id)}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                      >
+                        <span>{section.title || `Section ${section.order_index + 1}`}</span>
+                        {section.id === selectedSectionId && (
+                          <span style={{ fontSize: '0.75em', opacity: 0.7 }}>● selected</span>
+                        )}
                       </SidePanelItem>
                     ))
                   ) : (
@@ -3222,7 +3282,8 @@ const LMS = () => {
 
                 <GenerateQuestionsButton 
                   onClick={handleGenerateQuestions}
-                  disabled={questionsLoading}
+                  disabled={questionsLoading || !selectedSectionId}
+                  title={!selectedSectionId ? 'Select a section first' : `Generate questions for ${selectedSectionTitle || 'selected section'}`}
                 >
                   {questionsLoading ? (
                     <>
@@ -3245,6 +3306,11 @@ const LMS = () => {
                         <circle cx="12" cy="12" r="3"></circle>
                       </svg>
                       Generate Questions
+                      {selectedSectionId && courseSections.length > 0 && (
+                        <span style={{ fontSize: '0.8em', opacity: 0.85, marginLeft: '4px' }}>
+                          ({selectedSectionTitle})
+                        </span>
+                      )}
                     </>
                   )}
                 </GenerateQuestionsButton>
@@ -3253,10 +3319,14 @@ const LMS = () => {
               <PortalMainContent>
                 <PortalCourseInfo>
                   <PortalCourseInfoText className="portal-course-info-text-large">
-                    📝 Course Questions & Assessment
+                    📝 {selectedSectionId && courseSections.length > 0
+                      ? `${selectedSectionTitle} — Questions & Assessment`
+                      : 'Course Questions & Assessment'}
                   </PortalCourseInfoText>
                   <PortalCourseInfoText>
-                    Complete the following questions to assess your understanding of the course material.
+                    {selectedSectionId && courseSections.length > 0
+                      ? `Showing questions for the "${selectedSectionTitle}" level. Select a different section on the left to switch.`
+                      : 'Complete the following questions to assess your understanding of the course material.'}
                   </PortalCourseInfoText>
                 </PortalCourseInfo>
 

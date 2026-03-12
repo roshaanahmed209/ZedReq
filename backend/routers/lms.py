@@ -22,6 +22,7 @@ from schemas.lms import (
     WeeklyPerformanceResponse, WeeklyPerformanceListResponse,
     DomainPerformanceResponse, DomainPerformanceListResponse,
     CoursePerformanceResponse,
+    SectionPerformanceResponse,
     ActivityResponse, ActivityListResponse,
     QuestionCreate, QuestionResponse, QuestionListResponse,
     AnswerSubmit, AnswerResponse, AnswerListResponse, AnswerEvaluate,
@@ -30,7 +31,8 @@ from schemas.lms import (
     CertificateResponse, CertificateListResponse,
     SectionResponse, SectionListResponse,
     ResourceResponse, ResourceListResponse,
-    SectionProgressResponse, SectionProgressUpdate
+    SectionProgressResponse, SectionProgressUpdate,
+    ProcessCourseRequest,
 )
 
 router = APIRouter()
@@ -132,7 +134,14 @@ async def get_course_sections(
     current_user: dict = Depends(get_current_user),
     service: LMSService = Depends(get_lms_service)
 ):
-    """Get sections for a course"""
+    """Get sections for a course. Lazily seeds default level sections (idempotent).
+    
+    Note: backfill of orphan questions is handled by the POST azel/process-course
+    endpoint to keep this GET side-effect free beyond idempotent seeding.
+    """
+    # Idempotent: creates Basic/Intermediate/Expert only if no sections exist
+    service.ensure_default_level_sections(course_id)
+    
     sections = service.get_course_sections(course_id)
     
     return {
@@ -375,6 +384,27 @@ async def get_course_performance(
         }
     
     return performance
+
+
+@router.get("/courses/{course_id}/section-performance", response_model=SectionPerformanceResponse)
+async def get_section_performance_summary(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: LMSService = Depends(get_lms_service),
+):
+    """
+    Get per-section evaluation metrics for the authenticated user in a course.
+    Returns accuracy, questions_answered, correct_answers, and points for each
+    section (Basic / Intermediate / Expert).
+    """
+    user_id = current_user.get("id") or current_user.get("uid")
+    if not service.is_user_enrolled(user_id, course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be enrolled in this course to view section performance.",
+        )
+    summary = service.get_section_performance_summary(user_id, course_id)
+    return {"sections": summary}
 
 
 # ============================================================================
@@ -693,31 +723,74 @@ async def update_section_progress(
 @router.post("/azel/process-course/{course_id}")
 async def trigger_azel_agent(
     course_id: int,
+    body: Optional[ProcessCourseRequest] = None,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    service: LMSService = Depends(get_lms_service),
 ):
     """
     Trigger Azel agent to process course context and generate questions
+    scoped to a specific section (level).
+    
+    Body (optional):
+        section_id: int – section to generate questions for.
+                     If omitted, falls back to the first (Basic) section.
     
     This endpoint:
-    1. Retrieves Zed context for the user
-    2. Extracts highlighted topics of interest
-    3. Performs Google searches
-    4. Saves URLs to database
-    5. Creates Qdrant knowledge base (30-minute TTL)
-    6. Generates questions with detailed answers
-    7. Saves questions to database
+    1. Verifies the user is enrolled in the course
+    2. Ensures the course has default level sections
+    3. Backfills any orphan questions into the default section
+    4. Retrieves Zed context for the user
+    5. Extracts highlighted topics of interest
+    6. Performs web searches
+    7. Saves URLs to database
+    8. Creates Qdrant knowledge base (30-minute TTL)
+    9. Generates questions with detailed answers (difficulty matches section)
+    10. Saves questions to database with section_id set
     
     Note: This is a long-running operation (can take 30-120 seconds)
     """
+    from models.orm.lms_course_section import LMSCourseSection
+    
     try:
         # Verify course exists
-        course = db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
+        course = service.db.query(LMSCourse).filter(LMSCourse.id == course_id).first()
         if not course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Course not found"
             )
+        
+        # --- Security: user must be enrolled in the course ---
+        user_id = current_user.get('id') or current_user.get('uid')
+        if not service.is_user_enrolled(user_id, course_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must be enrolled in this course to generate questions"
+            )
+        
+        # --- Seed sections + backfill orphan questions (POST is mutation-safe) ---
+        sections = service.ensure_default_level_sections(course_id)
+        service.backfill_orphan_questions(course_id)
+        
+        section_id = body.section_id if body else None
+        
+        if section_id:
+            # Validate the section belongs to this course
+            section = service.db.query(LMSCourseSection).filter(
+                LMSCourseSection.id == section_id,
+                LMSCourseSection.course_id == course_id
+            ).first()
+            if not section:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Section {section_id} does not belong to course {course_id}"
+                )
+        else:
+            # Default to the first section (Basic)
+            section = sections[0] if sections else None
+            section_id = section.id if section else None
+        
+        section_title = section.title if section else "Basic"
         
         # Get Azel agent and check availability
         azel_agent = get_azel_agent()
@@ -734,27 +807,27 @@ async def trigger_azel_agent(
                 detail=f"Azel agent is not available. {'; '.join(error_details)}. Please check your configuration."
             )
         
-        # Process course context - use 'id' to match other endpoints
-        user_id = current_user.get('id') or current_user.get('uid')
-        logger.info(f"Starting Azel agent processing for user_id={user_id}, course_id={course_id}")
+        # Process course context
+        logger.info(f"Starting Azel agent processing for user_id={user_id}, course_id={course_id}, section_id={section_id} ({section_title})")
         
         result = azel_agent.process_course_context(
             user_id=user_id,
-            course_id=course_id
+            course_id=course_id,
+            section_id=section_id,
+            level=section_title,
         )
         
         # Always return result, even if not fully successful
         # This allows frontend to show partial results
         if not result.get('success'):
             logger.warning(f"Azel agent processing completed with errors: {result.get('error')}")
-            # Return 200 with error details instead of 500, so frontend can handle gracefully
             return {
                 "message": "Course context processing completed with errors",
                 "result": result,
                 "success": False
             }
         
-        logger.info(f"Azel agent processing completed successfully for user_id={user_id}, course_id={course_id}")
+        logger.info(f"Azel agent processing completed successfully for user_id={user_id}, course_id={course_id}, section_id={section_id}")
         return {
             "message": "Course context processed successfully",
             "result": result,
@@ -764,10 +837,11 @@ async def trigger_azel_agent(
     except HTTPException:
         raise
     except Exception as e:
+        # Log full details server-side; expose only a safe message to the client
         logger.error(f"Error in trigger_azel_agent: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
+            detail="An unexpected error occurred while processing the course. Please try again later."
         )
 
 

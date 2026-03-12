@@ -53,6 +53,12 @@ Based on the user's highlighted topics of interest and the knowledge base conten
 2. Test understanding of key concepts
 3. Are clear and unambiguous
 4. Have detailed, comprehensive answers
+5. Match the specified difficulty level (Basic, Intermediate, or Expert)
+
+Difficulty guidelines:
+- **Basic**: Definitions, recall, simple true/false, straightforward multiple choice.
+- **Intermediate**: Application of concepts, compare/contrast, scenario-based questions.
+- **Expert**: Analysis, synthesis, multi-step reasoning, open-ended expert-level problems.
 
 For each question, provide:
 - question_text: The question itself
@@ -674,7 +680,8 @@ Return a JSON array of topic strings."""
         course_id: int,
         highlighted_topics: List[str],
         context: str,
-        knowledge_base_content: str
+        knowledge_base_content: str,
+        level: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Generate questions with detailed answers based on highlighted topics
@@ -685,6 +692,7 @@ Return a JSON array of topic strings."""
             highlighted_topics: List of highlighted topics
             context: Zed context
             knowledge_base_content: Content from knowledge base
+            level: Difficulty level (e.g. "Basic", "Intermediate", "Expert")
             
         Returns:
             List of question dictionaries
@@ -697,11 +705,15 @@ Return a JSON array of topic strings."""
             topics_str = ", ".join(highlighted_topics[:5])  # Limit to top 5 topics
             kb_content_preview = knowledge_base_content[:2000] if knowledge_base_content else "No knowledge base content available."
             
+            level_instruction = ""
+            if level:
+                level_instruction = f"\nDifficulty Level: {level}\nAll questions MUST be at the {level} difficulty level.\n"
+            
             prompt = f"""Generate educational questions based on the following information:
 
 User's Highlighted Topics of Interest:
 {topics_str}
-
+{level_instruction}
 Zed Context (User Interests):
 {context[:1500]}
 
@@ -713,6 +725,7 @@ Generate {self.questions_per_course} questions that:
 2. Test understanding of key concepts
 3. Include detailed, comprehensive answers
 4. Are appropriate for course material
+5. Match the {level or 'Basic'} difficulty level
 
 Return a JSON array of question objects."""
             
@@ -746,19 +759,34 @@ Return a JSON array of question objects."""
             logger.error(f"Failed to generate questions: {e}")
             return []
     
-    def _save_questions(self, course_id: int, questions: List[Dict[str, Any]]) -> bool:
+    def _save_questions(self, course_id: int, questions: List[Dict[str, Any]], section_id: Optional[int] = None) -> bool:
         """
-        Save questions to lms_questions table
+        Save questions to lms_questions table using the SQLAlchemy ORM session pool.
         
         Args:
             course_id: Course ID
             questions: List of question dictionaries
+            section_id: Optional section ID to scope questions to a level
             
         Returns:
             True if successful, False otherwise
         """
+        from config.database_orm import SessionLocal
+        from sqlalchemy import func
+        
+        db = SessionLocal()
         try:
-            db = Database(get_connection_params())
+            # Determine the starting order_index so new questions don't collide
+            # with existing ones in the same course+section.
+            max_idx = (
+                db.query(func.coalesce(func.max(LMSQuestion.order_index), -1))
+                .filter(
+                    LMSQuestion.course_id == course_id,
+                    LMSQuestion.section_id == section_id if section_id else LMSQuestion.section_id.is_(None),
+                )
+                .scalar()
+            )
+            start_index = (max_idx or -1) + 1
             
             for idx, question_data in enumerate(questions):
                 # Store detailed answer in correct_answer field
@@ -768,36 +796,44 @@ Return a JSON array of question objects."""
                 # Combine answer and explanation for detailed answer
                 detailed_answer = f"{correct_answer}\n\nExplanation: {explanation}" if explanation else correct_answer
                 
-                db.execute(
-                    """INSERT INTO lms_questions 
-                       (course_id, question_text, question_type, options, correct_answer, points, order_index, created_at)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)""",
-                    (
-                        course_id,
-                        question_data.get('question_text', ''),
-                        question_data.get('question_type', 'text'),
-                        json.dumps(question_data.get('options', {})) if question_data.get('options') else None,
-                        detailed_answer,  # Store detailed answer in correct_answer field
-                        question_data.get('points', 1),
-                        idx
-                    )
-                )
+                db.add(LMSQuestion(
+                    course_id=course_id,
+                    section_id=section_id,
+                    question_text=question_data.get('question_text', ''),
+                    question_type=question_data.get('question_type', 'text'),
+                    options=question_data.get('options') if question_data.get('options') else None,
+                    correct_answer=detailed_answer,
+                    points=question_data.get('points', 1),
+                    order_index=start_index + idx,
+                ))
             
-            db.close()
-            logger.info(f"Saved {len(questions)} questions to database for course_id={course_id}")
+            db.commit()
+            logger.info(f"Saved {len(questions)} questions to database for course_id={course_id}, section_id={section_id}")
             return True
             
         except Exception as e:
+            db.rollback()
             logger.error(f"Failed to save questions: {e}")
             return False
+        finally:
+            db.close()
     
-    def process_course_context(self, user_id: int, course_id: int) -> Dict[str, Any]:
+    def process_course_context(
+        self,
+        user_id: int,
+        course_id: int,
+        section_id: Optional[int] = None,
+        level: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Main pipeline method: Process course context and generate questions
+        scoped to a specific section / difficulty level.
         
         Args:
             user_id: User ID
             course_id: Course ID
+            section_id: Optional section ID (questions will be saved with this)
+            level: Difficulty level label (e.g. "Basic", "Intermediate", "Expert")
             
         Returns:
             Dictionary with processing results
@@ -806,6 +842,8 @@ Return a JSON array of question objects."""
             'success': False,
             'user_id': user_id,
             'course_id': course_id,
+            'section_id': section_id,
+            'level': level,
             'topics_extracted': [],
             'urls_found': 0,
             'urls_saved': 0,
@@ -953,25 +991,26 @@ Return a JSON array of question objects."""
             content_length = len(knowledge_base_content) if knowledge_base_content else 0
             logger.info(f"[AZEL-AGENT] Step 6 SUCCESS: Extracted {content_length} chars of content in {step_elapsed:.2f}s")
             
-            # Step 7: Generate questions
+            # Step 7: Generate questions (with level context)
             step_start = time.time()
-            logger.info(f"[AZEL-AGENT] Step 7: Generating questions using LLM")
+            logger.info(f"[AZEL-AGENT] Step 7: Generating questions using LLM (level={level})")
             questions = self._generate_questions(
                 user_id,
                 course_id,
                 highlighted_topics,
                 context,
-                knowledge_base_content
+                knowledge_base_content,
+                level=level,
             )
             result['questions_generated'] = len(questions)
             step_elapsed = time.time() - step_start
             logger.info(f"[AZEL-AGENT] Step 7 SUCCESS: Generated {len(questions)} questions in {step_elapsed:.2f}s")
             
-            # Step 8: Save questions
+            # Step 8: Save questions (with section_id)
             step_start = time.time()
-            logger.info(f"[AZEL-AGENT] Step 8: Saving {len(questions)} questions to database")
+            logger.info(f"[AZEL-AGENT] Step 8: Saving {len(questions)} questions to database (section_id={section_id})")
             if questions:
-                saved = self._save_questions(course_id, questions)
+                saved = self._save_questions(course_id, questions, section_id=section_id)
                 if saved:
                     result['questions_saved'] = len(questions)
                     step_elapsed = time.time() - step_start

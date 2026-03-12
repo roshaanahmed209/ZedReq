@@ -276,6 +276,19 @@ class LMSService:
     # User Course Operations
     # ========================================================================
     
+    def is_user_enrolled(self, user_id: int, course_id: int) -> bool:
+        """Check whether *user_id* is enrolled in *course_id*."""
+        return (
+            self.db.query(LMSUserCourse)
+            .filter(
+                and_(
+                    LMSUserCourse.user_id == user_id,
+                    LMSUserCourse.course_id == course_id,
+                )
+            )
+            .first()
+        ) is not None
+    
     def enroll_in_course(self, user_id: int, course_id: int) -> Optional[LMSUserCourse]:
         """
         Enroll user in a course.
@@ -472,8 +485,14 @@ class LMSService:
         
         return result
     
-    def _recalculate_dashboard_stats(self, user_id: int):
-        """Recalculate dashboard stats from user answers"""
+    def _recalculate_dashboard_stats(self, user_id: int, commit: bool = True):
+        """Recalculate dashboard stats from user answers.
+        
+        Args:
+            user_id: The user whose dashboard to recalculate.
+            commit: Whether to commit after the update. Set to False when
+                    called inside an outer transaction (e.g. evaluate_answer).
+        """
         # Aggregate from lms_user_answers
         stats = (
             self.db.query(
@@ -525,7 +544,6 @@ class LMSService:
             dashboard.overall_accuracy = accuracy
             dashboard.day_streak = streak
             dashboard.last_activity_date = last_activity_date
-            self.db.commit()
         else:
             dashboard = LMSDashboard(
                 user_id=user_id,
@@ -537,6 +555,8 @@ class LMSService:
                 last_activity_date=last_activity_date
             )
             self.db.add(dashboard)
+        
+        if commit:
             self.db.commit()
     
     def _calculate_day_streak(self, user_id: int) -> int:
@@ -645,6 +665,75 @@ class LMSService:
         self.db.refresh(performance)
         return performance
     
+    def ensure_default_level_sections(self, course_id: int) -> List[LMSCourseSection]:
+        """
+        Create Basic/Intermediate/Expert level sections when course has none.
+        Returns existing sections if they already exist.
+        """
+        sections = (
+            self.db.query(LMSCourseSection)
+            .filter(LMSCourseSection.course_id == course_id)
+            .order_by(LMSCourseSection.order_index)
+            .all()
+        )
+        if sections:
+            return sections
+        
+        default_levels = [
+            ("Basic", 0),
+            ("Intermediate", 1),
+            ("Expert", 2),
+        ]
+        for title, order_index in default_levels:
+            self.db.add(LMSCourseSection(
+                course_id=course_id,
+                title=title,
+                order_index=order_index
+            ))
+        self.db.commit()
+        
+        return (
+            self.db.query(LMSCourseSection)
+            .filter(LMSCourseSection.course_id == course_id)
+            .order_by(LMSCourseSection.order_index)
+            .all()
+        )
+    
+    def backfill_orphan_questions(self, course_id: int) -> int:
+        """
+        Assign section_id to questions that have section_id IS NULL for this course.
+        They get assigned to the first (Basic) section.
+        Uses a single bulk UPDATE for scalability.
+        Returns the number of questions updated.
+        """
+        # Ensure sections exist first
+        sections = self.ensure_default_level_sections(course_id)
+        if not sections:
+            return 0
+        
+        default_section = sections[0]  # Basic section (order_index=0)
+        
+        # Single bulk UPDATE — no need to load rows into memory
+        count = (
+            self.db.query(LMSQuestion)
+            .filter(
+                and_(
+                    LMSQuestion.course_id == course_id,
+                    LMSQuestion.section_id.is_(None)
+                )
+            )
+            .update(
+                {LMSQuestion.section_id: default_section.id},
+                synchronize_session="fetch",
+            )
+        )
+        
+        if count > 0:
+            self.db.commit()
+            logger.info(f"Backfilled {count} orphan questions for course_id={course_id} into section '{default_section.title}' (id={default_section.id})")
+        
+        return count
+
     def get_domain_performance(self, user_id: int) -> List[Dict[str, Any]]:
         """Get performance by domain"""
         performances = (
@@ -674,6 +763,51 @@ class LMSService:
             return None
         
         return performance.to_dict(include_relations=True)
+    
+    def get_section_performance_summary(
+        self, user_id: int, course_id: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Return per-section evaluation metrics for *user_id* in *course_id*.
+        Every section that belongs to the course is included (even if the
+        user has no answers there yet — those get zeroed-out defaults).
+        """
+        sections = (
+            self.db.query(LMSCourseSection)
+            .filter(LMSCourseSection.course_id == course_id)
+            .order_by(LMSCourseSection.order_index)
+            .all()
+        )
+        
+        # Bulk-fetch all progress rows for this user + these section IDs
+        section_ids = [s.id for s in sections]
+        progress_rows = (
+            self.db.query(LMSUserSectionProgress)
+            .filter(
+                and_(
+                    LMSUserSectionProgress.user_id == user_id,
+                    LMSUserSectionProgress.section_id.in_(section_ids),
+                )
+            )
+            .all()
+        ) if section_ids else []
+        
+        progress_map = {p.section_id: p for p in progress_rows}
+        
+        result = []
+        for section in sections:
+            p = progress_map.get(section.id)
+            result.append({
+                'section_id': section.id,
+                'title': section.title,
+                'order_index': section.order_index,
+                'questions_answered': p.questions_answered if p and p.questions_answered else 0,
+                'correct_answers': p.correct_answers if p and p.correct_answers else 0,
+                'accuracy_percentage': float(p.accuracy_percentage) if p and p.accuracy_percentage else 0.0,
+                'total_points_earned': p.total_points_earned if p and p.total_points_earned else 0,
+            })
+        
+        return result
     
     # ========================================================================
     # Question/Answer Operations
@@ -769,7 +903,12 @@ class LMSService:
         points: int = 0,
         feedback: Optional[str] = None
     ) -> Optional[LMSUserAnswer]:
-        """Evaluate an answer (manual or AI)"""
+        """Evaluate an answer (manual or AI).
+        
+        All cascaded stat updates (course, domain, section, daily, dashboard)
+        are flushed inside a single transaction and committed once at the end
+        so that a mid-cascade failure rolls everything back atomically.
+        """
         answer = (
             self.db.query(LMSUserAnswer)
             .filter(LMSUserAnswer.id == answer_id)
@@ -779,51 +918,98 @@ class LMSService:
         if not answer:
             return None
         
-        # Update answer
-        answer.is_correct = is_correct
-        answer.points_earned = points
-        answer.feedback = feedback
-        answer.evaluated_at = datetime.now()
-        
-        self.db.commit()
-        self.db.refresh(answer)
-        
-        # Update dashboard stats
-        self._recalculate_dashboard_stats(answer.user_id)
-        
-        # Update course performance
-        question = self.db.query(LMSQuestion).filter(LMSQuestion.id == answer.question_id).first()
-        if question:
-            # Update course-specific performance
-            self._update_course_performance(answer.user_id, question.course_id, is_correct, points)
+        try:
+            # 1. Update the answer itself
+            answer.is_correct = is_correct
+            answer.points_earned = points
+            answer.feedback = feedback
+            answer.evaluated_at = datetime.now()
+            self.db.flush()  # make visible in session but don't commit yet
             
-            # Get course category as domain (or implement proper domain mapping)
-            course = self.db.query(LMSCourse).filter(LMSCourse.id == question.course_id).first()
-            if course and course.category:
-                # Find or create domain
-                domain = (
-                    self.db.query(LMSDomain)
-                    .filter(LMSDomain.name == course.category)
-                    .first()
-                )
+            # 2. Cascade: course / domain / section performance (no individual commits)
+            question = self.db.query(LMSQuestion).filter(LMSQuestion.id == answer.question_id).first()
+            if question:
+                self._update_course_performance(answer.user_id, question.course_id, is_correct, points)
                 
-                if domain:
-                    self._update_domain_performance(answer.user_id, domain.id, is_correct)
-        
-        # Record daily performance
-        today = date.today()
-        self.record_daily_performance(
-            user_id=answer.user_id,
-            record_date=today,
-            questions_answered=1,
-            correct_answers=1 if is_correct else 0,
-            wrong_answers=0 if is_correct else 1
-        )
+                course = self.db.query(LMSCourse).filter(LMSCourse.id == question.course_id).first()
+                if course and course.category:
+                    domain = (
+                        self.db.query(LMSDomain)
+                        .filter(LMSDomain.name == course.category)
+                        .first()
+                    )
+                    if domain:
+                        self._update_domain_performance(answer.user_id, domain.id, is_correct)
+                
+                if question.section_id:
+                    self._update_section_performance(answer.user_id, question.section_id, is_correct, points)
+            
+            # 3. Cascade: daily performance
+            today = date.today()
+            self._record_daily_performance_no_commit(
+                user_id=answer.user_id,
+                record_date=today,
+                questions_answered=1,
+                correct_answers=1 if is_correct else 0,
+                wrong_answers=0 if is_correct else 1,
+            )
+            
+            # 4. Cascade: dashboard stats (no individual commit)
+            self._recalculate_dashboard_stats(answer.user_id, commit=False)
+            
+            # 5. Single atomic commit
+            self.db.commit()
+            self.db.refresh(answer)
+        except Exception:
+            self.db.rollback()
+            raise
         
         return answer
     
+    def _record_daily_performance_no_commit(
+        self,
+        user_id: int,
+        record_date: date,
+        questions_answered: int = 0,
+        correct_answers: int = 0,
+        wrong_answers: int = 0,
+        study_time_minutes: int = 0,
+    ):
+        """Same logic as record_daily_performance but without committing
+        (used inside evaluate_answer's atomic transaction)."""
+        performance = (
+            self.db.query(LMSWeeklyPerformance)
+            .filter(
+                and_(
+                    LMSWeeklyPerformance.user_id == user_id,
+                    LMSWeeklyPerformance.date == record_date,
+                )
+            )
+            .first()
+        )
+        
+        if performance:
+            performance.questions_answered += questions_answered
+            performance.correct_answers += correct_answers
+            performance.wrong_answers += wrong_answers
+            performance.study_time_minutes += study_time_minutes
+        else:
+            performance = LMSWeeklyPerformance(
+                user_id=user_id,
+                date=record_date,
+                questions_answered=questions_answered,
+                correct_answers=correct_answers,
+                wrong_answers=wrong_answers,
+                study_time_minutes=study_time_minutes,
+            )
+            self.db.add(performance)
+    
     def _update_course_performance(self, user_id: int, course_id: int, is_correct: bool, points: int = 0):
-        """Update course performance after answer evaluation"""
+        """Update course performance after answer evaluation.
+        
+        NOTE: Does NOT commit — the caller (evaluate_answer) commits once
+        at the end to keep the whole evaluation cascade atomic.
+        """
         performance = (
             self.db.query(LMSUserCoursePerformance)
             .filter(
@@ -865,11 +1051,13 @@ class LMSService:
                 last_activity_date=date.today()
             )
             self.db.add(performance)
-        
-        self.db.commit()
     
     def _update_domain_performance(self, user_id: int, domain_id: int, is_correct: bool):
-        """Update domain performance after answer evaluation"""
+        """Update domain performance after answer evaluation.
+        
+        NOTE: Does NOT commit — the caller (evaluate_answer) commits once
+        at the end to keep the whole evaluation cascade atomic.
+        """
         performance = (
             self.db.query(LMSUserDomainPerformance)
             .filter(
@@ -904,8 +1092,47 @@ class LMSService:
                 accuracy_percentage=accuracy
             )
             self.db.add(performance)
+    
+    def _update_section_performance(self, user_id: int, section_id: int, is_correct: bool, points: int = 0):
+        """Update section-level performance after answer evaluation (upsert).
         
-        self.db.commit()
+        NOTE: Does NOT commit — the caller (evaluate_answer) commits once
+        at the end to keep the whole evaluation cascade atomic.
+        """
+        progress = (
+            self.db.query(LMSUserSectionProgress)
+            .filter(
+                and_(
+                    LMSUserSectionProgress.user_id == user_id,
+                    LMSUserSectionProgress.section_id == section_id,
+                )
+            )
+            .first()
+        )
+        
+        if progress:
+            progress.questions_answered = (progress.questions_answered or 0) + 1
+            if is_correct:
+                progress.correct_answers = (progress.correct_answers or 0) + 1
+                progress.total_points_earned = (progress.total_points_earned or 0) + points
+            
+            # Recalculate accuracy
+            if progress.questions_answered > 0:
+                progress.accuracy_percentage = round(
+                    (progress.correct_answers / progress.questions_answered) * 100,
+                    2
+                )
+        else:
+            accuracy = 100.0 if is_correct else 0.0
+            progress = LMSUserSectionProgress(
+                user_id=user_id,
+                section_id=section_id,
+                questions_answered=1,
+                correct_answers=1 if is_correct else 0,
+                accuracy_percentage=accuracy,
+                total_points_earned=points if is_correct else 0,
+            )
+            self.db.add(progress)
     
     def get_user_answers(
         self,

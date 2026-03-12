@@ -238,6 +238,29 @@ class CoursePerformanceResponse(BaseModel):
 
 
 # ============================================================================
+# Section Performance Schemas
+# ============================================================================
+
+class SectionPerformanceItem(BaseModel):
+    """Per-section evaluation metrics for a single level."""
+    section_id: int
+    title: str
+    order_index: int = 0
+    questions_answered: int = 0
+    correct_answers: int = 0
+    accuracy_percentage: float = 0.0
+    total_points_earned: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class SectionPerformanceResponse(BaseModel):
+    """Wrapper response for per-section performance summary."""
+    sections: List[SectionPerformanceItem] = []
+
+
+# ============================================================================
 # Activity Schemas
 # ============================================================================
 
@@ -503,3 +526,12 @@ class SectionProgressUpdate(BaseModel):
     """Schema for updating section progress"""
     completed_items: int = Field(..., ge=0)
     total_items: int = Field(..., gt=0)
+
+
+# ============================================================================
+# Azel Agent Schemas
+# ============================================================================
+
+class ProcessCourseRequest(BaseModel):
+    """Schema for triggering Azel question generation scoped to a section"""
+    section_id: Optional[int] = Field(None, gt=0, description="Section to generate questions for")

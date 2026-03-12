@@ -561,6 +561,14 @@ const SkillProgressFill = styled.div`
   }
 `
 
+const SkillSubStats = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.75em;
+  color: var(--text-light);
+`
+
 const TrendChart = styled.div`
   display: flex;
   align-items: flex-end;
@@ -862,6 +870,7 @@ const Evaluation = () => {
   const [weeklyPerformance, setWeeklyPerformance] = useState([])
   const [domainPerformance, setDomainPerformance] = useState([])
   const [coursePerformance, setCoursePerformance] = useState(null)
+  const [sectionPerformance, setSectionPerformance] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [evaluating, setEvaluating] = useState(false)
@@ -922,7 +931,7 @@ const Evaluation = () => {
       setLoading(true)
       
       // Fetch all data with individual error handling to prevent one failure from blocking others
-      const [dashboardRes, weeklyRes, domainRes, coursePerfRes, recommendationsRes] = await Promise.allSettled([
+      const [dashboardRes, weeklyRes, domainRes, coursePerfRes, recommendationsRes, sectionPerfRes] = await Promise.allSettled([
         lmsAPI.getDashboard().catch(err => {
           console.warn('Error fetching dashboard:', err)
           return { data: null }
@@ -942,6 +951,10 @@ const Evaluation = () => {
         lmsAPI.getRecommendations(5).catch(err => {
           console.warn('Error fetching recommendations:', err)
           return { data: { recommendations: [] } }
+        }),
+        lmsAPI.getSectionPerformance(selectedCourseId).catch(err => {
+          console.warn('Error fetching section performance:', err)
+          return { data: { sections: [] } }
         })
       ])
 
@@ -964,6 +977,10 @@ const Evaluation = () => {
       
       if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value?.data?.recommendations) {
         setRecommendations(recommendationsRes.value.data.recommendations)
+      }
+
+      if (sectionPerfRes.status === 'fulfilled' && sectionPerfRes.value?.data?.sections) {
+        setSectionPerformance(sectionPerfRes.value.data.sections)
       }
     } catch (err) {
       console.error('Error fetching performance data:', err)
@@ -1583,6 +1600,52 @@ const Evaluation = () => {
                   ) : (
                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
                       No domain performance data available to identify improvement areas.
+                    </div>
+                  )}
+                </div>
+              </EvaluationCard>
+            </GridContainer>
+
+            {/* Performance by Level (Section) */}
+            <GridContainer>
+              <EvaluationCard>
+                <CardHeader>
+                  <CardHeaderLeft>
+                    <CardIcon>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20V10"></path>
+                        <path d="M18 20V4"></path>
+                        <path d="M6 20v-4"></path>
+                      </svg>
+                    </CardIcon>
+                    <CardTitle>Performance by Level</CardTitle>
+                  </CardHeaderLeft>
+                </CardHeader>
+
+                <div>
+                  {sectionPerformance.length > 0 ? (
+                    sectionPerformance.map((section) => (
+                      <SkillBar key={section.section_id}>
+                        <SkillHeader>
+                          <SkillName>{section.title}</SkillName>
+                          <SkillPercentage>
+                            {section.questions_answered > 0
+                              ? `${(Number(section.accuracy_percentage) || 0).toFixed(1)}%`
+                              : '—'}
+                          </SkillPercentage>
+                        </SkillHeader>
+                        <SkillProgressBar>
+                          <SkillProgressFill width={Number(section.accuracy_percentage) || 0} />
+                        </SkillProgressBar>
+                        <SkillSubStats>
+                          <span>{section.correct_answers}/{section.questions_answered} correct</span>
+                          <span>{section.total_points_earned} pts</span>
+                        </SkillSubStats>
+                      </SkillBar>
+                    ))
+                  ) : (
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                      No section performance data available yet. Generate and answer questions by level to see results here.
                     </div>
                   )}
                 </div>
