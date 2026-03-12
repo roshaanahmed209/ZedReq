@@ -203,6 +203,40 @@ const EnrollButton = styled.button`
   }
 `
 
+const RefreshRecsButton = styled.button`
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 0.78em;
+  font-weight: 500;
+  color: var(--primary);
+  background: transparent;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  &:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  svg.spinning {
+    animation: spin 1s linear infinite;
+  }
+`
+
 const EmptySubtext = styled.p`
   font-size: 0.9em;
   color: var(--text-light);
@@ -2136,6 +2170,7 @@ const LMS = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [refreshingRecs, setRefreshingRecs] = useState(false)
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -2145,185 +2180,147 @@ const LMS = () => {
 
   const fetchAllData = async () => {
     const startTime = performance.now()
-    console.log('[LMS] ===== fetchAllData START: Fetching all LMS data =====')
+    console.log('[LMS] ===== fetchAllData START: Fetching all LMS data (single combined call) =====')
     
     try {
       setLoading(true)
       setError(null)
 
-      console.log('[LMS] fetchAllData: Making parallel API calls for 8 endpoints')
-      // Fetch all data in parallel using Promise.allSettled
-      // This allows the page to load even if some endpoints are slow or fail
-      const [
-        coursesRes,
-        dashboardRes,
-        weeklyRes,
-        domainRes,
-        activitiesRes,
-        recommendationsRes,
-        deadlinesRes,
-        certificatesRes
-      ] = await Promise.allSettled([
-        lmsAPI.getMyCourses({ limit: 100 }),
-        lmsAPI.getDashboard(),
-        lmsAPI.getWeeklyPerformance(7),
-        lmsAPI.getDomainPerformance(),
-        lmsAPI.getActivities(10),
-        lmsAPI.getRecommendations(5),
-        lmsAPI.getDeadlines(10),
-        lmsAPI.getCertificates()
-      ])
+      // Single API call replaces the previous 8 parallel calls
+      const response = await lmsAPI.getDashboardAll()
       
       const fetchTime = performance.now() - startTime
-      console.log(`[LMS] fetchAllData: All API calls completed in ${fetchTime.toFixed(2)}ms`)
+      console.log(`[LMS] fetchAllData: Combined API call completed in ${fetchTime.toFixed(2)}ms`)
 
-      // Handle each response individually (using Promise.allSettled, so we check status)
-      const failedRequests = []
+      const data = response.data
+      if (!data) {
+        throw new Error('Empty response from dashboard/all endpoint')
+      }
 
-      // Set courses (critical - page won't work without this)
-      console.log('[LMS] fetchAllData: Processing courses response')
-      if (coursesRes.status === 'fulfilled' && coursesRes.value.data) {
-        const coursesData = coursesRes.value.data.courses || []
-        if (Array.isArray(coursesData) && coursesData.length > 0) {
-          const mappedCourses = coursesData.map(course => {
-            // Backend returns LMSUserCourse with course data in flat structure:
-            // course_title, course_icon, course_description, course_lessons, course_duration
-            // OR nested course object
-            const title = course.course_title || course.title || 'Untitled Course'
-            const icon = course.course_icon || course.icon || (title ? title.substring(0, 2).toUpperCase() : 'CO')
-            const description = course.course_description || course.description || ''
-            const lessons = course.course_lessons !== undefined ? course.course_lessons : (course.lessons || 0)
-            const duration = course.course_duration || course.duration || 'N/A'
-            const category = course.category || 'General'
-            const difficulty = course.difficulty || 'beginner'
-            
-            return {
-              id: course.course_id || course.id,
-              title: title,
-              description: description,
-              icon: icon,
-              lessons: lessons,
-              duration: duration,
-              progress: course.progress || 0,
-              status: course.status || 'not_started',
-              category: category,
-              difficulty: difficulty
-            }
-          })
-          setCourses(mappedCourses)
-          console.log(`[LMS] fetchAllData: SUCCESS - Loaded ${mappedCourses.length} courses`)
-        } else {
-          // Empty courses array - user has no courses enrolled
-          setCourses([])
-          console.log('[LMS] fetchAllData: No courses found for user (empty array)')
-        }
-      } else if (coursesRes.status === 'rejected') {
-        failedRequests.push('courses')
-        console.error('[LMS] fetchAllData: FAILED - Courses request rejected:', coursesRes.reason)
-        // Set empty array on error so page doesn't break
-        setCourses([])
+      // Set courses
+      const coursesData = data.courses?.courses || []
+      if (Array.isArray(coursesData) && coursesData.length > 0) {
+        const mappedCourses = coursesData.map(course => {
+          // Backend returns LMSUserCourse with course data in flat structure:
+          // course_title, course_icon, course_description, course_lessons, course_duration
+          // OR nested course object
+          const title = course.course_title || course.title || 'Untitled Course'
+          const icon = course.course_icon || course.icon || (title ? title.substring(0, 2).toUpperCase() : 'CO')
+          const description = course.course_description || course.description || ''
+          const lessons = course.course_lessons !== undefined ? course.course_lessons : (course.lessons || 0)
+          const duration = course.course_duration || course.duration || 'N/A'
+          const category = course.category || 'General'
+          const difficulty = course.difficulty || 'beginner'
+          
+          return {
+            id: course.course_id || course.id,
+            title: title,
+            description: description,
+            icon: icon,
+            lessons: lessons,
+            duration: duration,
+            progress: course.progress || 0,
+            status: course.status || 'not_started',
+            category: category,
+            difficulty: difficulty
+          }
+        })
+        setCourses(mappedCourses)
+        console.log(`[LMS] fetchAllData: SUCCESS - Loaded ${mappedCourses.length} courses`)
       } else {
-        // Unknown status - set empty array
-        console.warn('[LMS] fetchAllData: UNKNOWN - Courses response has unknown status')
         setCourses([])
+        console.log('[LMS] fetchAllData: No courses found for user (empty array)')
       }
 
       // Set dashboard
-      if (dashboardRes.status === 'fulfilled' && dashboardRes.value.data) {
-        setDashboard(dashboardRes.value.data)
+      if (data.dashboard) {
+        setDashboard(data.dashboard)
         console.log('[LMS] fetchAllData: SUCCESS - Dashboard loaded')
-      } else if (dashboardRes.status === 'rejected') {
-        failedRequests.push('dashboard')
-        console.warn('[LMS] fetchAllData: FAILED - Dashboard:', dashboardRes.reason?.message || dashboardRes.reason)
       }
 
       // Set weekly performance
-      if (weeklyRes.status === 'fulfilled' && weeklyRes.value.data && weeklyRes.value.data.performance) {
-        setWeeklyPerformance(weeklyRes.value.data.performance)
-        console.log(`[LMS] fetchAllData: SUCCESS - Weekly performance loaded (${weeklyRes.value.data.performance.length} entries)`)
-      } else if (weeklyRes.status === 'rejected') {
-        failedRequests.push('weekly performance')
-        console.warn('[LMS] fetchAllData: FAILED - Weekly performance:', weeklyRes.reason?.message || weeklyRes.reason)
+      if (data.weekly_performance?.performance) {
+        setWeeklyPerformance(data.weekly_performance.performance)
+        console.log(`[LMS] fetchAllData: SUCCESS - Weekly performance loaded (${data.weekly_performance.performance.length} entries)`)
       }
 
       // Set domain performance
-      if (domainRes.status === 'fulfilled' && domainRes.value.data && domainRes.value.data.performance) {
-        setDomainPerformance(domainRes.value.data.performance)
-        console.log(`[LMS] fetchAllData: SUCCESS - Domain performance loaded (${domainRes.value.data.performance.length} entries)`)
-      } else if (domainRes.status === 'rejected') {
-        failedRequests.push('domain performance')
-        console.warn('[LMS] fetchAllData: FAILED - Domain performance:', domainRes.reason?.message || domainRes.reason)
+      if (data.domain_performance?.domains) {
+        setDomainPerformance(data.domain_performance.domains)
+        console.log(`[LMS] fetchAllData: SUCCESS - Domain performance loaded (${data.domain_performance.domains.length} entries)`)
       }
 
       // Set activities
-      if (activitiesRes.status === 'fulfilled' && activitiesRes.value.data && activitiesRes.value.data.activities) {
-        setActivities(activitiesRes.value.data.activities)
-        console.log(`[LMS] fetchAllData: SUCCESS - Activities loaded (${activitiesRes.value.data.activities.length} entries)`)
-      } else if (activitiesRes.status === 'rejected') {
-        failedRequests.push('activities')
-        console.warn('[LMS] fetchAllData: FAILED - Activities:', activitiesRes.reason?.message || activitiesRes.reason)
+      if (data.activities?.activities) {
+        setActivities(data.activities.activities)
+        console.log(`[LMS] fetchAllData: SUCCESS - Activities loaded (${data.activities.activities.length} entries)`)
       }
 
       // Set recommendations
-      if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value.data && recommendationsRes.value.data.recommendations) {
-        setRecommendations(recommendationsRes.value.data.recommendations)
-        console.log(`[LMS] fetchAllData: SUCCESS - Recommendations loaded (${recommendationsRes.value.data.recommendations.length} entries)`)
-      } else if (recommendationsRes.status === 'rejected') {
-        failedRequests.push('recommendations')
-        console.warn('[LMS] fetchAllData: FAILED - Recommendations:', recommendationsRes.reason?.message || recommendationsRes.reason)
+      if (data.recommendations?.recommendations) {
+        setRecommendations(data.recommendations.recommendations)
+        console.log(`[LMS] fetchAllData: SUCCESS - Recommendations loaded (${data.recommendations.recommendations.length} entries)`)
       }
 
       // Set deadlines
-      if (deadlinesRes.status === 'fulfilled' && deadlinesRes.value.data && deadlinesRes.value.data.deadlines) {
-        setDeadlines(deadlinesRes.value.data.deadlines)
-        console.log(`[LMS] fetchAllData: SUCCESS - Deadlines loaded (${deadlinesRes.value.data.deadlines.length} entries)`)
-      } else if (deadlinesRes.status === 'rejected') {
-        failedRequests.push('deadlines')
-        console.warn('[LMS] fetchAllData: FAILED - Deadlines:', deadlinesRes.reason?.message || deadlinesRes.reason)
+      if (data.deadlines?.deadlines) {
+        setDeadlines(data.deadlines.deadlines)
+        console.log(`[LMS] fetchAllData: SUCCESS - Deadlines loaded (${data.deadlines.deadlines.length} entries)`)
       }
 
       // Set certificates
-      if (certificatesRes.status === 'fulfilled' && certificatesRes.value.data && certificatesRes.value.data.certificates) {
-        setCertificates(certificatesRes.value.data.certificates)
-        console.log(`[LMS] fetchAllData: SUCCESS - Certificates loaded (${certificatesRes.value.data.certificates.length} entries)`)
-      } else if (certificatesRes.status === 'rejected') {
-        failedRequests.push('certificates')
-        console.warn('[LMS] fetchAllData: FAILED - Certificates:', certificatesRes.reason?.message || certificatesRes.reason)
-      }
-
-      // Show warning if critical data failed (courses)
-      if (coursesRes.status === 'rejected') {
-        const errorReason = coursesRes.reason?.message || coursesRes.reason?.response?.data?.detail || 'Unknown error'
-        if (errorReason.includes('timeout')) {
-          setError('Courses are taking longer than expected to load. Please refresh the page or try again in a moment.')
-        } else {
-          setError(`Failed to load courses: ${errorReason}. Please refresh the page.`)
-        }
-        console.error('[LMS] fetchAllData: CRITICAL ERROR - Courses failed to load')
-      } else if (failedRequests.length > 0) {
-        // Show info message for non-critical failures
-        const timeoutErrors = failedRequests.filter(req => 
-          req !== 'courses' && 
-          (coursesRes.status === 'rejected' && coursesRes.reason?.message?.includes('timeout'))
-        )
-        
-        if (timeoutErrors.length > 0) {
-          console.warn(`[LMS] fetchAllData: Some data failed to load due to timeouts: ${failedRequests.join(', ')}. The page may not display all information correctly.`)
-        } else {
-          console.warn(`[LMS] fetchAllData: Some data failed to load: ${failedRequests.join(', ')}. The page may not display all information correctly.`)
-        }
-        // Don't set error for non-critical failures - page is still usable
+      if (data.certificates?.certificates) {
+        setCertificates(data.certificates.certificates)
+        console.log(`[LMS] fetchAllData: SUCCESS - Certificates loaded (${data.certificates.certificates.length} entries)`)
       }
 
       const totalTime = performance.now() - startTime
-      console.log(`[LMS] ===== fetchAllData END: Completed in ${totalTime.toFixed(2)}ms, ${failedRequests.length} failures =====`)
+      console.log(`[LMS] ===== fetchAllData END: Completed in ${totalTime.toFixed(2)}ms =====`)
 
     } catch (err) {
       const totalTime = performance.now() - startTime
       console.error(`[LMS] ===== fetchAllData ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
-      setError(err.response?.data?.detail || err.message || 'Failed to load LMS data')
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to load LMS data'
+      if (errorMsg.includes('timeout')) {
+        setError('Dashboard is taking longer than expected to load. Please refresh the page or try again in a moment.')
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Auto-refresh recommendations on every page load (runs after initial data fetch)
+  useEffect(() => {
+    if (!loading) {
+      handleRefreshRecommendations(true) // silent = true (no extra loading UI on initial load)
+    }
+  }, [loading]) // fires once loading flips to false after fetchAllData
+
+  /**
+   * Refresh AI recommendations by calling the backend generate-recommendations
+   * endpoint which dismisses stale recs and creates fresh ones based on the
+   * user's latest profile + Zed context.
+   *
+   * @param {boolean} silent - if true, skip the refreshingRecs state (used on page load)
+   */
+  const handleRefreshRecommendations = async (silent = false) => {
+    if (refreshingRecs) return // prevent double-trigger
+    if (!silent) setRefreshingRecs(true)
+    console.log('[LMS] handleRefreshRecommendations: Generating fresh recommendations...')
+    try {
+      const res = await lmsAPI.generateRecommendations(5)
+      const data = res.data
+      if (data?.recommendations) {
+        setRecommendations(data.recommendations)
+        console.log(`[LMS] handleRefreshRecommendations: SUCCESS - ${data.recommendations.length} recommendations`)
+      }
+    } catch (err) {
+      console.error('[LMS] handleRefreshRecommendations: Error:', err)
+      // Don't overwrite the UI — stale recs are better than none
+    } finally {
+      setRefreshingRecs(false)
     }
   }
 
@@ -2508,23 +2505,32 @@ const LMS = () => {
   const handleSubmitAnswers = async () => {
     if (!selectedCourse) return
 
+    const answeredEntries = Object.entries(answers).filter(([_, a]) => a && a.trim())
+    if (answeredEntries.length === 0) {
+      alert('Please provide at least one answer before submitting.')
+      return
+    }
+
     try {
-      console.log('[LMS] handleSubmitAnswers: Submitting answers without evaluation')
-      
+      console.log('[LMS] handleSubmitAnswers: Submitting answers...')
+
       // Submit all answers
-      const submitPromises = Object.entries(answers)
-        .filter(([_, answer]) => answer && answer.trim())
-        .map(([questionId, answerText]) =>
+      await Promise.all(
+        answeredEntries.map(([questionId, answerText]) =>
           lmsAPI.submitAnswer(parseInt(questionId), answerText)
         )
+      )
 
-      await Promise.all(submitPromises)
-      
-      console.log('[LMS] handleSubmitAnswers: Answers submitted successfully')
-      alert('Answers submitted successfully!')
+      console.log(`[LMS] handleSubmitAnswers: ${answeredEntries.length} answer(s) submitted successfully`)
+      alert('Answers submitted successfully! Evaluation is running in the background.')
       setAnswers({})
       handleClosePortal()
-      
+
+      // Trigger evaluation in the background (fire-and-forget)
+      lmsAPI.triggerSeezEvaluateCourse(selectedCourse.id)
+        .then(() => console.log('[LMS] handleSubmitAnswers: Background evaluation completed'))
+        .catch(err => console.warn('[LMS] handleSubmitAnswers: Background evaluation error:', err))
+
       // Refresh dashboard to update stats
       await fetchAllData()
     } catch (err) {
@@ -2536,76 +2542,50 @@ const LMS = () => {
   const handleSubmitAndEvaluate = async () => {
     if (!selectedCourse) return
 
+    const answeredEntries = Object.entries(answers).filter(([_, a]) => a && a.trim())
+    if (answeredEntries.length === 0) {
+      alert('Please provide at least one answer before submitting.')
+      return
+    }
+
     const startTime = performance.now()
-    console.log(`[LMS] ===== SUBMIT & EVALUATE START: course_id=${selectedCourse.id} =====`)
+    const courseId = selectedCourse.id
+    console.log(`[LMS] ===== SUBMIT & EVALUATE START: course_id=${courseId} =====`)
 
     try {
-      // Step 1: Submit all answers first
+      // Step 1: Submit all answers
       console.log('[LMS] handleSubmitAndEvaluate: Step 1 - Submitting answers...')
-      const submitPromises = Object.entries(answers)
-        .filter(([_, answer]) => answer && answer.trim())
-        .map(([questionId, answerText]) =>
+      await Promise.all(
+        answeredEntries.map(([questionId, answerText]) =>
           lmsAPI.submitAnswer(parseInt(questionId), answerText)
         )
+      )
+      console.log(`[LMS] handleSubmitAndEvaluate: Step 1 SUCCESS - Submitted ${answeredEntries.length} answer(s)`)
 
-      if (submitPromises.length === 0) {
-        alert('Please provide at least one answer before submitting.')
-        return
-      }
-
-      await Promise.all(submitPromises)
-      console.log(`[LMS] handleSubmitAndEvaluate: Step 1 SUCCESS - Submitted ${submitPromises.length} answer(s)`)
-      
-      // Step 2: Trigger Seez agent to evaluate the answers
+      // Step 2: Trigger Seez evaluation (await so results are ready on the Evaluation page)
       console.log('[LMS] handleSubmitAndEvaluate: Step 2 - Triggering Seez agent evaluation...')
-      const evaluateResponse = await lmsAPI.triggerSeezEvaluateCourse(selectedCourse.id)
-      
-      const evaluationTime = performance.now() - startTime
-      console.log(`[LMS] handleSubmitAndEvaluate: Step 2 completed in ${evaluationTime.toFixed(2)}ms`)
-      
-      if (evaluateResponse.data && evaluateResponse.data.result) {
-        const result = evaluateResponse.data.result
-        const success = result.success !== false
-        const evaluatedCount = result.evaluated_count || 0
-        const averageScore = result.average_score !== undefined ? result.average_score : null
-        
-        if (success) {
-          let successMsg = `Answers submitted and evaluated successfully!\n\n`
-          successMsg += `Evaluated ${evaluatedCount} answer(s)`
-          if (averageScore !== null) {
-            successMsg += `\nAverage Score: ${averageScore.toFixed(1)}/10`
-          }
-          
-          console.log(`[LMS] handleSubmitAndEvaluate: SUCCESS - Evaluated ${evaluatedCount} answers, avg score: ${averageScore}`)
-          alert(successMsg)
-        } else {
-          const errorMsg = result.error || 'Evaluation completed with errors'
-          console.warn(`[LMS] handleSubmitAndEvaluate: Evaluation completed with errors: ${errorMsg}`)
-          alert(`Answers submitted, but evaluation had issues:\n${errorMsg}`)
-        }
-      } else {
-        console.log('[LMS] handleSubmitAndEvaluate: Evaluation response received but no result data')
-        alert('Answers submitted successfully! Evaluation is in progress.')
-      }
-      
-      setAnswers({})
-      handleClosePortal()
-      
-      // Refresh dashboard to update stats
-      console.log('[LMS] handleSubmitAndEvaluate: Refreshing dashboard data...')
-      await fetchAllData()
-      
+      await lmsAPI.triggerSeezEvaluateCourse(courseId)
+
       const totalTime = performance.now() - startTime
       console.log(`[LMS] ===== SUBMIT & EVALUATE END: Completed in ${totalTime.toFixed(2)}ms =====`)
+
+      // Clean up portal state
+      setAnswers({})
+      handleClosePortal()
+
+      // Step 3: Navigate to Evaluation page with the course pre-selected
+      navigate('/evaluation', { state: { courseId } })
     } catch (err) {
       const totalTime = performance.now() - startTime
       console.error(`[LMS] ===== SUBMIT & EVALUATE ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
-      
+
       const errorMsg = err.response?.data?.detail || err.message || 'Failed to submit and evaluate answers'
-      
-      // Check if it's a timeout error
+
       if (err.code === 'ECONNABORTED' || errorMsg.includes('timeout')) {
-        alert(`Request timed out. Your answers were submitted, but evaluation may still be processing. Please check back later.`)
+        // Answers were likely submitted; navigate anyway so user can check results
+        setAnswers({})
+        handleClosePortal()
+        navigate('/evaluation', { state: { courseId } })
       } else {
         alert(`Error: ${errorMsg}`)
       }
@@ -3077,9 +3057,27 @@ const LMS = () => {
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
                 AI Recommendations
+                <RefreshRecsButton
+                  onClick={() => handleRefreshRecommendations(false)}
+                  disabled={refreshingRecs}
+                  title="Refresh recommendations based on your latest profile"
+                >
+                  <svg
+                    className={refreshingRecs ? 'spinning' : ''}
+                    width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                  </svg>
+                  {refreshingRecs ? 'Refreshing...' : 'Refresh'}
+                </RefreshRecsButton>
               </CardTitle>
               <RecommendationsScrollContainer>
-                {loading ? (
+{(loading || refreshingRecs) ? (
                   <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
                 ) : recommendations.length > 0 ? (
                   recommendations.map((rec) => {
@@ -3333,10 +3331,10 @@ const LMS = () => {
                 {questionsLoading ? (
                   <div style={{ textAlign: 'center', padding: '40px' }}>Loading questions...</div>
                 ) : courseQuestions.length > 0 ? (
-                  courseQuestions.map((q) => (
+                  courseQuestions.map((q, idx) => (
                     <QuestionSection key={q.id}>
                       <QuestionLabel>
-                        <QuestionNumber>Question {q.order_index || q.id}:</QuestionNumber>
+                        <QuestionNumber>Question {idx + 1}:</QuestionNumber>
                         {q.question_text || q.question || 'No question text available'}
                       </QuestionLabel>
                       {q.question_type === 'multiple_choice' && q.options ? (

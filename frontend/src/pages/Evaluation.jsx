@@ -889,6 +889,18 @@ const Evaluation = () => {
     fetchCourses()
   }, [])
 
+  // If navigated here with a courseId in state (e.g. from "Submit & Evaluate"),
+  // auto-select that course once the courses list is loaded.
+  useEffect(() => {
+    const navCourseId = location.state?.courseId
+    if (navCourseId && courses.length > 0) {
+      const match = courses.find(c => c.id === navCourseId)
+      if (match) {
+        setSelectedCourseId(navCourseId)
+      }
+    }
+  }, [courses, location.state])
+
   // Fetch performance data when course is selected
   useEffect(() => {
     if (selectedCourseId) {
@@ -913,7 +925,12 @@ const Evaluation = () => {
           icon: course.course_icon || (course.title ? course.title.substring(0, 2).toUpperCase() : 'CO')
         }))
         setCourses(coursesList)
-        if (coursesList.length > 0 && !selectedCourseId) {
+
+        // Prefer courseId from navigation state; fallback to first course
+        const navCourseId = location.state?.courseId
+        if (navCourseId && coursesList.find(c => c.id === navCourseId)) {
+          setSelectedCourseId(navCourseId)
+        } else if (coursesList.length > 0 && !selectedCourseId) {
           setSelectedCourseId(coursesList[0].id)
         }
       }

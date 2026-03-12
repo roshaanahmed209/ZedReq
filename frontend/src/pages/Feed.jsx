@@ -1707,13 +1707,9 @@ const Feed = () => {
     setSearchTimeout(timeout)
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      navigate('/landing')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
+  const handleLogout = () => {
+    logout()
+    navigate('/landing')
   }
 
   const getTimeAgo = (dateString) => {

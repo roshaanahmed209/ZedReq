@@ -169,21 +169,19 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const logout = async () => {
-    try {
-      // Disconnect WebSocket
-      if (notificationWs) {
-        notificationWs.disconnect()
-        setNotificationWs(null)
-      }
-      
-      await authAPI.logout()
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setUser(null)
-      setUnreadNotifications(0)
+  const logout = () => {
+    // Disconnect WebSocket
+    if (notificationWs) {
+      notificationWs.disconnect()
+      setNotificationWs(null)
     }
+
+    // Clear state immediately so the UI reacts instantly
+    setUser(null)
+    setUnreadNotifications(0)
+
+    // Fire backend logout (context update) in the background — don't await
+    authAPI.logout().catch(err => console.warn('Background logout call failed:', err))
   }
 
   const updateUser = (userData) => {

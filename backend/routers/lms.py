@@ -204,10 +204,6 @@ async def get_my_courses(
     user_id = current_user["id"]
     logger.info(f"[LMS] get_my_courses: Fetching courses for user_id={user_id}, status={status}, limit={limit}, offset={offset}")
     
-    # Check if user has any enrollments
-    enrollment_count = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == user_id).count()
-    logger.info(f"[LMS] get_my_courses: User has {enrollment_count} course enrollments in database")
-    
     courses = service.get_user_courses(
         user_id=user_id,
         status=status,
@@ -215,15 +211,16 @@ async def get_my_courses(
         offset=offset
     )
     
-    logger.info(f"[LMS] get_my_courses: Retrieved {len(courses)} courses for user_id={user_id}")
+    # Derive total from the fetched list when within a single page, otherwise query
+    total = len(courses)
+    if total >= limit:
+        # There may be more rows beyond this page -- run a count
+        count_query = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == user_id)
+        if status:
+            count_query = count_query.filter(LMSUserCourse.status == status)
+        total = count_query.count()
     
-    # Get total count
-    query = service.db.query(LMSUserCourse).filter(LMSUserCourse.user_id == user_id)
-    if status:
-        query = query.filter(LMSUserCourse.status == status)
-    total = query.count()
-    
-    logger.info(f"[LMS] get_my_courses: Total courses count: {total}")
+    logger.info(f"[LMS] get_my_courses: Retrieved {len(courses)} courses, total={total}")
     
     # If no enrolled courses, check for recommendations and generate if needed
     if total == 0:
@@ -260,9 +257,6 @@ async def get_my_courses(
                     logger.error(f"[LMS] get_my_courses: Error generating recommendations: {e}", exc_info=True)
             else:
                 logger.info(f"[LMS] get_my_courses: Course recommendation feature is disabled")
-        
-        available_courses_count = service.db.query(LMSCourse).filter(LMSCourse.is_active == True).count()
-        logger.info(f"[LMS] get_my_courses: There are {available_courses_count} active courses available to enroll in.")
     
     return {
         "courses": courses,
@@ -316,6 +310,20 @@ async def update_course_progress(
 # ============================================================================
 # Dashboard Endpoints
 # ============================================================================
+
+@router.get("/dashboard/all")
+async def get_dashboard_all(
+    current_user: dict = Depends(get_current_user),
+    service: LMSService = Depends(get_lms_service)
+):
+    """Get ALL dashboard data in a single request.
+    
+    Returns courses, dashboard stats, weekly performance, domain performance,
+    activities, recommendations, deadlines, and certificates in one payload.
+    This replaces the 8 parallel API calls the frontend used to make.
+    """
+    return service.get_dashboard_all(current_user["id"])
+
 
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
@@ -592,6 +600,63 @@ async def dismiss_recommendation(
     return {"message": "Recommendation dismissed", "success": True}
 
 
+@router.post("/generate-recommendations")
+async def generate_recommendations(
+    limit: int = Query(5, ge=1, le=20),
+    current_user: dict = Depends(get_current_user),
+    service: LMSService = Depends(get_lms_service)
+):
+    """Regenerate AI course recommendations for the current user.
+
+    Dismisses all existing (non-dismissed) recommendations, then runs the
+    CourseRecommendationAgent with the latest user profile + Zed context to
+    produce fresh, personalised recommendations.
+    """
+    user_id = current_user["id"]
+    logger.info(f"[LMS] generate-recommendations: user_id={user_id}, limit={limit}")
+
+    # 1. Dismiss existing non-dismissed recommendations so the agent creates fresh ones
+    service.dismiss_all_recommendations(user_id)
+
+    # 2. Invalidate dashboard cache so the next load reflects new recs
+    from config.cache import invalidate_dashboard_cache
+    invalidate_dashboard_cache(user_id)
+
+    # 3. Trigger the Course Recommendation Agent
+    recommendation_enabled = os.environ.get('COURSE_RECOMMENDATION_ENABLED', 'true').lower() == 'true'
+    if not recommendation_enabled:
+        return {"success": False, "error": "Course recommendation feature is disabled", "recommendations": []}
+
+    try:
+        from agents.Course_recommendation_agent import get_course_recommendation_agent
+        agent = get_course_recommendation_agent()
+
+        if not agent.is_available():
+            return {"success": False, "error": "Course Recommendation Agent not available", "recommendations": []}
+
+        result = agent.generate_course_recommendations(user_id, limit=limit)
+
+        if result.get('success'):
+            logger.info(f"[LMS] generate-recommendations: Created {result.get('recommendations_created', 0)} recs")
+        else:
+            logger.warning(f"[LMS] generate-recommendations: Agent returned: {result.get('error')}")
+
+        # Return fresh recommendations
+        fresh_recs = service.get_recommendations(user_id, limit=limit)
+        return {
+            "success": result.get('success', False),
+            "recommendations_created": result.get('recommendations_created', 0),
+            "recommendations": fresh_recs,
+            "total": len(fresh_recs),
+        }
+    except Exception as e:
+        logger.error(f"[LMS] generate-recommendations error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+
 # ============================================================================
 # Deadline Endpoints
 # ============================================================================
@@ -815,6 +880,7 @@ async def trigger_azel_agent(
             course_id=course_id,
             section_id=section_id,
             level=section_title,
+            course_title=course.title,
         )
         
         # Always return result, even if not fully successful

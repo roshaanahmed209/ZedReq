@@ -1,6 +1,8 @@
-"""Redis Cache Configuration with Fallback Support"""
+"""Redis Cache Configuration with In-Memory TTL Fallback Support"""
 from redis import Redis
 from redis.exceptions import ConnectionError, RedisError
+from cachetools import TTLCache
+import threading
 import json
 import os
 import logging
@@ -10,6 +12,11 @@ logger = logging.getLogger(__name__)
 # Initialize Redis client with connection error handling
 _redis_client = None
 _redis_available = False
+
+# In-memory TTL cache fallback (used when Redis is unavailable)
+# maxsize=512 entries, ttl=120 seconds (2 minutes)
+_memory_cache = TTLCache(maxsize=512, ttl=120)
+_memory_cache_lock = threading.Lock()
 
 
 def _init_redis():
@@ -36,58 +43,109 @@ def _init_redis():
     except (ConnectionError, RedisError, Exception) as e:
         _redis_available = False
         _redis_client = None
-        logger.warning(f"Redis not available, using fallback (no caching): {e}")
+        logger.warning(f"Redis not available, using in-memory TTL cache fallback: {e}")
     
     return _redis_client, _redis_available
 
 
 def get_cached_dashboard(user_id: int):
-    """Get cached dashboard with fallback to None if Redis unavailable"""
+    """Get cached dashboard — tries Redis first, falls back to in-memory TTLCache"""
     redis_client, available = _init_redis()
     
-    if not available or redis_client is None:
-        return None
+    if available and redis_client is not None:
+        try:
+            key = f"lms:dashboard:{user_id}"
+            cached = redis_client.get(key)
+            if cached:
+                return json.loads(cached)
+        except (ConnectionError, RedisError, Exception) as e:
+            logger.warning(f"Redis cache read failed, trying memory cache: {e}")
     
-    try:
-        key = f"lms:dashboard:{user_id}"
-        cached = redis_client.get(key)
-        if cached:
-            return json.loads(cached)
-    except (ConnectionError, RedisError, Exception) as e:
-        logger.warning(f"Redis cache read failed, using fallback: {e}")
-        return None
-    
-    return None
+    # Fallback: in-memory cache
+    with _memory_cache_lock:
+        return _memory_cache.get(f"lms:dashboard:{user_id}")
 
 
 def cache_dashboard(user_id: int, data: dict, ttl: int = 300):
-    """Cache dashboard with fallback (silently fails if Redis unavailable)"""
+    """Cache dashboard — tries Redis first, falls back to in-memory TTLCache"""
     redis_client, available = _init_redis()
+    key = f"lms:dashboard:{user_id}"
     
-    if not available or redis_client is None:
-        return  # Silently skip caching if Redis unavailable
+    if available and redis_client is not None:
+        try:
+            redis_client.setex(key, ttl, json.dumps(data))
+            return
+        except (ConnectionError, RedisError, Exception) as e:
+            logger.warning(f"Redis cache write failed, using memory cache: {e}")
     
-    try:
-        key = f"lms:dashboard:{user_id}"
-        redis_client.setex(key, ttl, json.dumps(data))
-    except (ConnectionError, RedisError, Exception) as e:
-        logger.warning(f"Redis cache write failed: {e}")
-        # Don't raise - gracefully degrade
+    # Fallback: in-memory cache
+    with _memory_cache_lock:
+        _memory_cache[key] = data
 
 
 def invalidate_dashboard_cache(user_id: int):
-    """Invalidate dashboard cache with fallback"""
+    """Invalidate dashboard cache in both Redis and in-memory"""
+    redis_client, available = _init_redis()
+    key = f"lms:dashboard:{user_id}"
+    
+    if available and redis_client is not None:
+        try:
+            redis_client.delete(key)
+        except (ConnectionError, RedisError, Exception) as e:
+            logger.warning(f"Redis cache invalidation failed: {e}")
+    
+    # Always also clear from memory cache
+    with _memory_cache_lock:
+        _memory_cache.pop(key, None)
+
+
+# ========================================================================
+# Generic in-memory cache helpers (for non-dashboard data)
+# ========================================================================
+
+def get_cached(key: str):
+    """Get any value from in-memory cache (or Redis if available)"""
     redis_client, available = _init_redis()
     
-    if not available or redis_client is None:
-        return  # Silently skip if Redis unavailable
+    if available and redis_client is not None:
+        try:
+            cached = redis_client.get(key)
+            if cached:
+                return json.loads(cached)
+        except (ConnectionError, RedisError, Exception):
+            pass
     
-    try:
-        key = f"lms:dashboard:{user_id}"
-        redis_client.delete(key)
-    except (ConnectionError, RedisError, Exception) as e:
-        logger.warning(f"Redis cache invalidation failed: {e}")
-        # Don't raise - gracefully degrade
+    with _memory_cache_lock:
+        return _memory_cache.get(key)
+
+
+def set_cached(key: str, data, ttl: int = 120):
+    """Set any value in in-memory cache (and Redis if available)"""
+    redis_client, available = _init_redis()
+    
+    if available and redis_client is not None:
+        try:
+            redis_client.setex(key, ttl, json.dumps(data))
+            return
+        except (ConnectionError, RedisError, Exception):
+            pass
+    
+    with _memory_cache_lock:
+        _memory_cache[key] = data
+
+
+def invalidate_cached(key: str):
+    """Invalidate any cached key from both Redis and in-memory"""
+    redis_client, available = _init_redis()
+    
+    if available and redis_client is not None:
+        try:
+            redis_client.delete(key)
+        except (ConnectionError, RedisError, Exception):
+            pass
+    
+    with _memory_cache_lock:
+        _memory_cache.pop(key, None)
 
 
 def is_redis_available() -> bool:

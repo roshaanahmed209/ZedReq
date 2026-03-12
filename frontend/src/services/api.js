@@ -10,7 +10,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 150000, // 150 second default timeout (increased for LLM and complex queries)
+  timeout: 250000, // 250 second default timeout (increased for LLM and complex queries)
 })
 
 // Token management functions
@@ -449,23 +449,26 @@ export const lmsAPI = {
     api.post(`/api/lms/courses/${courseId}/enroll`),
   
   getMyCourses: (params = {}) =>
-    api.get('/api/lms/my-courses', { params, timeout: 150000 }), // 150 seconds - critical endpoint
+    api.get('/api/lms/my-courses', { params, timeout: 250000 }), // 250 seconds
   
   getMyCourse: (courseId) =>
-    api.get(`/api/lms/my-courses/${courseId}`, { timeout: 45000 }),
+    api.get(`/api/lms/my-courses/${courseId}`, { timeout: 250000 }),
   
   updateCourseProgress: (courseId, progress) =>
     api.put(`/api/lms/my-courses/${courseId}/progress`, { progress }),
   
   // Dashboard endpoints
+  getDashboardAll: () =>
+    api.get('/api/lms/dashboard/all', { timeout: 250000 }), // 250 seconds
+
   getDashboard: () =>
-    api.get('/api/lms/dashboard', { timeout: 150000 }), // 150 seconds for complex queries
+    api.get('/api/lms/dashboard', { timeout: 250000 }),
   
   getWeeklyPerformance: (days = 7) =>
-    api.get('/api/lms/dashboard/weekly', { params: { days }, timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/dashboard/weekly', { params: { days }, timeout: 250000 }),
   
   getDomainPerformance: () =>
-    api.get('/api/lms/dashboard/domains', { timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/dashboard/domains', { timeout: 250000 }),
   
   // Question/Answer endpoints
   getCourseQuestions: (courseId, sectionId = null) => {
@@ -493,18 +496,18 @@ export const lmsAPI = {
   
   // Activity endpoints
   getActivities: (limit = 10) =>
-    api.get('/api/lms/activities', { params: { limit }, timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/activities', { params: { limit }, timeout: 250000 }), // 250 seconds
   
   // Recommendation endpoints
   getRecommendations: (limit = 5) =>
-    api.get('/api/lms/recommendations', { params: { limit }, timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/recommendations', { params: { limit }, timeout: 250000 }), // 250 seconds
   
   dismissRecommendation: (recommendationId) =>
     api.post(`/api/lms/recommendations/${recommendationId}/dismiss`),
   
   // Deadline endpoints
   getDeadlines: (limit = 10) =>
-    api.get('/api/lms/deadlines', { params: { limit }, timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/deadlines', { params: { limit }, timeout: 250000 }), // 250 seconds
   
   createDeadline: (deadlineData) =>
     api.post('/api/lms/deadlines', deadlineData),
@@ -514,7 +517,7 @@ export const lmsAPI = {
   
   // Certificate endpoints
   getCertificates: () =>
-    api.get('/api/lms/certificates', { timeout: 150000 }), // 150 seconds
+    api.get('/api/lms/certificates', { timeout: 250000 }), // 250 seconds
   
   getCertificateByNumber: (certificateNumber) =>
     api.get(`/api/lms/certificates/${certificateNumber}`),
@@ -528,11 +531,11 @@ export const lmsAPI = {
   
   // Azel Agent endpoints (longer timeout for web searches and LLM calls)
   triggerAzelProcessCourse: (courseId, sectionId = null) =>
-    api.post(`/api/lms/azel/process-course/${courseId}`, sectionId ? { section_id: sectionId } : {}, { timeout: 150000 }), // 150 seconds timeout
+    api.post(`/api/lms/azel/process-course/${courseId}`, sectionId ? { section_id: sectionId } : {}, { timeout: 250000 }), // 250 seconds
   
   // Course performance endpoint
   getCoursePerformance: (courseId) =>
-    api.get(`/api/lms/dashboard/courses/${courseId}`, { timeout: 150000 }), // 150 seconds
+    api.get(`/api/lms/dashboard/courses/${courseId}`, { timeout: 250000 }), // 250 seconds
 
   // Section-level performance (per-level accuracy breakdown)
   getSectionPerformance: (courseId) =>
@@ -540,14 +543,14 @@ export const lmsAPI = {
   
   // Seez Agent endpoints (longer timeout for LLM evaluation calls)
   triggerSeezEvaluateCourse: (courseId) =>
-    api.post(`/api/lms/seez/evaluate-course/${courseId}`, {}, { timeout: 150000 }), // 150 seconds timeout
+    api.post(`/api/lms/seez/evaluate-course/${courseId}`, {}, { timeout: 250000 }), // 250 seconds
   
   triggerSeezEvaluateAnswers: (answerIds) =>
-    api.post('/api/lms/seez/evaluate-answers', answerIds, { timeout: 150000 }), // 150 seconds timeout
+    api.post('/api/lms/seez/evaluate-answers', answerIds, { timeout: 250000 }), // 250 seconds
 
     // Course Recommendation endpoints
     generateRecommendations: (limit = 5) =>
-      api.post(`/api/lms/generate-recommendations?limit=${limit}`, {}, { timeout: 150000 }), // 150 seconds timeout
+      api.post(`/api/lms/generate-recommendations?limit=${limit}`, {}, { timeout: 250000 }), // 250 seconds
   }
 
 // Nemz API methods
@@ -574,13 +577,13 @@ export const nemzAPI = {
 // Vec API methods (Vector Database Sync)
 export const vecAPI = {
   sync: (force = false) =>
-    api.post('/api/vec/sync', { force }, { timeout: 300000 }), // 5 minutes timeout
+    api.post('/api/vec/sync', { force }, { timeout: 250000 }), // 250 seconds
   
   syncBackground: (force = false) =>
-    api.post('/api/vec/sync/background', { force }, { timeout: 30000 }),
+    api.post('/api/vec/sync/background', { force }, { timeout: 250000 }),
   
   getStatus: () =>
-    api.get('/api/vec/status', { timeout: 30000 }),
+    api.get('/api/vec/status', { timeout: 250000 }),
 }
 
 // Interview API methods

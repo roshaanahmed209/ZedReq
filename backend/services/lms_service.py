@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, desc, func, Integer
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 # Import all LMS ORM models
 from models.orm import (
@@ -14,7 +14,10 @@ from models.orm import (
 )
 
 # Import cache functions
-from config.cache import get_cached_dashboard, cache_dashboard, invalidate_dashboard_cache
+from config.cache import (
+    get_cached_dashboard, cache_dashboard, invalidate_dashboard_cache,
+    get_cached, set_cached,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +42,11 @@ class LMSService:
         user_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """Get all courses with optional filters"""
-        query = self.db.query(LMSCourse)
+        query = self.db.query(LMSCourse).options(
+            selectinload(LMSCourse.sections),
+            selectinload(LMSCourse.resources),
+            selectinload(LMSCourse.questions),
+        )
         
         if is_active is not None:
             query = query.filter(LMSCourse.is_active == is_active)
@@ -447,13 +454,17 @@ class LMSService:
     # ========================================================================
     
     def get_dashboard(self, user_id: int) -> Dict[str, Any]:
-        """Get or create dashboard stats for user with Redis caching"""
-        # Check cache first (returns None if Redis unavailable)
+        """Get or create dashboard stats for user with caching.
+        
+        Stats are incrementally updated by evaluate_answer() and log_activity(),
+        so the read path simply returns the stored row (no expensive recalculation).
+        """
+        # Check cache first (tries Redis, falls back to in-memory TTLCache)
         cached = get_cached_dashboard(user_id)
         if cached:
             return cached
         
-        # Calculate if not cached or Redis unavailable
+        # Fetch stored dashboard row
         dashboard = (
             self.db.query(LMSDashboard)
             .filter(LMSDashboard.user_id == user_id)
@@ -461,7 +472,7 @@ class LMSService:
         )
         
         if not dashboard:
-            # Create new dashboard
+            # Create new dashboard with zeroed stats
             dashboard = LMSDashboard(
                 user_id=user_id,
                 total_questions=0,
@@ -473,15 +484,11 @@ class LMSService:
             self.db.add(dashboard)
             self.db.commit()
             self.db.refresh(dashboard)
-        else:
-            # Recalculate stats from answers (ensure accuracy)
-            self._recalculate_dashboard_stats(user_id)
-            self.db.refresh(dashboard)
         
         result = dashboard.to_dict()
         
-        # Cache result (silently fails if Redis unavailable)
-        cache_dashboard(user_id, result, ttl=300)
+        # Cache result (Redis or in-memory fallback)
+        cache_dashboard(user_id, result, ttl=120)
         
         return result
     
@@ -595,6 +602,55 @@ class LMSService:
     def update_dashboard_stats(self, user_id: int, stats: dict):
         """Update dashboard stats (called after answer submission)"""
         self._recalculate_dashboard_stats(user_id)
+    
+    def get_dashboard_all(self, user_id: int) -> Dict[str, Any]:
+        """Fetch ALL dashboard data in a single service call.
+        
+        Combines: courses, dashboard stats, weekly performance, domain
+        performance, activities, recommendations, deadlines, and certificates.
+        Uses in-memory cache (or Redis) to avoid recalculating on every load.
+        """
+        cache_key = f"lms:dashboard_all:{user_id}"
+        cached = get_cached(cache_key)
+        if cached:
+            return cached
+        
+        # Fetch everything in the same DB session (single connection)
+        courses = self.get_user_courses(user_id=user_id, limit=100)
+        dashboard = self.get_dashboard(user_id)
+        weekly = self.get_weekly_performance(user_id, days=7)
+        domains = self.get_domain_performance(user_id)
+        activities = self.get_recent_activities(user_id, limit=10)
+        recommendations = self.get_recommendations(user_id, limit=5)
+        deadlines = self.get_upcoming_deadlines(user_id, limit=10)
+        certificates = self.get_user_certificates(user_id)
+        
+        # Get total course count
+        total_query = self.db.query(func.count(LMSUserCourse.id)).filter(
+            LMSUserCourse.user_id == user_id
+        )
+        total_courses = total_query.scalar() or 0
+        
+        result = {
+            "courses": {
+                "courses": courses,
+                "total": total_courses,
+                "limit": 100,
+                "offset": 0,
+            },
+            "dashboard": dashboard,
+            "weekly_performance": {"performance": weekly, "total": len(weekly)},
+            "domain_performance": {"domains": domains},
+            "activities": {"activities": activities, "total": len(activities)},
+            "recommendations": {"recommendations": recommendations, "total": len(recommendations)},
+            "deadlines": {"deadlines": deadlines, "total": len(deadlines)},
+            "certificates": {"certificates": certificates, "total": len(certificates)},
+        }
+        
+        # Cache for 2 minutes
+        set_cached(cache_key, result, ttl=120)
+        
+        return result
     
     # ========================================================================
     # Performance Operations
@@ -738,7 +794,7 @@ class LMSService:
         """Get performance by domain"""
         performances = (
             self.db.query(LMSUserDomainPerformance)
-            .join(LMSDomain)
+            .options(joinedload(LMSUserDomainPerformance.domain))
             .filter(LMSUserDomainPerformance.user_id == user_id)
             .order_by(desc(LMSUserDomainPerformance.accuracy_percentage))
             .all()
@@ -1212,7 +1268,7 @@ class LMSService:
         """Get recent activities for user"""
         activities = (
             self.db.query(LMSActivity)
-            .join(LMSCourse, isouter=True)
+            .options(joinedload(LMSActivity.course))
             .filter(LMSActivity.user_id == user_id)
             .order_by(desc(LMSActivity.created_at))
             .limit(limit)
@@ -1241,7 +1297,7 @@ class LMSService:
         """Get AI recommendations for user"""
         recommendations = (
             self.db.query(LMSRecommendation)
-            .join(LMSCourse)
+            .options(joinedload(LMSRecommendation.course))
             .filter(
                 and_(
                     LMSRecommendation.user_id == user_id,
@@ -1294,6 +1350,25 @@ class LMSService:
         recommendation.is_dismissed = True
         self.db.commit()
         return True
+
+    def dismiss_all_recommendations(self, user_id: int) -> int:
+        """Dismiss all active (non-dismissed) recommendations for a user.
+
+        Returns the number of recommendations dismissed.
+        """
+        count = (
+            self.db.query(LMSRecommendation)
+            .filter(
+                and_(
+                    LMSRecommendation.user_id == user_id,
+                    LMSRecommendation.is_dismissed == False,
+                )
+            )
+            .update({"is_dismissed": True})
+        )
+        self.db.commit()
+        logger.info(f"[LMS] dismiss_all_recommendations: dismissed {count} for user_id={user_id}")
+        return count
     
     # ========================================================================
     # Deadline Operations
@@ -1307,7 +1382,7 @@ class LMSService:
         """Get upcoming deadlines for user"""
         deadlines = (
             self.db.query(LMSDeadline)
-            .join(LMSCourse, isouter=True)
+            .options(joinedload(LMSDeadline.course))
             .filter(
                 and_(
                     LMSDeadline.user_id == user_id,
@@ -1380,7 +1455,7 @@ class LMSService:
         """Get user's certificates"""
         certificates = (
             self.db.query(LMSCertificate)
-            .join(LMSCourse)
+            .options(joinedload(LMSCertificate.course))
             .filter(LMSCertificate.user_id == user_id)
             .order_by(desc(LMSCertificate.issued_at))
             .all()
@@ -1542,34 +1617,34 @@ class LMSService:
     
     def _update_course_progress_from_sections(self, user_id: int, course_id: int):
         """Calculate and update course progress from section completions"""
-        # Get all sections for course
-        sections = (
-            self.db.query(LMSCourseSection)
+        # Get total section count for course
+        total_sections = (
+            self.db.query(func.count(LMSCourseSection.id))
             .filter(LMSCourseSection.course_id == course_id)
-            .all()
+            .scalar()
         )
         
-        if not sections:
+        if not total_sections:
             return
         
-        # Get user progress for all sections
-        total_sections = len(sections)
-        completed_sections = 0
+        # Single bulk query: count completed sections for this user
+        section_ids_subq = (
+            self.db.query(LMSCourseSection.id)
+            .filter(LMSCourseSection.course_id == course_id)
+            .subquery()
+        )
         
-        for section in sections:
-            progress = (
-                self.db.query(LMSUserSectionProgress)
-                .filter(
-                    and_(
-                        LMSUserSectionProgress.user_id == user_id,
-                        LMSUserSectionProgress.section_id == section.id,
-                        LMSUserSectionProgress.is_completed == True
-                    )
+        completed_sections = (
+            self.db.query(func.count(LMSUserSectionProgress.id))
+            .filter(
+                and_(
+                    LMSUserSectionProgress.user_id == user_id,
+                    LMSUserSectionProgress.section_id.in_(section_ids_subq),
+                    LMSUserSectionProgress.is_completed == True
                 )
-                .first()
             )
-            if progress:
-                completed_sections += 1
+            .scalar()
+        ) or 0
         
         # Calculate progress percentage
         course_progress = round((completed_sections / total_sections) * 100) if total_sections > 0 else 0

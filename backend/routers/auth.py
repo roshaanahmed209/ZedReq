@@ -1,5 +1,5 @@
 """Authentication Router - JWT based authentication using ORM"""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -144,26 +144,30 @@ async def google_auth(
         )
 
 
+def _run_zed_context_update(user_id: int):
+    """Background task: refresh context and trigger Zed Agent update (non-blocking)."""
+    from config.database_orm import SessionLocal
+    db = SessionLocal()
+    try:
+        context_updater = ContextUpdater(db)
+        context_updater.refresh_and_update_zed_context(user_id=user_id)
+        logger.info(f"Background zed context update completed for user_id={user_id}")
+    except Exception as e:
+        logger.error(f"Background zed context update failed for user_id={user_id}: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 @router.post("/logout")
 async def logout(
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Logout user and refresh context for Zed Agent"""
-    try:
-        # Refresh runtime_context and trigger Zed Agent to update zed column
-        context_updater = ContextUpdater(db)
-        context_updater.refresh_and_update_zed_context(user_id=current_user["id"])
-        
-        return {
-            "message": "Logged out successfully",
-            "context_updated": True
-        }
-    except Exception as e:
-        logger.error(f"Error during logout context update: {e}", exc_info=True)
-        # Don't fail logout if context update fails
-        return {
-            "message": "Logged out successfully",
-            "context_updated": False,
-            "warning": "Context update failed but logout completed"
-        }
+    """Logout user and schedule context refresh in background."""
+    # Schedule the heavy context update to run AFTER the response is sent
+    background_tasks.add_task(_run_zed_context_update, current_user["id"])
+
+    return {
+        "message": "Logged out successfully",
+        "context_updated": "scheduled"
+    }

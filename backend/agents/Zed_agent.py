@@ -5,7 +5,7 @@ AI-powered agent for maintaining comprehensive user context in the database
 
 import os
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 import json
 
@@ -13,6 +13,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from config.database import get_connection_params, Database
+from config.database_orm import SessionLocal
+from models.orm import User, Description, UserExperience, UserEducation, UserProject, UserInterest
 
 logger = logging.getLogger(__name__)
 
@@ -270,6 +272,152 @@ class ZedAgent:
         else:
             self.llm = None
     
+    def _get_user_profile(self, user_id: int) -> str:
+        """
+        Fetch the user's own profile data (skills, bio, experience, education,
+        projects, interests, certifications, resume text) from the database and
+        return it as a structured text block ready to be injected into an LLM prompt.
+
+        This ensures the Zed context always reflects the user's actual profile,
+        not just their interactions.
+        """
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.uid == user_id).first()
+            if not user:
+                return ""
+
+            parts: List[str] = []
+
+            # --- Basic identity ---
+            parts.append(f"Name: {user.name or 'N/A'}")
+            parts.append(f"Username: {user.username or 'N/A'}")
+
+            # --- Description / Profile details ---
+            desc: Optional[Description] = None
+            if user.description_id:
+                desc = db.query(Description).filter(Description.desc_id == user.description_id).first()
+
+            if desc:
+                if desc.current_status:
+                    parts.append(f"Current Status: {desc.current_status}")
+                if desc.role:
+                    parts.append(f"Role/Headline: {desc.role}")
+                if desc.company:
+                    parts.append(f"Company: {desc.company}")
+                if desc.industry:
+                    parts.append(f"Industry: {desc.industry}")
+                if desc.location:
+                    parts.append(f"Location: {desc.location}")
+                if desc.about:
+                    parts.append(f"About: {desc.about}")
+                if desc.skills:
+                    parts.append(f"Skills: {desc.skills}")
+                if desc.certificates:
+                    parts.append(f"Licenses & Certifications: {desc.certificates}")
+                if desc.resume:
+                    # resume is stored as text (parsed CV content)
+                    resume_preview = desc.resume[:2000] if len(desc.resume) > 2000 else desc.resume
+                    parts.append(f"Resume/CV:\n{resume_preview}")
+                if desc.short_desc:
+                    parts.append(f"Short Description: {desc.short_desc}")
+
+            # --- Experience ---
+            experiences = (
+                db.query(UserExperience)
+                .filter(UserExperience.user_id == user_id)
+                .order_by(UserExperience.start_date.desc())
+                .limit(10)
+                .all()
+            )
+            if experiences:
+                exp_lines = []
+                for exp in experiences:
+                    current_tag = " (current)" if exp.is_current else ""
+                    date_range = f"{exp.start_date}" if exp.start_date else ""
+                    if exp.end_date:
+                        date_range += f" - {exp.end_date}"
+                    elif exp.is_current:
+                        date_range += " - Present"
+                    line = f"  - {exp.title} at {exp.company}{current_tag}"
+                    if date_range:
+                        line += f" ({date_range})"
+                    if exp.employment_type:
+                        line += f" [{exp.employment_type}]"
+                    if exp.description:
+                        line += f"\n    {exp.description[:200]}"
+                    exp_lines.append(line)
+                parts.append("Experience:\n" + "\n".join(exp_lines))
+
+            # --- Education ---
+            educations = (
+                db.query(UserEducation)
+                .filter(UserEducation.user_id == user_id)
+                .order_by(UserEducation.start_year.desc().nullslast())
+                .limit(5)
+                .all()
+            )
+            if educations:
+                edu_lines = []
+                for edu in educations:
+                    line = f"  - {edu.school}"
+                    if edu.degree:
+                        line += f", {edu.degree}"
+                    if edu.field_of_study:
+                        line += f" in {edu.field_of_study}"
+                    years = ""
+                    if edu.start_year:
+                        years = str(edu.start_year)
+                    if edu.end_year:
+                        years += f" - {edu.end_year}"
+                    if years:
+                        line += f" ({years})"
+                    edu_lines.append(line)
+                parts.append("Education:\n" + "\n".join(edu_lines))
+
+            # --- Projects ---
+            projects = (
+                db.query(UserProject)
+                .filter(UserProject.user_id == user_id)
+                .order_by(UserProject.created_at.desc())
+                .limit(5)
+                .all()
+            )
+            if projects:
+                proj_lines = []
+                for proj in projects:
+                    line = f"  - {proj.title}"
+                    if proj.technologies:
+                        techs = ", ".join(proj.technologies) if isinstance(proj.technologies, list) else str(proj.technologies)
+                        line += f" (Technologies: {techs})"
+                    if proj.description:
+                        line += f"\n    {proj.description[:150]}"
+                    proj_lines.append(line)
+                parts.append("Projects:\n" + "\n".join(proj_lines))
+
+            # --- Interests ---
+            interests = (
+                db.query(UserInterest)
+                .filter(UserInterest.user_id == user_id)
+                .limit(20)
+                .all()
+            )
+            if interests:
+                interest_lines = [f"  - {i.name} ({i.interest_type})" for i in interests]
+                parts.append("Interests:\n" + "\n".join(interest_lines))
+
+            if len(parts) <= 2:
+                # Only name and username — essentially empty profile
+                return ""
+
+            return "\n".join(parts)
+
+        except Exception as e:
+            logger.error(f"Failed to fetch user profile for user_id={user_id}: {e}", exc_info=True)
+            return ""
+        finally:
+            db.close()
+
     def get_runtime_context(self, user_id: int) -> list:
         """
         Retrieve runtime_context JSONB and extract content items with key="content"
@@ -374,6 +522,9 @@ class ZedAgent:
             # Retrieve existing zed context
             existing_zed_context = self.get_user_context(user_id) or "No existing context available."
             
+            # Retrieve user's own profile data (skills, experience, education, etc.)
+            user_profile_text = self._get_user_profile(user_id)
+            
             # Build content from runtime_context
             if runtime_content_items:
                 runtime_content = "\n\n".join([
@@ -385,8 +536,21 @@ class ZedAgent:
             
             # Build the prompt for context update
             prompt_parts = [
-                "Update the user context by merging runtime_context content with existing zed context:",
+                "Update the user context by merging ALL data sources below into one comprehensive context document:",
                 "",
+            ]
+            
+            # Include the user's own profile as a primary data source
+            if user_profile_text:
+                prompt_parts.extend([
+                    "=== USER PROFILE (from database) ===",
+                    "This is the user's actual profile data — skills, experience, education, certifications, resume, and interests. "
+                    "This is authoritative and should ALWAYS be reflected in the context document:",
+                    user_profile_text,
+                    "",
+                ])
+            
+            prompt_parts.extend([
                 "=== RUNTIME_CONTEXT CONTENT ===",
                 "This content comes from recent user activities, button clicks, and parsed resume/CV:",
                 runtime_content,
@@ -395,13 +559,13 @@ class ZedAgent:
                 "This is the current comprehensive context that should be updated:",
                 existing_zed_context,
                 "",
-                "Please analyze the runtime_context content and merge it with the existing zed context. ",
-                "Create a comprehensive, updated context document that:",
-                "1. Incorporates all new information from runtime_context",
-                "2. Preserves and enhances existing context from zed",
-                "3. Identifies patterns and insights across both sources",
-                "4. Creates an extensive, detailed context document following the structure defined in your instructions."
-            ]
+                "Please analyze ALL three data sources and create a comprehensive, updated context document that:",
+                "1. Incorporates the user's actual profile data (skills, experience, education, certifications) as the foundation",
+                "2. Incorporates all new information from runtime_context",
+                "3. Preserves and enhances existing context from zed",
+                "4. Identifies patterns and insights across all sources",
+                "5. Creates an extensive, detailed context document following the structure defined in your instructions."
+            ])
             
             user_prompt = "\n".join(prompt_parts)
             
@@ -495,14 +659,30 @@ class ZedAgent:
             # Retrieve existing context
             existing_context = self.get_user_context(user_id) or "No existing context available."
             
+            # Retrieve user's own profile data
+            user_profile_text = self._get_user_profile(user_id)
+            
             # Build the prompt for context update
             prompt_parts = [
-                "Update the user context based on the following new information:",
+                "Update the user context based on the following information:",
                 "",
+            ]
+            
+            # Include the user's own profile as a primary data source
+            if user_profile_text:
+                prompt_parts.extend([
+                    "=== USER PROFILE (from database) ===",
+                    "This is the user's actual profile data — skills, experience, education, certifications, resume, and interests. "
+                    "This is authoritative and should ALWAYS be reflected in the context document:",
+                    user_profile_text,
+                    "",
+                ])
+            
+            prompt_parts.extend([
                 "=== NEW INFORMATION ===",
                 new_information,
                 ""
-            ]
+            ])
             
             if additional_context:
                 prompt_parts.extend([
@@ -515,8 +695,9 @@ class ZedAgent:
                 "=== EXISTING CONTEXT ===",
                 existing_context,
                 "",
-                "Please analyze the new information and update the context document comprehensively. ",
-                "Merge new information with existing context, identify patterns, and create an extensive, detailed context document."
+                "Please analyze all data sources and update the context document comprehensively. ",
+                "The user's profile data should form the foundation. Merge new information with existing context, ",
+                "identify patterns, and create an extensive, detailed context document."
             ])
             
             user_prompt = "\n".join(prompt_parts)
@@ -567,6 +748,9 @@ class ZedAgent:
             # Retrieve runtime_context and extract content
             runtime_content_items = self.get_runtime_context(user_id)
             
+            # Retrieve user's own profile data
+            user_profile_text = self._get_user_profile(user_id)
+            
             # Build content from runtime_context
             if runtime_content_items:
                 runtime_content = "\n\n".join([
@@ -580,11 +764,24 @@ class ZedAgent:
             prompt_parts = [
                 "Create comprehensive user context based on the following information:",
                 "",
+            ]
+            
+            # Include the user's own profile as a primary data source
+            if user_profile_text:
+                prompt_parts.extend([
+                    "=== USER PROFILE (from database) ===",
+                    "This is the user's actual profile data — skills, experience, education, certifications, resume, and interests. "
+                    "This is authoritative and should form the FOUNDATION of the context document:",
+                    user_profile_text,
+                    "",
+                ])
+            
+            prompt_parts.extend([
                 "=== RUNTIME_CONTEXT CONTENT ===",
                 "This content comes from recent user activities, button clicks, and parsed resume/CV:",
                 runtime_content,
                 ""
-            ]
+            ])
             
             if user_information:
                 prompt_parts.extend([
@@ -601,9 +798,10 @@ class ZedAgent:
                 ])
             
             prompt_parts.append(
-                "Please analyze this information and create an extensive, detailed context document "
-                "following the structure defined in your instructions. Since this is initial context, "
-                "focus on what can be inferred from the available information, especially from the runtime_context content."
+                "Please analyze ALL data sources and create an extensive, detailed context document "
+                "following the structure defined in your instructions. The user's profile data (skills, "
+                "experience, education, certifications) should be treated as the primary foundation. "
+                "Supplement with runtime_context and any additional data provided."
             )
             
             user_prompt = "\n".join(prompt_parts)

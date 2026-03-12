@@ -48,12 +48,15 @@ Return ONLY the JSON array, no additional text."""
 # System prompt for question generation
 QUESTION_GENERATION_PROMPT = """You are an expert educational content creator. Generate high-quality questions that test understanding and knowledge retention.
 
-Based on the user's highlighted topics of interest and the knowledge base content, create questions that:
-1. Focus on the user's highlighted topics
-2. Test understanding of key concepts
-3. Are clear and unambiguous
-4. Have detailed, comprehensive answers
-5. Match the specified difficulty level (Basic, Intermediate, or Expert)
+CRITICAL RULE: Every question you generate MUST be directly about the COURSE SUBJECT specified in the prompt. The user's highlighted topics are provided only to personalise questions within the course scope — they must NEVER cause you to generate questions about unrelated subjects.
+
+Based on the course subject, the user's relevant topics, and the knowledge base content, create questions that:
+1. Are strictly about the course subject
+2. Use the user's interests to personalise examples (only when relevant to the course)
+3. Test understanding of key concepts within the course scope
+4. Are clear and unambiguous
+5. Have detailed, comprehensive answers
+6. Match the specified difficulty level (Basic, Intermediate, or Expert)
 
 Difficulty guidelines:
 - **Basic**: Definitions, recall, simple true/false, straightforward multiple choice.
@@ -180,15 +183,20 @@ class AzelAgent:
             logger.error(f"Failed to retrieve Zed context for user_id={user_id}: {e}")
             return None
     
-    def _extract_highlighted_topics(self, context: str, course_id: int) -> List[str]:
+    def _extract_highlighted_topics(self, context: str, course_id: int, course_title: Optional[str] = None) -> List[str]:
         """
-        Extract highlighted topics of interest from Zed context.
+        Extract highlighted topics of interest from Zed context, filtered to
+        be relevant to the given course subject.
+
         First tries to parse the structured "Preferred Topics" section,
         then falls back to LLM extraction if structured format not found.
+        When a course_title is provided the LLM is asked to return only
+        topics that are relevant to that course.
         
         Args:
             context: Zed context text containing highlighted topics
             course_id: Course ID for context
+            course_title: Optional course title to scope topics
             
         Returns:
             List of highlighted topics (top 5 from "Highlighted Topics" section)
@@ -198,11 +206,14 @@ class AzelAgent:
         
         if topics:
             logger.info(f"Extracted {len(topics)} highlighted topics from structured section for course_id={course_id}")
+            # If we have a course title, filter topics to only those relevant
+            if course_title and self.openai_available and self.llm:
+                topics = self._filter_topics_for_course(topics, course_title)
             return topics
         
         # Fallback to LLM extraction if structured format not found
         logger.info(f"Structured topics not found, falling back to LLM extraction for course_id={course_id}")
-        return self._extract_topics_with_llm(context, course_id)
+        return self._extract_topics_with_llm(context, course_id, course_title=course_title)
     
     def _parse_structured_topics(self, context: str) -> List[str]:
         """
@@ -283,13 +294,50 @@ class AzelAgent:
             logger.warning(f"Failed to parse structured topics: {e}")
             return []
     
-    def _extract_topics_with_llm(self, context: str, course_id: int) -> List[str]:
+    def _filter_topics_for_course(self, topics: List[str], course_title: str) -> List[str]:
+        """Filter a list of user-interest topics to only those relevant to the course.
+
+        If none of the user's topics match the course subject at all, the LLM
+        generates course-specific sub-topics instead so that the pipeline always
+        has something relevant to search for.
+        """
+        try:
+            prompt = (
+                f"Course title: \"{course_title}\"\n\n"
+                f"User's highlighted topics: {json.dumps(topics)}\n\n"
+                f"Return a JSON array containing ONLY the topics from the list above "
+                f"that are directly relevant to the course \"{course_title}\".\n"
+                f"If NONE of the topics are relevant, generate 3-5 sub-topics that "
+                f"ARE relevant to \"{course_title}\" and return those instead.\n"
+                f"Return ONLY the JSON array, no additional text."
+            )
+            messages = [
+                SystemMessage(content="You filter topic lists to keep only those relevant to a given course subject."),
+                HumanMessage(content=prompt),
+            ]
+            response = self.llm.invoke(messages)
+            content = response.content.strip()
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+            filtered = json.loads(content)
+            if isinstance(filtered, list) and filtered:
+                logger.info(f"[AZEL-AGENT] Filtered topics for '{course_title}': {filtered}")
+                return filtered[:5]
+        except Exception as e:
+            logger.warning(f"[AZEL-AGENT] Topic filtering failed, using originals: {e}")
+        return topics
+
+    def _extract_topics_with_llm(self, context: str, course_id: int, course_title: Optional[str] = None) -> List[str]:
         """
         Fallback method: Extract highlighted topics using LLM when structured format not found.
+        When course_title is provided, topics are scoped to that course subject.
         
         Args:
             context: Zed context text
             course_id: Course ID for context
+            course_title: Optional course title to scope topic extraction
             
         Returns:
             List of highlighted topics
@@ -299,14 +347,24 @@ class AzelAgent:
             return []
         
         try:
-            prompt = f"""Extract the highlighted topics of interest from the following user context.
+            course_scope = ""
+            if course_title:
+                course_scope = (
+                    f"\nIMPORTANT: The user is studying the course \"{course_title}\".\n"
+                    f"Only extract topics that are relevant to \"{course_title}\".\n"
+                    f"If the user context does not mention topics related to "
+                    f"\"{course_title}\", generate 3-5 sub-topics that are core to "
+                    f"\"{course_title}\" instead.\n"
+                )
 
+            prompt = f"""Extract the highlighted topics of interest from the following user context.
+{course_scope}
 Context:
 {context[:3000]}
 
 Focus on topics that are:
 - Highlighted or emphasized in the context
-- Relevant to educational content
+- Relevant to the course "{course_title or 'educational content'}"
 - Suitable for course material and questions
 
 Return a JSON array of topic strings."""
@@ -682,9 +740,11 @@ Return a JSON array of topic strings."""
         context: str,
         knowledge_base_content: str,
         level: Optional[str] = None,
+        course_title: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Generate questions with detailed answers based on highlighted topics
+        Generate questions with detailed answers based on highlighted topics,
+        strictly scoped to the course subject.
         
         Args:
             user_id: User ID
@@ -693,6 +753,7 @@ Return a JSON array of topic strings."""
             context: Zed context
             knowledge_base_content: Content from knowledge base
             level: Difficulty level (e.g. "Basic", "Intermediate", "Expert")
+            course_title: Course title — ALL questions must be about this subject
             
         Returns:
             List of question dictionaries
@@ -709,22 +770,33 @@ Return a JSON array of topic strings."""
             if level:
                 level_instruction = f"\nDifficulty Level: {level}\nAll questions MUST be at the {level} difficulty level.\n"
             
+            course_instruction = ""
+            if course_title:
+                course_instruction = (
+                    f"\n*** COURSE SUBJECT: {course_title} ***\n"
+                    f"CRITICAL: Every question MUST be directly about \"{course_title}\".\n"
+                    f"The user's highlighted topics below are meant to personalise the "
+                    f"questions within the scope of \"{course_title}\" — they must NOT "
+                    f"cause questions to drift to unrelated subjects.\n"
+                    f"If a highlighted topic does not relate to \"{course_title}\", ignore it.\n"
+                )
+            
             prompt = f"""Generate educational questions based on the following information:
-
-User's Highlighted Topics of Interest:
+{course_instruction}
+User's Highlighted Topics of Interest (use ONLY those relevant to the course):
 {topics_str}
 {level_instruction}
-Zed Context (User Interests):
+Zed Context (User Interests — for personalisation only, NOT as primary subject):
 {context[:1500]}
 
 Knowledge Base Content:
 {kb_content_preview}
 
 Generate {self.questions_per_course} questions that:
-1. Focus on the highlighted topics of interest
-2. Test understanding of key concepts
-3. Include detailed, comprehensive answers
-4. Are appropriate for course material
+1. Are STRICTLY about the course subject "{course_title or 'General'}"
+2. Use the user's relevant interests to personalise examples/scenarios
+3. Test understanding of key concepts within the course scope
+4. Include detailed, comprehensive answers
 5. Match the {level or 'Basic'} difficulty level
 
 Return a JSON array of question objects."""
@@ -762,6 +834,11 @@ Return a JSON array of question objects."""
     def _save_questions(self, course_id: int, questions: List[Dict[str, Any]], section_id: Optional[int] = None) -> bool:
         """
         Save questions to lms_questions table using the SQLAlchemy ORM session pool.
+
+        Before inserting new questions, any existing questions for the same
+        course + section are deleted so that "Generate Questions" always
+        produces a fresh set.  Associated user answers are cascade-deleted
+        by the database FK constraint (ondelete='CASCADE').
         
         Args:
             course_id: Course ID
@@ -776,17 +853,23 @@ Return a JSON array of question objects."""
         
         db = SessionLocal()
         try:
-            # Determine the starting order_index so new questions don't collide
-            # with existing ones in the same course+section.
-            max_idx = (
-                db.query(func.coalesce(func.max(LMSQuestion.order_index), -1))
-                .filter(
-                    LMSQuestion.course_id == course_id,
-                    LMSQuestion.section_id == section_id if section_id else LMSQuestion.section_id.is_(None),
-                )
-                .scalar()
+            # ---- Delete previous questions for this course + section ----
+            delete_filter = [LMSQuestion.course_id == course_id]
+            if section_id:
+                delete_filter.append(LMSQuestion.section_id == section_id)
+            else:
+                delete_filter.append(LMSQuestion.section_id.is_(None))
+
+            deleted = (
+                db.query(LMSQuestion)
+                .filter(*delete_filter)
+                .delete(synchronize_session="fetch")
             )
-            start_index = (max_idx or -1) + 1
+            if deleted:
+                logger.info(f"[AZEL-AGENT] Deleted {deleted} old questions for course_id={course_id}, section_id={section_id}")
+
+            # New questions always start at order_index 0 since old ones are gone
+            start_index = 0
             
             for idx, question_data in enumerate(questions):
                 # Store detailed answer in correct_answer field
@@ -824,6 +907,7 @@ Return a JSON array of question objects."""
         course_id: int,
         section_id: Optional[int] = None,
         level: Optional[str] = None,
+        course_title: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Main pipeline method: Process course context and generate questions
@@ -834,6 +918,7 @@ Return a JSON array of question objects."""
             course_id: Course ID
             section_id: Optional section ID (questions will be saved with this)
             level: Difficulty level label (e.g. "Basic", "Intermediate", "Expert")
+            course_title: The course title — questions MUST be relevant to this subject
             
         Returns:
             Dictionary with processing results
@@ -871,10 +956,10 @@ Return a JSON array of question objects."""
             context_length = len(context) if context else 0
             logger.info(f"[AZEL-AGENT] Step 1 SUCCESS: Retrieved Zed context ({context_length} chars) in {step_elapsed:.2f}s")
             
-            # Step 2: Extract highlighted topics
+            # Step 2: Extract highlighted topics (scoped to course subject)
             step_start = time.time()
-            logger.info(f"[AZEL-AGENT] Step 2: Extracting highlighted topics from context")
-            highlighted_topics = self._extract_highlighted_topics(context, course_id)
+            logger.info(f"[AZEL-AGENT] Step 2: Extracting highlighted topics (course_title='{course_title}')")
+            highlighted_topics = self._extract_highlighted_topics(context, course_id, course_title=course_title)
             result['topics_extracted'] = highlighted_topics
             step_elapsed = time.time() - step_start
             
@@ -906,7 +991,9 @@ Return a JSON array of question objects."""
             
             def perform_search_with_protection(topic):
                 """Perform Google search with rate limiting and error handling"""
-                search_query = f"{sanitize_search_query(topic)} tutorial course educational"
+                # Include the course title in the search query so results are course-relevant
+                course_scope = sanitize_search_query(course_title) if course_title else ""
+                search_query = f"{course_scope} {sanitize_search_query(topic)} tutorial course educational"
                 
                 try:
                     with rate_limiter.acquire():
@@ -991,9 +1078,9 @@ Return a JSON array of question objects."""
             content_length = len(knowledge_base_content) if knowledge_base_content else 0
             logger.info(f"[AZEL-AGENT] Step 6 SUCCESS: Extracted {content_length} chars of content in {step_elapsed:.2f}s")
             
-            # Step 7: Generate questions (with level context)
+            # Step 7: Generate questions (with level + course title context)
             step_start = time.time()
-            logger.info(f"[AZEL-AGENT] Step 7: Generating questions using LLM (level={level})")
+            logger.info(f"[AZEL-AGENT] Step 7: Generating questions using LLM (level={level}, course='{course_title}')")
             questions = self._generate_questions(
                 user_id,
                 course_id,
@@ -1001,6 +1088,7 @@ Return a JSON array of question objects."""
                 context,
                 knowledge_base_content,
                 level=level,
+                course_title=course_title,
             )
             result['questions_generated'] = len(questions)
             step_elapsed = time.time() - step_start

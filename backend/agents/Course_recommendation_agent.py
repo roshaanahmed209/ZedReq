@@ -17,6 +17,7 @@ from config.database import get_connection_params, Database
 from config.database_orm import get_db
 from models.orm.lms_course import LMSCourse
 from models.orm.lms_recommendation import LMSRecommendation
+from agents.Zed_agent import get_zed_agent
 
 logger = logging.getLogger(__name__)
 
@@ -139,12 +140,25 @@ class CourseRecommendationAgent:
             logger.error(f"[COURSE-REC] Failed to retrieve Zed context for user_id={user_id}: {e}", exc_info=True)
             return None
     
-    def _extract_learning_needs(self, context: str) -> Dict[str, Any]:
+    def _get_user_profile_text(self, user_id: int) -> str:
         """
-        Extract learning needs from Zed context using LLM
+        Retrieve the user's profile data via the ZedAgent helper.
+        Returns a formatted text block or empty string.
+        """
+        try:
+            zed_agent = get_zed_agent()
+            return zed_agent._get_user_profile(user_id)
+        except Exception as e:
+            logger.error(f"[COURSE-REC] Failed to get user profile for user_id={user_id}: {e}")
+            return ""
+
+    def _extract_learning_needs(self, context: str, user_profile: str = "") -> Dict[str, Any]:
+        """
+        Extract learning needs from Zed context and user profile using LLM
         
         Args:
             context: Zed context text
+            user_profile: User's actual profile data (skills, experience, etc.)
             
         Returns:
             Dictionary with learning_interests, career_goals, knowledge_gaps, highlighted_topics
@@ -157,15 +171,38 @@ class CourseRecommendationAgent:
             # Limit context length to avoid token limits
             context_preview = context[:3000] if len(context) > 3000 else context
             
-            prompt = f"""Analyze the following user context and extract learning needs:
+            # Build combined input with profile data first (authoritative)
+            input_parts = []
+            if user_profile:
+                profile_preview = user_profile[:2000] if len(user_profile) > 2000 else user_profile
+                input_parts.append(
+                    "=== USER PROFILE (authoritative) ===\n"
+                    "This is the user's actual profile — skills, experience, education, certifications.\n"
+                    "Use this as the PRIMARY source for identifying technical skills and career level.\n\n"
+                    f"{profile_preview}"
+                )
+            
+            input_parts.append(
+                "=== ZED CONTEXT (behavioral) ===\n"
+                "This is the user's behavioral context from interactions on the platform.\n\n"
+                f"{context_preview}"
+            )
+            
+            combined_input = "\n\n".join(input_parts)
+            
+            prompt = f"""Analyze the following user data and extract learning needs:
 
-{context_preview}
+{combined_input}
 
 Extract:
-1. Technical skills they want to learn or improve
+1. Technical skills they want to learn or improve (based on gaps relative to their current skills)
 2. Career goals and professional interests
-3. Knowledge gaps (what they need to learn)
+3. Knowledge gaps (what they need to learn based on their current role and skills)
 4. Highlighted topics of interest (if mentioned in a "Preferred Topics" or "Highlighted Topics" section)
+
+IMPORTANT: The courses should be DIRECTLY relevant to the user's actual skills and career.
+For example, a Software Engineer with Docker/Kubernetes/GCP skills should get courses about
+advanced cloud architecture, container orchestration, etc. — NOT generic career advice.
 
 Return a JSON object with learning_interests, career_goals, knowledge_gaps, and highlighted_topics arrays."""
             
@@ -498,15 +535,27 @@ Generate courses that are practical, relevant, and match the user's learning nee
             return result
         
         try:
+            # Step 0: Get user's actual profile data (skills, experience, etc.)
+            user_profile = self._get_user_profile_text(user_id)
+            if user_profile:
+                logger.info(f"[COURSE-REC] Retrieved user profile for user_id={user_id} ({len(user_profile)} chars)")
+            else:
+                logger.warning(f"[COURSE-REC] No user profile data for user_id={user_id}")
+            
             # Step 1: Get Zed context
             context = self._get_zed_context(user_id)
-            if not context:
-                result['error'] = "No Zed context found for user"
-                logger.warning(f"[COURSE-REC] No Zed context for user_id={user_id}")
+            if not context and not user_profile:
+                result['error'] = "No Zed context or profile data found for user"
+                logger.warning(f"[COURSE-REC] No Zed context AND no profile for user_id={user_id}")
                 return result
             
-            # Step 2: Extract learning needs
-            learning_needs = self._extract_learning_needs(context)
+            # If no Zed context but we have profile, use profile as fallback context
+            if not context:
+                context = f"User profile data:\n{user_profile}"
+                logger.info(f"[COURSE-REC] Using profile data as fallback context for user_id={user_id}")
+            
+            # Step 2: Extract learning needs (now includes profile data)
+            learning_needs = self._extract_learning_needs(context, user_profile=user_profile)
             if not learning_needs:
                 result['error'] = "Could not extract learning needs from context"
                 logger.warning(f"[COURSE-REC] No learning needs extracted for user_id={user_id}")
