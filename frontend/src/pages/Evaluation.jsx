@@ -436,30 +436,6 @@ const AnalysisText = styled.p`
   font-weight: 300;
 `
 
-const RecommendationCard = styled.div`
-  padding: 16px 20px;
-  background: transparent;
-  border-left: 2px solid var(--border);
-  margin-top: 16px;
-  margin-left: 4px;
-`
-
-const RecommendationTitle = styled.div`
-  font-size: 0.85em;
-  font-weight: 400;
-  color: var(--text-light);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-`
-
-const RecommendationText = styled.p`
-  font-size: 0.9em;
-  color: var(--text-light);
-  line-height: 1.7;
-  font-weight: 300;
-`
-
 const ProgressCircle = styled.div`
   position: relative;
   width: 180px;
@@ -871,7 +847,7 @@ const Evaluation = () => {
   const [domainPerformance, setDomainPerformance] = useState([])
   const [coursePerformance, setCoursePerformance] = useState(null)
   const [sectionPerformance, setSectionPerformance] = useState([])
-  const [recommendations, setRecommendations] = useState([])
+  const [courseAnalysis, setCourseAnalysis] = useState(null)
   const [loading, setLoading] = useState(true)
   const [evaluating, setEvaluating] = useState(false)
   const [viewMode, setViewMode] = useState('performance') // 'performance' or 'answers'
@@ -948,7 +924,7 @@ const Evaluation = () => {
       setLoading(true)
       
       // Fetch all data with individual error handling to prevent one failure from blocking others
-      const [dashboardRes, weeklyRes, domainRes, coursePerfRes, recommendationsRes, sectionPerfRes] = await Promise.allSettled([
+      const [dashboardRes, weeklyRes, domainRes, coursePerfRes, sectionPerfRes, analysisRes] = await Promise.allSettled([
         lmsAPI.getDashboard().catch(err => {
           console.warn('Error fetching dashboard:', err)
           return { data: null }
@@ -965,13 +941,13 @@ const Evaluation = () => {
           console.warn('Error fetching course performance:', err)
           return { data: null }
         }),
-        lmsAPI.getRecommendations(5).catch(err => {
-          console.warn('Error fetching recommendations:', err)
-          return { data: { recommendations: [] } }
-        }),
         lmsAPI.getSectionPerformance(selectedCourseId).catch(err => {
           console.warn('Error fetching section performance:', err)
           return { data: { sections: [] } }
+        }),
+        lmsAPI.getCourseAnalysis(selectedCourseId).catch(err => {
+          console.warn('Error fetching course analysis:', err)
+          return { data: null }
         })
       ])
 
@@ -992,12 +968,13 @@ const Evaluation = () => {
         setCoursePerformance(coursePerfRes.value.data)
       }
       
-      if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value?.data?.recommendations) {
-        setRecommendations(recommendationsRes.value.data.recommendations)
-      }
 
       if (sectionPerfRes.status === 'fulfilled' && sectionPerfRes.value?.data?.sections) {
         setSectionPerformance(sectionPerfRes.value.data.sections)
+      }
+
+      if (analysisRes.status === 'fulfilled' && analysisRes.value?.data) {
+        setCourseAnalysis(analysisRes.value.data)
       }
     } catch (err) {
       console.error('Error fetching performance data:', err)
@@ -1176,12 +1153,6 @@ const Evaluation = () => {
   const questionsAttempted = coursePerformance?.questions_answered || dashboard?.total_questions || 0
   const correctAnswers = coursePerformance?.correct_answers || dashboard?.correct_answers || 0
   const accuracyRate = coursePerformance?.accuracy_percentage || dashboard?.overall_accuracy || 0
-  
-  // Get areas for improvement (lowest performing domains)
-  const areasForImprovement = domainPerformance
-    .filter(d => d.accuracy_percentage !== null && d.accuracy_percentage !== undefined)
-    .sort((a, b) => (a.accuracy_percentage || 0) - (b.accuracy_percentage || 0))
-    .slice(0, 3)
   
   // Calculate weekly trend from real data
   const weeklyTrendData = weeklyPerformance
@@ -1552,24 +1523,20 @@ const Evaluation = () => {
                 </CardHeader>
 
                 <div>
-                  {domainPerformance.length > 0 ? (
-                    domainPerformance
-                      .sort((a, b) => (b.accuracy_percentage || 0) - (a.accuracy_percentage || 0))
-                      .slice(0, 3)
-                      .map((domain, index) => (
-                        <SkillBar key={domain.id || index}>
-                          <SkillHeader>
-                            <SkillName>{domain.domain_name || 'Domain'}</SkillName>
-                            <SkillPercentage>{domain.accuracy_percentage?.toFixed(1) || 0}%</SkillPercentage>
-                          </SkillHeader>
-                          <SkillProgressBar>
-                            <SkillProgressFill width={domain.accuracy_percentage || 0} />
-                          </SkillProgressBar>
-                        </SkillBar>
-                      ))
+                  {courseAnalysis?.strengths?.length > 0 ? (
+                    <AnalysisList>
+                      {courseAnalysis.strengths.map((item, index) => (
+                        <AnalysisItem key={index}>
+                          <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                            <span style={{ color: '#22c55e', flexShrink: 0 }}>✓</span>
+                            {item}
+                          </AnalysisText>
+                        </AnalysisItem>
+                      ))}
+                    </AnalysisList>
                   ) : (
                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                      No domain performance data available
+                      No strengths data available yet. Complete and evaluate questions to see your strengths.
                     </div>
                   )}
                 </div>
@@ -1591,32 +1558,27 @@ const Evaluation = () => {
                 </CardHeader>
 
                 <div>
-                  {areasForImprovement.length > 0 ? (
+                  {courseAnalysis?.areas_for_improvement?.length > 0 ? (
                     <>
-                      {areasForImprovement.map((domain, index) => (
-                        <SkillBar key={domain.id || index}>
-                          <SkillHeader>
-                            <SkillName>{domain.domain_name || 'Domain'}</SkillName>
-                            <SkillPercentage>{domain.accuracy_percentage?.toFixed(1) || 0}%</SkillPercentage>
-                          </SkillHeader>
-                          <SkillProgressBar>
-                            <SkillProgressFill width={domain.accuracy_percentage || 0} />
-                          </SkillProgressBar>
-                        </SkillBar>
-                      ))}
-                      {areasForImprovement.length > 0 && (
-                        <AnalysisList className="analysis-list-spaced">
-                          <AnalysisItem>
-                            <AnalysisText>
-                              Focus on improving these areas to enhance your overall performance. Practice exercises are available in the LMS portal.
+                      <AnalysisList>
+                        {courseAnalysis.areas_for_improvement.map((item, index) => (
+                          <AnalysisItem key={index}>
+                            <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                              <span style={{ color: '#f59e0b', flexShrink: 0 }}>▸</span>
+                              {item}
                             </AnalysisText>
                           </AnalysisItem>
-                        </AnalysisList>
+                        ))}
+                      </AnalysisList>
+                      {courseAnalysis.summary && (
+                        <div style={{ padding: '12px 20px', fontSize: '0.85em', color: 'var(--text-light)', fontStyle: 'italic', borderTop: '1px solid var(--border)' }}>
+                          {courseAnalysis.summary}
+                        </div>
                       )}
                     </>
                   ) : (
                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                      No domain performance data available to identify improvement areas.
+                      No improvement areas identified yet. Complete and evaluate questions to get personalized feedback.
                     </div>
                   )}
                 </div>
@@ -1727,38 +1689,6 @@ const Evaluation = () => {
                 )}
               </EvaluationCard>
 
-              {/* AI Recommendations */}
-              <EvaluationCard>
-                <CardHeader>
-                  <CardHeaderLeft>
-                    <CardIcon>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                      </svg>
-                    </CardIcon>
-                    <CardTitle>Recommendations</CardTitle>
-                  </CardHeaderLeft>
-                </CardHeader>
-
-                {recommendations.length > 0 ? (
-                  <AnalysisList>
-                    {recommendations.slice(0, 3).map((rec, index) => (
-                      <AnalysisItem key={rec.id || index}>
-                        <AnalysisTitle>
-                          {rec.title || rec.recommendation_type || 'Recommendation'}
-                        </AnalysisTitle>
-                        <AnalysisText>
-                          {rec.description || rec.message || 'No description available.'}
-                        </AnalysisText>
-                      </AnalysisItem>
-                    ))}
-                  </AnalysisList>
-                ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                    No recommendations available at this time. Complete more courses and questions to receive personalized recommendations.
-                  </div>
-                )}
-              </EvaluationCard>
             </GridContainer>
               </>
             )}

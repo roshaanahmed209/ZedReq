@@ -260,6 +260,14 @@ class SectionPerformanceResponse(BaseModel):
     sections: List[SectionPerformanceItem] = []
 
 
+class CourseAnalysisResponse(BaseModel):
+    """Overall strengths & areas for improvement for a course (not section-level)."""
+    strengths: List[str] = []
+    areas_for_improvement: List[str] = []
+    summary: str = ""
+    total_evaluated: int = 0
+
+
 # ============================================================================
 # Activity Schemas
 # ============================================================================

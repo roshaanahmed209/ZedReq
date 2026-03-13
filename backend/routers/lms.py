@@ -23,6 +23,7 @@ from schemas.lms import (
     DomainPerformanceResponse, DomainPerformanceListResponse,
     CoursePerformanceResponse,
     SectionPerformanceResponse,
+    CourseAnalysisResponse,
     ActivityResponse, ActivityListResponse,
     QuestionCreate, QuestionResponse, QuestionListResponse,
     AnswerSubmit, AnswerResponse, AnswerListResponse, AnswerEvaluate,
@@ -413,6 +414,29 @@ async def get_section_performance_summary(
         )
     summary = service.get_section_performance_summary(user_id, course_id)
     return {"sections": summary}
+
+
+@router.get("/courses/{course_id}/analysis", response_model=CourseAnalysisResponse)
+async def get_course_analysis(
+    course_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: LMSService = Depends(get_lms_service),
+):
+    """
+    Return overall strengths and areas for improvement for the authenticated
+    user in a specific course.  Covers all sections/levels combined.
+    """
+    user_id = current_user.get("id") or current_user.get("uid")
+    if not service.is_user_enrolled(user_id, course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be enrolled in this course to view analysis.",
+        )
+
+    from agents.Seez_agent import get_seez_agent
+    seez = get_seez_agent()
+    analysis = seez.generate_course_analysis(user_id, course_id)
+    return analysis
 
 
 # ============================================================================

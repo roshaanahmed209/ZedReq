@@ -502,6 +502,123 @@ Return a JSON object with: score (0-10), is_correct (boolean), feedback (string)
             if should_close:
                 db.close()
     
+    def generate_course_analysis(
+        self,
+        user_id: int,
+        course_id: int,
+        db_session=None,
+    ) -> Dict[str, Any]:
+        """Analyse ALL evaluated answers for a user in a course and return
+        overall strengths and areas for improvement.
+
+        This is NOT section/level-specific — it covers the entire course.
+
+        Returns:
+            {
+              "strengths": ["...","..."],
+              "areas_for_improvement": ["...","..."],
+              "summary": "...",
+              "total_evaluated": int,
+            }
+        """
+        should_close = False
+        if db_session is None:
+            from config.database_orm import get_db
+            db = next(get_db())
+            should_close = True
+        else:
+            db = db_session
+
+        try:
+            # Gather all evaluated answers with their questions for this course
+            rows = (
+                db.query(LMSUserAnswer, LMSQuestion)
+                .join(LMSQuestion, LMSUserAnswer.question_id == LMSQuestion.id)
+                .filter(
+                    LMSUserAnswer.user_id == user_id,
+                    LMSQuestion.course_id == course_id,
+                    LMSUserAnswer.evaluated_at.isnot(None),
+                )
+                .order_by(LMSUserAnswer.evaluated_at.desc())
+                .limit(50)  # cap to avoid token overflow
+                .all()
+            )
+
+            if not rows:
+                return {
+                    "strengths": [],
+                    "areas_for_improvement": [],
+                    "summary": "No evaluated answers available for this course yet.",
+                    "total_evaluated": 0,
+                }
+
+            # Build a compact summary for the LLM
+            answer_summaries = []
+            for answer, question in rows:
+                score = 0
+                if answer.points_earned is not None and question.points:
+                    score = round((answer.points_earned / question.points) * 10, 1)
+                answer_summaries.append({
+                    "question": question.question_text[:200],
+                    "user_answer": (answer.answer_text or "")[:200],
+                    "score": score,
+                    "is_correct": answer.is_correct,
+                    "feedback": (answer.feedback or "")[:200],
+                })
+
+            if not self.openai_available or not self.llm:
+                # Fallback: compute simple stats without LLM
+                correct = sum(1 for a in answer_summaries if a["is_correct"])
+                total = len(answer_summaries)
+                return {
+                    "strengths": [f"Answered {correct}/{total} questions correctly."] if correct else [],
+                    "areas_for_improvement": [f"Review the {total - correct} incorrect answers."] if total - correct else [],
+                    "summary": f"Evaluated {total} answers with {correct} correct.",
+                    "total_evaluated": total,
+                }
+
+            prompt = f"""Analyse the following evaluated answers from a single course and identify the student's overall strengths and areas for improvement.
+
+Evaluated Answers (most recent first):
+{json.dumps(answer_summaries, indent=2)[:4000]}
+
+Return a JSON object with exactly these keys:
+- "strengths": a list of 2-4 concise bullet-point strings describing what the student is doing well
+- "areas_for_improvement": a list of 2-4 concise bullet-point strings describing specific topics or skills the student should work on
+- "summary": a 1-2 sentence overall assessment
+
+Return ONLY the JSON object, no extra text."""
+
+            messages = [
+                SystemMessage(content="You are an educational analyst. Analyse student performance data and identify strengths and areas for improvement. Be specific, constructive, and encouraging."),
+                HumanMessage(content=prompt),
+            ]
+
+            response = self.llm.invoke(messages)
+            content = response.content.strip()
+
+            # Extract JSON
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            analysis = json.loads(content)
+            analysis["total_evaluated"] = len(answer_summaries)
+            return analysis
+
+        except Exception as e:
+            logger.error(f"[SEEZ] generate_course_analysis failed: {e}", exc_info=True)
+            return {
+                "strengths": [],
+                "areas_for_improvement": [],
+                "summary": "Unable to generate analysis at this time.",
+                "total_evaluated": 0,
+            }
+        finally:
+            if should_close:
+                db.close()
+
     def is_available(self) -> bool:
         """Check if agent is available (OpenAI working)"""
         return self.openai_available

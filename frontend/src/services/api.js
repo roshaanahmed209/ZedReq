@@ -540,6 +540,9 @@ export const lmsAPI = {
   // Section-level performance (per-level accuracy breakdown)
   getSectionPerformance: (courseId) =>
     api.get(`/api/lms/courses/${courseId}/section-performance`),
+
+  getCourseAnalysis: (courseId) =>
+    api.get(`/api/lms/courses/${courseId}/analysis`),
   
   // Seez Agent endpoints (longer timeout for LLM evaluation calls)
   triggerSeezEvaluateCourse: (courseId) =>
