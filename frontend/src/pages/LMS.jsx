@@ -656,6 +656,10 @@ const DashboardCard = styled.div`
     padding: 14px;
     border-radius: 8px;
   }
+
+  &.dashboard-card-span-2 {
+    grid-column: 1 / -1;
+  }
 `
 
 const CardTitle = styled.h3`
@@ -2752,8 +2756,8 @@ const LMS = () => {
                     <AnimatedCourseCard key={course.id} course={course} index={index} onCourseClick={handleCourseClick} />
                   ))}
                 </CoursesGrid>
-              ) : recommendations.length > 0 ? (
-                // Show recommended courses if no enrolled courses
+              ) : activeTab === 'all' && recommendations.length > 0 ? (
+                // Only show recommended courses on the "All Courses" tab when no enrolled courses exist
                 <>
                   <PanelHeader>
                     <PanelTitle>Recommended Courses</PanelTitle>
@@ -2807,8 +2811,17 @@ const LMS = () => {
                       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
                   </EmptyIcon>
-                  <EmptyText>No courses found</EmptyText>
-                  <EmptySubtext>Course recommendations will appear here based on your interests</EmptySubtext>
+                  <EmptyText>
+                    {activeTab === 'inProgress' && 'No courses in progress'}
+                    {activeTab === 'completed' && 'No completed courses yet'}
+                    {activeTab === 'notStarted' && 'No unstarted courses'}
+                    {activeTab === 'all' && 'No courses found'}
+                  </EmptyText>
+                  <EmptySubtext>
+                    {activeTab === 'all'
+                      ? 'Course recommendations will appear here based on your interests'
+                      : 'Enroll in a course to get started'}
+                  </EmptySubtext>
                 </EmptyState>
               )}
             </ScrollableContent>
@@ -2941,109 +2954,26 @@ const LMS = () => {
               ) : null}
             </DashboardCard>
 
-            {/* Weekly Performance */}
-            <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="20" x2="18" y2="10"></line>
-                  <line x1="12" y1="20" x2="12" y2="4"></line>
-                  <line x1="6" y1="20" x2="6" y2="14"></line>
-                </svg>
-                Weekly Performance
-              </CardTitle>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
-              ) : weeklyPerformance.length > 0 ? (
-                <BarChart>
-                  {weeklyPerformance.map((day, index) => {
-                    const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
-                    const height = ((day.questions_answered || 0) / maxValue) * 100
-                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    const dayName = day.day_name || dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
-                    
-                    return (
-                      <div key={day.date || index} className="trend-bar-wrapper">
-                        <Bar height={height}>
-                          <BarValue>{day.questions_answered || 0}</BarValue>
-                        </Bar>
-                        <BarLabel>{dayName}</BarLabel>
-                      </div>
-                    )
-                  })}
-                </BarChart>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
-                  No performance data available
-                </div>
+            {/* Learning Streak */}
+            <StatCard>
+              <div>
+                <StatValue>{dashboard?.day_streak || 0}</StatValue>
+                <StatLabel>Day Streak</StatLabel>
+              </div>
+              {(dashboard?.day_streak || 0) > 0 && (
+                <StatChange positive>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Keep it up!
+                </StatChange>
               )}
-            </DashboardCard>
+            </StatCard>
 
-            {/* Domain-Specific Performance */}
-            <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                Domain-Specific Performance
-              </CardTitle>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
-              ) : domainPerformance.length > 0 ? (
-                <DomainList>
-                  {domainPerformance.map((domain) => (
-                    <DomainItem key={domain.domain_id || domain.domain_name}>
-                      <DomainHeader>
-                        <DomainName>{domain.domain_name || 'Unknown Domain'}</DomainName>
-                        <DomainPercentage>{domain.accuracy || 0}%</DomainPercentage>
-                      </DomainHeader>
-                      <DomainProgressBar>
-                        <DomainProgressFill width={domain.accuracy || 0} />
-                      </DomainProgressBar>
-                    </DomainItem>
-                  ))}
-                </DomainList>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
-                  No domain performance data available
-                </div>
-              )}
-            </DashboardCard>
 
-            {/* Recent Learning Activity */}
-            <DashboardCard>
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                Recent Activity
-              </CardTitle>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
-              ) : activities.length > 0 ? (
-                <ActivityScrollContainer>
-                  {activities.map((activity) => (
-                    <ActivityItem key={activity.id}>
-                      <ActivityIcon>
-                        {activity.course_icon || activity.activity_type?.substring(0, 2).toUpperCase() || 'AC'}
-                      </ActivityIcon>
-                      <ActivityContent>
-                        <ActivityTitle>{activity.description || activity.activity_type || 'Activity'}</ActivityTitle>
-                        <ActivityTime>{formatDate(activity.created_at)}</ActivityTime>
-                      </ActivityContent>
-                    </ActivityItem>
-                  ))}
-                </ActivityScrollContainer>
-              ) : (
-                <EmptyState>
-                  <EmptyText>No recent activity</EmptyText>
-                </EmptyState>
-              )}
-            </DashboardCard>
 
             {/* AI Recommendations */}
-            <DashboardCard>
+            <DashboardCard className="dashboard-card-span-2">
               <CardTitle>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 3v3"></path>
@@ -3125,76 +3055,39 @@ const LMS = () => {
               </RecommendationsScrollContainer>
             </DashboardCard>
 
-            {/* Learning Streak */}
-            <StatCard>
-              <div>
-                <StatValue>{dashboard?.day_streak || 0}</StatValue>
-                <StatLabel>Day Streak</StatLabel>
-              </div>
-              {(dashboard?.day_streak || 0) > 0 && (
-                <StatChange positive>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                  </svg>
-                  Keep it up!
-                </StatChange>
-              )}
-            </StatCard>
-
-            {/* Certificates Earned */}
-            <StatCard>
-              <div>
-                <StatValue>{certificates.length || 0}</StatValue>
-                <StatLabel>Certificates</StatLabel>
-              </div>
-              {certificates.length > 0 && (
-                <StatChange positive>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                  {certificates.length} earned
-                </StatChange>
-              )}
-            </StatCard>
-
-            {/* Upcoming Deadlines */}
+            {/* Weekly Performance */}
             <DashboardCard className="dashboard-card-span-2">
               <CardTitle>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
                 </svg>
-                Upcoming Deadlines
+                Weekly Performance
               </CardTitle>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
-              ) : deadlines.length > 0 ? (
-                <DomainList>
-                  {deadlines.map((deadline) => {
-                    const dueText = formatDeadline(deadline.deadline_date)
-                    const isOverdue = dueText === 'Overdue'
-                    const isDueSoon = dueText.includes('today') || dueText.includes('tomorrow') || dueText.includes('in 1 days') || dueText.includes('in 2 days')
+              ) : weeklyPerformance.length > 0 ? (
+                <BarChart>
+                  {weeklyPerformance.map((day, index) => {
+                    const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
+                    const height = ((day.questions_answered || 0) / maxValue) * 100
+                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                    const dayName = day.day_name || dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
                     
                     return (
-                      <DomainItem key={deadline.id}>
-                        <DomainHeader>
-                          <DomainName>{deadline.title || deadline.course_title || 'Deadline'}</DomainName>
-                          <DomainPercentage 
-                            className={isOverdue ? 'domain-percentage-due-soon' : isDueSoon ? 'domain-percentage-due-soon' : 'domain-percentage-due-medium'}
-                          >
-                            {dueText}
-                          </DomainPercentage>
-                        </DomainHeader>
-                      </DomainItem>
+                      <div key={day.date || index} className="trend-bar-wrapper">
+                        <Bar height={height}>
+                          <BarValue>{day.questions_answered || 0}</BarValue>
+                        </Bar>
+                        <BarLabel>{dayName}</BarLabel>
+                      </div>
                     )
                   })}
-                </DomainList>
+                </BarChart>
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
-                  No upcoming deadlines
+                  No performance data available
                 </div>
               )}
             </DashboardCard>

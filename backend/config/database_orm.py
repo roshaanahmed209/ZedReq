@@ -46,6 +46,25 @@ engine = create_engine(
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Background-task session factory
+# ─────────────────────────────────────────────────────────────────────────────
+# Used exclusively by background workers (e.g. LMS dashboard pre-warmer) that
+# should NOT interfere with normal OLTP traffic:
+#
+#   autoflush=False  – prevents accidental implicit writes / flushes that would
+#                      hold row-level locks while the query is running.
+#   autocommit=False – keeps the session inside an explicit transaction so that
+#                      SET statement_timeout applies for the entire session life.
+#
+# The underlying engine is **shared** (same connection pool) so background reads
+# benefit from pool_pre_ping and pool_recycle settings already configured above.
+# Concurrency is controlled externally (semaphore in lms_preloader.py).
+BackgroundSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
+
 # Base class for ORM models
 Base = declarative_base()
 

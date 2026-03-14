@@ -18,6 +18,7 @@ from schemas.two_factor import (
 from services.auth_service import AuthService
 from services.two_factor_service import TwoFactorService
 from services.context_updater import ContextUpdater
+from services.lms_preloader import schedule_lms_preload
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
 from utils.errors import NotFoundError, ValidationError
@@ -54,11 +55,25 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: UserLogin,
+    background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Login user and return JWT tokens"""
+    """Login user and return JWT tokens.
+
+    After a successful login (no 2FA required) the LMS dashboard data is
+    pre-warmed in a background thread so the user's first visit to the
+    dashboard is instant.
+    """
     try:
         result = auth_service.login(credentials.username, credentials.password)
+
+        # Only schedule the preload when the login is complete (2FA not pending).
+        # When 2FA is required, the preload is triggered in /2fa/verify instead.
+        if not result.get("requires_2fa"):
+            user_id = result.get("user", {}).get("id")
+            if user_id:
+                background_tasks.add_task(schedule_lms_preload, user_id)
+
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
@@ -95,14 +110,25 @@ def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
 @router.post("/2fa/verify")
 async def verify_2fa_login(
     verify_data: TwoFactorVerify,
+    background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Verify 2FA code and complete login"""
+    """Verify 2FA code and complete login.
+
+    Once 2FA is confirmed and the full token pair is issued, the LMS dashboard
+    is pre-warmed in a background thread.
+    """
     try:
         result = auth_service.verify_2fa_and_login(
             verify_data.temp_token,
             verify_data.code
         )
+
+        # Schedule LMS pre-warm now that login is fully complete.
+        user_id = result.get("user", {}).get("id")
+        if user_id:
+            background_tasks.add_task(schedule_lms_preload, user_id)
+
         return result
     except ValueError as e:
         raise HTTPException(
@@ -125,11 +151,22 @@ class GoogleAuthRequest(BaseModel):
 @router.post("/google", response_model=TokenResponse)
 async def google_auth(
     google_data: GoogleAuthRequest,
+    background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Authenticate user with Google ID token"""
+    """Authenticate user with Google ID token.
+
+    After a successful Google sign-in the LMS dashboard is pre-warmed in a
+    background thread so the first visit is served straight from cache.
+    """
     try:
         result = auth_service.verify_google_token(google_data.id_token)
+
+        # Schedule LMS pre-warm after successful Google auth.
+        user_id = result.get("user", {}).get("id")
+        if user_id:
+            background_tasks.add_task(schedule_lms_preload, user_id)
+
         return TokenResponse(**result)
     except ValueError as e:
         raise HTTPException(
