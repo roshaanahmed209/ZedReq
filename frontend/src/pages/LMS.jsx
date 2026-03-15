@@ -1125,6 +1125,58 @@ const BarLabel = styled.div`
   }
 `
 
+const WeeklyPerfHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+`
+
+const WeeklyPerfFilters = styled.div`
+  display: flex;
+  gap: 6px;
+`
+
+const WeeklyPerfFilterBtn = styled.button`
+  font-size: 0.78em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.active ? '#fff' : 'var(--text-light)'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 400;
+
+  &:hover {
+    border-color: var(--primary);
+    color: ${props => props.active ? '#fff' : 'var(--primary)'};
+  }
+`
+
+const BarChartScrollWrapper = styled.div`
+  overflow-x: auto;
+  width: 100%;
+
+  /* Custom scrollbar matching theme */
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+    opacity: 0.6;
+  }
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+`
+
 const DomainList = styled.div`
   display: flex;
   flex-direction: column;
@@ -2296,6 +2348,8 @@ const LMS = () => {
   const [currentPage, setCurrentPage] = useState(0)   // 0-based page index, 5 questions per page
   const [enrollingLoading, setEnrollingLoading] = useState(false)
   const [enrollingMessage, setEnrollingMessage] = useState('')
+  const [weeklyPerfDays, setWeeklyPerfDays] = useState(7)
+  const [weeklyPerfLoading, setWeeklyPerfLoading] = useState(false)
 
   // Derived: title of the currently selected section (avoids repeated .find() in JSX)
   const selectedSectionTitle = (courseSections.find(s => s.id === selectedSectionId)?.title) || ''
@@ -2486,6 +2540,22 @@ const LMS = () => {
    *
    * @param {boolean} silent - if true, skip the refreshingRecs state (used on page load)
    */
+  const handleWeeklyPerfFilter = async (days) => {
+    if (days === weeklyPerfDays || weeklyPerfLoading) return
+    setWeeklyPerfDays(days)
+    setWeeklyPerfLoading(true)
+    try {
+      const res = await lmsAPI.getWeeklyPerformance(days)
+      if (res?.data?.performance) {
+        setWeeklyPerformance(res.data.performance)
+      }
+    } catch (err) {
+      console.warn('[LMS] handleWeeklyPerfFilter: Failed to fetch weekly performance', err)
+    } finally {
+      setWeeklyPerfLoading(false)
+    }
+  }
+
   const handleRefreshRecommendations = async (silent = false) => {
     if (refreshingRecs) return // prevent double-trigger
     if (!silent && recsRefreshCount >= MAX_RECS_REFRESHES) return // local guard
@@ -3328,34 +3398,55 @@ const LMS = () => {
 
             {/* Weekly Performance */}
             <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="20" x2="18" y2="10"></line>
-                  <line x1="12" y1="20" x2="12" y2="4"></line>
-                  <line x1="6" y1="20" x2="6" y2="14"></line>
-                </svg>
-                Weekly Performance
-              </CardTitle>
-              {loading ? (
+              <WeeklyPerfHeader>
+                <CardTitle style={{ marginBottom: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                  Performance
+                </CardTitle>
+                <WeeklyPerfFilters>
+                  <WeeklyPerfFilterBtn
+                    active={weeklyPerfDays === 7}
+                    onClick={() => handleWeeklyPerfFilter(7)}
+                  >
+                    Last 7 Days
+                  </WeeklyPerfFilterBtn>
+                  <WeeklyPerfFilterBtn
+                    active={weeklyPerfDays === 30}
+                    onClick={() => handleWeeklyPerfFilter(30)}
+                  >
+                    Last 30 Days
+                  </WeeklyPerfFilterBtn>
+                </WeeklyPerfFilters>
+              </WeeklyPerfHeader>
+              {(loading || weeklyPerfLoading) ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
               ) : weeklyPerformance.length > 0 ? (
-                <BarChart>
-                  {weeklyPerformance.map((day, index) => {
-                    const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
-                    const height = ((day.questions_answered || 0) / maxValue) * 100
-                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    const dayName = dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
-                    
-                    return (
-                      <div key={day.date || index} className="trend-bar-wrapper">
-                        <Bar height={height}>
-                          <BarValue>{day.questions_answered || 0}</BarValue>
-                        </Bar>
-                        <BarLabel>{dayName}</BarLabel>
-                      </div>
-                    )
-                  })}
-                </BarChart>
+                <BarChartScrollWrapper>
+                  <BarChart>
+                    {weeklyPerformance.map((day, index) => {
+                      const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
+                      const height = ((day.questions_answered || 0) / maxValue) * 100
+                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                      const dateObj = new Date(day.date)
+                      const label = weeklyPerfDays <= 7
+                        ? (dayNames[dateObj.getDay()] || `Day ${index + 1}`)
+                        : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+                      return (
+                        <div key={day.date || index} className="trend-bar-wrapper">
+                          <Bar height={height}>
+                            <BarValue>{day.questions_answered || 0}</BarValue>
+                          </Bar>
+                          <BarLabel>{label}</BarLabel>
+                        </div>
+                      )
+                    })}
+                  </BarChart>
+                </BarChartScrollWrapper>
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
                   No performance data available

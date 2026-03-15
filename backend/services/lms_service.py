@@ -602,36 +602,41 @@ class LMSService:
             self.db.commit()
     
     def _calculate_day_streak(self, user_id: int) -> int:
-        """Calculate consecutive days with learning activity using SQL"""
+        """Calculate consecutive days where the user answered at least one question.
+
+        Uses ``lms_weekly_performance`` as the authoritative source — a day only
+        counts toward the streak when ``questions_answered > 0``, which requires
+        at least one answer to have been evaluated.
+        """
         today = date.today()
-        
-        # Get unique activity dates for last 365 days (reasonable limit)
-        activity_dates = self.db.query(
-            func.distinct(func.date(LMSActivity.created_at)).label('activity_date')
-        ).filter(
-            and_(
-                LMSActivity.user_id == user_id,
-                func.date(LMSActivity.created_at) >= today - timedelta(days=365)
+
+        # Query days within the last 365 days where the user answered questions
+        rows = (
+            self.db.query(LMSWeeklyPerformance.date)
+            .filter(
+                LMSWeeklyPerformance.user_id == user_id,
+                LMSWeeklyPerformance.questions_answered > 0,
+                LMSWeeklyPerformance.date >= today - timedelta(days=365),
             )
-        ).order_by(desc('activity_date')).all()
-        
-        if not activity_dates:
+            .order_by(desc(LMSWeeklyPerformance.date))
+            .all()
+        )
+
+        if not rows:
             return 0
-        
-        # Convert to set of dates
-        dates_set = {row.activity_date for row in activity_dates}
-        
-        # Calculate streak from today backwards
+
+        # Build a set for O(1) look-ups
+        dates_set = {row.date for row in rows}
+
+        # Walk backwards from today counting consecutive active days
         streak = 0
         current_date = today
-        
         while current_date in dates_set:
             streak += 1
             current_date -= timedelta(days=1)
-            # Safety limit to prevent infinite loop
-            if streak > 365:
+            if streak > 365:  # safety cap
                 break
-        
+
         return streak
     
     def update_dashboard_stats(self, user_id: int, stats: dict):
