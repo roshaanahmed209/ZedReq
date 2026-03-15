@@ -203,6 +203,71 @@ const EnrollButton = styled.button`
   }
 `
 
+const EnrollOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+`
+
+const EnrollOverlayRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+`
+
+const EnrollOverlayText = styled.div`
+  font-size: 1.25em;
+  font-weight: 500;
+  color: #ffffff;
+  overflow: hidden;
+  height: 1.6em;
+  display: flex;
+  align-items: center;
+
+  span.msg {
+    display: inline-block;
+    animation: diceRoll 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes diceRoll {
+    0%   { transform: rotateX(90deg) translateY(-14px); opacity: 0; }
+    100% { transform: rotateX(0deg)  translateY(0);     opacity: 1; }
+  }
+`
+
+const EnrollDots = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 2px;
+
+  span {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: dotBounce 1.6s ease-in-out infinite;
+  }
+
+  span:nth-child(1) { animation-delay: 0s; }
+  span:nth-child(2) { animation-delay: 0.3s; }
+  span:nth-child(3) { animation-delay: 0.6s; }
+
+  @keyframes dotBounce {
+    0%, 70%, 100% { transform: translateY(0);    opacity: 0.35; }
+    35%           { transform: translateY(-9px); opacity: 1;    }
+  }
+`
+
 const RefreshRecsButton = styled.button`
   margin-left: auto;
   padding: 4px 10px;
@@ -1999,13 +2064,21 @@ const SubmitButton = styled.button`
   cursor: pointer;
   transition: all 0.3s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--border, #555);
+    box-shadow: none;
+    transform: none;
   }
 
   @media (max-width: 768px) {
@@ -2161,6 +2234,40 @@ const AnimatedCourseCard = ({ course, index, onCourseClick }) => {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Rate-limit constants — module-level so they are never re-declared per render
+// ---------------------------------------------------------------------------
+const MAX_RECS_REFRESHES = 3
+const MAX_GENERATE_QUESTIONS = 3
+
+/**
+ * usePersistentCounter
+ * A small custom hook that keeps a numeric counter in both React state and
+ * localStorage so the value survives page refreshes and logout/login cycles.
+ *
+ * @param {string}  key  - localStorage key (should be user-scoped by the caller)
+ * @param {number}  max  - upper bound; stored value is clamped to [0, max]
+ * @returns {[number, (updater: number | ((prev: number) => number)) => void]}
+ */
+function usePersistentCounter(key, max) {
+  const [count, _setCount] = useState(() => {
+    const raw = parseInt(localStorage.getItem(key) || '0', 10)
+    // Clamp to [0, max] to neutralise any manual localStorage tampering
+    return Math.min(Math.max(0, isNaN(raw) ? 0 : raw), max)
+  })
+
+  const setCount = React.useCallback((updater) => {
+    _setCount(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      const clamped = Math.min(Math.max(0, next), max)
+      localStorage.setItem(key, String(clamped))
+      return clamped
+    })
+  }, [key, max]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [count, setCount]
+}
+
 const LMS = () => {
   const [activeTab, setActiveTab] = useState('all')
   const [topGradientOpacity, setTopGradientOpacity] = useState(0)
@@ -2169,7 +2276,7 @@ const LMS = () => {
   const [isPortalOpen, setIsPortalOpen] = useState(false)
   const scrollRef = useRef(null)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user: authUser } = useAuth()
 
   // State for API data
   const [courses, setCourses] = useState([])
@@ -2187,6 +2294,8 @@ const LMS = () => {
   const [answers, setAnswers] = useState({}) // questionId -> answer text
   const [sectionPerf, setSectionPerf] = useState([])  // [{section_id, title, questions_answered, accuracy_percentage}]
   const [currentPage, setCurrentPage] = useState(0)   // 0-based page index, 5 questions per page
+  const [enrollingLoading, setEnrollingLoading] = useState(false)
+  const [enrollingMessage, setEnrollingMessage] = useState('')
 
   // Derived: title of the currently selected section (avoids repeated .find() in JSX)
   const selectedSectionTitle = (courseSections.find(s => s.id === selectedSectionId)?.title) || ''
@@ -2230,6 +2339,19 @@ const LMS = () => {
   const [error, setError] = useState(null)
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [refreshingRecs, setRefreshingRecs] = useState(false)
+
+  // Persistent rate-limit counters — scoped per user, clamped, tamper-resistant
+  // Keys are memoised so they never change identity mid-session
+  const recsKey = React.useMemo(
+    () => authUser?.id ? `lms_recs_refresh_count_${authUser.id}` : null,
+    [authUser?.id]
+  )
+  const genKey = React.useMemo(
+    () => authUser?.id ? `lms_gen_questions_count_${authUser.id}` : null,
+    [authUser?.id]
+  )
+  const [recsRefreshCount, setRecsRefreshCount] = usePersistentCounter(recsKey ?? '__noop__', MAX_RECS_REFRESHES)
+  const [generateQuestionsCount, setGenerateQuestionsCount] = usePersistentCounter(genKey ?? '__noop__', MAX_GENERATE_QUESTIONS)
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -2366,6 +2488,7 @@ const LMS = () => {
    */
   const handleRefreshRecommendations = async (silent = false) => {
     if (refreshingRecs) return // prevent double-trigger
+    if (!silent && recsRefreshCount >= MAX_RECS_REFRESHES) return // local guard
     if (!silent) setRefreshingRecs(true)
     console.log('[LMS] handleRefreshRecommendations: Generating fresh recommendations...')
     try {
@@ -2375,8 +2498,19 @@ const LMS = () => {
         setRecommendations(data.recommendations)
         console.log(`[LMS] handleRefreshRecommendations: SUCCESS - ${data.recommendations.length} recommendations`)
       }
+      // Sync frontend counter with authoritative server value
+      if (!silent && data?.rate_limit != null) {
+        const usedOnServer = MAX_RECS_REFRESHES - data.rate_limit.remaining
+        setRecsRefreshCount(usedOnServer)
+      }
     } catch (err) {
-      console.error('[LMS] handleRefreshRecommendations: Error:', err)
+      if (err?.response?.status === 429) {
+        // Server says limit exceeded — pin the counter to max so the button disables
+        setRecsRefreshCount(MAX_RECS_REFRESHES)
+        console.warn('[LMS] handleRefreshRecommendations: Rate limit exceeded (server)')
+      } else {
+        console.error('[LMS] handleRefreshRecommendations: Error:', err)
+      }
       // Don't overwrite the UI — stale recs are better than none
     } finally {
       setRefreshingRecs(false)
@@ -2516,6 +2650,7 @@ const LMS = () => {
     setSelectedSectionId(null) // Reset section selection for new course
     setAnswers({}) // Clear previous answers
     setCurrentPage(0)
+    setGenerateQuestionsCount(0) // Reset generate attempts for new course
     setIsPortalOpen(true)
 
     // Fetch per-section performance so level-locking and progress bar are accurate
@@ -2532,19 +2667,38 @@ const LMS = () => {
 
   const handleEnrollCourse = async (courseId) => {
     if (!courseId) return
-    
+
+    const messages = [
+      'Fetching your profile',
+      'Loading user preferences',
+      'Checking course availability',
+      'Syncing knowledge vectors',
+      'Updating learning profile',
+      'Configuring course sections',
+      'Personalising your curriculum',
+      'Finalising enrollment',
+    ]
+
+    let msgIdx = 0
+    setEnrollingMessage(messages[0])
+    setEnrollingLoading(true)
+
+    const msgTimer = setInterval(() => {
+      msgIdx = (msgIdx + 1) % messages.length
+      setEnrollingMessage(messages[msgIdx])
+    }, 1800)
+
     try {
       console.log(`[LMS] handleEnrollCourse: Enrolling in course_id=${courseId}`)
-      
       await lmsAPI.enrollInCourse(courseId)
-      alert('Successfully enrolled in course!')
-      
-      // Refresh courses list and recommendations
+
+      setEnrollingMessage('Enrollment successful! 🎉')
+      await new Promise(r => setTimeout(r, 900))
+
       await fetchAllData()
     } catch (err) {
       console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
-      
-      // Handle quota exceeded (403) from server-side subscription check
+
       if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'course_enrollments') {
         const detail = err.response.data.detail
         alert(`Monthly course enrollment limit reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan or wait until next month.`)
@@ -2552,6 +2706,10 @@ const LMS = () => {
         const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
         alert(`Error: ${typeof errorMsg === 'string' ? errorMsg : errorMsg.message || 'Failed to enroll'}`)
       }
+    } finally {
+      clearInterval(msgTimer)
+      setEnrollingLoading(false)
+      setEnrollingMessage('')
     }
   }
 
@@ -2698,6 +2856,12 @@ const LMS = () => {
       console.warn('[LMS] handleGenerateQuestions: No course selected')
       return
     }
+    if (generateQuestionsCount >= MAX_GENERATE_QUESTIONS) {
+      console.warn('[LMS] handleGenerateQuestions: Attempt limit reached')
+      return
+    }
+
+    setGenerateQuestionsCount(c => c + 1)
 
     const sectionId = selectedSectionId
     const sectionLabel = selectedSectionTitle || 'Basic'
@@ -2721,7 +2885,13 @@ const LMS = () => {
       if (response.data) {
         const result = response.data.result || {}
         const success = response.data.success !== false && result.success !== false
-        
+
+        // Sync counter with authoritative server value
+        if (response.data.rate_limit != null) {
+          const usedOnServer = MAX_GENERATE_QUESTIONS - response.data.rate_limit.remaining
+          setGenerateQuestionsCount(usedOnServer)
+        }
+
         console.log(`[LMS] handleGenerateQuestions: Response received, success=${success}`)
         console.log(`[LMS] handleGenerateQuestions: Result - topics=${result.topics_extracted?.length || 0}, urls=${result.urls_saved || 0}, questions=${result.questions_saved || 0}`)
         
@@ -2782,9 +2952,18 @@ const LMS = () => {
       let errorMsg = 'Failed to generate questions. Please try again.'
       
       if (err.response) {
-        // Server responded with error
-        errorMsg = err.response.data?.detail || err.response.data?.message || err.message
-        console.error(`[LMS] handleGenerateQuestions: Server error response:`, err.response.data)
+        if (err.response.status === 429) {
+          // Rate limit hit on the server — pin counter to max to disable button
+          setGenerateQuestionsCount(MAX_GENERATE_QUESTIONS)
+          const detail = err.response.data?.detail
+          errorMsg = (typeof detail === 'object' ? detail?.message : detail)
+            || 'Question generation limit reached. Maximum 3 attempts allowed.'
+          console.warn(`[LMS] handleGenerateQuestions: Rate limit exceeded (server)`)
+        } else {
+          // Server responded with error
+          errorMsg = err.response.data?.detail || err.response.data?.message || err.message
+          console.error(`[LMS] handleGenerateQuestions: Server error response:`, err.response.data)
+        }
       } else if (err.request) {
         // Request made but no response
         if (err.code === 'ECONNABORTED') {
@@ -2812,6 +2991,20 @@ const LMS = () => {
 
   return (
     <Container>
+      {/* Full-screen enrollment loading overlay */}
+      {enrollingLoading && (
+        <EnrollOverlay>
+          <EnrollOverlayRow>
+            <EnrollOverlayText key={enrollingMessage}>
+              <span className="msg">{enrollingMessage}</span>
+            </EnrollOverlayText>
+            <EnrollDots>
+              <span /><span /><span />
+            </EnrollDots>
+          </EnrollOverlayRow>
+        </EnrollOverlay>
+      )}
+
       <Navbar />
 
       <MainContainer>
@@ -3067,8 +3260,8 @@ const LMS = () => {
                 AI Recommendations
                 <RefreshRecsButton
                   onClick={() => handleRefreshRecommendations(false)}
-                  disabled={refreshingRecs}
-                  title="Refresh recommendations based on your latest profile"
+                  disabled={refreshingRecs || recsRefreshCount >= MAX_RECS_REFRESHES}
+                  title={recsRefreshCount >= MAX_RECS_REFRESHES ? 'Refresh limit reached (3/3)' : `Refresh recommendations (${MAX_RECS_REFRESHES - recsRefreshCount} attempts left)`}
                 >
                   <svg
                     className={refreshingRecs ? 'spinning' : ''}
@@ -3081,7 +3274,7 @@ const LMS = () => {
                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
                     <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
                   </svg>
-                  {refreshingRecs ? 'Refreshing...' : 'Refresh'}
+                  {refreshingRecs ? 'Refreshing...' : recsRefreshCount >= MAX_RECS_REFRESHES ? 'Limit Reached' : `Refresh (${MAX_RECS_REFRESHES - recsRefreshCount} left)`}
                 </RefreshRecsButton>
               </CardTitle>
               <RecommendationsScrollContainer>
@@ -3269,8 +3462,12 @@ const LMS = () => {
 
                 <GenerateQuestionsButton 
                   onClick={handleGenerateQuestions}
-                  disabled={questionsLoading || !selectedSectionId}
-                  title={!selectedSectionId ? 'Select a section first' : `Generate questions for ${selectedSectionTitle || 'selected section'}`}
+                  disabled={questionsLoading || !selectedSectionId || generateQuestionsCount >= MAX_GENERATE_QUESTIONS}
+                  title={
+                    !selectedSectionId ? 'Select a section first'
+                    : generateQuestionsCount >= MAX_GENERATE_QUESTIONS ? 'Generation limit reached (3/3)'
+                    : `Generate questions for ${selectedSectionTitle || 'selected section'} (${MAX_GENERATE_QUESTIONS - generateQuestionsCount} attempts left)`
+                  }
                 >
                   {questionsLoading ? (
                     <>
@@ -3278,6 +3475,10 @@ const LMS = () => {
                         <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                       </svg>
                       Generating Questions...
+                    </>
+                  ) : generateQuestionsCount >= MAX_GENERATE_QUESTIONS ? (
+                    <>
+                      Limit Reached (3/3)
                     </>
                   ) : (
                     <>
@@ -3295,7 +3496,7 @@ const LMS = () => {
                       Generate Questions
                       {selectedSectionId && courseSections.length > 0 && (
                         <span style={{ fontSize: '0.8em', opacity: 0.85, marginLeft: '4px' }}>
-                          ({selectedSectionTitle})
+                          ({selectedSectionTitle}) · {MAX_GENERATE_QUESTIONS - generateQuestionsCount} left
                         </span>
                       )}
                     </>
@@ -3385,14 +3586,18 @@ const LMS = () => {
                 )}
 
                 <ButtonContainer>
-                  <SubmitButton onClick={handleNextQuestions} disabled={Object.keys(answers).length === 0}>
-                    {(() => {
-                      const PAGE_SIZE = 5
-                      const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
-                      const isLastPage = currentPage >= totalPages - 1
-                      return isLastPage ? 'Submit Page' : 'Next Questions'
-                    })()}
-                  </SubmitButton>
+                  {(() => {
+                    const PAGE_SIZE = 5
+                    const pageQuestions = courseQuestions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                    const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+                    const isLastPage = currentPage >= totalPages - 1
+                    const allAnswered = pageQuestions.length > 0 && pageQuestions.every(q => answers[q.id] && answers[q.id].trim())
+                    return (
+                      <SubmitButton onClick={handleNextQuestions} disabled={!allAnswered}>
+                        {isLastPage ? 'Next Page' : 'Next Questions'}
+                      </SubmitButton>
+                    )
+                  })()}
                   <EvaluateButton onClick={handleSubmitAndEvaluate} disabled={Object.keys(answers).length === 0}>
                     Submit & Evaluate
                   </EvaluateButton>

@@ -31,6 +31,7 @@ from .lms_deadline import LMSDeadline
 from .lms_certificate import LMSCertificate
 from .azel_search_url import AzelSearchUrl
 from .reserved_seat import ReservedSeat
+from .lms_rate_limit import LMSRateLimit
 
 # Profile Feature Models
 from .user_experience import UserExperience
@@ -78,6 +79,7 @@ __all__ = [
     'LMSCertificate',
     'AzelSearchUrl',
     'ReservedSeat',
+    'LMSRateLimit',
     # Profile Feature Models
     'UserExperience',
     'UserEducation',

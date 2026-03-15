@@ -12,6 +12,16 @@ from dependencies.auth import get_current_user
 from dependencies.subscription import require_lms_quota
 from config.database_orm import get_db
 from services.lms_service import LMSService
+from services.rate_limit_service import (
+    RateLimitService,
+    RateLimitExceeded,
+    ACTION_GENERATE_RECOMMENDATIONS,
+    ACTION_GENERATE_QUESTIONS,
+)
+
+# Maximum allowed calls per user per action
+_MAX_REC_REFRESHES = 3
+_MAX_QUESTION_GENERATIONS = 3
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
 from agents.Azel_agent import get_azel_agent
 from agents.Seez_agent import get_seez_agent
@@ -636,9 +646,30 @@ async def generate_recommendations(
     Dismisses all existing (non-dismissed) recommendations, then runs the
     CourseRecommendationAgent with the latest user profile + Zed context to
     produce fresh, personalised recommendations.
+
+    Rate-limited to {_MAX_REC_REFRESHES} calls per user (server-enforced).
     """
     user_id = current_user["id"]
     logger.info(f"[LMS] generate-recommendations: user_id={user_id}, limit={limit}")
+
+    # ── Server-side rate-limit check ────────────────────────────────────────
+    rl_service = RateLimitService(service.db)
+    try:
+        remaining = rl_service.check_and_increment(
+            user_id=user_id,
+            action=ACTION_GENERATE_RECOMMENDATIONS,
+            max_calls=_MAX_REC_REFRESHES,
+        )
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "message": str(exc),
+                "action": ACTION_GENERATE_RECOMMENDATIONS,
+                "max_calls": _MAX_REC_REFRESHES,
+                "remaining": 0,
+            },
+        )
 
     # 1. Dismiss existing non-dismissed recommendations so the agent creates fresh ones
     service.dismiss_all_recommendations(user_id)
@@ -673,7 +704,14 @@ async def generate_recommendations(
             "recommendations_created": result.get('recommendations_created', 0),
             "recommendations": fresh_recs,
             "total": len(fresh_recs),
+            "rate_limit": {
+                "action": ACTION_GENERATE_RECOMMENDATIONS,
+                "remaining": remaining,
+                "max_calls": _MAX_REC_REFRESHES,
+            },
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[LMS] generate-recommendations error: {e}", exc_info=True)
         raise HTTPException(
@@ -857,6 +895,27 @@ async def trigger_azel_agent(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You must be enrolled in this course to generate questions"
             )
+
+        # --- Server-side rate-limit check (per user per course) ---
+        rl_service = RateLimitService(service.db)
+        try:
+            rl_remaining = rl_service.check_and_increment(
+                user_id=user_id,
+                action=ACTION_GENERATE_QUESTIONS,
+                max_calls=_MAX_QUESTION_GENERATIONS,
+                course_id=course_id,
+            )
+        except RateLimitExceeded as exc:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "message": str(exc),
+                    "action": ACTION_GENERATE_QUESTIONS,
+                    "course_id": course_id,
+                    "max_calls": _MAX_QUESTION_GENERATIONS,
+                    "remaining": 0,
+                },
+            )
         
         # --- Seed sections + backfill orphan questions (POST is mutation-safe) ---
         sections = service.ensure_default_level_sections(course_id)
@@ -910,19 +969,28 @@ async def trigger_azel_agent(
         
         # Always return result, even if not fully successful
         # This allows frontend to show partial results
+        _rate_limit_payload = {
+            "action": ACTION_GENERATE_QUESTIONS,
+            "course_id": course_id,
+            "remaining": rl_remaining,
+            "max_calls": _MAX_QUESTION_GENERATIONS,
+        }
+
         if not result.get('success'):
             logger.warning(f"Azel agent processing completed with errors: {result.get('error')}")
             return {
                 "message": "Course context processing completed with errors",
                 "result": result,
-                "success": False
+                "success": False,
+                "rate_limit": _rate_limit_payload,
             }
-        
+
         logger.info(f"Azel agent processing completed successfully for user_id={user_id}, course_id={course_id}, section_id={section_id}")
         return {
             "message": "Course context processed successfully",
             "result": result,
-            "success": True
+            "success": True,
+            "rate_limit": _rate_limit_payload,
         }
         
     except HTTPException:

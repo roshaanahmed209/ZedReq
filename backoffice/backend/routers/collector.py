@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import re
 import hmac
+import ipaddress
 
 from dependencies.database import get_db
 from config.settings import settings
@@ -96,7 +97,7 @@ class APIMetricRequest(BaseModel):
     @validator('ip_address')
     def validate_ip(cls, v):
         if v:
-            if not validate_ip(v):
+            if not validate_ip_address(v):
                 raise ValueError("Invalid IP address format")
             return v
         return v
@@ -229,7 +230,7 @@ class ErrorLogRequest(BaseModel):
     @validator('ip_address')
     def validate_ip(cls, v):
         if v:
-            if not validate_ip(v):
+            if not validate_ip_address(v):
                 raise ValueError("Invalid IP address format")
             return v
         return v
@@ -260,7 +261,7 @@ class SecurityEventRequest(BaseModel):
     @validator('ip_address')
     def validate_ip(cls, v):
         if v:
-            if not validate_ip(v):
+            if not validate_ip_address(v):
                 raise ValueError("Invalid IP address format")
             return v
         return v
@@ -304,7 +305,7 @@ class SessionRequest(BaseModel):
     @validator('ip_address')
     def validate_ip(cls, v):
         if v:
-            if not validate_ip(v):
+            if not validate_ip_address(v):
                 raise ValueError("Invalid IP address format")
             return v
         return v
