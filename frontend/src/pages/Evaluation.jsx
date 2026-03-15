@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -862,6 +862,39 @@ const EmptyStateSubtext = styled.div`
   color: var(--text-light);
 `
 
+// ---------------------------------------------------------------------------
+// Rate-limit constants — module-level so they are never re-declared per render
+// ---------------------------------------------------------------------------
+const MAX_EVALUATIONS = 3
+
+/**
+ * usePersistentCounter
+ * A small custom hook that keeps a numeric counter in both React state and
+ * localStorage so the value survives page refreshes and logout/login cycles.
+ *
+ * @param {string}  key  - localStorage key (should be user-scoped by the caller)
+ * @param {number}  max  - upper bound; stored value is clamped to [0, max]
+ * @returns {[number, (updater: number | ((prev: number) => number)) => void]}
+ */
+function usePersistentCounter(key, max) {
+  const [count, _setCount] = useState(() => {
+    const raw = parseInt(localStorage.getItem(key) || '0', 10)
+    // Clamp to [0, max] to neutralise any manual localStorage tampering
+    return Math.min(Math.max(0, isNaN(raw) ? 0 : raw), max)
+  })
+
+  const setCount = useCallback((updater) => {
+    _setCount(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      const clamped = Math.min(Math.max(0, next), max)
+      localStorage.setItem(key, String(clamped))
+      return clamped
+    })
+  }, [key, max]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [count, setCount]
+}
+
 const Evaluation = () => {
   const [selectedCourseId, setSelectedCourseId] = useState(null)
   const [courses, setCourses] = useState([])
@@ -882,7 +915,14 @@ const Evaluation = () => {
   const [filterCourseId, setFilterCourseId] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout } = useAuth()
+  const { logout, user: authUser } = useAuth()
+
+  // Persistent rate-limit counter — scoped per user, clamped, tamper-resistant
+  const evalKey = React.useMemo(
+    () => authUser?.id ? `lms_eval_count_${authUser.id}_${selectedCourseId || 'global'}` : null,
+    [authUser?.id, selectedCourseId]
+  )
+  const [evaluationCount, setEvaluationCount] = usePersistentCounter(evalKey ?? '__noop__', MAX_EVALUATIONS)
 
   // Fetch courses on mount
   useEffect(() => {
@@ -1011,6 +1051,10 @@ const Evaluation = () => {
 
   const handleRunEvaluation = async () => {
     if (!selectedCourseId) return
+    if (evaluationCount >= MAX_EVALUATIONS) {
+      console.warn('[Evaluation] handleRunEvaluation: Attempt limit reached')
+      return
+    }
     
     try {
       setEvaluating(true)
@@ -1019,6 +1063,15 @@ const Evaluation = () => {
       if (response.data) {
         const result = response.data.result || {}
         const message = response.data.message || ''
+        
+        // Update rate limit counter from server response if available
+        if (response.data.rate_limit?.remaining !== undefined) {
+          const remaining = response.data.rate_limit.remaining
+          setEvaluationCount(() => MAX_EVALUATIONS - remaining)
+        } else {
+          // Fallback: increment local counter
+          setEvaluationCount(prev => prev + 1)
+        }
         
         // Check if no answers were found (this is now a success response, not an error)
         if (message.includes('No unevaluated answers found') || 
@@ -1040,8 +1093,21 @@ const Evaluation = () => {
       }
     } catch (err) {
       console.error('Error running evaluation:', err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to run evaluation'
-      alert(`Error: ${errorMsg}`)
+      
+      // Handle rate limit error (429)
+      if (err.response?.status === 429) {
+        const detail = err.response.data?.detail
+        if (detail?.remaining !== undefined) {
+          setEvaluationCount(() => MAX_EVALUATIONS - detail.remaining)
+        } else {
+          setEvaluationCount(MAX_EVALUATIONS) // Assume limit reached
+        }
+        const errorMsg = detail?.message || detail || 'Evaluation limit reached. Maximum 3 attempts allowed per course.'
+        alert(`Error: ${errorMsg}`)
+      } else {
+        const errorMsg = err.response?.data?.detail || err.message || 'Failed to run evaluation'
+        alert(`Error: ${typeof errorMsg === 'string' ? errorMsg : errorMsg.message || 'Failed to run evaluation'}`)
+      }
     } finally {
       setEvaluating(false)
     }
@@ -1237,20 +1303,30 @@ const Evaluation = () => {
                   {selectedCourseId && (
                     <button
                       onClick={handleRunEvaluation}
-                      disabled={evaluating}
+                      disabled={evaluating || evaluationCount >= MAX_EVALUATIONS}
+                      title={
+                        evaluationCount >= MAX_EVALUATIONS
+                          ? 'Evaluation limit reached (3/3)'
+                          : `Run AI evaluation (${MAX_EVALUATIONS - evaluationCount} attempts left)`
+                      }
                       style={{
                         marginTop: '20px',
                         width: '100%',
                         padding: '12px',
-                        background: 'var(--primary)',
+                        background: evaluationCount >= MAX_EVALUATIONS ? 'var(--border)' : 'var(--primary)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: evaluating ? 'not-allowed' : 'pointer',
-                        opacity: evaluating ? 0.6 : 1
+                        cursor: (evaluating || evaluationCount >= MAX_EVALUATIONS) ? 'not-allowed' : 'pointer',
+                        opacity: (evaluating || evaluationCount >= MAX_EVALUATIONS) ? 0.6 : 1
                       }}
                     >
-                      {evaluating ? 'Running AI Evaluation...' : 'Run AI Evaluation'}
+                      {evaluating
+                        ? 'Running AI Evaluation...'
+                        : evaluationCount >= MAX_EVALUATIONS
+                        ? `Limit Reached (${MAX_EVALUATIONS}/${MAX_EVALUATIONS})`
+                        : `Run AI Evaluation (${MAX_EVALUATIONS - evaluationCount} left)`
+                      }
                     </button>
                   )}
                 </>

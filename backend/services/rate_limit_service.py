@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # ── well-known action names (use these constants everywhere) ─────────────────
 ACTION_GENERATE_RECOMMENDATIONS = "generate_recommendations"
 ACTION_GENERATE_QUESTIONS = "generate_questions"
+ACTION_EVALUATE_ANSWERS = "evaluate_answers"
 
 
 class RateLimitExceeded(Exception):

@@ -17,11 +17,13 @@ from services.rate_limit_service import (
     RateLimitExceeded,
     ACTION_GENERATE_RECOMMENDATIONS,
     ACTION_GENERATE_QUESTIONS,
+    ACTION_EVALUATE_ANSWERS,
 )
 
 # Maximum allowed calls per user per action
 _MAX_REC_REFRESHES = 3
 _MAX_QUESTION_GENERATIONS = 3
+_MAX_EVALUATIONS = 3
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
 from agents.Azel_agent import get_azel_agent
 from agents.Seez_agent import get_seez_agent
@@ -1015,7 +1017,9 @@ async def trigger_seez_agent_course(
     db: Session = Depends(get_db)
 ):
     """
-    Trigger Seez agent to evaluate all unevaluated answers for a course
+    Trigger Seez agent to evaluate all unevaluated answers for a course.
+    
+    Rate-limited to {_MAX_EVALUATIONS} calls per user per course (server-enforced).
     
     This endpoint:
     1. Retrieves all unevaluated answers for the user in the specified course
@@ -1033,6 +1037,30 @@ async def trigger_seez_agent_course(
                 detail="Course not found"
             )
         
+        # Get user ID
+        user_id = current_user.get('id') or current_user.get('uid')
+        
+        # Check and increment rate limit (course-specific)
+        rl_service = RateLimitService(db)
+        try:
+            remaining = rl_service.check_and_increment(
+                user_id=user_id,
+                action=ACTION_EVALUATE_ANSWERS,
+                max_calls=_MAX_EVALUATIONS,
+                course_id=course_id
+            )
+        except RateLimitExceeded as e:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "message": f"Rate limit exceeded for evaluation. Max {_MAX_EVALUATIONS} attempts allowed per course.",
+                    "action": ACTION_EVALUATE_ANSWERS,
+                    "max_calls": _MAX_EVALUATIONS,
+                    "remaining": 0,
+                    "course_id": course_id,
+                }
+            )
+        
         # Get Seez agent
         seez_agent = get_seez_agent()
         
@@ -1041,9 +1069,6 @@ async def trigger_seez_agent_course(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Seez agent is not available. Please check OpenAI configuration."
             )
-        
-        # Get user ID
-        user_id = current_user.get('id') or current_user.get('uid')
         
         # Evaluate all course answers
         result = seez_agent.evaluate_course_answers(
@@ -1059,7 +1084,13 @@ async def trigger_seez_agent_course(
                 # Return success response with info message
                 return {
                     "message": "No unevaluated answers found for this course",
-                    "result": result
+                    "result": result,
+                    "rate_limit": {
+                        "action": ACTION_EVALUATE_ANSWERS,
+                        "max_calls": _MAX_EVALUATIONS,
+                        "remaining": remaining,
+                        "course_id": course_id,
+                    }
                 }
             else:
                 # Actual error occurred
@@ -1070,7 +1101,13 @@ async def trigger_seez_agent_course(
         
         return {
             "message": "Answers evaluated successfully",
-            "result": result
+            "result": result,
+            "rate_limit": {
+                "action": ACTION_EVALUATE_ANSWERS,
+                "max_calls": _MAX_EVALUATIONS,
+                "remaining": remaining,
+                "course_id": course_id,
+            }
         }
         
     except HTTPException:
