@@ -155,7 +155,7 @@ class AzelAgent:
         # Configuration
         self.kb_ttl_minutes = 30  # Fixed 30-minute TTL
         self.max_search_results = int(os.environ.get('AZEL_MAX_SEARCH_RESULTS', 10))
-        self.questions_per_course = int(os.environ.get('AZEL_QUESTIONS_PER_COURSE', 5))
+        self.questions_per_course = int(os.environ.get('AZEL_QUESTIONS_PER_COURSE', 20))
         self.embedding_dimension = 1536  # OpenAI text-embedding-3-small dimension
     
     def _get_zed_context(self, user_id: int) -> Optional[str]:

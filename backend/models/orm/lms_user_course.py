@@ -82,5 +82,7 @@ class LMSUserCourse(Base):
             data['course_description'] = self.course.description
             data['course_lessons'] = self.course.lessons
             data['course_duration'] = self.course.duration
+            data['course_category'] = self.course.category
+            data['course_difficulty'] = self.course.difficulty
         
         return data

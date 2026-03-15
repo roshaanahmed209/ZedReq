@@ -12,6 +12,7 @@ from models.orm import (
     LMSUserDomainPerformance, LMSUserCoursePerformance, LMSDashboard, LMSWeeklyPerformance,
     LMSActivity, LMSRecommendation, LMSDeadline, LMSCertificate
 )
+from models.orm.azel_search_url import AzelSearchUrl
 
 # Import cache functions
 from config.cache import (
@@ -268,16 +269,50 @@ class LMSService:
         
         return [section.to_dict() for section in sections]
     
-    def get_course_resources(self, course_id: int) -> List[Dict[str, Any]]:
-        """Get resources for a course"""
+    def get_course_resources(self, course_id: int, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get resources for a course.
+
+        Primary source: lms_course_resources (static resources attached to the course).
+        Fallback: azel_search_urls (URLs gathered by the AI agent when generating
+        questions for this user+course pair) – returned only when the primary table
+        has no entries so that every AI-generated course surfaces its references.
+        """
         resources = (
             self.db.query(LMSCourseResource)
             .filter(LMSCourseResource.course_id == course_id)
             .order_by(LMSCourseResource.order_index)
             .all()
         )
-        
-        return [resource.to_dict() for resource in resources]
+
+        if resources:
+            return [resource.to_dict() for resource in resources]
+
+        # Fallback: use search URLs stored by the Azel agent
+        if user_id is not None:
+            search_urls = (
+                self.db.query(AzelSearchUrl)
+                .filter(
+                    AzelSearchUrl.course_id == course_id,
+                    AzelSearchUrl.user_id == user_id,
+                )
+                .order_by(AzelSearchUrl.created_at)
+                .all()
+            )
+            return [
+                {
+                    "id": su.id,
+                    "course_id": su.course_id,
+                    "title": su.title or su.url,
+                    "resource_type": "link",
+                    "url": su.url,
+                    "description": su.snippet,
+                    "order_index": idx,
+                    "created_at": su.created_at,
+                }
+                for idx, su in enumerate(search_urls)
+            ]
+
+        return []
     
     # ========================================================================
     # User Course Operations

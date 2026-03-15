@@ -158,7 +158,8 @@ async def get_course_resources(
     service: LMSService = Depends(get_lms_service)
 ):
     """Get resources for a course"""
-    resources = service.get_course_resources(course_id)
+    user_id = current_user.get("id") or current_user.get("uid")
+    resources = service.get_course_resources(course_id, user_id=user_id)
     
     return {
         "resources": resources,

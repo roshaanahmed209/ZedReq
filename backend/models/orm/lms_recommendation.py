@@ -69,5 +69,7 @@ class LMSRecommendation(Base):
             data['course_title'] = self.course.title
             data['course_icon'] = self.course.icon
             data['course_description'] = self.course.description
+            data['course_category'] = self.course.category
+            data['course_difficulty'] = self.course.difficulty
         
         return data

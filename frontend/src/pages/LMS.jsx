@@ -1798,6 +1798,34 @@ const SidePanelItem = styled.div`
   }
 `
 
+const ResourcesScrollContainer = styled.div`
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-lighter);
+  }
+
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+`
+
 const ProgressIndicator = styled.div`
   display: flex;
   align-items: center;
@@ -2024,6 +2052,35 @@ const EvaluateButton = styled.button`
   }
 `
 
+const PortalProgressWrapper = styled.div`
+  margin-bottom: 20px;
+`
+
+const PortalProgressLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85em;
+  color: var(--text-light);
+  margin-bottom: 6px;
+`
+
+const PortalProgressTrack = styled.div`
+  width: 100%;
+  height: 8px;
+  background: var(--hover-bg);
+  border-radius: 10px;
+  overflow: hidden;
+`
+
+const PortalProgressFill = styled.div`
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.4s ease;
+  width: ${props => props.progress || 0}%;
+`
+
 const PortalCourseInfo = styled.div`
   background: rgba(10, 102, 194, 0.1);
   border: 1px solid rgba(10, 102, 194, 0.2);
@@ -2093,24 +2150,6 @@ const AnimatedCourseCard = ({ course, index, onCourseClick }) => {
         <CourseContent>
           <CourseTitle>{course.title}</CourseTitle>
           <CourseDescription>{course.description}</CourseDescription>
-          <CourseFooter>
-            <CourseInfo>
-              <InfoItem>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                {course.duration}
-              </InfoItem>
-              <InfoItem>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                {course.lessons}
-              </InfoItem>
-            </CourseInfo>
-          </CourseFooter>
           {course.progress > 0 && (
             <ProgressBar>
               <ProgressFill progress={course.progress} />
@@ -2146,9 +2185,25 @@ const LMS = () => {
   const [courseResources, setCourseResources] = useState([])
   const [selectedSectionId, setSelectedSectionId] = useState(null)
   const [answers, setAnswers] = useState({}) // questionId -> answer text
+  const [sectionPerf, setSectionPerf] = useState([])  // [{section_id, title, questions_answered, accuracy_percentage}]
+  const [currentPage, setCurrentPage] = useState(0)   // 0-based page index, 5 questions per page
 
   // Derived: title of the currently selected section (avoids repeated .find() in JSX)
   const selectedSectionTitle = (courseSections.find(s => s.id === selectedSectionId)?.title) || ''
+
+  /**
+   * Returns true if the given section is locked (user has not passed the previous level).
+   * Basic (index 0) is always unlocked.
+   * Subsequent levels require >= 20 questions answered AND >= 50% accuracy on the prior level.
+   */
+  const isSectionLocked = (section) => {
+    const idx = courseSections.findIndex(s => s.id === section.id)
+    if (idx <= 0) return false // Basic always open
+    const prevSection = courseSections[idx - 1]
+    const prevPerf = sectionPerf.find(p => p.section_id === prevSection.id)
+    if (!prevPerf) return true
+    return prevPerf.questions_answered < 20 || prevPerf.accuracy_percentage < 50
+  }
 
   /**
    * Shared helper — fetches questions for a given course+section and updates state.
@@ -2213,8 +2268,8 @@ const LMS = () => {
           const description = course.course_description || course.description || ''
           const lessons = course.course_lessons !== undefined ? course.course_lessons : (course.lessons || 0)
           const duration = course.course_duration || course.duration || 'N/A'
-          const category = course.category || 'General'
-          const difficulty = course.difficulty || 'beginner'
+          const category = course.course_category || course.category || 'General'
+          const difficulty = course.course_difficulty || course.difficulty || 'beginner'
           
           return {
             id: course.course_id || course.id,
@@ -2394,6 +2449,7 @@ const LMS = () => {
     if (sectionId === selectedSectionId) return
     setSelectedSectionId(sectionId)
     setAnswers({}) // Clear previous answers
+    setCurrentPage(0) // Reset to first page for the new section
     
     if (selectedCourse) {
       try {
@@ -2455,11 +2511,23 @@ const LMS = () => {
     navigate('/feed')
   }
 
-  const handleCourseClick = (course) => {
+  const handleCourseClick = async (course) => {
     setSelectedCourse(course)
     setSelectedSectionId(null) // Reset section selection for new course
     setAnswers({}) // Clear previous answers
+    setCurrentPage(0)
     setIsPortalOpen(true)
+
+    // Fetch per-section performance so level-locking and progress bar are accurate
+    try {
+      const perfRes = await lmsAPI.getSectionPerformance(course.id)
+      if (perfRes.data && perfRes.data.sections) {
+        setSectionPerf(perfRes.data.sections)
+      }
+    } catch (err) {
+      console.warn('[LMS] handleCourseClick: Could not fetch section performance:', err)
+      setSectionPerf([])
+    }
   }
 
   const handleEnrollCourse = async (courseId) => {
@@ -2489,6 +2557,16 @@ const LMS = () => {
 
   const handleClosePortal = () => {
     setIsPortalOpen(false)
+
+    // Update the matching course card's progress bar before tearing down portal state
+    if (selectedCourse && sectionPerf.length > 0) {
+      const totalAnswered = sectionPerf.reduce((sum, p) => sum + (p.questions_answered || 0), 0)
+      const newProgress = Math.min(Math.round((totalAnswered / 60) * 100), 100)
+      setCourses(prev => prev.map(c =>
+        c.id === selectedCourse.id ? { ...c, progress: newProgress } : c
+      ))
+    }
+
     setTimeout(() => {
       setSelectedCourse(null)
       setSelectedSectionId(null)
@@ -2496,6 +2574,8 @@ const LMS = () => {
       setCourseSections([])
       setCourseResources([])
       setAnswers({})
+      setCurrentPage(0)
+      setSectionPerf([])
     }, 400)
   }
 
@@ -2506,39 +2586,56 @@ const LMS = () => {
     }))
   }
 
-  const handleSubmitAnswers = async () => {
+  const handleNextQuestions = async () => {
     if (!selectedCourse) return
 
     const answeredEntries = Object.entries(answers).filter(([_, a]) => a && a.trim())
     if (answeredEntries.length === 0) {
-      alert('Please provide at least one answer before submitting.')
+      alert('Please provide at least one answer before continuing.')
       return
     }
 
-    try {
-      console.log('[LMS] handleSubmitAnswers: Submitting answers...')
+    const PAGE_SIZE = 5
+    const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+    const isLastPage = currentPage >= totalPages - 1
 
-      // Submit all answers
+    try {
+      console.log(`[LMS] handleNextQuestions: Submitting ${answeredEntries.length} answer(s) for page ${currentPage + 1}...`)
+
+      // Submit current page's answers
       await Promise.all(
         answeredEntries.map(([questionId, answerText]) =>
           lmsAPI.submitAnswer(parseInt(questionId), answerText)
         )
       )
+      console.log(`[LMS] handleNextQuestions: Submitted successfully`)
 
-      console.log(`[LMS] handleSubmitAnswers: ${answeredEntries.length} answer(s) submitted successfully`)
-      alert('Answers submitted successfully! Evaluation is running in the background.')
-      setAnswers({})
-      handleClosePortal()
-
-      // Trigger evaluation in the background (fire-and-forget)
+      // Fire-and-forget evaluation so progress stats update in the background
       lmsAPI.triggerSeezEvaluateCourse(selectedCourse.id)
-        .then(() => console.log('[LMS] handleSubmitAnswers: Background evaluation completed'))
-        .catch(err => console.warn('[LMS] handleSubmitAnswers: Background evaluation error:', err))
+        .then(() => console.log('[LMS] handleNextQuestions: Background evaluation completed'))
+        .catch(err => console.warn('[LMS] handleNextQuestions: Background evaluation error:', err))
 
-      // Refresh dashboard to update stats
-      await fetchAllData()
+      // Refresh section performance so progress bar and lock status stay current
+      try {
+        const perfRes = await lmsAPI.getSectionPerformance(selectedCourse.id)
+        if (perfRes.data && perfRes.data.sections) setSectionPerf(perfRes.data.sections)
+      } catch (e) {
+        console.warn('[LMS] handleNextQuestions: Could not refresh section performance:', e)
+      }
+
+      setAnswers({})
+
+      if (isLastPage) {
+        // No more questions — inform user and close portal
+        alert('You have completed all questions for this level! Your answers have been submitted.')
+        handleClosePortal()
+        await fetchAllData()
+      } else {
+        // Advance to next page (pure frontend slice — no API call)
+        setCurrentPage(p => p + 1)
+      }
     } catch (err) {
-      console.error('[LMS] handleSubmitAnswers: Error submitting answers:', err)
+      console.error('[LMS] handleNextQuestions: Error submitting answers:', err)
       alert('Failed to submit answers. Please try again.')
     }
   }
@@ -2768,11 +2865,11 @@ const LMS = () => {
                       // Backend returns flat structure: course_id, course_title, course_icon, course_description
                       // OR nested: rec.course (if include_relations returns full course object)
                       const courseId = rec.course_id || (rec.course && rec.course.id)
-                      const courseTitle = rec.course_title || (rec.course && rec.course.title) || 'Recommended Course'
-                      const courseIcon = rec.course_icon || (rec.course && rec.course.icon) || (courseTitle ? courseTitle.substring(0, 2).toUpperCase() : 'RC')
-                      const courseDescription = rec.course_description || (rec.course && rec.course.description) || rec.reason || 'A course recommended for you'
-                      const courseCategory = (rec.course && rec.course.category) || 'General'
-                      const courseDifficulty = (rec.course && rec.course.difficulty) || 'beginner'
+                      const courseTitle = rec.course_title || 'Recommended Course'
+                      const courseIcon = rec.course_icon || (courseTitle ? courseTitle.substring(0, 2).toUpperCase() : 'RC')
+                      const courseDescription = rec.course_description || rec.reason || 'A course recommended for you'
+                      const courseCategory = rec.course_category || 'General'
+                      const courseDifficulty = rec.course_difficulty || 'beginner'
                       
                       if (!courseId) {
                         console.warn('[LMS] Recommendation missing course_id:', rec)
@@ -2872,15 +2969,6 @@ const LMS = () => {
                     <StatValue>{dashboard.total_questions || 0}</StatValue>
                     <StatLabel>Total Questions</StatLabel>
                   </div>
-                  {dashboard.questions_change && (
-                    <StatChange positive={dashboard.questions_change > 0}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                      </svg>
-                      {dashboard.questions_change > 0 ? '+' : ''}{dashboard.questions_change}% from last week
-                    </StatChange>
-                  )}
                 </StatCard>
 
                 <StatCard>
@@ -2888,15 +2976,6 @@ const LMS = () => {
                     <StatValue>{dashboard.correct_answers || 0}</StatValue>
                     <StatLabel>Correct Answers</StatLabel>
                   </div>
-                  {dashboard.correct_change && (
-                    <StatChange positive={dashboard.correct_change > 0}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                      </svg>
-                      {dashboard.correct_change > 0 ? '+' : ''}{dashboard.correct_change}% improvement
-                    </StatChange>
-                  )}
                 </StatCard>
 
                 <StatCard>
@@ -2904,15 +2983,6 @@ const LMS = () => {
                     <StatValue>{dashboard.wrong_answers || 0}</StatValue>
                     <StatLabel>Wrong Answers</StatLabel>
                   </div>
-                  {dashboard.wrong_change && (
-                    <StatChange positive={dashboard.wrong_change > 0}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                        <polyline points="17 18 23 18 23 12"></polyline>
-                      </svg>
-                      {dashboard.wrong_change > 0 ? '+' : ''}{dashboard.wrong_change}% from last week
-                    </StatChange>
-                  )}
                 </StatCard>
               </>
             ) : null}
@@ -2928,30 +2998,38 @@ const LMS = () => {
               </CardTitle>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
-              ) : dashboard ? (
-                <ProgressCircle>
-                  <svg width="150" height="150">
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--primary)" />
-                        <stop offset="100%" stopColor="var(--secondary)" />
-                      </linearGradient>
-                    </defs>
-                    <CircleBackground cx="75" cy="75" r="60" />
-                    <CircleProgress 
-                      cx="75" 
-                      cy="75" 
-                      r="60" 
-                      circumference={2 * Math.PI * 60}
-                      offset={2 * Math.PI * 60 * (1 - (dashboard.accuracy || 0) / 100)}
-                    />
-                  </svg>
-                  <CircleText>
-                    <CircleValue>{(dashboard.accuracy || 0).toFixed(1)}%</CircleValue>
-                    <CircleLabel>Accuracy</CircleLabel>
-                  </CircleText>
-                </ProgressCircle>
-              ) : null}
+              ) : dashboard ? (() => {
+                const totalQ = dashboard.total_questions || 0
+                const correctA = dashboard.correct_answers || 0
+                // Use backend's pre-computed value first; fall back to frontend calculation
+                const accuracy = dashboard.overall_accuracy != null
+                  ? parseFloat(dashboard.overall_accuracy)
+                  : totalQ > 0 ? (correctA / totalQ) * 100 : 0
+                return (
+                  <ProgressCircle>
+                    <svg width="150" height="150">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="var(--primary)" />
+                          <stop offset="100%" stopColor="var(--secondary)" />
+                        </linearGradient>
+                      </defs>
+                      <CircleBackground cx="75" cy="75" r="60" />
+                      <CircleProgress
+                        cx="75"
+                        cy="75"
+                        r="60"
+                        circumference={2 * Math.PI * 60}
+                        offset={2 * Math.PI * 60 * (1 - accuracy / 100)}
+                      />
+                    </svg>
+                    <CircleText>
+                      <CircleValue>{accuracy.toFixed(1)}%</CircleValue>
+                      <CircleLabel>Accuracy</CircleLabel>
+                    </CircleText>
+                  </ProgressCircle>
+                )
+              })() : null}
             </DashboardCard>
 
             {/* Learning Streak */}
@@ -3021,7 +3099,7 @@ const LMS = () => {
                             {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
                           </ActivityIcon>
                           <ActivityContent style={{ flex: 1 }}>
-                            <ActivityTitle>{rec.course_title || rec.recommendation_text || 'Recommended Course'}</ActivityTitle>
+                            <ActivityTitle>{rec.course_title || 'Recommended Course'}</ActivityTitle>
                             <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
                           </ActivityContent>
                         </div>
@@ -3073,7 +3151,7 @@ const LMS = () => {
                     const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
                     const height = ((day.questions_answered || 0) / maxValue) * 100
                     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    const dayName = day.day_name || dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
+                    const dayName = dayNames[new Date(day.date).getDay()] || `Day ${index + 1}`
                     
                     return (
                       <div key={day.date || index} className="trend-bar-wrapper">
@@ -3113,61 +3191,79 @@ const LMS = () => {
             <>
               <PortalSidePanel>
                 <SidePanelSection>
-                  <SidePanelTitle>Course Info</SidePanelTitle>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    {selectedCourse.duration}
-                  </PortalCourseInfoText>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    {selectedCourse.lessons} lessons
-                  </PortalCourseInfoText>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="12" x2="2" y2="12"></line>
-                      <polyline points="12 2 2 12 12 22"></polyline>
-                    </svg>
-                    {selectedCourse.progress}% complete
-                  </PortalCourseInfoText>
-                </SidePanelSection>
-
-                <SidePanelSection>
                   <SidePanelTitle>Level / Section</SidePanelTitle>
                   {courseSections.length > 0 ? (
-                    courseSections.map((section) => (
-                      <SidePanelItem 
-                        key={section.id} 
-                        active={section.id === selectedSectionId}
-                        onClick={() => handleSectionSelect(section.id)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                      >
-                        <span>{section.title || `Section ${section.order_index + 1}`}</span>
-                        {section.id === selectedSectionId && (
-                          <span style={{ fontSize: '0.75em', opacity: 0.7 }}>● selected</span>
-                        )}
-                      </SidePanelItem>
-                    ))
+                    courseSections.map((section) => {
+                      const locked = isSectionLocked(section)
+                      const perf = sectionPerf.find(p => p.section_id === section.id)
+                      return (
+                        <SidePanelItem
+                          key={section.id}
+                          active={section.id === selectedSectionId}
+                          onClick={() => !locked && handleSectionSelect(section.id)}
+                          style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            opacity: locked ? 0.45 : 1,
+                            cursor: locked ? 'not-allowed' : 'pointer',
+                          }}
+                          title={locked ? 'Complete the previous level with ≥20 answers and ≥50% accuracy to unlock' : ''}
+                        >
+                          <span>{section.title || `Section ${section.order_index + 1}`}</span>
+                          <span style={{ fontSize: '0.75em', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {locked
+                              ? '🔒'
+                              : section.id === selectedSectionId
+                                ? '● selected'
+                                : perf && perf.questions_answered > 0
+                                  ? `${perf.questions_answered}/20`
+                                  : null}
+                          </span>
+                        </SidePanelItem>
+                      )
+                    })
                   ) : (
                     <SidePanelItem>No sections available</SidePanelItem>
                   )}
                 </SidePanelSection>
 
-                <SidePanelSection>
+                <SidePanelSection style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                   <SidePanelTitle>Resources</SidePanelTitle>
                   {courseResources.length > 0 ? (
-                    courseResources.map((resource) => (
-                      <SidePanelItem key={resource.id}>
-                        {resource.resource_type === 'material' ? '📚' : resource.resource_type === 'code' ? '💻' : '🎥'} {resource.title || resource.resource_type}
-                      </SidePanelItem>
-                    ))
+                    <ResourcesScrollContainer>
+                    {courseResources.map((resource) => {
+                      const icon = resource.resource_type === 'material' ? '📚'
+                        : resource.resource_type === 'code' ? '💻'
+                        : resource.resource_type === 'document' ? '📄'
+                        : '🔗'
+                      return resource.url ? (
+                        <SidePanelItem
+                          key={resource.id}
+                          as="a"
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                        >
+                          <span>{icon}</span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {resource.title || resource.resource_type}
+                          </span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                          </svg>
+                        </SidePanelItem>
+                      ) : (
+                        <SidePanelItem key={resource.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{icon}</span>
+                          <span>{resource.title || resource.resource_type}</span>
+                        </SidePanelItem>
+                      )
+                    })}
+                    </ResourcesScrollContainer>
                   ) : (
-                    <SidePanelItem>No resources available</SidePanelItem>
+                    <SidePanelItem style={{ cursor: 'default' }}>No resources available</SidePanelItem>
                   )}
                 </SidePanelSection>
 
@@ -3208,6 +3304,23 @@ const LMS = () => {
               </PortalSidePanel>
 
               <PortalMainContent>
+                {/* Overall progress bar — answers across all levels, target 60 */}
+                {(() => {
+                  const totalAnswered = sectionPerf.reduce((sum, p) => sum + (p.questions_answered || 0), 0)
+                  const progressPct = Math.min(Math.round((totalAnswered / 60) * 100), 100)
+                  return (
+                    <PortalProgressWrapper>
+                      <PortalProgressLabel>
+                        <span>Overall Progress</span>
+                        <span>{totalAnswered} / 60 questions answered ({progressPct}%)</span>
+                      </PortalProgressLabel>
+                      <PortalProgressTrack>
+                        <PortalProgressFill progress={progressPct} />
+                      </PortalProgressTrack>
+                    </PortalProgressWrapper>
+                  )
+                })()}
+
                 <PortalCourseInfo>
                   <PortalCourseInfoText className="portal-course-info-text-large">
                     📝 {selectedSectionId && courseSections.length > 0
@@ -3223,46 +3336,62 @@ const LMS = () => {
 
                 {questionsLoading ? (
                   <div style={{ textAlign: 'center', padding: '40px' }}>Loading questions...</div>
-                ) : courseQuestions.length > 0 ? (
-                  courseQuestions.map((q, idx) => (
-                    <QuestionSection key={q.id}>
-                      <QuestionLabel>
-                        <QuestionNumber>Question {idx + 1}:</QuestionNumber>
-                        {q.question_text || q.question || 'No question text available'}
-                      </QuestionLabel>
-                      {q.question_type === 'multiple_choice' && q.options ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                          {Object.entries(q.options).map(([key, value]) => (
-                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                              <input
-                                type="radio"
-                                name={`question-${q.id}`}
-                                value={key}
-                                onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                              />
-                              <span>{key}: {value}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : (
-                        <AnswerInput 
-                          placeholder="Type your answer here..."
-                          rows="4"
-                          value={answers[q.id] || ''}
-                          onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                        />
-                      )}
-                    </QuestionSection>
-                  ))
-                ) : (
+                ) : courseQuestions.length > 0 ? (() => {
+                  const PAGE_SIZE = 5
+                  const pageQuestions = courseQuestions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                  const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+                  return (
+                    <>
+                      {/* Page indicator */}
+                      <div style={{ fontSize: '0.85em', color: 'var(--text-light)', marginBottom: '12px' }}>
+                        Page {currentPage + 1} of {totalPages} &nbsp;·&nbsp; Questions {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, courseQuestions.length)} of {courseQuestions.length}
+                      </div>
+                      {pageQuestions.map((q, idx) => (
+                        <QuestionSection key={q.id}>
+                          <QuestionLabel>
+                            <QuestionNumber>Question {currentPage * PAGE_SIZE + idx + 1}:</QuestionNumber>
+                            {q.question_text || q.question || 'No question text available'}
+                          </QuestionLabel>
+                          {q.question_type === 'multiple_choice' && q.options ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                              {Object.entries(q.options).map(([key, value]) => (
+                                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                  <input
+                                    type="radio"
+                                    name={`question-${q.id}`}
+                                    value={key}
+                                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                                  />
+                                  <span>{key}: {value}</span>
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <AnswerInput
+                              placeholder="Type your answer here..."
+                              rows="4"
+                              value={answers[q.id] || ''}
+                              onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                            />
+                          )}
+                        </QuestionSection>
+                      ))}
+                    </>
+                  )
+                })() : (
                   <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
                     No questions available for this course
                   </div>
                 )}
 
                 <ButtonContainer>
-                  <SubmitButton onClick={handleSubmitAnswers} disabled={Object.keys(answers).length === 0}>
-                    Submit Answers
+                  <SubmitButton onClick={handleNextQuestions} disabled={Object.keys(answers).length === 0}>
+                    {(() => {
+                      const PAGE_SIZE = 5
+                      const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+                      const isLastPage = currentPage >= totalPages - 1
+                      return isLastPage ? 'Submit Page' : 'Next Questions'
+                    })()}
                   </SubmitButton>
                   <EvaluateButton onClick={handleSubmitAndEvaluate} disabled={Object.keys(answers).length === 0}>
                     Submit & Evaluate
