@@ -2769,10 +2769,34 @@ const LMS = () => {
     } catch (err) {
       console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
 
-      if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'course_enrollments') {
-        const detail = err.response.data.detail
-        alert(`Monthly course enrollment limit reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan or wait until next month.`)
+      if (err.response?.status === 403) {
+        // Use userMessage from interceptor if available, otherwise extract from response
+        let message = err.userMessage || err.message
+        // If message is the generic axios error, extract from response instead
+        if (message && message.includes('Request failed with status code')) {
+          message = null // Reset to extract from response
+        }
+        
+        if (!message) {
+          const detail = err.response.data?.detail
+          // Handle quota exceeded errors (course enrollments, AI messages, etc.)
+          if (detail && typeof detail === 'object' && detail.feature) {
+            // Use the message from backend, which includes upgrade suggestion
+            message = detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
+          } else if (detail) {
+            // Handle other 403 errors - check if it's a string or object
+            message = typeof detail === 'string' ? detail : detail?.message
+          }
+        }
+        
+        // Final fallback
+        if (!message) {
+          message = 'Your enrollment limit has been reached. Upgrade your plan to increase your limit.'
+        }
+        
+        alert(message)
       } else {
+        // Handle non-403 errors
         const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
         alert(`Error: ${typeof errorMsg === 'string' ? errorMsg : errorMsg.message || 'Failed to enroll'}`)
       }

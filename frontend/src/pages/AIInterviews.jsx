@@ -1143,9 +1143,20 @@ const AIInterviews = () => {
       const errorDetail = err.response?.data?.detail || err.message || 'Failed to start interview'
       
       // Handle quota exceeded (403) from server-side subscription check
-      if (err.response?.status === 403 && err.response?.data?.detail?.feature === 'interview_sessions') {
-        const detail = err.response.data.detail
-        alert(`Monthly interview session limit reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan or wait until next month.`)
+      if (err.response?.status === 403) {
+        // Use userMessage from interceptor if available, otherwise extract from response
+        const message = err.userMessage || (() => {
+          const detail = err.response.data?.detail
+          // Handle quota exceeded errors (interview sessions, AI messages, course enrollments, etc.)
+          if (detail && typeof detail === 'object' && detail.feature) {
+            // Use the message from backend, which includes upgrade suggestion
+            return detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
+          } else {
+            // Handle other 403 errors
+            return typeof detail === 'string' ? detail : (detail?.message || 'Access denied')
+          }
+        })()
+        alert(message)
       } else if (err.response?.status === 429) {
         // Handle rate limiting
         const retryAfter = err.response?.headers?.['retry-after'] || 60

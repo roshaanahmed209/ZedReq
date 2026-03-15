@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Initialize Redis client with connection error handling
 _redis_client = None
 _redis_available = False
+_redis_initialized = False  # Track if we've attempted initialization
 
 # In-memory TTL cache fallback (used when Redis is unavailable)
 # maxsize=512 entries, ttl=120 seconds (2 minutes)
@@ -21,10 +22,18 @@ _memory_cache_lock = threading.Lock()
 
 def _init_redis():
     """Initialize Redis client with fallback handling"""
-    global _redis_client, _redis_available
+    global _redis_client, _redis_available, _redis_initialized
     
-    if _redis_client is not None:
+    # If already initialized and available, return immediately
+    if _redis_available and _redis_client is not None:
         return _redis_client, _redis_available
+    
+    # If already initialized but unavailable, return without retrying
+    if _redis_initialized and not _redis_available:
+        return _redis_client, _redis_available
+    
+    # Mark as initialized to prevent repeated connection attempts
+    _redis_initialized = True
     
     try:
         _redis_client = Redis(
@@ -43,7 +52,8 @@ def _init_redis():
     except (ConnectionError, RedisError, Exception) as e:
         _redis_available = False
         _redis_client = None
-        logger.warning(f"Redis not available, using in-memory TTL cache fallback: {e}")
+        # Only log once at INFO level (not WARNING) since fallback is working
+        logger.info(f"Redis not available, using in-memory TTL cache fallback: {e}")
     
     return _redis_client, _redis_available
 

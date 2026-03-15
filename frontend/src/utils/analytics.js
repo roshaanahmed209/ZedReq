@@ -63,14 +63,16 @@ function getDeviceInfo() {
 
 // Send events to collector
 async function sendEvents(events) {
+    // Skip if API key is not configured (analytics disabled)
+    if (!COLLECTOR_API_KEY) {
+        return;
+    }
+    
     try {
         const headers = {
             'Content-Type': 'application/json',
+            'X-API-Key': COLLECTOR_API_KEY,
         };
-        
-        if (COLLECTOR_API_KEY) {
-            headers['X-API-Key'] = COLLECTOR_API_KEY;
-        }
         
         await fetch(`${COLLECTOR_URL}/events`, {
             method: 'POST',
@@ -133,14 +135,16 @@ export function trackInteraction(interactionType, elementId = null, elementType 
 
 // Update session activity
 async function updateSessionActivity() {
+    // Skip if API key is not configured (analytics disabled)
+    if (!COLLECTOR_API_KEY) {
+        return;
+    }
+    
     try {
         const headers = {
             'Content-Type': 'application/json',
+            'X-API-Key': COLLECTOR_API_KEY,
         };
-        
-        if (COLLECTOR_API_KEY) {
-            headers['X-API-Key'] = COLLECTOR_API_KEY;
-        }
         
         await fetch(`${COLLECTOR_URL}/session/update?session_id=${getSessionId()}`, {
             method: 'POST',
@@ -153,16 +157,18 @@ async function updateSessionActivity() {
 
 // Start session
 export async function startSession() {
+    // Skip if API key is not configured (analytics disabled)
+    if (!COLLECTOR_API_KEY) {
+        return;
+    }
+    
     const deviceInfo = getDeviceInfo();
     
     try {
         const headers = {
             'Content-Type': 'application/json',
+            'X-API-Key': COLLECTOR_API_KEY,
         };
-        
-        if (COLLECTOR_API_KEY) {
-            headers['X-API-Key'] = COLLECTOR_API_KEY;
-        }
         
         await fetch(`${COLLECTOR_URL}/session/start`, {
             method: 'POST',
@@ -182,14 +188,17 @@ export async function startSession() {
 
 // End session
 export async function endSession() {
+    // Skip if API key is not configured (analytics disabled)
+    if (!COLLECTOR_API_KEY) {
+        sessionStorage.removeItem('analytics_session_id');
+        return;
+    }
+    
     try {
         const headers = {
             'Content-Type': 'application/json',
+            'X-API-Key': COLLECTOR_API_KEY,
         };
-        
-        if (COLLECTOR_API_KEY) {
-            headers['X-API-Key'] = COLLECTOR_API_KEY;
-        }
         
         await fetch(`${COLLECTOR_URL}/session/end?session_id=${getSessionId()}`, {
             method: 'POST',

@@ -64,6 +64,28 @@ api.interceptors.response.use(
           message: error.response?.data?.detail || error.response?.data?.message || error.response?.data?.error
         })
         
+        // Handle quota exceeded (403) - extract user-friendly message
+        if (status === 403) {
+          const detail = error.response.data?.detail
+          if (detail && typeof detail === 'object' && detail.feature) {
+            // Quota exceeded error - extract the message
+            const userMessage = detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
+            error.userMessage = userMessage
+            // Override the default axios error message
+            error.message = userMessage
+          } else if (detail) {
+            // Other 403 errors - extract message
+            const userMessage = typeof detail === 'string' ? detail : (detail?.message || 'Access denied')
+            error.userMessage = userMessage
+            // Override the default axios error message
+            error.message = userMessage
+          } else {
+            // No detail provided, use a generic message
+            error.userMessage = 'Access denied'
+            error.message = 'Access denied'
+          }
+        }
+        
         // Handle rate limiting (429)
         if (status === 429) {
           const retryAfter = error.response.headers?.['retry-after'] || error.response.headers?.['Retry-After'] || 60

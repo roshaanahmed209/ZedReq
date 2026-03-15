@@ -16,6 +16,29 @@ const slideUp = keyframes`
   to { transform: translateY(0); opacity: 1; }
 `
 
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
+const LoadingSpinner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-light);
+  
+  &::after {
+    content: '';
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: ${spin} 0.8s linear infinite;
+  }
+`
+
 const Container = styled.div`
   min-height: 100vh;
   width: 100%;
@@ -849,6 +872,7 @@ const Evaluation = () => {
   const [sectionPerformance, setSectionPerformance] = useState([])
   const [courseAnalysis, setCourseAnalysis] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [performanceLoading, setPerformanceLoading] = useState(false)
   const [evaluating, setEvaluating] = useState(false)
   const [viewMode, setViewMode] = useState('performance') // 'performance' or 'answers'
   const [answers, setAnswers] = useState([])
@@ -921,6 +945,7 @@ const Evaluation = () => {
     if (!selectedCourseId) return
     
     try {
+      setPerformanceLoading(true)
       setLoading(true)
       
       // Fetch all data with individual error handling to prevent one failure from blocking others
@@ -980,6 +1005,7 @@ const Evaluation = () => {
       console.error('Error fetching performance data:', err)
     } finally {
       setLoading(false)
+      setPerformanceLoading(false)
     }
   }
 
@@ -1428,28 +1454,32 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
                 
-                <ProgressCircle>
-                  <svg width="180" height="180">
-                    <defs>
-                      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--primary)" />
-                        <stop offset="100%" stopColor="var(--secondary)" />
-                      </linearGradient>
-                    </defs>
-                    <CircleBackground cx="90" cy="90" r="70" />
-                    <CircleProgress 
-                      cx="90" 
-                      cy="90" 
-                      r="70" 
-                      circumference={2 * Math.PI * 70}
-                      offset={2 * Math.PI * 70 * (1 - Math.max(0, overallScore) / 10)}
-                    />
-                  </svg>
-                  <CircleText>
-                    <CircleValue>{overallScore > 0 ? overallScore.toFixed(1) : '0.0'}</CircleValue>
-                    <CircleLabel>out of 10</CircleLabel>
-                  </CircleText>
-                </ProgressCircle>
+                {performanceLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <ProgressCircle>
+                    <svg width="180" height="180">
+                      <defs>
+                        <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="var(--primary)" />
+                          <stop offset="100%" stopColor="var(--secondary)" />
+                        </linearGradient>
+                      </defs>
+                      <CircleBackground cx="90" cy="90" r="70" />
+                      <CircleProgress 
+                        cx="90" 
+                        cy="90" 
+                        r="70" 
+                        circumference={2 * Math.PI * 70}
+                        offset={2 * Math.PI * 70 * (1 - Math.max(0, overallScore) / 10)}
+                      />
+                    </svg>
+                    <CircleText>
+                      <CircleValue>{overallScore > 0 ? overallScore.toFixed(1) : '0.0'}</CircleValue>
+                      <CircleLabel>out of 10</CircleLabel>
+                    </CircleText>
+                  </ProgressCircle>
+                )}
               </EvaluationCard>
 
               <EvaluationCard>
@@ -1466,44 +1496,48 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
                 
-                <div>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Questions Attempted</SkillName>
-                      <SkillPercentage>{questionsAttempted}</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={Math.min(100, (questionsAttempted / 150) * 100)} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Correct Answers</SkillName>
-                      <SkillPercentage>{correctAnswers}</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={questionsAttempted > 0 ? Math.min(100, (correctAnswers / questionsAttempted) * 100) : 0} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Accuracy Rate</SkillName>
-                      <SkillPercentage>{accuracyRate.toFixed(1)}%</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={accuracyRate} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                  <SkillBar>
-                    <SkillHeader>
-                      <SkillName>Total Points</SkillName>
-                      <SkillPercentage>{coursePerformance?.total_points_earned || 0}</SkillPercentage>
-                    </SkillHeader>
-                    <SkillProgressBar>
-                      <SkillProgressFill width={Math.min(100, ((coursePerformance?.total_points_earned || 0) / 200) * 100)} />
-                    </SkillProgressBar>
-                  </SkillBar>
-                </div>
+                {performanceLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <div>
+                    <SkillBar>
+                      <SkillHeader>
+                        <SkillName>Questions Attempted</SkillName>
+                        <SkillPercentage>{questionsAttempted}</SkillPercentage>
+                      </SkillHeader>
+                      <SkillProgressBar>
+                        <SkillProgressFill width={Math.min(100, (questionsAttempted / 150) * 100)} />
+                      </SkillProgressBar>
+                    </SkillBar>
+                    <SkillBar>
+                      <SkillHeader>
+                        <SkillName>Correct Answers</SkillName>
+                        <SkillPercentage>{correctAnswers}</SkillPercentage>
+                      </SkillHeader>
+                      <SkillProgressBar>
+                        <SkillProgressFill width={questionsAttempted > 0 ? Math.min(100, (correctAnswers / questionsAttempted) * 100) : 0} />
+                      </SkillProgressBar>
+                    </SkillBar>
+                    <SkillBar>
+                      <SkillHeader>
+                        <SkillName>Accuracy Rate</SkillName>
+                        <SkillPercentage>{accuracyRate.toFixed(1)}%</SkillPercentage>
+                      </SkillHeader>
+                      <SkillProgressBar>
+                        <SkillProgressFill width={accuracyRate} />
+                      </SkillProgressBar>
+                    </SkillBar>
+                    <SkillBar>
+                      <SkillHeader>
+                        <SkillName>Total Points</SkillName>
+                        <SkillPercentage>{coursePerformance?.total_points_earned || 0}</SkillPercentage>
+                      </SkillHeader>
+                      <SkillProgressBar>
+                        <SkillProgressFill width={Math.min(100, ((coursePerformance?.total_points_earned || 0) / 200) * 100)} />
+                      </SkillProgressBar>
+                    </SkillBar>
+                  </div>
+                )}
               </EvaluationCard>
             </GridContainer>
 
@@ -1522,24 +1556,28 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
 
-                <div>
-                  {courseAnalysis?.strengths?.length > 0 ? (
-                    <AnalysisList>
-                      {courseAnalysis.strengths.map((item, index) => (
-                        <AnalysisItem key={index}>
-                          <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <span style={{ color: '#22c55e', flexShrink: 0 }}>✓</span>
-                            {item}
-                          </AnalysisText>
-                        </AnalysisItem>
-                      ))}
-                    </AnalysisList>
-                  ) : (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                      No strengths data available yet. Complete and evaluate questions to see your strengths.
-                    </div>
-                  )}
-                </div>
+                {performanceLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <div>
+                    {courseAnalysis?.strengths?.length > 0 ? (
+                      <AnalysisList>
+                        {courseAnalysis.strengths.map((item, index) => (
+                          <AnalysisItem key={index}>
+                            <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                              <span style={{ color: '#22c55e', flexShrink: 0 }}>✓</span>
+                              {item}
+                            </AnalysisText>
+                          </AnalysisItem>
+                        ))}
+                      </AnalysisList>
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                        No strengths data available yet. Complete and evaluate questions to see your strengths.
+                      </div>
+                    )}
+                  </div>
+                )}
               </EvaluationCard>
 
               {/* Areas for Improvement */}
@@ -1557,31 +1595,35 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
 
-                <div>
-                  {courseAnalysis?.areas_for_improvement?.length > 0 ? (
-                    <>
-                      <AnalysisList>
-                        {courseAnalysis.areas_for_improvement.map((item, index) => (
-                          <AnalysisItem key={index}>
-                            <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                              <span style={{ color: '#f59e0b', flexShrink: 0 }}>▸</span>
-                              {item}
-                            </AnalysisText>
-                          </AnalysisItem>
-                        ))}
-                      </AnalysisList>
-                      {courseAnalysis.summary && (
-                        <div style={{ padding: '12px 20px', fontSize: '0.85em', color: 'var(--text-light)', fontStyle: 'italic', borderTop: '1px solid var(--border)' }}>
-                          {courseAnalysis.summary}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-                      No improvement areas identified yet. Complete and evaluate questions to get personalized feedback.
-                    </div>
-                  )}
-                </div>
+                {performanceLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <div>
+                    {courseAnalysis?.areas_for_improvement?.length > 0 ? (
+                      <>
+                        <AnalysisList>
+                          {courseAnalysis.areas_for_improvement.map((item, index) => (
+                            <AnalysisItem key={index}>
+                              <AnalysisText style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ color: '#f59e0b', flexShrink: 0 }}>▸</span>
+                                {item}
+                              </AnalysisText>
+                            </AnalysisItem>
+                          ))}
+                        </AnalysisList>
+                        {courseAnalysis.summary && (
+                          <div style={{ padding: '12px 20px', fontSize: '0.85em', color: 'var(--text-light)', fontStyle: 'italic', borderTop: '1px solid var(--border)' }}>
+                            {courseAnalysis.summary}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+                        No improvement areas identified yet. Complete and evaluate questions to get personalized feedback.
+                      </div>
+                    )}
+                  </div>
+                )}
               </EvaluationCard>
             </GridContainer>
 
@@ -1601,18 +1643,21 @@ const Evaluation = () => {
                   </CardHeaderLeft>
                 </CardHeader>
 
-                <div>
-                  {sectionPerformance.length > 0 ? (
-                    sectionPerformance.map((section) => (
-                      <SkillBar key={section.section_id}>
-                        <SkillHeader>
-                          <SkillName>{section.title}</SkillName>
-                          <SkillPercentage>
-                            {section.questions_answered > 0
-                              ? `${(Number(section.accuracy_percentage) || 0).toFixed(1)}%`
-                              : '—'}
-                          </SkillPercentage>
-                        </SkillHeader>
+                {performanceLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <div>
+                    {sectionPerformance.length > 0 ? (
+                      sectionPerformance.map((section) => (
+                        <SkillBar key={section.section_id}>
+                          <SkillHeader>
+                            <SkillName>{section.title}</SkillName>
+                            <SkillPercentage>
+                              {section.questions_answered > 0
+                                ? `${(Number(section.accuracy_percentage) || 0).toFixed(1)}%`
+                                : '—'}
+                            </SkillPercentage>
+                          </SkillHeader>
                         <SkillProgressBar>
                           <SkillProgressFill width={Number(section.accuracy_percentage) || 0} />
                         </SkillProgressBar>
@@ -1627,7 +1672,8 @@ const Evaluation = () => {
                       No section performance data available yet. Generate and answer questions by level to see results here.
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
               </EvaluationCard>
             </GridContainer>
 

@@ -50,7 +50,7 @@ async def require_ai_quota(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
-                "message": "Monthly AI message quota exceeded",
+                "message": "Your message limit has been reached. Upgrade your plan to increase your limit.",
                 "limit": result["limit"],
                 "used": result["used"],
                 "plan": result["plan"],
@@ -83,7 +83,7 @@ async def require_lms_quota(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
-                "message": "Monthly course enrollment quota exceeded",
+                "message": "Your enrollment limit has been reached. Upgrade your plan to increase your limit.",
                 "limit": result["limit"],
                 "used": result["used"],
                 "plan": result["plan"],
