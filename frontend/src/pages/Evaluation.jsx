@@ -809,7 +809,6 @@ const FeedbackText = styled.div`
   padding: 12px;
   background: rgba(10, 102, 194, 0.05);
   border-radius: 8px;
-  border-left: 3px solid var(--primary);
   white-space: pre-wrap;
   word-wrap: break-word;
 `
@@ -825,18 +824,12 @@ const SuggestionItem = styled.li`
   margin-bottom: 8px;
   background: rgba(10, 102, 194, 0.05);
   border-radius: 6px;
-  border-left: 3px solid var(--primary);
   font-size: 0.9em;
   color: var(--text);
   line-height: 1.6;
 
   &:last-child {
     margin-bottom: 0;
-  }
-
-  &::before {
-    content: '💡';
-    margin-right: 8px;
   }
 `
 

@@ -412,6 +412,7 @@ async def update_profile(
                 )
             
             # Get other form fields (can be strings or files)
+            name = form.get("name")
             interests = form.get("interests")
             location = form.get("location")
             
@@ -425,6 +426,7 @@ async def update_profile(
             
             updated_profile = settings_service.update_profile(
                 user_id=current_user["id"],
+                name=name,
                 profile_pic=final_profile_pic,
                 cover_pic=final_cover_pic,
                 resume=resume_url,
@@ -438,6 +440,7 @@ async def update_profile(
             profile_data = await request.json()
             updated_profile = settings_service.update_profile(
                 user_id=current_user["id"],
+                name=profile_data.get('name'),
                 profile_pic=profile_data.get('profile_pic'),
                 cover_pic=profile_data.get('cover_pic'),
                 resume=profile_data.get('resume'),

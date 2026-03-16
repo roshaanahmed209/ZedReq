@@ -632,6 +632,7 @@ class SettingsService:
     def update_profile(
         self, 
         user_id: int, 
+        name: Optional[str] = None,
         profile_pic: Optional[str] = None,
         cover_pic: Optional[str] = None,
         resume: Optional[str] = None,
@@ -643,6 +644,7 @@ class SettingsService:
         
         Args:
             user_id: User ID
+            name: User's full name
             profile_pic: Profile picture URL
             cover_pic: Cover picture URL
             resume: Resume file URL
@@ -664,6 +666,15 @@ class SettingsService:
                 raise NotFoundError('User')
             
             update_data = {}
+            
+            # Update name if provided
+            if name:
+                sanitized_name = sanitize_text_for_storage(name, max_length=100)
+                if sanitized_name.strip():
+                    user.name = sanitized_name.strip()
+                    update_data['name'] = sanitized_name.strip()
+                else:
+                    raise ValidationError("Name cannot be empty")
             
             # Get or create description (optimized query)
             description = None

@@ -499,6 +499,7 @@ const Settings = () => {
   const [success, setSuccess] = useState('')
 
   // Profile settings
+  const [name, setName] = useState(user?.name || '')
   const [profilePic, setProfilePic] = useState(null)
   const [profilePicPreview, setProfilePicPreview] = useState(user?.profile_pic || '')
   const [coverPic, setCoverPic] = useState(null)
@@ -537,6 +538,7 @@ const Settings = () => {
   // Load user data on mount and when user changes
   useEffect(() => {
     if (user) {
+      setName(user.name || '')
       setProfilePicPreview(user.profile_pic || '')
       setCoverPicPreview(user.cover_pic || '')
       setInterests(user.interests || '')
@@ -822,7 +824,40 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      let hasChanges = false
+      const updatedFields = []
+
+      // Validate and update name
+      if (name && name.trim() && name.trim() !== user?.name) {
+        const trimmedName = name.trim()
+        if (trimmedName.length > 100) {
+          setError('Name must be less than 100 characters')
+          setLoading(false)
+          return
+        }
+        if (trimmedName.length === 0) {
+          setError('Name cannot be empty')
+          setLoading(false)
+          return
+        }
+
+        try {
+          const response = await api.put('/api/user/profile', { name: trimmedName })
+          if (updateUser && response.data) {
+            // Use the full response from the API to update user state
+            updateUser({ ...user, ...response.data })
+          }
+          updatedFields.push('name')
+        } catch (nameError) {
+          if (nameError.response?.status === 429) {
+            const retryAfter = nameError.response?.headers['retry-after'] || 60
+            setError(`Too many requests. Please wait ${retryAfter} seconds before trying again.`)
+          } else {
+            setError(nameError.response?.data?.detail || 'Failed to update name')
+          }
+          setLoading(false)
+          return
+        }
+      }
 
       // Validate and update password
       if (newPassword) {
@@ -862,11 +897,10 @@ const Settings = () => {
             current_password: currentPassword,
             new_password: newPassword
           })
-          setSuccess('Password changed successfully!')
           setCurrentPassword('')
           setNewPassword('')
           setConfirmPassword('')
-          hasChanges = true
+          updatedFields.push('password')
         } catch (passwordError) {
           if (passwordError.response?.status === 429) {
             const retryAfter = passwordError.response?.headers['retry-after'] || 60
@@ -891,11 +925,10 @@ const Settings = () => {
 
         try {
           await api.put('/api/user/email', { email: newEmail })
-          setSuccess(hasChanges ? 'Password and email updated successfully!' : 'Email updated successfully!')
           if (updateUser) {
             updateUser({ ...user, email: newEmail })
           }
-          hasChanges = true
+          updatedFields.push('email')
         } catch (emailError) {
           if (emailError.response?.status === 429) {
             const retryAfter = emailError.response?.headers['retry-after'] || 60
@@ -908,12 +941,35 @@ const Settings = () => {
         }
       }
 
-      if (!hasChanges && !newPassword && (!newEmail || newEmail === user?.email)) {
+      // Show success message based on what was updated
+      if (updatedFields.length > 0) {
+        const fieldNames = updatedFields.map(field => {
+          if (field === 'name') return 'Name'
+          if (field === 'password') return 'Password'
+          if (field === 'email') return 'Email'
+          return field
+        })
+        const message = updatedFields.length === 1
+          ? `${fieldNames[0]} updated successfully!`
+          : `${fieldNames.join(', ')} updated successfully!`
+        setSuccess(message)
+        
+        // Refresh user data from server to ensure everything is in sync
+        try {
+          const userResponse = await userAPI.getCurrentUser()
+          if (updateUser && userResponse.data) {
+            updateUser(userResponse.data)
+          }
+        } catch (refreshError) {
+          // Don't fail the update if refresh fails, just log it
+          console.warn('Failed to refresh user data:', refreshError)
+        }
+      } else {
         setError('No changes to save')
       }
 
       // Clear success message after 5 seconds
-      if (hasChanges) {
+      if (updatedFields.length > 0) {
         setTimeout(() => setSuccess(''), 5000)
       }
     } catch (error) {
@@ -1230,6 +1286,18 @@ const Settings = () => {
         return (
           <>
             <SectionTitle>Account Settings</SectionTitle>
+
+            <FormGroup>
+              <Label>Full Name</Label>
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your full name"
+                maxLength={100}
+              />
+              <InfoText>This is your display name shown on your profile</InfoText>
+            </FormGroup>
 
             <FormGroup>
               <Label>Email Address</Label>
