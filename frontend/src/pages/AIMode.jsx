@@ -868,6 +868,57 @@ const FileInput = styled.input`
   display: none;
 `
 
+const PrebuiltTextContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+`
+
+const PrebuiltTextButton = styled.button`
+  padding: 14px 18px;
+  background: var(--bg-white);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9em;
+  color: var(--text);
+  font-weight: 400;
+  line-height: 1.5;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--primary);
+    background: rgba(10, 102, 194, 0.05);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(10, 102, 194, 0.15);
+  }
+
+  &:active {
+    transform: translateX(2px);
+  }
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+    font-size: 0.85em;
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px 14px;
+    font-size: 0.8em;
+  }
+`
+
+const PrebuiltTextIcon = styled.span`
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--primary);
+  font-weight: 500;
+`
+
 const UploadedFileDisplay = styled.div`
   display: flex;
   align-items: center;
@@ -1055,19 +1106,23 @@ const AIMode = () => {
     }
   }
 
-  const handleSendMessage = async () => {
-    if (message.trim()) {
-      const userMessageText = message.trim()
-      
-      // Add user message
-      const userMessage = {
-        id: Date.now(),
-        text: userMessageText,
-        isUser: true,
-        time: "Just now"
-      }
-      setChatMessages(prev => [...prev, userMessage])
+  const handleSendMessage = async (customMessage = null) => {
+    const messageToSend = customMessage || message.trim()
+    if (!messageToSend) return
+    
+    const userMessageText = messageToSend.trim()
+    
+    // Add user message
+    const userMessage = {
+      id: Date.now(),
+      text: userMessageText,
+      isUser: true,
+      time: "Just now"
+    }
+    setChatMessages(prev => [...prev, userMessage])
+    if (!customMessage) {
       setMessage('')
+    }
       
       // Show thinking animation
       setIsThinking(true)
@@ -1279,7 +1334,6 @@ const AIMode = () => {
         setChatMessages(prev => [...prev, errorResponse])
       }
     }
-  }
 
   return (
     <Container>
@@ -1294,84 +1348,32 @@ const AIMode = () => {
           
           <PanelContent>
             <PanelSection>
-              <SectionTitle>Upload Resume</SectionTitle>
-              <FileInput
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.doc"
-                onChange={handleFileChange}
-              />
-              {!uploadedFile ? (
-                <UploadArea onClick={handleFileClick}>
-                  <UploadIcon>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="17 8 12 3 7 8"></polyline>
-                      <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                  </UploadIcon>
-                  <UploadText>Drag & drop your resume here</UploadText>
-                  <UploadText className="upload-text-small">or</UploadText>
-                  <UploadButton onClick={(e) => { e.stopPropagation(); handleFileClick(); }}>
-                    Browse Files
-                  </UploadButton>
-                  <UploadText className="upload-text-tiny">
-                    Supported formats: PDF, DOCX
-                  </UploadText>
-                </UploadArea>
-              ) : (
-                <UploadedFileDisplay>
-                  <FileInfo>
-                    <FileIcon>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                      </svg>
-                    </FileIcon>
-                    <FileDetails>
-                      <FileName>{uploadedFile.name}</FileName>
-                      <FileSize>{(uploadedFile.size / 1024).toFixed(2)} KB</FileSize>
-                    </FileDetails>
-                  </FileInfo>
-                  <RemoveFileButton onClick={handleRemoveFile}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </RemoveFileButton>
-                </UploadedFileDisplay>
-              )}
-            </PanelSection>
-
-            <PanelSection>
-              <SectionTitle>Find Jobs</SectionTitle>
-              <JobFilterButton 
-                active={jobFilter === 'all'} 
-                onClick={() => setJobFilter('all')}
-              >
-                All Jobs
-              </JobFilterButton>
-              <JobFilterButton 
-                active={jobFilter === 'recommended'} 
-                onClick={() => setJobFilter('recommended')}
-              >
-                AI Recommended
-              </JobFilterButton>
-              <JobFilterButton 
-                active={jobFilter === 'remote'} 
-                onClick={() => setJobFilter('remote')}
-              >
-                Remote Only
-              </JobFilterButton>
-              <JobFilterButton 
-                active={jobFilter === 'fulltime'} 
-                onClick={() => setJobFilter('fulltime')}
-              >
-                Full-time
-              </JobFilterButton>
+              <SectionTitle>Quick Actions</SectionTitle>
+              <PrebuiltTextContainer>
+                <PrebuiltTextButton onClick={() => handleSendMessage("Find me jobs that match my skills and experience")}>
+                  Find me jobs that match my skills and experience
+                </PrebuiltTextButton>
+                
+                <PrebuiltTextButton onClick={() => handleSendMessage("Show me remote software engineering positions")}>
+                  Show me remote software engineering positions
+                </PrebuiltTextButton>
+                
+                <PrebuiltTextButton onClick={() => handleSendMessage("What are the best jobs for someone with my background?")}>
+                  What are the best jobs for someone with my background?
+                </PrebuiltTextButton>
+                
+                <PrebuiltTextButton onClick={() => handleSendMessage("Help me improve my resume for better job matches")}>
+                  Help me improve my resume for better job matches
+                </PrebuiltTextButton>
+                
+                <PrebuiltTextButton onClick={() => handleSendMessage("Find companies hiring in my location")}>
+                  Find companies hiring in my location
+                </PrebuiltTextButton>
+                
+                <PrebuiltTextButton onClick={() => handleSendMessage("What skills should I learn to advance my career?")}>
+                  What skills should I learn to advance my career?
+                </PrebuiltTextButton>
+              </PrebuiltTextContainer>
             </PanelSection>
           </PanelContent>
         </SidePanel>

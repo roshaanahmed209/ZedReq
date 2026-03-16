@@ -667,12 +667,14 @@ class SettingsService:
             
             update_data = {}
             
-            # Update name if provided
-            if name:
-                sanitized_name = sanitize_text_for_storage(name, max_length=100)
-                if sanitized_name.strip():
-                    user.name = sanitized_name.strip()
-                    update_data['name'] = sanitized_name.strip()
+            # Update name if provided (check for both None and empty string)
+            if name is not None and str(name).strip():
+                sanitized_name = sanitize_text_for_storage(str(name), max_length=100)
+                trimmed_name = sanitized_name.strip()
+                if trimmed_name:
+                    user.name = trimmed_name
+                    update_data['name'] = trimmed_name
+                    logger.info(f"Updating name for user {user_id} to: {trimmed_name}")
                 else:
                     raise ValidationError("Name cannot be empty")
             
@@ -770,9 +772,12 @@ class SettingsService:
                 interests_content = f"User updated interests: {sanitized_interests}"
                 self._update_runtime_context(user_id, interests_content)
             
-            # Refresh objects to get latest state (transaction commits automatically via context manager)
-            self.db.refresh(user)
-            self.db.refresh(description)
+            # Flush changes to ensure they're persisted
+            self.db.flush()
+            
+            # Log the name update for debugging
+            if 'name' in update_data:
+                logger.info(f"Name update flushed for user {user_id}: {update_data['name']}")
             
             # Update user embedding and invalidate cache if recommendation-relevant fields changed
             if recommendation_changed:
@@ -788,9 +793,10 @@ class SettingsService:
                     logger.warning(f"Failed to update embedding/cache for user {user_id}: {e}")
                     # Don't fail profile update if embedding/cache update fails
             
-            logger.info(f"Profile updated for user {user_id}")
+            # Transaction commits automatically via context manager
+            logger.info(f"Profile updated for user {user_id}, name={user.name}")
             
-            # Return updated profile (query will use fresh data)
+            # Return updated profile (query will use fresh data after commit)
             return self.profile_service.get_user_profile(user_id)
     
     def change_password(self, user_id: int, current_password: str, new_password: str) -> bool:
