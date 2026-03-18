@@ -27,18 +27,33 @@ except ImportError:
 
 
 def get_connection_params() -> Dict[str, Any]:
-    """Get database connection parameters from environment"""
-    # Check for DATABASE_URL first (common in cloud deployments)
-    database_url = os.environ.get('DATABASE_URL')
+    """Get database connection parameters. Requires POSTGRES_PASSWORD in production."""
+    try:
+        from config.settings import get_settings
+        s = get_settings()
+        if s.DATABASE_URL:
+            return {"conninfo": s.DATABASE_URL}
+        return {
+            "host": s.POSTGRES_HOST,
+            "port": s.POSTGRES_PORT,
+            "dbname": s.POSTGRES_DB,
+            "user": s.POSTGRES_USER,
+            "password": s.POSTGRES_PASSWORD,
+        }
+    except Exception:
+        pass
+    database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        return {'conninfo': database_url}
-    
+        return {"conninfo": database_url}
+    password = os.environ.get("POSTGRES_PASSWORD", "")
+    if not password and os.environ.get("DEBUG", "true").lower() in ("false", "0"):
+        raise ValueError("POSTGRES_PASSWORD must be set in production. Set DEBUG=true only for development.")
     return {
-        'host': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'port': int(os.environ.get('POSTGRES_PORT', 5432)),
-        'dbname': os.environ.get('POSTGRES_DB', 'ZedReq'),
-        'user': os.environ.get('POSTGRES_USER', 'postgres'),
-        'password': os.environ.get('POSTGRES_PASSWORD', ''),
+        "host": os.environ.get("POSTGRES_HOST", "localhost"),
+        "port": int(os.environ.get("POSTGRES_PORT", 5432)),
+        "dbname": os.environ.get("POSTGRES_DB", "ZedReq"),
+        "user": os.environ.get("POSTGRES_USER", "postgres"),
+        "password": password,
     }
 
 

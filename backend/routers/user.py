@@ -254,11 +254,10 @@ async def get_user_profile_by_id(
             # Don't fail the profile request if context update fails
             logger.warning(f"Failed to update context for profile view: {e}")
     
-    return {
+    response = {
         "uid": profile.get("id") or profile.get("uid"),
         "username": profile.get("username"),
         "name": profile.get("name"),
-        "email": profile.get("email") or profile.get("user_email"),
         "profile_url": profile.get("profile_url"),
         "profile_pic": profile.get("profile_pic"),
         "cover_pic": profile.get("cover_pic"),
@@ -267,13 +266,17 @@ async def get_user_profile_by_id(
         "skills": profile.get("skills"),
         "certificates": profile.get("certificates"),
         "current_status": profile.get("current_status"),
-            "role": profile.get("role"),
-            "company": profile.get("company"),
-            "location": profile.get("location"),
-            "industry": profile.get("industry"),
+        "role": profile.get("role"),
+        "company": profile.get("company"),
+        "location": profile.get("location"),
+        "industry": profile.get("industry"),
         "connection_status": profile.get("connection_status"),
-        "created_at": profile.get("created_at")
-        }
+        "created_at": profile.get("created_at"),
+    }
+    # Only include email when viewing own profile (PII protection)
+    if current_user.get("id") == user_id:
+        response["email"] = profile.get("email") or profile.get("user_email")
+    return response
 
 
 @router.get("/{user_id}/connections/count")

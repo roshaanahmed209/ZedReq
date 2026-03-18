@@ -1,4 +1,5 @@
 """Authentication Dependencies - JWT Token Validation"""
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -8,6 +9,7 @@ from config.settings import settings
 from config.database import get_database
 from models.user import User
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)
 
@@ -39,9 +41,10 @@ def verify_token(token: str) -> dict:
         return payload
         
     except JWTError as e:
+        logger.debug("JWT validation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}"
+            detail="Invalid or expired token"
         )
 
 

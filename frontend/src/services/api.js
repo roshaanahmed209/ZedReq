@@ -676,21 +676,19 @@ export class NotificationWebSocket {
       console.error('No token available for WebSocket connection')
       return
     }
-    
+
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
     const wsUrl = apiUrl
       .replace('http://', 'ws://')
       .replace('https://', 'wss://')
-    
-    const fullWsUrl = `${wsUrl}/ws/notifications?token=${token}`
-    console.log('Connecting to WebSocket:', fullWsUrl)
-    
+    const fullWsUrl = `${wsUrl}/ws/notifications`
+
     try {
       this.ws = new WebSocket(fullWsUrl)
-      
+
       this.ws.onopen = () => {
-        console.log('WebSocket connected successfully to:', this.ws?.url || fullWsUrl)
         this.reconnectAttempts = 0
+        this.ws.send(JSON.stringify({ type: 'auth', token }))
       }
       
       this.ws.onmessage = (event) => {
@@ -713,7 +711,7 @@ export class NotificationWebSocket {
       
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error)
-        console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
+        console.error('WebSocket URL:', this.ws?.url || fullWsUrl.replace(/\/ws\/notifications.*/, '/ws/notifications'))
         console.error('WebSocket readyState:', this.ws?.readyState)
         console.error('WebSocket state:', this.ws ? {
           CONNECTING: this.ws.CONNECTING,
@@ -785,23 +783,19 @@ export class MessagingWebSocket {
       console.error('No token available for messaging WebSocket connection')
       return
     }
-    
+
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
     const wsUrl = apiUrl
       .replace('http://', 'ws://')
       .replace('https://', 'wss://')
-    
-    const fullWsUrl = `${wsUrl}/api/messaging/messages?token=${token}`
-    console.log('Connecting to Messaging WebSocket:', fullWsUrl)
-    
+    const fullWsUrl = `${wsUrl}/api/messaging/messages`
+
     try {
       this.ws = new WebSocket(fullWsUrl)
-      
+
       this.ws.onopen = () => {
-        console.log('Messaging WebSocket connected successfully')
         this.reconnectAttempts = 0
-        
-        // Start ping interval to keep connection alive
+        this.ws.send(JSON.stringify({ type: 'auth', token }))
         this.pingInterval = setInterval(() => this.ping(), 30000)
       }
       
@@ -857,7 +851,6 @@ export class MessagingWebSocket {
         if (import.meta.env.DEV) {
           console.error('Messaging WebSocket error:', error)
           console.error('WebSocket state:', this.ws?.readyState)
-          console.error('WebSocket URL:', this.ws?.url || fullWsUrl)
         }
         
         // Don't call onError for connection failures - let onclose handle reconnection

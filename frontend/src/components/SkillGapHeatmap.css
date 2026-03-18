@@ -54,11 +54,21 @@
   transform: translateY(0);
 }
 
-/* ── header ────────────────────────────────────────────────── */
+/* ── two-column layout: heading | graphics ──────────────────── */
+.sgh-layout {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  column-gap: 160px;
+  row-gap: 48px;
+  align-items: start;
+}
+
+/* ── header (left column) ─────────────────────────────────────── */
 .sgh-header {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto 56px;
+  text-align: left;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 0.25em;
 }
 
 .sgh-header h2 {
@@ -78,20 +88,56 @@
 }
 
 .sgh-divider {
-  margin: 26px auto 0;
-  width: min(220px, 55%);
+  margin: 26px 0 0;
+  width: min(220px, 80%);
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 180, 216, 0.9), transparent);
+  background: linear-gradient(90deg, rgba(0, 180, 216, 0.9), transparent);
   box-shadow: 0 0 14px rgba(0, 180, 216, 0.35);
   animation: sghDivGlow 4s ease-in-out infinite;
 }
 
-/* ── content grid ──────────────────────────────────────────── */
+/* ── content grid (right column: radar | panel) — glass morph ── */
 .sgh-content {
+  position: relative;
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 48px;
   align-items: start;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Glass morph: blurred background layer */
+.sgh-content::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  z-index: 0;
+  background-image: url('/static/bg_first.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(28px);
+  opacity: 0.85;
+}
+
+.sgh-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(5, 12, 24, 0.55);
+  pointer-events: none;
+}
+
+.sgh-content > * {
+  position: relative;
+  z-index: 2;
 }
 
 /* ── radar area (left) ─────────────────────────────────────── */
@@ -761,9 +807,25 @@
     padding: 92px 20px;
   }
 
+  .sgh-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .sgh-header {
+    text-align: center;
+  }
+
+  .sgh-divider {
+    margin-left: auto;
+    margin-right: auto;
+    background: linear-gradient(90deg, transparent, rgba(0, 180, 216, 0.9), transparent);
+  }
+
   .sgh-content {
     grid-template-columns: 1fr;
     gap: 40px;
+    padding: 24px;
   }
 
   .sgh-radar-area {
@@ -799,6 +861,10 @@
 
   .sgh-label {
     font-size: 9px;
+  }
+
+  .sgh-content {
+    padding: 20px 16px;
   }
 
   .sgh-panel {

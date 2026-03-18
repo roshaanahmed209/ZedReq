@@ -11,22 +11,32 @@ _project_root = Path(__file__).parent.parent.parent
 _env_file = _project_root / ".env"
 load_dotenv(_env_file)
 
-# Build database URL
+
 def get_database_url() -> str:
-    """Build PostgreSQL database URL from environment variables"""
-    database_url = os.environ.get('DATABASE_URL')
+    """Build PostgreSQL database URL. Uses settings when available (required POSTGRES_PASSWORD in production)."""
+    try:
+        from config.settings import get_settings
+        s = get_settings()
+        if s.DATABASE_URL:
+            url = s.DATABASE_URL
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            return url
+        return f"postgresql://{s.POSTGRES_USER}:{s.POSTGRES_PASSWORD}@{s.POSTGRES_HOST}:{s.POSTGRES_PORT}/{s.POSTGRES_DB}"
+    except Exception:
+        pass
+    database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        # Handle Heroku-style postgres:// URLs
-        if database_url.startswith('postgres://'):
-            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
         return database_url
-    
-    host = os.environ.get('POSTGRES_HOST', 'localhost')
-    port = os.environ.get('POSTGRES_PORT', '5432')
-    db = os.environ.get('POSTGRES_DB', 'ZedReq')
-    user = os.environ.get('POSTGRES_USER', 'postgres')
-    password = os.environ.get('POSTGRES_PASSWORD', '')
-    
+    password = os.environ.get("POSTGRES_PASSWORD", "")
+    if not password and os.environ.get("DEBUG", "true").lower() in ("false", "0"):
+        raise ValueError("POSTGRES_PASSWORD must be set in production. Set DEBUG=true only for development.")
+    host = os.environ.get("POSTGRES_HOST", "localhost")
+    port = os.environ.get("POSTGRES_PORT", "5432")
+    db = os.environ.get("POSTGRES_DB", "ZedReq")
+    user = os.environ.get("POSTGRES_USER", "postgres")
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 

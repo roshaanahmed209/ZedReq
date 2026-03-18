@@ -18,18 +18,28 @@ logger = logging.getLogger(__name__)
 
 
 @router.websocket("/messages")
-async def websocket_messages(
-    websocket: WebSocket,
-    token: str = Query(...)
-):
+async def websocket_messages(websocket: WebSocket):
     """
     WebSocket endpoint for real-time messaging.
-    Connect with: ws://host/api/messaging/messages?token=<jwt_token>
+    Connect to ws://host/api/messaging/messages, then send first message: {"type": "auth", "token": "<jwt>"}.
     """
-    # Validate token and get user BEFORE accepting connection
+    await websocket.accept()
     user_id = None
     try:
-        # Create a new session for this WebSocket connection
+        first_msg = await websocket.receive_text()
+        try:
+            message_data = json.loads(first_msg)
+            if message_data.get("type") != "auth":
+                raise ValueError("First message must be {\"type\": \"auth\", \"token\": \"<jwt>\"}")
+            token = message_data.get("token") or ""
+            if not token:
+                raise ValueError("Token required in auth message")
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning("WebSocket messaging auth message invalid: %s", e)
+            await websocket.send_json({"type": "error", "message": "Invalid or missing auth message"})
+            await websocket.close(code=4001, reason="Invalid authentication")
+            return
+
         db = next(get_db())
         try:
             auth_service = AuthService(db)
@@ -38,35 +48,16 @@ async def websocket_messages(
             if not user_id:
                 raise ValueError("User ID not found in token")
             user_id = int(user_id)
-            logger.info(f"WebSocket messaging authentication successful for user {user_id}")
         except Exception as auth_error:
-            logger.error(f"WebSocket authentication error: {auth_error}", exc_info=True)
-            db.close()
-            raise
+            logger.debug("WebSocket messaging authentication failed: %s", auth_error)
+            await websocket.send_json({"type": "error", "message": "Invalid or expired token"})
+            await websocket.close(code=4001, reason="Invalid authentication token")
+            return
         finally:
-            if db:
-                db.close()
-    except Exception as e:
-        logger.error(f"WebSocket authentication failed: {e}", exc_info=True)
-        try:
-            # Only try to accept and close if websocket is still in a valid state
-            if websocket.client_state.name == "CONNECTING":
-                await websocket.accept()
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Authentication failed: {str(e)}"
-                })
-                await websocket.close(code=4001, reason=f"Invalid authentication token: {str(e)}")
-        except Exception as close_error:
-            # Connection might already be closed, just log it
-            logger.debug(f"WebSocket already closed or in invalid state: {close_error}")
-        return
-    
-    # Accept connection and register with manager
-    try:
+            db.close()
+
         await connection_manager.connect(websocket, user_id)
-        logger.info(f"WebSocket messaging connected: User {user_id}")
-        logger.info(f"WebSocket messaging connected: User {user_id}")
+        logger.info("WebSocket messaging connected: User %s", user_id)
         
         # Initialize messaging service
         messaging_service = MessagingService()

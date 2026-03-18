@@ -547,8 +547,21 @@ Return a JSON array of topic strings."""
         Returns:
             Hashed collection name to prevent guessing and data leakage
         """
-        # Use hash with salt to prevent guessing collection names
-        salt = os.environ.get('AZEL_COLLECTION_SALT', 'default_salt_change_in_prod')
+        salt = os.environ.get("AZEL_COLLECTION_SALT", "").strip()
+        if not salt:
+            try:
+                from config.settings import settings
+                is_production = not getattr(settings, "DEBUG", True)
+            except Exception:
+                is_production = os.environ.get("ENV", "").lower() == "production"
+            if is_production:
+                logger.error("AZEL_COLLECTION_SALT is not set. Set it in production for Azel knowledge base collections.")
+                raise ValueError(
+                    "AZEL_COLLECTION_SALT is required in production. "
+                    "Set the AZEL_COLLECTION_SALT environment variable."
+                )
+            salt = "default_salt_change_in_prod"
+            logger.warning("Using default AZEL_COLLECTION_SALT (dev only). Set AZEL_COLLECTION_SALT in production.")
         user_hash = hashlib.sha256(f"{user_id}_{salt}".encode()).hexdigest()[:16]
         course_hash = hashlib.sha256(f"{course_id}_{salt}".encode()).hexdigest()[:16]
         return f"azel_kb_{user_hash}_{course_hash}"

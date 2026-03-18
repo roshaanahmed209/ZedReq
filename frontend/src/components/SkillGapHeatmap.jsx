@@ -227,15 +227,17 @@ const SkillGapHeatmap = ({ skills = DEFAULT_SKILLS }) => {
       <div className="sgh-bg-glow" />
 
       <div className={`sgh-container ${isVisible ? 'sgh-visible' : ''}`}>
-        {/* ─── header ──────────────────────────────────────── */}
-        <header className="sgh-header">
-          <h2>Close Your Skill Gaps with AI Precision</h2>
-          <p>Our adaptive learning engine analyzes your profile and highlights exactly what you need to improve.</p>
-          <div className="sgh-divider" />
-        </header>
+        {/* ─── two-column layout: heading | graphics ─────────── */}
+        <div className="sgh-layout">
+          {/* Column 1: Heading */}
+          <header className="sgh-header">
+            <h2>Close Your Skill Gaps with AI Precision</h2>
+            <p>Our adaptive learning engine analyzes your profile and highlights exactly what you need to improve.</p>
+            <div className="sgh-divider" />
+          </header>
 
-        {/* ─── two-column content ──────────────────────────── */}
-        <div className="sgh-content">
+          {/* Column 2: All graphics (radar + panel) */}
+          <div className="sgh-content">
           {/* LEFT — radar */}
           <div className="sgh-radar-area">
             <div className="sgh-radar-wrap">
@@ -453,6 +455,7 @@ const SkillGapHeatmap = ({ skills = DEFAULT_SKILLS }) => {
             )}
 
           </div>
+        </div>
         </div>
       </div>
 

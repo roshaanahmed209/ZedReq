@@ -45,6 +45,8 @@ from routers import (
 from routers.reserved_seats import router as reserved_seats_router
 from routers.monitoring import router as monitoring_router
 from middleware.monitoring_middleware import MonitoringMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
+from middleware.body_limit import BodySizeLimitMiddleware
 
 
 def build_frontend():
@@ -159,36 +161,10 @@ async def lifespan(app: FastAPI):
         firebase_logger.setLevel(logging.INFO)  # Ensure we see Firebase logs
         
         print("Initializing Firebase Realtime Database...")
-        
-        # #region agent log
-        import json
-        import os
-        try:
-            with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
-                f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:141","message":"Server startup: initializing Firebase","data":{"cwd":os.getcwd()},"timestamp":int(__import__("time").time()*1000)}) + "\n")
-        except: pass
-        # #endregion
-        
         firebase_app = initialize_firebase()
-        
-        # #region agent log
-        try:
-            with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
-                f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:143","message":"Server startup: Firebase init result","data":{"firebase_app_is_none":firebase_app is None},"timestamp":int(__import__("time").time()*1000)}) + "\n")
-        except: pass
-        # #endregion
-        
         if firebase_app:
             print("Firebase Admin SDK app created, getting database reference...")
             db_ref = get_firebase_db()
-            
-            # #region agent log
-            try:
-                with open(r"e:\professional\ZedRec\.cursor\debug.log", "a", encoding="utf-8") as f:
-                    f.write(json.dumps({"runId":"initial","hypothesisId":"B","location":"main.py:145","message":"Server startup: got db_ref","data":{"db_ref_is_none":db_ref is None},"timestamp":int(__import__("time").time()*1000)}) + "\n")
-            except: pass
-            # #endregion
-            
             if db_ref:
                 print("✓ Firebase Realtime Database initialized successfully (using Admin SDK)")
             else:
@@ -270,10 +246,12 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "X-API-Key"],
     expose_headers=["*"],
     max_age=3600,
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
 
 server_origins = cors_origins + ["http://localhost:5000", "http://localhost:5173"]
 # Global exception handlers to ensure CORS headers are always included

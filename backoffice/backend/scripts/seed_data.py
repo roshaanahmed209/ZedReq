@@ -1,4 +1,5 @@
 """Seed database with initial data for backoffice system"""
+import os
 import sys
 from pathlib import Path
 
@@ -25,9 +26,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initial bootstrap admin (bypasses reserved-username check; only used in seed)
-INITIAL_ADMIN_USERNAME = "admin"
-INITIAL_ADMIN_EMAIL = "admin@zedreq.com"
-INITIAL_ADMIN_PASSWORD = "roshaan_admin_zed"  # Change in production after first login
+
+INITIAL_ADMIN_USERNAME = os.environ.get("INITIAL_ADMIN_USERNAME", "").strip()
+INITIAL_ADMIN_EMAIL = os.environ.get("INITIAL_ADMIN_EMAIL", "").strip()
+INITIAL_ADMIN_EMAIL
+
+def _get_initial_admin_password():
+    """Get initial admin password from env. In production, INITIAL_ADMIN_PASSWORD must be set."""
+    password = os.environ.get("INITIAL_ADMIN_PASSWORD", "").strip()
+    if password:
+        return password
+    return None
 
 
 def create_initial_admin(db: Session):
@@ -38,10 +47,18 @@ def create_initial_admin(db: Session):
             logger.info("Admin user already exists, skipping creation")
             return existing.to_dict()
 
+        password = _get_initial_admin_password()
+        if not password:
+            logger.warning(
+                "Skipping initial admin creation: INITIAL_ADMIN_PASSWORD not set. "
+                "Set INITIAL_ADMIN_PASSWORD in production or ALLOW_DEFAULT_ADMIN_PASSWORD=true / ENV=development for dev."
+            )
+            return None
+
         admin_user = AdminUser(
             username=INITIAL_ADMIN_USERNAME,
             email=INITIAL_ADMIN_EMAIL,
-            password_hash=hash_password(INITIAL_ADMIN_PASSWORD),
+            password_hash=hash_password(password),
             role="super_admin",
             is_active=True,
         )
@@ -50,7 +67,7 @@ def create_initial_admin(db: Session):
         db.refresh(admin_user)
 
         logger.info("✓ Initial super_admin user created")
-        logger.warning("⚠ Default login: %s / %s - CHANGE PASSWORD IN PRODUCTION!", INITIAL_ADMIN_USERNAME, INITIAL_ADMIN_PASSWORD)
+        logger.warning("⚠ Change initial admin password after first login in production.")
         return admin_user.to_dict()
     except Exception as e:
         logger.error("Error creating admin user: %s", e, exc_info=True)
