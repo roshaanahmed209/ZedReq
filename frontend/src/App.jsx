@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import FirstPage from './pages/FirstPage'
+import GetStarted from './pages/GetStarted'
 import Landing from './pages/Landing'
 import Feed from './pages/Feed'
 import Network from './pages/Network'
@@ -43,6 +44,7 @@ function App() {
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />
+          <Route path="/get-started" element={<GetStarted />} />
           <Route path="/landing" element={<Landing />} />
           <Route 
             path="/feed" 

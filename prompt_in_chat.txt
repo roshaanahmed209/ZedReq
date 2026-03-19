@@ -1,83 +1,166 @@
-so here is the use case i have my main agent in which is zed and what i want from this is, this agent will be specific for each user, there will be a TTL based knowledge base for this agent, this agent keeps the context for the user, the interest of user, like if the user likes a post what content does the post talks about, this agent will be maintaining all the context like field, in which job field the user is interested in, which domain, like HR, mechanical engr, computer science, what languages like python node js, react and so on, the work of this agent is to only maintain the context of user, and save  this in the database,
+# Terms and Conditions
+
+**Last Updated:** February 2026
+
+Welcome to **ZedReq** ("Platform", "Service", "we", "our", "us"). These Terms and Conditions ("Terms") govern your access to and use of the ZedReq website, applications, and services. By accessing or using ZedReq, you agree to be bound by these Terms. If you do not agree, you must not use the Platform.
+
+---
+
+## 1. Eligibility
+
+You must be at least **16 years old** (or the minimum legal age in your jurisdiction) to use ZedReq. By using the Platform, you represent that you meet this requirement and have the legal capacity to enter into these Terms.
+
+---
+
+## 2. Account Registration
+
+* You must provide accurate, current, and complete information during registration.
+* You are responsible for maintaining the confidentiality of your login credentials.
+* You are responsible for all activity occurring under your account.
+* We reserve the right to suspend or terminate accounts that violate these Terms.
+
+---
+
+## 3. Platform Description
+
+ZedReq is an **AI-powered career SaaS platform** offering professional networking, job matching, learning tools, AI career assistance, mock interviews, and related services. ZedReq does **not** guarantee employment, job offers, or interview outcomes.
+
+---
+
+## 4. User Content
+
+"User Content" includes profile data, posts, messages, resumes, media, and any information you submit.
+
+You agree that:
+
+* You own or have rights to all User Content you submit.
+* Your content does not violate any laws or third‑party rights.
+* You grant ZedReq a **non‑exclusive, worldwide, royalty‑free license** to host, store, process, and display User Content solely for operating and improving the Platform.
+
+We reserve the right to remove content that violates these Terms.
+
+---
+
+## 5. Prohibited Conduct
+
+You agree **not** to:
+
+* Impersonate another person or entity.
+* Post misleading, fraudulent, or false information.
+* Harass, abuse, or harm other users.
+* Upload malicious code, spam, or automated scripts.
+* Attempt unauthorized access to systems or data.
+* Scrape, reverse engineer, or exploit the Platform.
+
+---
+
+## 6. AI‑Generated Content Disclaimer
+
+ZedReq uses artificial intelligence to provide recommendations, career advice, evaluations, and interview simulations.
+
+* AI outputs are **informational only** and not professional advice.
+* We do not guarantee accuracy, completeness, or suitability.
+* Users remain solely responsible for decisions made based on AI outputs.
+
+---
+
+## 7. Payments & Subscriptions
+
+* Some features may require payment or subscription.
+* Payments are processed through third‑party providers.
+* ZedReq **does not store credit card details**.
+* Fees are non‑refundable unless stated otherwise.
+* Trial access may be modified or terminated at our discretion.
+
+---
+
+## 8. Third‑Party Services
+
+ZedReq may integrate with third‑party tools (payment processors, storage providers, AI services).
+
+We are **not responsible** for third‑party services, content, or policies. Use of third‑party services is subject to their terms.
+
+---
+
+## 9. Privacy
+
+Your use of ZedReq is also governed by our **Privacy Policy**, which explains how we collect, use, and protect your data. By using ZedReq, you consent to data processing as described therein.
+
+---
+
+## 10. Intellectual Property
+
+* ZedReq, including all software, designs, algorithms, and branding, is our intellectual property.
+* You may not copy, modify, distribute, or create derivative works without permission.
+* User content remains owned by the user.
+
+---
+
+## 11. Account Termination
+
+We may suspend or terminate your access:
+
+* For violation of these Terms
+* For unlawful or harmful activity
+* At our discretion to protect the Platform
+
+Upon termination, your access rights cease immediately.
+
+---
+
+## 12. Disclaimer of Warranties
+
+ZedReq is provided **"as is"** and **"as available"**.
+
+We make no warranties regarding:
+
+* Continuous availability
+* Accuracy of content
+* Job placement or hiring outcomes
+
+---
+
+## 13. Limitation of Liability
+
+To the maximum extent permitted by law:
+
+* ZedReq shall not be liable for indirect, incidental, or consequential damages.
+* Our total liability shall not exceed the amount paid by you (if any) in the last 12 months.
+
+---
+
+## 14. Indemnification
+
+You agree to indemnify and hold harmless ZedReq from any claims arising out of:
+
+* Your use of the Platform
+* Violation of these Terms
+* Infringement of third‑party rights
+
+---
+
+## 15. Governing Law
+
+These Terms are governed by and construed in accordance with applicable laws, without regard to conflict‑of‑law principles.
+
+---
+
+## 16. Changes to Terms
+
+We may update these Terms at any time. Continued use of ZedReq after changes constitutes acceptance of the updated Terms.
+
+---
+
+## 17. Contact Information
+
+For questions regarding these Terms:
+
+**Email:** [support@zedreq.com](mailto:support@zedreq.com)
+
+---
+
+By using ZedReq, you acknowledge that you have read, understood, and agreed to these Terms and Conditions.
 
 
-so now we move to @backend/agents/Azel_agent.py this Azel agent will use the information for saved from zed using this information azel will create questions along with answers and these questions will be saved in the database with the answers
 
-now here is what will happen once the context is updated from zed it will inform Azel and then the Azel pipeline will start:
-
-1- analyzes the context from azel 
-2- use google search and find relevenat data which aligns with the context 
-3- since we will be using free acounts for now i want that for each search it also keeps the URLS saved in the DB for that course, like for example the agent analyzed the context and triggers the  google search now for return of search there will be URLS so for that course use the UUID(user id), Course id, URL id and URL to save in the DB.
-4- use those URLS to create TTL based knowledge base here is a description of how  i plan to use the knowledge base: since there will be many users and each user can have max 5 courses and we cannot afford to maintain all the knowledge bases considering a large user base so i plan that we will use the URLS to create knowledge base on qdrant and after the questions and answers(detailed answers) are created just save those questions in the DB 
-
-
-move this :
-
-Profile Information
-Member since
-January 2026
-Email
-admin@roshaan.com
-,
-
-Featured
-,
-Interests
-Recommendations
-
-
-all of these components in a new column just beside the main one, the main column width should not be changed at all
-
-
-i have added URL links of the profiles in the database in the users table so this can be used by vec_agent.
-now we will proceed to posts and posts link creation, i also have to verify first that how and when the links are saved in the database for the user profiles.
-the last thing that will be left is jobs 
-
-
-also after the user sign in with google auth the procedure should same as signup since the user is logging in with google auth, what database entries are being made how is the user registered in our system?
-
-i am planning to fetch users location, and also modifying the recommendation service to keep the locations on first priority, the algorithm for locations that i plan is easy, what we will do is we will first fetch the users location country and city, for recommendation there will levels to it, on first level the jobs which are in the users city will be recommended to user and in the second level we will move to country level, this implementation will on all job section, andin the remote job section the recommendation service will be based on skills as maybe already implemented
-
-
-
-
-
-
-
-i have added a file @ZedReq/to_add.txt  this contains code which needs to be added in the firstpage match the theme and the fontstyle 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+add a terms and conditions check on the 

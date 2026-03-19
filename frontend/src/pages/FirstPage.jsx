@@ -205,7 +205,7 @@ const FirstPage = () => {
           <h2 className="hero-headline">Find the role that fits you — faster, smarter, with AI.</h2>
           <p className="hero-subheadline">AI job matching • Intelligent career assistant • Realistic mock interviews</p>
           <div className="hero-cta">
-            <Link to="/landing" className="btn-primary">Get Matched — It's Free</Link>
+            <Link to="/get-started" className="btn-primary">Get Matched — It's Free</Link>
             <button 
               onClick={() => setShowReserveModal(true)} 
               className="btn-secondary"
@@ -764,7 +764,7 @@ const FirstPage = () => {
           <h2 className="scroll-reveal">Ready to level up your career?</h2>
           <p className="scroll-reveal">Create your AI profile in minutes — get matched today.</p>
           <div className="cta-buttons scroll-reveal">
-            <Link to="/landing" className="btn-primary large">Create Free Profile</Link>
+            <Link to="/get-started" className="btn-primary large">Create Free Profile</Link>
           </div>
         </div>
       </section>
