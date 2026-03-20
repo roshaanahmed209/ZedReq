@@ -36,3 +36,46 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+.choose-plan-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(5, 5, 8, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.choose-plan-success-card {
+  max-width: 26rem;
+  width: 100%;
+  padding: 1.75rem 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(20, 28, 36, 0.98), rgba(12, 16, 22, 0.99));
+  border: 1px solid rgba(0, 180, 216, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.choose-plan-success-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e8f4f8;
+}
+
+.choose-plan-success-body {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(220, 235, 240, 0.88);
+}
+
+.choose-plan-success-cta {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+}

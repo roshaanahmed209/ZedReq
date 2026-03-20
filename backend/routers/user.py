@@ -239,6 +239,98 @@ async def search_all(
     return response
 
 
+def _normalize_subscription_response(subscription: Dict[str, Any]) -> SubscriptionInfo:
+    """Coerce DB/datetime values into SubscriptionInfo fields."""
+
+    def _dt_str(v):
+        if v is None:
+            return None
+        if hasattr(v, "isoformat"):
+            return v.isoformat()
+        s = str(v).strip()
+        return s if s else None
+
+    return SubscriptionInfo(
+        plan=str(subscription.get("plan") or "free").strip() or "free",
+        status=str(subscription.get("status") or "inactive").strip() or "inactive",
+        subscription_start=_dt_str(subscription.get("subscription_start")),
+        subscription_end=_dt_str(subscription.get("subscription_end")),
+        requires_plan_selection=bool(subscription.get("requires_plan_selection", True)),
+    )
+
+
+# Literal paths must be registered before /{user_id} or "subscription" is parsed as user_id (422).
+@router.get("/subscription", response_model=SubscriptionInfo)
+async def get_subscription(
+    current_user: dict = Depends(get_current_user),
+    settings_service: SettingsService = Depends(get_settings_service)
+):
+    """Get user subscription information"""
+    try:
+        subscription = settings_service.get_subscription_info_with_flags(current_user["id"])
+        return _normalize_subscription_response(subscription)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except Exception as e:
+        logger.error(f"Get subscription error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get subscription information"
+        )
+
+
+@router.get("/subscription/usage")
+async def get_subscription_usage(
+    usage_summary: dict = Depends(get_quota_info)
+):
+    """
+    Get current subscription plan and remaining quotas for all features.
+
+    Returns:
+        Plan info (name, status, limits) and per-feature usage
+        (used/limit/remaining for ai_messages, course_enrollments, interview_sessions).
+
+    Security: Authenticated via get_current_user (inside get_quota_info dependency).
+    Plan is always fetched fresh from DB, not from JWT or cache.
+    """
+    return usage_summary
+
+
+@router.put("/subscription", response_model=SubscriptionInfo)
+async def update_subscription(
+    subscription_data: SubscriptionUpdate,
+    current_user: dict = Depends(get_current_user),
+    settings_service: SettingsService = Depends(get_settings_service)
+):
+    """Update user subscription plan"""
+    try:
+        subscription = settings_service.update_subscription(
+            user_id=current_user["id"],
+            plan=subscription_data.plan,
+            billing_email=subscription_data.billing_email,
+        )
+        return _normalize_subscription_response(subscription)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.message
+        )
+    except Exception as e:
+        logger.error(f"Update subscription error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update subscription"
+        )
+
+
 @router.get("/{user_id}")
 async def get_user_profile_by_id(
     user_id: int,
@@ -792,97 +884,6 @@ async def disable_2fa(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to disable 2FA"
-        )
-
-
-def _normalize_subscription_response(subscription: Dict[str, Any]) -> SubscriptionInfo:
-    """Coerce DB/datetime values so response_model validation never returns 422."""
-
-    def _dt_str(v):
-        if v is None:
-            return None
-        if hasattr(v, "isoformat"):
-            return v.isoformat()
-        s = str(v).strip()
-        return s if s else None
-
-    return SubscriptionInfo(
-        plan=str(subscription.get("plan") or "free").strip() or "free",
-        status=str(subscription.get("status") or "inactive").strip() or "inactive",
-        subscription_start=_dt_str(subscription.get("subscription_start")),
-        subscription_end=_dt_str(subscription.get("subscription_end")),
-        requires_plan_selection=bool(subscription.get("requires_plan_selection", True)),
-    )
-
-
-@router.get("/subscription", response_model=SubscriptionInfo)
-async def get_subscription(
-    current_user: dict = Depends(get_current_user),
-    settings_service: SettingsService = Depends(get_settings_service)
-):
-    """Get user subscription information"""
-    try:
-        subscription = settings_service.get_subscription_info_with_flags(current_user["id"])
-        return _normalize_subscription_response(subscription)
-    except NotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    except Exception as e:
-        logger.error(f"Get subscription error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get subscription information"
-        )
-
-
-@router.get("/subscription/usage")
-async def get_subscription_usage(
-    usage_summary: dict = Depends(get_quota_info)
-):
-    """
-    Get current subscription plan and remaining quotas for all features.
-    
-    Returns:
-        Plan info (name, status, limits) and per-feature usage
-        (used/limit/remaining for ai_messages, course_enrollments, interview_sessions).
-    
-    Security: Authenticated via get_current_user (inside get_quota_info dependency).
-    Plan is always fetched fresh from DB, not from JWT or cache.
-    """
-    return usage_summary
-
-
-@router.put("/subscription", response_model=SubscriptionInfo)
-async def update_subscription(
-    subscription_data: SubscriptionUpdate,
-    current_user: dict = Depends(get_current_user),
-    settings_service: SettingsService = Depends(get_settings_service)
-):
-    """Update user subscription plan"""
-    try:
-        subscription = settings_service.update_subscription(
-            user_id=current_user["id"],
-            plan=subscription_data.plan,
-            billing_email=subscription_data.billing_email,
-        )
-        return _normalize_subscription_response(subscription)
-    except NotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.message
-        )
-    except Exception as e:
-        logger.error(f"Update subscription error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update subscription"
         )
 
 

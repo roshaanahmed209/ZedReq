@@ -48,6 +48,24 @@ def _parse_origin(url: str) -> Optional[str]:
         return None
 
 
+def _websocket_connect_origins(http_origin: str) -> list[str]:
+    """
+    Browsers treat ws: and http: as different for connect-src.
+    Allow WebSockets to the same host as the API URL.
+    """
+    try:
+        p = urlparse(http_origin)
+        if not p.netloc:
+            return []
+        if p.scheme == "http":
+            return [f"ws://{p.netloc}"]
+        if p.scheme == "https":
+            return [f"wss://{p.netloc}"]
+    except Exception:
+        pass
+    return []
+
+
 def _build_connect_src() -> str:
     parts: list[str] = ["'self'", _FIREBASE_AND_GOOGLE_CONNECT, _PADDLE_CONNECT]
 
@@ -60,6 +78,7 @@ def _build_connect_src() -> str:
     origin = _parse_origin(api_url)
     if origin:
         parts.append(origin)
+        parts.extend(_websocket_connect_origins(origin))
 
     # Local dev: SPA on Vite (3000) calling API on 5000
     debug = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
@@ -68,6 +87,8 @@ def _build_connect_src() -> str:
             [
                 "http://localhost:5000",
                 "http://127.0.0.1:5000",
+                "ws://localhost:5000",
+                "ws://127.0.0.1:5000",
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://localhost:5173",
@@ -97,6 +118,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "img-src 'self' data: https: blob:; "
+            "media-src 'self' data: https: blob:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             f"connect-src {connect_src}; "
             "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.google.com https://checkout.paddle.com https://sandbox-checkout.paddle.com; "

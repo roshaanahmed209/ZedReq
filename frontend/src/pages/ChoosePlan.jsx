@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Beams from '../components/Beams'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
@@ -10,13 +10,22 @@ const ChoosePlan = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showFreePlanActive, setShowFreePlanActive] = useState(false)
+
+  const goToFeed = () => navigate('/feed', { replace: true })
+
+  useEffect(() => {
+    if (!showFreePlanActive) return undefined
+    const t = setTimeout(() => navigate('/feed', { replace: true }), 2800)
+    return () => clearTimeout(t)
+  }, [showFreePlanActive, navigate])
 
   const selectFree = async () => {
     setError('')
     setLoading(true)
     try {
       await api.put('/api/user/subscription', { plan: 'free' })
-      navigate('/feed', { replace: true })
+      setShowFreePlanActive(true)
     } catch (e) {
       setError(e.response?.data?.detail || e.message || 'Could not select Free plan')
     } finally {
@@ -26,6 +35,19 @@ const ChoosePlan = () => {
 
   return (
     <div className="choose-plan-page">
+      {showFreePlanActive && (
+        <div className="choose-plan-success-overlay" role="status" aria-live="polite">
+          <div className="choose-plan-success-card">
+            <p className="choose-plan-success-title">You&apos;re on the Free plan</p>
+            <p className="choose-plan-success-body">
+              Your plan is active. You can upgrade anytime from Settings. Taking you to your feed…
+            </p>
+            <button type="button" className="btn-primary choose-plan-success-cta" onClick={goToFeed}>
+              Go to feed now
+            </button>
+          </div>
+        </div>
+      )}
       <PlanFlowBackButton />
       <section className="pricing-section choose-plan-pricing" style={{ position: 'relative', overflow: 'hidden' }}>
         <div
