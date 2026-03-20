@@ -40,6 +40,7 @@ from routers.financial_tracking import router as financial_tracking_router
 from routers.activity import router as activity_router
 from routers.monitoring import router as monitoring_router
 from routers.collector import router as collector_router
+from routers.enterprise_inquiries import router as enterprise_inquiries_router
 from middleware.security import (
     SecurityHeadersMiddleware,
     RateLimitMiddleware,
@@ -370,6 +371,7 @@ app.include_router(financial_tracking_router)
 app.include_router(activity_router)
 app.include_router(monitoring_router)
 app.include_router(collector_router)
+app.include_router(enterprise_inquiries_router)
 
 # Serve static files from frontend build
 backoffice_root = Path(__file__).parent.parent

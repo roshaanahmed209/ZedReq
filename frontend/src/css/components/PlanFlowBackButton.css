@@ -1,0 +1,41 @@
+.plan-flow-back-btn {
+  position: fixed;
+  top: clamp(0.85rem, 2.5vw, 1.5rem);
+  left: clamp(0.85rem, 2.5vw, 1.5rem);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem;
+  margin: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #b0b0b0;
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.plan-flow-back-btn:hover {
+  color: #fff;
+  background: rgba(0, 180, 216, 0.2);
+}
+
+.plan-flow-back-btn:active {
+  transform: scale(0.97);
+}
+
+.plan-flow-back-btn__arrow {
+  font-size: 1.15em;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.plan-flow-back-btn__text {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}

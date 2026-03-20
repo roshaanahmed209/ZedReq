@@ -112,6 +112,13 @@ export const activityAPI = {
   getLogById: (logId) => api.get(`/admin/activity/logs/${logId}`),
 }
 
+// Enterprise inquiries (main app DB — leads from /enterprise-inquiry)
+export const enterpriseInquiriesAPI = {
+  list: (params) => api.get('/admin/enterprise-inquiries', { params }),
+  updateStatus: (id, status) =>
+    api.patch(`/admin/enterprise-inquiries/${id}`, { status }),
+}
+
 // Monitoring API
 export const monitoringApi = {
   // Uptime

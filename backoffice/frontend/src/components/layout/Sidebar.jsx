@@ -6,13 +6,15 @@ import {
   DollarSign, 
   TrendingUp, 
   Activity,
-  Menu
+  Menu,
+  Building2,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/users', label: 'Users', icon: Users },
+  { path: '/enterprise-inquiries', label: 'Enterprise', icon: Building2 },
   { path: '/revenue', label: 'Revenue', icon: DollarSign },
   { path: '/costs', label: 'Costs', icon: TrendingUp },
   { path: '/cash-flow', label: 'Cash Flow', icon: DollarSign },

@@ -10,6 +10,7 @@ import Revenue from './pages/Revenue'
 import Costs from './pages/Costs'
 import CashFlow from './pages/CashFlow'
 import Activity from './pages/Activity'
+import EnterpriseInquiries from './pages/EnterpriseInquiries'
 
 function App() {
   return (
@@ -73,6 +74,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Activity />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/enterprise-inquiries"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EnterpriseInquiries />
                 </Layout>
               </ProtectedRoute>
             }

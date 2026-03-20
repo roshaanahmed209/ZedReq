@@ -1,0 +1,281 @@
+/* Full-page layout: large type, centered hero, no box containers */
+
+.enterprise-inquiry-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 5vw, 3rem) clamp(4rem, 12vh, 8rem);
+  box-sizing: border-box;
+}
+
+/* Center the form block in the viewport */
+.enterprise-hero {
+  min-height: min(100dvh, 100vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vh, 2rem) 0;
+}
+
+.enterprise-title {
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  margin: 0 0 clamp(1rem, 2.5vw, 1.75rem);
+  line-height: 1.05;
+}
+
+.enterprise-lead {
+  font-size: clamp(1.15rem, 2.4vw, 1.65rem);
+  line-height: 1.55;
+  color: #a8a8a8;
+  margin: 0 0 clamp(2rem, 5vw, 3.5rem);
+  max-width: 38rem;
+}
+
+.enterprise-error {
+  color: #f09098;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin: 0 0 clamp(1.25rem, 3vw, 2rem);
+  max-width: 36rem;
+}
+
+.enterprise-form {
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.enterprise-label {
+  display: block;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin-bottom: clamp(0.65rem, 1.5vw, 1rem);
+  color: #c8c8c8;
+  text-align: left;
+}
+
+.enterprise-input {
+  width: 100%;
+  padding: clamp(1rem, 2.5vw, 1.35rem) clamp(1.1rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+  border: none;
+  border-bottom: 2px solid #3a3a3a;
+  background: transparent;
+  color: #fff;
+  margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+  box-sizing: border-box;
+  border-radius: 0;
+  transition: border-color 0.2s ease;
+}
+
+.enterprise-input::placeholder {
+  color: #666;
+}
+
+.enterprise-input:focus {
+  outline: none;
+  border-bottom-color: #00b4d8;
+}
+
+.enterprise-submit {
+  width: 100%;
+  padding: clamp(1.1rem, 2.5vw, 1.45rem) clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.15rem, 2.3vw, 1.4rem);
+  font-weight: 600;
+  border: none;
+  background: #00b4d8;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.enterprise-submit:hover:not(:disabled) {
+  background: #0099c7;
+}
+
+.enterprise-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.enterprise-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.enterprise-back {
+  display: inline-block;
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  color: #888;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.enterprise-back:hover {
+  color: #00b4d8;
+}
+
+/* Space so smooth scroll has room to travel below the hero */
+.enterprise-scroll-anchor {
+  min-height: clamp(6rem, 22vh, 14rem);
+}
+
+/* Thank you section: scroll target first; animation runs only on inner content after scroll settles */
+.enterprise-thankyou {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  min-height: min(88dvh, 88vh);
+  padding: clamp(2rem, 6vw, 4rem) 0;
+  max-width: 48rem;
+  margin: 0 auto;
+  scroll-margin-top: 8vh;
+}
+
+/* Hidden until scroll has finished — layout preserved; no motion on wrapper */
+.enterprise-thankyou-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.enterprise-thankyou-content--visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Smooth per-line reveal (GPU-friendly); staggered after scroll settles */
+@keyframes enterpriseLineReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.35rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.enterprise-thankyou-reveal-line {
+  opacity: 0;
+  transform: translate3d(0, 1.35rem, 0);
+}
+
+.enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line {
+  animation-name: enterpriseLineReveal;
+  animation-duration: 0.75s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+  will-change: opacity, transform;
+}
+
+.enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line--headline {
+  animation-duration: 0.85s;
+  animation-delay: 0.08s;
+}
+
+.enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line--body1 {
+  animation-duration: 0.7s;
+  animation-delay: 0.42s;
+}
+
+.enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line--body2 {
+  animation-duration: 0.7s;
+  animation-delay: 0.68s;
+}
+
+.enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line--actions {
+  animation-duration: 0.65s;
+  animation-delay: 0.95s;
+}
+
+.enterprise-thankyou-headline {
+  margin: 0 0 clamp(1.25rem, 3vw, 2rem);
+  font-size: clamp(3.25rem, 12vw, 7.5rem);
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 60px rgba(0, 180, 216, 0.25);
+}
+
+.enterprise-thankyou-detail {
+  margin: 0 0 clamp(0.85rem, 2vw, 1.15rem);
+  font-size: clamp(0.95rem, 1.85vw, 1.15rem);
+  line-height: 1.6;
+  color: #9a9a9a;
+  max-width: 32rem;
+}
+
+.enterprise-thankyou-detail.enterprise-thankyou-reveal-line--body2 {
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.enterprise-thankyou-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  align-items: center;
+  justify-content: center;
+  margin-top: clamp(0.5rem, 2vw, 1rem);
+}
+
+.enterprise-btn-free {
+  padding: clamp(0.95rem, 2vw, 1.2rem) clamp(1.5rem, 3vw, 2.25rem);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  border: 2px solid #00b4d8;
+  background: transparent;
+  color: #00b4d8;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.enterprise-btn-free:hover:not(:disabled) {
+  background: rgba(0, 180, 216, 0.12);
+  color: #fff;
+}
+
+.enterprise-btn-free:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.enterprise-btn-plans {
+  font-size: clamp(0.95rem, 1.9vw, 1.1rem);
+  color: #888;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.enterprise-btn-plans:hover {
+  color: #00b4d8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterprise-thankyou-reveal-line {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
+  .enterprise-thankyou-content--visible .enterprise-thankyou-reveal-line {
+    animation: none;
+  }
+}

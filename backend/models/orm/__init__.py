@@ -47,6 +47,7 @@ from .payment import Payment
 from .subscription_plan import SubscriptionPlan
 from .user_subscription import UserSubscription
 from .usage_tracking import UsageTracking
+from .enterprise_inquiry import EnterpriseInquiry
 
 __all__ = [
     'User',
@@ -93,4 +94,5 @@ __all__ = [
     'SubscriptionPlan',
     'UserSubscription',
     'UsageTracking',
+    'EnterpriseInquiry',
 ]

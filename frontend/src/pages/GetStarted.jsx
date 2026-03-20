@@ -139,6 +139,14 @@ const GetStarted = () => {
                 <li>We reserve the right to suspend or terminate accounts that violate these Terms.</li>
               </ul>
 
+              <h4>Disclosure or loss of credentials</h4>
+              <p>
+                If you share your login credentials with another person, lose control of them, or they are otherwise obtained by a third party through your own conduct (including weak passwords, phishing, or failure to secure your devices), <strong>you remain responsible for all activity conducted through your account unless and until you notify us and we complete a successful recovery or security reset in accordance with our procedures</strong>. For security and integrity purposes, <strong>any actions performed while authenticated to your account will be attributed to the account holder</strong>, and ZedReq shall <strong>not be liable</strong> for losses, unauthorized changes, messages, transactions, or other consequences arising from unauthorized use that results from credential disclosure or compromise attributable to you.
+              </p>
+              <p>
+                Notwithstanding the foregoing, if you believe your account has been accessed without authorization, you should contact us promptly. <strong>We will make reasonable efforts to assist the legitimate account owner</strong> with account recovery, identity verification, and restoring access where practicable and consistent with our security policies and applicable law. Recovery is not guaranteed and may require proof of identity; we may take steps—including temporary suspension or additional verification—to protect the account and other users while a claim is assessed.
+              </p>
+
               <h3>3. Platform Description</h3>
               <p>ZedReq is an <strong>AI-powered career SaaS platform</strong> offering professional networking, job matching, learning tools, AI career assistance, mock interviews, and related services. ZedReq does <strong>not</strong> guarantee employment, job offers, or interview outcomes.</p>
 

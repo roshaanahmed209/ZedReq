@@ -135,3 +135,33 @@ class SubscriptionMetricsResponse(BaseModel):
     plans_breakdown: dict
     mrr: float
     conversion_rate: float
+
+
+class EnterpriseInquiryItem(BaseModel):
+    """One enterprise sales lead from the main app"""
+
+    id: int
+    user_id: int
+    contact_email: str
+    user_email: Optional[str] = None
+    username: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class EnterpriseInquiryListResponse(BaseModel):
+    """Paginated enterprise inquiries"""
+
+    items: list[EnterpriseInquiryItem]
+    total: int
+    page: int
+    limit: int
+    pages: int
+
+
+class EnterpriseInquiryStatusUpdate(BaseModel):
+    """Admin workflow status for a lead"""
+
+    status: str = Field(..., pattern="^(new|contacted|closed)$")

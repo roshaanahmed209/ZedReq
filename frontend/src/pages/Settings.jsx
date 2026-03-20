@@ -1673,7 +1673,7 @@ const Settings = () => {
                     opacity: subscriptionPlan === 'pro' ? 1 : 0.5
                   }}
                 >
-                  Pro Plan {subscriptionPlan === 'pro' ? '(Current)' : '- $9.99/month'}
+                  Pro Plan {subscriptionPlan === 'pro' ? '(Current)' : '- $49.99/month'}
                 </SecondaryButton>
                 <SecondaryButton 
                   disabled={true}
@@ -1684,7 +1684,7 @@ const Settings = () => {
                     opacity: subscriptionPlan === 'premium' ? 1 : 0.5
                   }}
                 >
-                  Premium Plan {subscriptionPlan === 'premium' ? '(Current)' : '- $49.99/month'}
+                  Premium Plan {subscriptionPlan === 'premium' ? '(Current)' : '- $89.99/month'}
                 </SecondaryButton>
                 <SecondaryButton 
                   disabled={true}

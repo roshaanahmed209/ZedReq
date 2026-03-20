@@ -67,8 +67,8 @@ PLAN_LIMITS = {
 # Plan prices (for payment amounts)
 PLAN_PRICES = {
     "free": 0.00,
-    "pro": 9.99,
-    "premium": 19.99,
+    "pro": 49.99,
+    "premium": 89.99,
     "enterprise": 199.99,
 }
 

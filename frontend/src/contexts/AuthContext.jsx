@@ -114,9 +114,17 @@ export const AuthProvider = ({ children }) => {
         message: 'Login failed' 
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message || 
-                          'Network error. Please try again.'
+      const noResponse = !error.response
+      const looksLikeNetwork =
+        noResponse &&
+        (error.code === 'ERR_NETWORK' ||
+          String(error.message || '').toLowerCase().includes('network'))
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (looksLikeNetwork
+          ? 'Cannot reach the API. Confirm the backend is running, and that VITE_API_URL (or the URL in your browser) matches your CORS settings — localhost and 127.0.0.1 are not interchangeable.'
+          : 'Network error. Please try again.')
       return { success: false, message: errorMessage }
     }
   }
@@ -162,9 +170,17 @@ export const AuthProvider = ({ children }) => {
         message: 'Registration failed'
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message || 
-                          'Network error. Please try again.'
+      const noResponse = !error.response
+      const looksLikeNetwork =
+        noResponse &&
+        (error.code === 'ERR_NETWORK' ||
+          String(error.message || '').toLowerCase().includes('network'))
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (looksLikeNetwork
+          ? 'Cannot reach the API. Confirm the backend is running, and that VITE_API_URL (or the URL in your browser) matches your CORS settings — localhost and 127.0.0.1 are not interchangeable.'
+          : 'Network error. Please try again.')
       return { success: false, message: errorMessage }
     }
   }

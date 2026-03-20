@@ -1,0 +1,38 @@
+/* Choose plan: reuses FirstPage pricing cards + Beams; page-level tweaks only */
+
+.choose-plan-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #0a0a0a;
+}
+
+.choose-plan-pricing {
+  padding-top: clamp(4rem, 10vw, 6rem);
+  padding-bottom: clamp(3rem, 8vw, 5rem);
+}
+
+.choose-plan-error {
+  max-width: 52rem;
+  margin: 0 auto 1.5rem;
+  padding: 0.85rem 1.1rem;
+  text-align: center;
+  color: #ffb4bc;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+/* Match link-styled primary buttons when using native <button> */
+.choose-plan-page .pricing-btn[type='button'] {
+  display: block;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.choose-plan-page .pricing-btn[type='button']:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

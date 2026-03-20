@@ -393,6 +393,7 @@ img, video, iframe {
 .pricing-grid .scroll-reveal-scale:nth-child(1) { transition-delay: 0.08s; }
 .pricing-grid .scroll-reveal-scale:nth-child(2) { transition-delay: 0.2s; }
 .pricing-grid .scroll-reveal-scale:nth-child(3) { transition-delay: 0.32s; }
+.pricing-grid .scroll-reveal-scale:nth-child(4) { transition-delay: 0.44s; }
 
 /* Ultra-subtle section divider gradient lines */
 .trust-section::before,
@@ -1378,30 +1379,30 @@ img, video, iframe {
     font-size: 1.15em;
     font-weight: 300;
     line-height: 1.7;
-    max-width: 600px;
+    max-width: 820px;
     margin: -20px auto 50px auto;
 }
 
 .pricing-grid {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 32px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
     align-items: start;
 }
 
-@media (max-width: 968px) {
+@media (max-width: 1200px) {
     .pricing-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 28px;
     }
-    
+
     .pricing-card.featured {
-        grid-column: span 2;
-        max-width: 480px;
-        margin: 0 auto;
+        grid-column: span 1;
+        max-width: none;
+        margin: 0;
     }
 }
 
@@ -1524,6 +1525,10 @@ img, video, iframe {
     margin-bottom: 16px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
+}
+
+.pricing-features + .pricing-includes {
+    margin-top: 20px;
 }
 
 .pricing-features {
@@ -1798,7 +1803,7 @@ img, video, iframe {
     }
     
     .pricing-card.featured {
-        grid-column: span 2;
+        grid-column: span 1;
         transform: scale(1);
     }
     
@@ -1862,7 +1867,7 @@ img, video, iframe {
     }
     
     .pricing-card.featured {
-        grid-column: span 2;
+        grid-column: span 1;
     }
     
     .metrics-grid {
@@ -3501,11 +3506,11 @@ img, video, iframe {
 /* Enhanced small tablet support */
 @media (max-width: 820px) and (min-width: 601px) {
     .pricing-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
     
     .pricing-card.featured {
-        grid-column: 1;
+        grid-column: span 1;
     }
     
     .metrics-grid {

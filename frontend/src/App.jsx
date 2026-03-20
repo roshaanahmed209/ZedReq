@@ -16,8 +16,20 @@ import Notifications from './pages/Notifications'
 import Messages from './pages/Messages'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
+import ChoosePlan from './pages/ChoosePlan'
+import Checkout from './pages/Checkout'
+import EnterpriseInquiry from './pages/EnterpriseInquiry'
 import ProtectedRoute from './components/ProtectedRoute'
+import RequirePlanSelected from './components/RequirePlanSelected'
 import { initAnalytics, trackPageView } from './utils/analytics'
+
+function WithPlanGate({ children }) {
+  return (
+    <ProtectedRoute>
+      <RequirePlanSelected>{children}</RequirePlanSelected>
+    </ProtectedRoute>
+  )
+}
 
 // Component to track route changes
 function RouteTracker() {
@@ -46,102 +58,45 @@ function App() {
           <Route path="/" element={<FirstPage />} />
           <Route path="/get-started" element={<GetStarted />} />
           <Route path="/landing" element={<Landing />} />
-          <Route 
-            path="/feed" 
+          <Route
+            path="/choose-plan"
             element={
               <ProtectedRoute>
-                <Feed />
+                <ChoosePlan />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/network" 
+          <Route
+            path="/checkout"
             element={
               <ProtectedRoute>
-                <Network />
+                <Checkout />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/jobs" 
+          <Route
+            path="/enterprise-inquiry"
             element={
               <ProtectedRoute>
-                <Jobs />
+                <EnterpriseInquiry />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/lms" 
-            element={
-              <ProtectedRoute>
-                <LMS />
-              </ProtectedRoute>
-            } 
+          <Route path="/feed" element={<WithPlanGate><Feed /></WithPlanGate>} />
+          <Route path="/network" element={<WithPlanGate><Network /></WithPlanGate>} />
+          <Route path="/jobs" element={<WithPlanGate><Jobs /></WithPlanGate>} />
+          <Route path="/lms" element={<WithPlanGate><LMS /></WithPlanGate>} />
+          <Route path="/evaluation" element={<WithPlanGate><Evaluation /></WithPlanGate>} />
+          <Route path="/ai-mode" element={<WithPlanGate><AIMode /></WithPlanGate>} />
+          <Route path="/ai-interviews" element={<WithPlanGate><AIInterviews /></WithPlanGate>} />
+          <Route path="/notifications" element={<WithPlanGate><Notifications /></WithPlanGate>} />
+          <Route path="/messages" element={<WithPlanGate><Messages /></WithPlanGate>} />
+          <Route
+            path="/profile/:username-:hashedId"
+            element={<WithPlanGate><Profile /></WithPlanGate>}
           />
-          <Route 
-            path="/evaluation" 
-            element={
-              <ProtectedRoute>
-                <Evaluation />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/ai-mode" 
-            element={
-              <ProtectedRoute>
-                <AIMode />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/ai-interviews" 
-            element={
-              <ProtectedRoute>
-                <AIInterviews />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/notifications" 
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/messages" 
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile/:username-:hashedId" 
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile/:userId" 
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/profile/:userId" element={<WithPlanGate><Profile /></WithPlanGate>} />
+          <Route path="/settings" element={<WithPlanGate><Settings /></WithPlanGate>} />
         </Routes>
       </Router>
       </AuthProvider>

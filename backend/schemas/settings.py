@@ -76,6 +76,7 @@ class TwoFactorUpdate(BaseModel):
 class SubscriptionUpdate(BaseModel):
     """Subscription update request"""
     plan: str = Field(..., pattern="^(free|pro|premium)$")
+    billing_email: Optional[EmailStr] = None
 
 
 class SubscriptionInfo(BaseModel):
@@ -84,7 +85,13 @@ class SubscriptionInfo(BaseModel):
     status: str = "inactive"
     subscription_start: Optional[str] = None
     subscription_end: Optional[str] = None
-    
+    requires_plan_selection: bool = True
+
     class Config:
         # Allow None values to be converted to defaults
         orm_mode = False
+
+
+class EnterpriseInquiryRequest(BaseModel):
+    """Enterprise sales inquiry (authenticated user)"""
+    email: EmailStr

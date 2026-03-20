@@ -918,8 +918,8 @@ class SettingsService:
             )
             if user_sub and user_sub.plan:
                 return {
-                    'plan': user_sub.plan.plan_name,
-                    'status': user_sub.status,
+                    'plan': str(user_sub.plan.plan_name),
+                    'status': str(user_sub.status or 'inactive'),
                     'subscription_start': user_sub.started_at.isoformat() if user_sub.started_at else None,
                     'subscription_end': user_sub.expires_at.isoformat() if user_sub.expires_at else None
                 }
@@ -952,16 +952,57 @@ class SettingsService:
         except Exception as e:
             logger.error(f"Get subscription info error: {e}", exc_info=True)
             raise
-    
-    def update_subscription(self, user_id: int, plan: str) -> Dict[str, Any]:
+
+    def requires_plan_selection(self, user_id: int) -> bool:
+        """
+        True until the user has a persisted plan signal (active subscription and/or payment row with a plan).
+        """
+        try:
+            user = self.db.query(User).filter(User.uid == user_id).first()
+            if not user:
+                return True
+            active_sub = (
+                self.db.query(UserSubscription)
+                .filter(UserSubscription.user_id == user_id, UserSubscription.status == 'active')
+                .first()
+            )
+            if active_sub:
+                return False
+            if user.pay_id:
+                payment = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
+                if payment and payment.subscription_plan and str(payment.subscription_plan).strip():
+                    return False
+            payment_orphan = self.db.query(Payment).filter(Payment.uid == user_id).first()
+            if payment_orphan and payment_orphan.subscription_plan and str(payment_orphan.subscription_plan).strip():
+                return False
+            return True
+        except Exception as e:
+            logger.error(f"requires_plan_selection error: {e}", exc_info=True)
+            return True
+
+    def get_subscription_info_with_flags(self, user_id: int) -> Dict[str, Any]:
+        """Subscription dict plus requires_plan_selection for API responses."""
+        info = self.get_subscription_info(user_id)
+        info['requires_plan_selection'] = self.requires_plan_selection(user_id)
+        return info
+
+    def update_subscription(
+        self,
+        user_id: int,
+        plan: str,
+        billing_email: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Update user subscription plan (payment-first flow).
         
         Write order (payment is source of truth):
         1. Look up plan_id from subscription_plans.
-        2. UPSERT payment FIRST (plan, status).
-        3. UPSERT user_subscriptions (synced from payment, used for quota reads).
+        2. UPSERT payment FIRST (plan, billing subscription status).
+        3. UPSERT user_subscriptions (entitlement; always active for self-serve tiers).
         4. SET payment.subscription_id FK link.
+        
+        Free tier: payment.subscription_status stays inactive (no paid sub);
+        user_subscriptions.status is active so quota/API reads match the chosen plan.
         
         Enterprise plan cannot be self-assigned — admin only.
         """
@@ -973,7 +1014,10 @@ class SettingsService:
             if not user:
                 raise NotFoundError('User')
             
-            subscription_status = 'inactive' if plan == 'free' else 'active'
+            # Billing row: inactive for free (no recurring payment), active for paid tiers
+            payment_subscription_status = 'inactive' if plan == 'free' else 'active'
+            # Entitlement row: active whenever user has a self-serve plan (used by get_user_plan)
+            user_sub_status = 'active'
             
             # 1. Look up plan_id from subscription_plans
             plan_obj = self.db.query(SubscriptionPlan).filter_by(plan_name=plan, is_active=True).first()
@@ -988,29 +1032,33 @@ class SettingsService:
             
             if payment:
                 payment.subscription_plan = plan
-                payment.subscription_status = subscription_status
+                payment.subscription_status = payment_subscription_status
             else:
                 payment = Payment(
                     uid=user_id,
                     subscription_plan=plan,
-                    subscription_status=subscription_status,
+                    subscription_status=payment_subscription_status,
                 )
                 self.db.add(payment)
                 self.db.flush()
                 user.pay_id = payment.pay_id
+
+            be = (billing_email or "").strip()
+            if be:
+                payment.billing_email = be[:150]
             
             # 3. UPSERT user_subscriptions (synced from payment, used for quota reads)
             user_sub = self.db.query(UserSubscription).filter_by(user_id=user_id).first()
             if user_sub:
                 user_sub.plan_id = plan_obj.plan_id
-                user_sub.status = subscription_status
+                user_sub.status = user_sub_status
                 user_sub.assigned_by = 'self'
             else:
                 from datetime import datetime, timezone
                 user_sub = UserSubscription(
                     user_id=user_id,
                     plan_id=plan_obj.plan_id,
-                    status=subscription_status,
+                    status=user_sub_status,
                     assigned_by='self',
                     started_at=datetime.now(timezone.utc),
                 )
@@ -1024,15 +1072,15 @@ class SettingsService:
             
             logger.info(f"Subscription updated to {plan} for user {user_id} (subscription_id={user_sub.subscription_id})")
             
-            return self.get_subscription_info(user_id)
-            
+            return self.get_subscription_info_with_flags(user_id)
+
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
             self.db.rollback()
             logger.error(f"Update subscription error: {e}", exc_info=True)
             raise
-    
+
     def delete_account(self, user_id: int) -> bool:
         """Delete user account (cascade deletes handled by DB)"""
         try:

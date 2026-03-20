@@ -23,7 +23,8 @@ from schemas.settings import (
     PasswordChange,
     EmailUpdate,
     SubscriptionUpdate,
-    SubscriptionInfo
+    SubscriptionInfo,
+    EnterpriseInquiryRequest,
 )
 from schemas.two_factor import (
     TwoFactorSetupResponse,
@@ -32,9 +33,26 @@ from schemas.two_factor import (
     TwoFactorStatusResponse
 )
 from utils.errors import NotFoundError, ValidationError
+from models.orm.enterprise_inquiry import EnterpriseInquiry
 
 # Rate limiter for sensitive operations (password, email, account deletion)
 _sensitive_limiter = RateLimiter(requests_per_minute=5)  # Very strict for sensitive operations
+
+_enterprise_inquiry_limiter = RateLimiter(requests_per_minute=10)
+
+
+def enterprise_inquiry_rate_limit(current_user: dict = Depends(get_current_user)):
+    """Rate limit enterprise inquiry submissions per user."""
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    if not _enterprise_inquiry_limiter.is_allowed(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many inquiries. Please try again later.",
+        )
+    return current_user
+
 
 def sensitive_rate_limit(current_user: dict = Depends(get_current_user)):
     """Rate limit for sensitive operations (password change, email change, account deletion)"""
@@ -777,6 +795,26 @@ async def disable_2fa(
         )
 
 
+def _normalize_subscription_response(subscription: Dict[str, Any]) -> SubscriptionInfo:
+    """Coerce DB/datetime values so response_model validation never returns 422."""
+
+    def _dt_str(v):
+        if v is None:
+            return None
+        if hasattr(v, "isoformat"):
+            return v.isoformat()
+        s = str(v).strip()
+        return s if s else None
+
+    return SubscriptionInfo(
+        plan=str(subscription.get("plan") or "free").strip() or "free",
+        status=str(subscription.get("status") or "inactive").strip() or "inactive",
+        subscription_start=_dt_str(subscription.get("subscription_start")),
+        subscription_end=_dt_str(subscription.get("subscription_end")),
+        requires_plan_selection=bool(subscription.get("requires_plan_selection", True)),
+    )
+
+
 @router.get("/subscription", response_model=SubscriptionInfo)
 async def get_subscription(
     current_user: dict = Depends(get_current_user),
@@ -784,16 +822,8 @@ async def get_subscription(
 ):
     """Get user subscription information"""
     try:
-        subscription = settings_service.get_subscription_info(current_user["id"])
-        # Ensure all required fields are present and valid strings
-        subscription['plan'] = str(subscription.get('plan', 'free')).strip() or 'free'
-        subscription['status'] = str(subscription.get('status', 'inactive')).strip() or 'inactive'
-        # Ensure optional fields are None if not present
-        subscription['subscription_start'] = subscription.get('subscription_start') or None
-        subscription['subscription_end'] = subscription.get('subscription_end') or None
-        
-        # Validate and return
-        return SubscriptionInfo(**subscription)
+        subscription = settings_service.get_subscription_info_with_flags(current_user["id"])
+        return _normalize_subscription_response(subscription)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -834,9 +864,10 @@ async def update_subscription(
     try:
         subscription = settings_service.update_subscription(
             user_id=current_user["id"],
-            plan=subscription_data.plan
+            plan=subscription_data.plan,
+            billing_email=subscription_data.billing_email,
         )
-        return subscription
+        return _normalize_subscription_response(subscription)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -853,6 +884,41 @@ async def update_subscription(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update subscription"
         )
+
+
+@router.post("/enterprise-inquiry")
+async def submit_enterprise_inquiry(
+    body: EnterpriseInquiryRequest,
+    current_user: dict = Depends(enterprise_inquiry_rate_limit),
+    db: Session = Depends(get_db),
+):
+    """Persist enterprise interest (authenticated). User id from JWT only; visible in backoffice."""
+    uid = current_user.get("id")
+    email = str(body.email).strip()
+    try:
+        row = EnterpriseInquiry(
+            user_id=int(uid),
+            contact_email=email[:255],
+            user_email=(current_user.get("email") or "")[:255] or None,
+            username=(current_user.get("username") or "")[:100] or None,
+            status="new",
+        )
+        db.add(row)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error("enterprise_inquiry persist failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not save your request. Please try again.",
+        )
+    logger.info(
+        "enterprise_inquiry user_id=%s email=%s username=%s",
+        uid,
+        email,
+        current_user.get("username"),
+    )
+    return {"success": True, "message": "Thank you. Our team will contact you soon."}
 
 
 @router.delete("/account")
