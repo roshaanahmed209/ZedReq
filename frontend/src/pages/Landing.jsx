@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { useAuth } from '../contexts/AuthContext'
-import { signInWithPopup } from 'firebase/auth'
+import { signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider } from '../config/firebase'
 import api, { tokenService } from '../services/api'
+import { extractApiErrorMessage } from '../utils/apiError'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -344,6 +345,21 @@ const GoogleIcon = styled.span`
   justify-content: center;
 `
 
+const AgreementNote = styled.p`
+  font-size: 0.85em;
+  color: var(--text-light);
+  line-height: 1.5;
+  margin: 0 0 18px;
+
+  a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+`
+
 const Landing = () => {
   const [activeTab, setActiveTab] = useState('login')
   const [message, setMessage] = useState('')
@@ -360,7 +376,7 @@ const Landing = () => {
     setMessage('')
     setErrors([])
     setIsError(false)
-    
+
     setTimeout(() => {
       setMessage(text)
       setIsError(error)
@@ -395,10 +411,7 @@ const Landing = () => {
     }
     
     if (result.success) {
-      showMessage(result.message || 'Login successful!')
-      setTimeout(() => {
-        navigate('/feed')
-      }, 800)
+      navigate('/feed')
     } else {
       showMessage(result.message || 'Login failed', true)
     }
@@ -419,13 +432,10 @@ const Landing = () => {
     const result = await verify2FA(tempToken, twoFactorCode)
     
     if (result.success) {
-      showMessage('Login successful!')
       setRequires2FA(false)
       setTempToken(null)
       setTwoFactorCode('')
-      setTimeout(() => {
-        navigate('/feed')
-      }, 800)
+      navigate('/feed')
     } else {
       showMessage(result.message || 'Invalid 2FA code', true)
       setTwoFactorCode('')
@@ -434,54 +444,69 @@ const Landing = () => {
     setLoading(false)
   }
 
-  const handleGoogleSignIn = async () => {
+  const runGoogleAuth = async (intent) => {
     setLoading(true)
     setMessage('')
     setErrors([])
-    
+
     try {
-      // Sign in with Google using Firebase
       const result = await signInWithPopup(auth, googleProvider)
-      const user = result.user
-      
-      // Get the ID token
-      const idToken = await user.getIdToken()
-      
-      // Send token to backend for verification and user creation/login
-      const response = await api.post('/api/auth/google', { id_token: idToken })
-      
+      const firebaseUser = result.user
+      const idToken = await firebaseUser.getIdToken()
+
+      const response = await api.post('/api/auth/google', {
+        id_token: idToken,
+        intent,
+      })
+
       if (response.data && response.data.access_token) {
-        // Store tokens using tokenService
         const { access_token, refresh_token, user: userData } = response.data
         tokenService.setTokens(access_token, refresh_token)
-        
-        // Update AuthContext with user data
+
         if (userData) {
           updateUser(userData)
         } else {
-          // If user data not in response, fetch it from backend
           await checkAuthStatus()
         }
-        
-        showMessage('Login successful!')
-        // Wait a bit longer to ensure state is updated before navigation
-        setTimeout(() => {
-          navigate('/feed')
-        }, 1000)
+
+        navigate('/feed')
       } else {
-        showMessage(response.data?.detail || 'Google sign-in failed', true)
+        showMessage(
+          extractApiErrorMessage(response.data) || 'Google sign-in failed',
+          true
+        )
+        if (intent === 'login') {
+          await signOut(auth)
+        }
       }
     } catch (error) {
-      console.error('Google sign-in error:', error)
+      console.error('Google auth error:', error)
       if (error.code === 'auth/popup-closed-by-user') {
         showMessage('Sign-in cancelled', true)
+      } else if (error.response) {
+        const apiMsg = extractApiErrorMessage(error.response.data)
+        const fallback =
+          intent === 'login' && error.response.status === 404
+            ? 'No ZedReq account is registered for this Google email. Please create an account first (use Sign up).'
+            : 'Google sign-in failed'
+        showMessage(apiMsg || fallback, true)
+        if (intent === 'login') {
+          await signOut(auth)
+        }
       } else {
         showMessage(error.message || 'Google sign-in failed', true)
+        if (intent === 'login') {
+          await signOut(auth)
+        }
       }
     } finally {
       setLoading(false)
     }
   }
+
+  const handleGoogleSignIn = () => runGoogleAuth('login')
+
+  const handleGoogleSignUp = () => runGoogleAuth('signup')
 
   const handleRegister = async (e) => {
     e.preventDefault()
@@ -526,10 +551,7 @@ const Landing = () => {
     const result = await register(userData)
     
     if (result.success) {
-      showMessage(result.message || 'Account created successfully!')
-      setTimeout(() => {
-        navigate('/feed')
-      }, 800)
+      navigate('/feed')
     } else {
       showMessage(result.message || 'Registration failed', true, result.errors || [])
     }
@@ -715,9 +737,35 @@ const Landing = () => {
                 />
                 <PasswordHint>8-25 characters, at least one uppercase</PasswordHint>
               </InputWrapper>
+              <AgreementNote>
+                By creating an account, you agree to our{' '}
+                <Link to="/terms">Terms of Service</Link>
+                {' '}and{' '}
+                <Link to="/privacy">Privacy Policy</Link>.
+              </AgreementNote>
               <Button type="submit" disabled={loading}>
                 {loading ? <LoadingSpinner>Creating Account...</LoadingSpinner> : 'Sign Up →'}
               </Button>
+              <Divider>
+                <DividerLine />
+                <DividerText>OR</DividerText>
+                <DividerLine />
+              </Divider>
+              <GoogleButton
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={loading}
+              >
+                <GoogleIcon>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M17.64 9.20454C17.64 8.56636 17.5827 7.95272 17.4764 7.36363H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H15.9564C17.1582 14.7227 17.64 12.9455 17.64 9.20454Z" fill="#4285F4"/>
+                    <path d="M9 18C11.43 18 13.467 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4204 9 14.4204C6.65455 14.4204 4.67182 12.8373 3.96409 10.71H0.957275V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"/>
+                    <path d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V4.95818H0.957273C0.347727 6.17318 0 7.54773 0 9C0 10.4523 0.347727 11.8268 0.957273 13.0418L3.96409 10.71Z" fill="#FBBC05"/>
+                    <path d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.95818L3.96409 7.29C4.67182 5.16273 6.65455 3.57955 9 3.57955Z" fill="#EA4335"/>
+                  </svg>
+                </GoogleIcon>
+                {loading ? 'Please wait...' : 'Sign up with Google'}
+              </GoogleButton>
             </Form>
           </TabContent>
           

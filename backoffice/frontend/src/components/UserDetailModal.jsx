@@ -8,18 +8,19 @@ import {
 } from 'lucide-react'
 
 // Two-step confirmation wrapper for destructive actions
-const ConfirmAction = ({ label, icon: Icon, variant, onConfirm, disabled, className }) => {
+const ConfirmAction = ({ label, icon: Icon, variant, onConfirm, disabled, className, title }) => {
   const [confirming, setConfirming] = useState(false)
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" title={title}>
         <span className="text-sm text-muted-foreground">Are you sure?</span>
         <Button
           size="sm"
           variant="destructive"
           onClick={() => { onConfirm(); setConfirming(false) }}
           disabled={disabled}
+          title={title}
         >
           Confirm
         </Button>
@@ -41,6 +42,7 @@ const ConfirmAction = ({ label, icon: Icon, variant, onConfirm, disabled, classN
       onClick={() => setConfirming(true)}
       disabled={disabled}
       className={className}
+      title={title}
     >
       {Icon && <Icon className="h-4 w-4 mr-2" />}
       {label}
@@ -94,6 +96,31 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
       setActionResult({
         type: 'error',
         message: err.response?.data?.detail || err.message || 'Action failed'
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    try {
+      setActionLoading('delete')
+      setActionResult(null)
+      const response = await usersAPI.delete(userId, 'Admin deletion')
+      let message = response.data?.message || 'Account deleted'
+      if (response.data?.email_sent === true) {
+        message += ' A confirmation email was sent to the user.'
+      } else if (response.data?.email_sent === false) {
+        message += ' Notification email was not sent (configure SMTP in backoffice .env).'
+      }
+      setUser(null)
+      setActionResult({ type: 'success', message })
+      if (onUserUpdated) onUserUpdated()
+      setTimeout(() => onClose(), 2000)
+    } catch (err) {
+      setActionResult({
+        type: 'error',
+        message: err.response?.data?.detail || err.message || 'Delete failed'
       })
     } finally {
       setActionLoading(null)
@@ -371,12 +398,14 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                     variant="outline"
                     disabled={!!actionLoading}
                     onConfirm={() => handleAction('suspend', () => usersAPI.suspend(userId, 'Admin action'))}
+                    title="Not functional"
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleAction('unsuspend', () => usersAPI.unsuspend(userId))}
                     disabled={!!actionLoading}
+                    title="Not functional"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     {actionLoading === 'unsuspend' ? 'Processing...' : 'Unsuspend'}
@@ -388,6 +417,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                     variant="outline"
                     onClick={() => handleAction('forceLogout', () => usersAPI.forceLogout(userId))}
                     disabled={!!actionLoading}
+                    title="Not functional"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     {actionLoading === 'forceLogout' ? 'Processing...' : 'Force Logout'}
@@ -405,8 +435,11 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                   </Button>
                 </div>
 
-                {/* Send Notification */}
-                <div className="space-y-2 p-3 rounded-lg bg-accent/50">
+                {/* Send Notification (audit-only; not wired to email/in-app) */}
+                <div
+                  className="space-y-2 p-3 rounded-lg bg-accent/50"
+                  title="Not functional"
+                >
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Bell className="h-4 w-4" />
                     Send Notification
@@ -416,6 +449,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                     value={notifySubject}
                     onChange={(e) => setNotifySubject(e.target.value)}
                     maxLength={200}
+                    title="Not functional"
                   />
                   <textarea
                     placeholder="Message..."
@@ -424,11 +458,13 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                     maxLength={2000}
                     rows={3}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                    title="Not functional"
                   />
                   <Button
                     size="sm"
                     onClick={() => handleAction('notify', () => usersAPI.sendNotification(userId, notifySubject, notifyMessage))}
                     disabled={actionLoading === 'notify' || !notifySubject.trim() || !notifyMessage.trim()}
+                    title="Not functional"
                   >
                     {actionLoading === 'notify' ? 'Sending...' : 'Send'}
                   </Button>
@@ -508,7 +544,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                       icon={Trash2}
                       variant="destructive"
                       disabled={!!actionLoading}
-                      onConfirm={() => handleAction('delete', () => usersAPI.delete(userId, 'Admin deletion'))}
+                      onConfirm={handleDeleteUser}
                       className="w-full justify-start"
                     />
                   </div>
@@ -519,6 +555,7 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                   <a
                     href={`/activity?user_id=${userId}`}
                     className="text-sm text-primary hover:underline flex items-center gap-1"
+                    title="Not functional"
                   >
                     <Activity className="h-3 w-3" />
                     View Activity Logs for this user

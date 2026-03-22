@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import api, { userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
+import { ZEDREQ_EMAIL } from '../config/contact'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -1816,7 +1817,7 @@ const Settings = () => {
 
               <h3>8. Contact Us</h3>
               <p>
-                If you have any questions about this Privacy Policy, please contact us at privacy@zedreq.com
+                If you have any questions about this Privacy Policy, please contact us at {ZEDREQ_EMAIL}
               </p>
 
               <p style={{ marginTop: '20px', fontSize: '0.9em', color: 'var(--text-lighter)' }}>

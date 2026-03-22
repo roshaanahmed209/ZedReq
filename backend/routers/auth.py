@@ -10,7 +10,8 @@ from schemas.auth import (
     UserResponse,
     RefreshTokenRequest
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from schemas.two_factor import (
     TwoFactorVerify,
     TwoFactorVerifySetup
@@ -21,7 +22,7 @@ from services.context_updater import ContextUpdater
 from services.lms_preloader import schedule_lms_preload
 from dependencies.auth import get_current_user
 from config.database_orm import get_db
-from utils.errors import NotFoundError, ValidationError
+from utils.errors import NotFoundError, ValidationError, GoogleSignInNoAccountError
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -146,6 +147,10 @@ async def verify_2fa_login(
 class GoogleAuthRequest(BaseModel):
     """Google authentication request"""
     id_token: str
+    intent: Literal["login", "signup"] = Field(
+        default="signup",
+        description="'login' requires an existing ZedReq user; 'signup' creates one if needed.",
+    )
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -160,7 +165,9 @@ async def google_auth(
     background thread so the first visit is served straight from cache.
     """
     try:
-        result = auth_service.verify_google_token(google_data.id_token)
+        result = auth_service.verify_google_token(
+            google_data.id_token, google_data.intent
+        )
 
         # Schedule LMS pre-warm after successful Google auth.
         user_id = result.get("user", {}).get("id")
@@ -168,6 +175,11 @@ async def google_auth(
             background_tasks.add_task(schedule_lms_preload, user_id)
 
         return TokenResponse(**result)
+    except GoogleSignInNoAccountError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.message,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

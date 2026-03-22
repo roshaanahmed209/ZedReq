@@ -1,0 +1,119 @@
+.public-subpage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0f;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.public-subpage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.public-subpage-logo {
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-decoration: none;
+}
+
+.public-subpage-logo:hover {
+  color: #a78bfa;
+}
+
+.public-subpage-nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.public-subpage-nav a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.public-subpage-nav a:hover {
+  color: #fff;
+}
+
+.public-subpage-main {
+  flex: 1;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.public-subpage-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem;
+  color: #fff;
+}
+
+.public-subpage-prose {
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.public-subpage-prose p {
+  margin: 0 0 1rem;
+}
+
+.public-subpage-prose ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.public-subpage-prose a {
+  color: #a78bfa;
+}
+
+.public-subpage-prose a:hover {
+  text-decoration: underline;
+}
+
+.public-subpage-cta {
+  margin-top: 1.5rem;
+}
+
+.public-subpage-cta a {
+  display: inline-block;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: #fff !important;
+  text-decoration: none !important;
+  font-weight: 600;
+}
+
+.public-subpage-cta a:hover {
+  opacity: 0.95;
+}
+
+.public-subpage-inline-links a {
+  color: #a78bfa;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.public-subpage-inline-links a:hover {
+  text-decoration: underline;
+}
+
+/* Legal docs: reuse GetStarted modal typography on full pages */
+.public-subpage-main .public-legal-article.get-started-modal-body {
+  max-height: none;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.88);
+}

@@ -726,7 +726,7 @@ class AdminService:
         
         return {'success': True, 'message': 'Notification logged'}
     
-    def delete_user_soft(
+    def delete_user_permanent(
         self,
         user_id: int,
         reason: str,
@@ -735,51 +735,51 @@ class AdminService:
         user_agent: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Soft-delete a user: cancel subscription in both tables + log deletion intent.
-        Payment updated first (source of truth), then user_subscriptions synced.
-        No CASCADE DELETE — actual deletion handled by main app flow.
+        Permanently delete a user row from the main app database (DB ON DELETE CASCADE
+        cleans related rows). Then notify the former account email via SMTP if configured.
         """
+        from utils.smtp_mail import send_plain_email
+
         engine = get_main_app_engine()
         with engine.begin() as conn:
-            # Verify user exists
-            user_check = conn.execute(
-                text("SELECT uid FROM users WHERE uid = :uid"),
-                {'uid': user_id}
+            row = conn.execute(
+                text("DELETE FROM users WHERE uid = :uid RETURNING user_email"),
+                {"uid": user_id},
             ).fetchone()
-            if not user_check:
+            if not row:
                 raise ValueError("User not found")
-            
-            # Cancel in payment FIRST (source of truth)
-            conn.execute(
-                text("""
-                    UPDATE payment 
-                    SET subscription_status = 'cancelled', updated_at = NOW()
-                    WHERE uid = :uid AND subscription_status = 'active'
-                """),
-                {'uid': user_id}
-            )
-            
-            # Cancel in user_subscriptions (synced from payment)
-            conn.execute(
-                text("""
-                    UPDATE user_subscriptions
-                    SET status = 'cancelled', updated_at = NOW()
-                    WHERE user_id = :uid AND status = 'active'
-                """),
-                {'uid': user_id}
-            )
-        
+
+            user_email = row.user_email
+
         self._log_admin_activity(
             admin_id=admin_id,
-            action_type='delete_user_request',
-            target_type='user',
+            action_type="delete_user",
+            target_type="user",
             target_id=user_id,
-            details={'reason': reason[:500], 'type': 'soft_delete'},
+            details={
+                "reason": reason[:500],
+                "type": "permanent_delete",
+                "notified_email": user_email,
+            },
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
         )
-        
-        return {'success': True, 'message': 'User deletion requested and subscription cancelled'}
+
+        subject = "Your ZedReq account has been deleted"
+        body = (
+            "Hello,\n\n"
+            "Your ZedReq account associated with this email address has been permanently "
+            "deleted by an administrator.\n\n"
+            "If you believe this was a mistake, please contact support.\n\n"
+            "— ZedReq"
+        )
+        email_sent = send_plain_email(user_email, subject, body) if user_email else False
+
+        return {
+            "success": True,
+            "message": "User account permanently deleted",
+            "email_sent": email_sent,
+        }
     
     # ========================================================================
     # Financial Analytics Methods

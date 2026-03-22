@@ -32,3 +32,15 @@ class ConflictError(AppError):
     """Resource conflict error"""
     def __init__(self, message: str = "Resource already exists"):
         super().__init__(message, 409)
+
+
+class GoogleSignInNoAccountError(AppError):
+    """Google sign-in (login intent): no ZedReq user for that email."""
+    def __init__(
+        self,
+        message: str = (
+            "No ZedReq account is registered for this Google email. "
+            "Please create an account first (use Sign up)."
+        ),
+    ):
+        super().__init__(message, 404)

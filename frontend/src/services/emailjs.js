@@ -3,6 +3,7 @@
  * Uses EmailJS client-side SDK with public key
  */
 import emailjs from '@emailjs/browser'
+import { ZEDREQ_EMAIL } from '../config/contact'
 
 // EmailJS configuration - these should be in .env file
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
@@ -22,7 +23,7 @@ function initializeEmailJS() {
 /**
  * Generate HTML email template for reservation confirmation
  */
-function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai', companyEmail = 'support@zedreq.ai') {
+function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai', companyEmail = ZEDREQ_EMAIL) {
   return `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; font-size: 16px; background-color: #000000; color: #ffffff; padding: 0; margin: 0;">
   <div style="max-width: 600px; margin: auto; padding: 0;">
@@ -142,7 +143,7 @@ export async function sendReservationEmail(email, promoCode) {
     // 1. Use simple variables and configure HTML in EmailJS dashboard template
     // 2. Or send the full HTML as a variable (if your template supports it)
     const websiteLink = import.meta.env.VITE_WEBSITE_URL || 'https://zedreq.ai'
-    const companyEmail = import.meta.env.VITE_COMPANY_EMAIL || 'support@zedreq.ai'
+    const companyEmail = ZEDREQ_EMAIL
     
     const templateParams = {
       to_email: email,

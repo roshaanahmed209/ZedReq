@@ -19,6 +19,16 @@ import Settings from './pages/Settings'
 import ChoosePlan from './pages/ChoosePlan'
 import Checkout from './pages/Checkout'
 import EnterpriseInquiry from './pages/EnterpriseInquiry'
+import Features from './pages/Features'
+import PricingPublic from './pages/PricingPublic'
+import About from './pages/About'
+import Careers from './pages/Careers'
+import Contact from './pages/Contact'
+import Blog from './pages/Blog'
+import HelpCenter from './pages/HelpCenter'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import CookiePolicy from './pages/CookiePolicy'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePlanSelected from './components/RequirePlanSelected'
 import { initAnalytics, trackPageView } from './utils/analytics'
@@ -56,6 +66,16 @@ function App() {
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<PricingPublic />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/careers" element={<Careers />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/cookies" element={<CookiePolicy />} />
           <Route path="/get-started" element={<GetStarted />} />
           <Route path="/landing" element={<Landing />} />
           <Route

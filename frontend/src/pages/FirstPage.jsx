@@ -4,6 +4,8 @@ import DarkVeil from '../components/DarkVeil'
 import Beams from '../components/Beams'
 import CardSwap, { Card } from '../components/CardSwap'
 import ReserveSeatModal from '../components/ReserveSeatModal'
+import SiteFooter from '../components/SiteFooter'
+import { zedreqMailto } from '../config/contact'
 import CombinedSkillGapAndNetwork from '../components/CombinedSkillGapAndNetwork'
 import JobDiscoveryFlow from '../components/JobDiscoveryFlow'
 import { Timeline } from '../components/Timeline'
@@ -228,7 +230,7 @@ const FirstPage = () => {
 
       {/* Showcase Sections */}
       {/* Feature Cards */}
-      <section className="features-section-cardswap">
+      <section id="features" className="features-section-cardswap">
         <div className="features-content-wrapper">
           <div className="features-text-section scroll-reveal">
             <h2 className="features-title">Powerful Features to Accelerate Your Career</h2>
@@ -582,7 +584,7 @@ const FirstPage = () => {
       </section>
 
       {/* Pricing */}
-      <section className="pricing-section" style={{ position: 'relative', overflow: 'hidden' }}>
+      <section id="pricing" className="pricing-section" style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, opacity: 0.6 }}>
           <Beams
             beamWidth={1.5}
@@ -744,7 +746,7 @@ const FirstPage = () => {
               <div className="price">
                 Custom
               </div>
-              <a href="mailto:support@zedreq.com?subject=Enterprise%20plan%20inquiry" className="btn-secondary pricing-btn">Contact us</a>
+              <a href={zedreqMailto('Enterprise plan inquiry')} className="btn-secondary pricing-btn">Contact us</a>
               <div className="pricing-divider"></div>
               <p className="pricing-includes">Everything in Free — unlimited networking, jobs, feed, messaging &amp; more</p>
               <p className="pricing-includes">Enterprise usage:</p>
@@ -798,45 +800,7 @@ const FirstPage = () => {
         onClose={() => setShowReserveModal(false)}
       />
 
-      {/* Footer */}
-      <footer className="footer scroll-reveal">
-        <div className="footer-content">
-          <div className="footer-section scroll-reveal">
-            <h4>Product</h4>
-            <ul>
-              <li><a href="#">Features</a></li>
-              <li><a href="#">Pricing</a></li>
-            </ul>
-          </div>
-          <div className="footer-section scroll-reveal">
-            <h4>Company</h4>
-            <ul>
-              <li><a href="#">About</a></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Contact</a></li>
-            </ul>
-          </div>
-          <div className="footer-section scroll-reveal">
-            <h4>Resources</h4>
-            <ul>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">Help Center</a></li>
-              <li><a href="#">Privacy Policy</a></li>
-            </ul>
-          </div>
-          <div className="footer-section scroll-reveal">
-            <h4>Legal</h4>
-            <ul>
-              <li><a href="#">Terms of Service</a></li>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Cookie Policy</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="footer-bottom scroll-reveal">
-          <p>&copy; 2024 ZedReq — All rights reserved.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

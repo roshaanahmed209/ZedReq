@@ -136,7 +136,7 @@
   animation: get-started-fade-up 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) 0.3s forwards;
 }
 
-/* Card with checkboxes and button */
+/* Card with CTA */
 .get-started-card {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(12px);
@@ -147,89 +147,6 @@
   margin-bottom: 28px;
   opacity: 0;
   animation: get-started-fade-up 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) 0.45s forwards;
-}
-
-.get-started-checkboxes {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 32px;
-  text-align: left;
-}
-
-.get-started-checkbox-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  cursor: pointer;
-  color: #ffffff;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.get-started-checkbox {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.get-started-checkbox-custom {
-  flex-shrink: 0;
-  position: relative;
-  width: 22px;
-  height: 22px;
-  border: 2px solid #2a2a2a;
-  border-radius: 6px;
-  background: transparent;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-}
-
-.get-started-checkbox:checked + .get-started-checkbox-custom {
-  background: #00B4D8;
-  border-color: #00B4D8;
-  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.4);
-}
-
-.get-started-checkbox-custom::after {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 3px;
-  width: 6px;
-  height: 11px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg) scale(0);
-  transition: transform 0.2s ease;
-}
-
-.get-started-checkbox:checked + .get-started-checkbox-custom::after {
-  transform: rotate(45deg) scale(1);
-}
-
-.get-started-checkbox-text {
-  user-select: none;
-}
-
-.get-started-link {
-  color: #00B4D8;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s, color 0.2s;
-}
-
-.get-started-link:hover {
-  color: #00d9ff;
-  border-bottom-color: #00B4D8;
-}
-
-.get-started-link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
 }
 
 /* Get Started button — matches .btn-primary */

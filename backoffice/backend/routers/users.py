@@ -420,15 +420,15 @@ async def delete_user(
     service: AdminService = Depends(get_admin_service)
 ):
     """
-    Soft-delete a user account. Requires super_admin.
-    Cancels subscription + logs deletion intent. No cascading DELETE.
+    Permanently delete a user account in the main app database. Requires super_admin.
+    Sends a notification email to the user's address when SMTP is configured.
     """
     if user_id < 1:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID")
     try:
         ip_address, user_agent = _extract_request_meta(request)
         reason = body.reason if body else "Admin deletion"
-        result = service.delete_user_soft(
+        result = service.delete_user_permanent(
             user_id=user_id,
             reason=reason,
             admin_id=current_admin["id"],

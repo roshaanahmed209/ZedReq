@@ -16,6 +16,7 @@ from models.orm import User
 from services.user_service import UserService
 from config.settings import settings
 from utils.logger import setup_logger
+from utils.errors import GoogleSignInNoAccountError
 
 logger = setup_logger(__name__)
 
@@ -440,8 +441,8 @@ class AuthService:
             "created_at": user.get("created_at")
         }
     
-    def verify_google_token(self, id_token: str) -> dict:
-        """Verify Firebase ID token and create/login user"""
+    def verify_google_token(self, id_token: str, intent: str = "signup") -> dict:
+        """Verify Firebase ID token. intent 'signup' creates user if missing; 'login' requires existing user."""
         try:
             # Firebase ID tokens are JWTs - decode without verification for now
             # In production, you should verify the signature using Firebase's public keys
@@ -521,7 +522,10 @@ class AuthService:
                 
                 return self._create_tokens(user_dict)
             else:
-                # Create new user
+                if intent == "login":
+                    raise GoogleSignInNoAccountError()
+
+                # Create new user (signup intent)
                 # Generate username from email (before @)
                 base_username = google_email.split('@')[0].lower()
                 username = base_username
@@ -566,6 +570,8 @@ class AuthService:
                 
                 return self._create_tokens(user_dict)
                 
+        except GoogleSignInNoAccountError:
+            raise
         except requests.RequestException as e:
             logger.error(f"Google token verification error: {e}")
             raise ValueError('Failed to verify Google token')
