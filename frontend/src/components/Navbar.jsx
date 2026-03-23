@@ -452,7 +452,7 @@ const PanelDivider = styled.div`
 function Navbar() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { user, logout } = useAuth()
+    const { user, logout, sessionFeedStats } = useAuth()
 
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
@@ -693,14 +693,22 @@ function Navbar() {
                     <PanelSection>
                         <PanelItem>
                             <span className="label">Profile views</span>
-                            <span className="value">142</span>
+                            <span className="value">
+                                {sessionFeedStats != null
+                                    ? sessionFeedStats.profileViews.toLocaleString()
+                                    : '—'}
+                            </span>
                         </PanelItem>
                     </PanelSection>
                     
                     <PanelSection>
                         <PanelItem>
                             <span className="label">Post impressions</span>
-                            <span className="value">1,234</span>
+                            <span className="value">
+                                {sessionFeedStats != null
+                                    ? sessionFeedStats.postImpressions.toLocaleString()
+                                    : '—'}
+                            </span>
                         </PanelItem>
                     </PanelSection>
                     

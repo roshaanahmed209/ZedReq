@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { nemzAPI, vecAPI } from '../services/api'
 import Navbar from '../components/Navbar'
+import { AiFormattedChatContent } from '../utils/aiChatFormat'
 import '../css/pages/AIMode.css'
 
 const fadeIn = keyframes`
@@ -548,6 +549,42 @@ const MessageText = styled.p`
   color: var(--text);
   line-height: 1.6;
   font-weight: 300;
+  margin: 0;
+`
+
+const BotMessageBody = styled.div`
+  font-size: 0.95em;
+  color: var(--text);
+  line-height: 1.65;
+  font-weight: 400;
+
+  p {
+    margin: 0 0 0.85em;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  ol {
+    margin: 0.35em 0 0.85em;
+    padding-left: 1.35em;
+    list-style-type: decimal;
+  }
+
+  li {
+    margin-bottom: 0.55em;
+    padding-left: 0.2em;
+    white-space: pre-line;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  strong {
+    font-weight: 600;
+    color: var(--text);
+  }
 `
 
 const MessageTime = styled.div`
@@ -1395,7 +1432,13 @@ const AIMode = () => {
               <ChatContainer ref={chatContainerRef}>
                 {chatMessages.map((msg) => (
                   <MessageBubble key={msg.id} isUser={msg.isUser}>
-                    <MessageText>{msg.text}</MessageText>
+                    {msg.isUser ? (
+                      <MessageText>{msg.text}</MessageText>
+                    ) : (
+                      <BotMessageBody>
+                        <AiFormattedChatContent text={msg.text} />
+                      </BotMessageBody>
+                    )}
                     <MessageTime>{msg.time}</MessageTime>
                   </MessageBubble>
                 ))}

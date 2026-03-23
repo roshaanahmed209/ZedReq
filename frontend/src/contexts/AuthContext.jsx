@@ -3,6 +3,43 @@ import { authAPI, tokenService, NotificationWebSocket } from '../services/api'
 
 const AuthContext = createContext()
 
+const SESSION_FEED_STATS_KEY = 'zedreq_session_feed_stats'
+
+function randomFeedStats() {
+  return {
+    profileViews: Math.floor(Math.random() * 200),
+    postImpressions: Math.floor(Math.random() * 800),
+  }
+}
+
+function readStoredFeedStats(userId) {
+  if (userId == null) return null
+  try {
+    const raw = sessionStorage.getItem(SESSION_FEED_STATS_KEY)
+    if (!raw) return null
+    const o = JSON.parse(raw)
+    if (String(o.userId) !== String(userId)) return null
+    return {
+      profileViews: o.profileViews,
+      postImpressions: o.postImpressions,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStoredFeedStats(userId, stats) {
+  if (userId == null) return
+  sessionStorage.setItem(
+    SESSION_FEED_STATS_KEY,
+    JSON.stringify({ userId, ...stats })
+  )
+}
+
+function clearStoredFeedStats() {
+  sessionStorage.removeItem(SESSION_FEED_STATS_KEY)
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -16,6 +53,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [notificationWs, setNotificationWs] = useState(null)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [sessionFeedStats, setSessionFeedStats] = useState(null)
 
   useEffect(() => {
     checkAuthStatus()
@@ -23,6 +61,8 @@ export const AuthProvider = ({ children }) => {
     // Listen for unauthorized events (token expired, etc.)
     const handleUnauthorized = () => {
       setUser(null)
+      setSessionFeedStats(null)
+      clearStoredFeedStats()
       tokenService.clearTokens()
     }
     
@@ -60,11 +100,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user])
 
+  const hydrateSessionFeedStats = (userId) => {
+    const id = userId
+    if (id == null) return
+    const existing = readStoredFeedStats(id)
+    if (existing) {
+      setSessionFeedStats(existing)
+      return
+    }
+    const stats = randomFeedStats()
+    writeStoredFeedStats(id, stats)
+    setSessionFeedStats(stats)
+  }
+
+  const refreshSessionFeedStats = (userId) => {
+    const id = userId
+    if (id == null) return
+    const stats = randomFeedStats()
+    writeStoredFeedStats(id, stats)
+    setSessionFeedStats(stats)
+  }
+
   const checkAuthStatus = async () => {
     try {
       // Check if we have a token
       if (!tokenService.isAuthenticated()) {
         setUser(null)
+        setSessionFeedStats(null)
         setLoading(false)
         return
       }
@@ -72,15 +134,19 @@ export const AuthProvider = ({ children }) => {
       // Verify token by getting current user
       const response = await authAPI.getCurrentUser()
       if (response.data) {
-        setUser(response.data)
+        const userData = response.data
+        setUser(userData)
+        hydrateSessionFeedStats(userData.id ?? userData.uid)
       } else {
         setUser(null)
+        setSessionFeedStats(null)
         tokenService.clearTokens()
       }
     } catch (error) {
       // Token invalid or expired
       console.log('Not authenticated or token expired')
       setUser(null)
+      setSessionFeedStats(null)
       tokenService.clearTokens()
     } finally {
       setLoading(false)
@@ -102,7 +168,9 @@ export const AuthProvider = ({ children }) => {
       }
       
       if (response.data && response.data.user) {
-        setUser(response.data.user)
+        const u = response.data.user
+        setUser(u)
+        refreshSessionFeedStats(u.id ?? u.uid)
         return { 
           success: true, 
           message: 'Login successful' 
@@ -134,7 +202,9 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.verify2FA(tempToken, code)
       
       if (response.data && response.data.user) {
-        setUser(response.data.user)
+        const u = response.data.user
+        setUser(u)
+        refreshSessionFeedStats(u.id ?? u.uid)
         return { 
           success: true, 
           message: 'Login successful' 
@@ -158,7 +228,9 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.register(userData)
       
       if (response.data && response.data.user) {
-        setUser(response.data.user)
+        const u = response.data.user
+        setUser(u)
+        refreshSessionFeedStats(u.id ?? u.uid)
         return { 
           success: true, 
           message: 'Registration successful' 
@@ -195,6 +267,8 @@ export const AuthProvider = ({ children }) => {
     // Clear state immediately so the UI reacts instantly
     setUser(null)
     setUnreadNotifications(0)
+    setSessionFeedStats(null)
+    clearStoredFeedStats()
 
     // Fire backend logout (context update) in the background — don't await
     authAPI.logout().catch(err => console.warn('Background logout call failed:', err))
@@ -215,7 +289,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user && tokenService.isAuthenticated(),
     checkAuthStatus,
     unreadNotifications,
-    setUnreadNotifications
+    setUnreadNotifications,
+    sessionFeedStats,
+    refreshSessionFeedStats,
   }
 
   return (

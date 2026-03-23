@@ -90,9 +90,12 @@ const AuthContainer = styled.div`
   max-width: 420px;
   padding: 28px 28px 32px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 48%, var(--border));
   background: color-mix(in srgb, var(--bg-white) 94%, transparent);
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent),
+    0 8px 32px color-mix(in srgb, var(--primary) 16%, transparent),
+    var(--shadow-lg);
 `
 
 const Tabs = styled.div`
@@ -490,7 +493,7 @@ const Landing = () => {
   const [requires2FA, setRequires2FA] = useState(false)
   const [tempToken, setTempToken] = useState(null)
   const [twoFactorCode, setTwoFactorCode] = useState('')
-  const { login, verify2FA, register, updateUser, checkAuthStatus } = useAuth()
+  const { login, verify2FA, register, updateUser, checkAuthStatus, refreshSessionFeedStats } = useAuth()
   const navigate = useNavigate()
 
   const showMessage = (text, error = false, errorList = []) => {
@@ -586,6 +589,7 @@ const Landing = () => {
 
         if (userData) {
           updateUser(userData)
+          refreshSessionFeedStats(userData.id ?? userData.uid)
         } else {
           await checkAuthStatus()
         }

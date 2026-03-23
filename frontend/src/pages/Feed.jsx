@@ -27,17 +27,17 @@ const Container = styled.div`
 
 
 const MainContainer = styled.div`
-  max-width: 1600px;
+  max-width: 1880px;
   margin: 0 auto 0 0;
   display: grid;
-  grid-template-columns: 280px 280px 1fr;
+  grid-template-columns: 268px 248px minmax(0, 1fr);
   gap: 25px;
   padding: 30px 20px;
   
   @media (max-width: 1400px) {
     max-width: 100%;
     margin: 0 auto;
-    grid-template-columns: 260px 260px 1fr;
+    grid-template-columns: 254px 236px minmax(0, 1fr);
     gap: 22px;
     padding: 28px 18px;
   }
@@ -45,19 +45,19 @@ const MainContainer = styled.div`
   @media (max-width: 1200px) {
     max-width: 100%;
     margin: 0 auto;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 298px 1fr;
     gap: 20px;
     padding: 25px 15px;
   }
   
   @media (max-width: 1024px) {
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 276px 1fr;
     gap: 18px;
     padding: 20px 15px;
   }
   
   @media (max-width: 900px) {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 256px 1fr;
     gap: 16px;
     padding: 18px 12px;
   }
@@ -457,7 +457,10 @@ const PanelDivider = styled.div`
   margin: 8px 0;
 `
 
-const FeedContainer = styled.main``
+const FeedContainer = styled.main`
+  width: 100%;
+  min-width: 0;
+`
 
 const PostCreator = styled.div`
   background: var(--bg-white);
@@ -1411,7 +1414,7 @@ const Feed = () => {
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [messagesOpen, setMessagesOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { logout } = useAuth()
+  const { logout, sessionFeedStats } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -1745,14 +1748,22 @@ const Feed = () => {
             <PanelSection>
               <PanelItem>
                 <span className="label">Profile views</span>
-                <span className="value">142</span>
+                <span className="value">
+                  {sessionFeedStats != null
+                    ? sessionFeedStats.profileViews.toLocaleString()
+                    : '—'}
+                </span>
               </PanelItem>
             </PanelSection>
             
             <PanelSection>
               <PanelItem>
                 <span className="label">Post impressions</span>
-                <span className="value">1,234</span>
+                <span className="value">
+                  {sessionFeedStats != null
+                    ? sessionFeedStats.postImpressions.toLocaleString()
+                    : '—'}
+                </span>
               </PanelItem>
             </PanelSection>
             
