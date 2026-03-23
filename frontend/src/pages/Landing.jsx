@@ -87,32 +87,44 @@ const PageTitle = styled.h2`
 
 const AuthContainer = styled.div`
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  padding: 28px 28px 32px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--bg-white) 94%, transparent);
+  box-shadow: var(--shadow-lg);
 `
 
 const Tabs = styled.div`
   display: flex;
-  margin-bottom: 30px;
-  border-bottom: 1px solid var(--border);
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 26px;
+  border-radius: 12px;
+  background: var(--hover-bg);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 `
 
 const TabButton = styled.button`
   flex: 1;
-  padding: 15px 20px;
-  background: none;
+  padding: 11px 16px;
+  background: transparent;
   border: none;
+  border-radius: 10px;
   color: var(--text-light);
-  font-size: 1em;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   
   &.active {
     color: var(--primary);
-    border-bottom-color: var(--primary);
+    background: var(--bg-white);
+    box-shadow: var(--shadow);
   }
   
-  &:hover {
+  &:hover:not(.active) {
     color: var(--text);
   }
 `
@@ -125,32 +137,48 @@ const TabContent = styled.div`
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 `
 
 const InputWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 `
 
 const Label = styled.label`
-  color: var(--text);
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
 `
 
 const Input = styled.input`
-  padding: 15px;
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 16px;
   border: 1px solid ${props => props.$hasError ? '#dc3545' : 'var(--border)'};
-  border-radius: 8px;
-  background: var(--bg-light);
+  border-radius: 10px;
+  background: var(--hover-bg);
   color: var(--text);
-  font-size: 1em;
-  transition: border-color 0.3s ease;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  
+  &:hover:not(:focus) {
+    border-color: color-mix(in srgb, var(--border) 65%, var(--text-light));
+  }
   
   &:focus {
     outline: none;
     border-color: ${props => props.$hasError ? '#dc3545' : 'var(--primary)'};
+    background: var(--bg-white);
+    box-shadow: 0 0 0 3px
+      ${props =>
+        props.$hasError
+          ? 'color-mix(in srgb, #dc3545 22%, transparent)'
+          : 'color-mix(in srgb, var(--primary) 28%, transparent)'};
   }
   
   &::placeholder {
@@ -159,30 +187,69 @@ const Input = styled.input`
 `
 
 const Button = styled.button`
-  padding: 15px 30px;
+  min-height: 48px;
+  padding: 14px 24px;
+  margin-top: 2px;
   background: var(--primary);
-  color: white;
+  color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 1.1em;
-  font-weight: 500;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 38%, transparent);
   
   &:hover:not(:disabled) {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 45%, transparent);
   }
   
   &:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0);
   }
   
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
+    box-shadow: none;
+  }
+`
+
+const SecondaryButton = styled(Button)`
+  flex: 1;
+  margin-top: 0;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  
+  &:hover:not(:disabled) {
+    background: var(--hover-bg);
+    border-color: color-mix(in srgb, var(--border) 40%, var(--text-light));
+    box-shadow: none;
+    transform: none;
+  }
+`
+
+const FormActionsRow = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  align-self: stretch;
+
+  & > button {
+    margin-top: 0;
+  }
+
+  & > button:first-of-type {
+    flex: 1.35;
+  }
+
+  & > button:last-of-type {
+    flex: 1;
   }
 `
 
@@ -192,29 +259,40 @@ const LoadingSpinner = styled.span`
 `
 
 const Message = styled.div`
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-top: 22px;
   text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.45;
   opacity: 0;
-  transform: translateY(-10px);
-  transition: all 0.3s ease;
-  
+  transform: translateY(-6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+
   &.show {
     opacity: 1;
     transform: translateY(0);
   }
-  
+
   &.success {
-    background: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-    border: 1px solid rgba(40, 167, 69, 0.3);
+    background: color-mix(in srgb, #22c55e 12%, transparent);
+    color: #86efac;
+    border: 1px solid color-mix(in srgb, #22c55e 35%, transparent);
   }
-  
+
   &.error {
-    background: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
-    border: 1px solid rgba(220, 53, 69, 0.3);
+    background: color-mix(in srgb, #dc3545 12%, transparent);
+    color: #fca5a5;
+    border: 1px solid color-mix(in srgb, #dc3545 35%, transparent);
+  }
+
+  [data-theme='light'] & {
+    &.success {
+      color: #166534;
+    }
+    &.error {
+      color: #991b1b;
+    }
   }
 `
 
@@ -283,58 +361,71 @@ const WelcomeMessage = styled.p`
 `
 
 const PasswordHint = styled.p`
-  font-size: 0.85em;
+  font-size: 0.8125rem;
   color: var(--text-lighter);
-  margin-top: 4px;
+  margin-top: 2px;
+  line-height: 1.4;
 `
 
 const Divider = styled.div`
   display: flex;
   align-items: center;
-  margin: 20px 0;
+  margin: 6px 0 2px;
   width: 100%;
 `
 
 const DividerLine = styled.div`
   flex: 1;
   height: 1px;
-  background: var(--border);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--border) 90%, var(--text-light)) 20%,
+    color-mix(in srgb, var(--border) 90%, var(--text-light)) 80%,
+    transparent
+  );
 `
 
 const DividerText = styled.span`
-  padding: 0 15px;
-  color: var(--text-light);
-  font-size: 0.9em;
+  padding: 0 14px;
+  color: var(--text-lighter);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 `
 
 const GoogleButton = styled.button`
   width: 100%;
+  min-height: 48px;
   padding: 12px 20px;
-  background: #fff;
-  color: #333;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
+  background: var(--bg-white);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  transition: all 0.2s ease;
-  margin-top: 10px;
-  
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 4px;
+
   &:hover:not(:disabled) {
-    background: #f8f9fa;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: var(--hover-bg);
+    border-color: color-mix(in srgb, var(--border) 50%, var(--primary));
+    box-shadow: var(--shadow);
   }
-  
+
   &:active:not(:disabled) {
-    background: #f1f3f4;
+    transform: scale(0.99);
   }
-  
+
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
   }
 `
@@ -346,18 +437,48 @@ const GoogleIcon = styled.span`
 `
 
 const AgreementNote = styled.p`
-  font-size: 0.85em;
+  font-size: 0.8125rem;
   color: var(--text-light);
-  line-height: 1.5;
-  margin: 0 0 18px;
+  line-height: 1.55;
+  margin: -4px 0 2px;
 
   a {
     color: var(--primary);
     text-decoration: none;
+    font-weight: 500;
   }
   a:hover {
     text-decoration: underline;
   }
+`
+
+const TwoFactorIntro = styled.div`
+  text-align: center;
+  margin-bottom: 8px;
+`
+
+const TwoFactorTitle = styled.h3`
+  margin: 0 0 8px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+`
+
+const TwoFactorSubtitle = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-light);
+  line-height: 1.5;
+`
+
+const OTPInput = styled(Input)`
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: 0.45em;
+  text-align: center;
+  padding-left: calc(16px + 0.2em);
 `
 
 const Landing = () => {
@@ -643,49 +764,43 @@ const Landing = () => {
               </Form>
             ) : (
               <Form onSubmit={handle2FAVerification}>
-                <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: 'var(--text)' }}>Two-Factor Authentication</h3>
-                  <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '0.9em' }}>
+                <TwoFactorIntro>
+                  <TwoFactorTitle>Two-Factor Authentication</TwoFactorTitle>
+                  <TwoFactorSubtitle>
                     Enter the 6-digit code from your authenticator app
-                  </p>
-                </div>
+                  </TwoFactorSubtitle>
+                </TwoFactorIntro>
                 <InputWrapper>
                   <Label htmlFor="2fa-code">2FA Code</Label>
-                  <Input 
+                  <OTPInput
                     id="2fa-code"
-                    type="text" 
+                    type="text"
                     value={twoFactorCode}
                     onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="000000"
                     maxLength={6}
                     autoComplete="one-time-code"
+                    inputMode="numeric"
                     required
-                    style={{ 
-                      fontFamily: 'monospace', 
-                      fontSize: '1.5em', 
-                      letterSpacing: '0.5em', 
-                      textAlign: 'center' 
-                    }}
                   />
                   <PasswordHint>You can also use a backup code (8 characters)</PasswordHint>
                 </InputWrapper>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <FormActionsRow>
                   <Button type="submit" disabled={loading || twoFactorCode.length !== 6}>
                     {loading ? <LoadingSpinner>Verifying...</LoadingSpinner> : 'Verify →'}
                   </Button>
-                  <Button 
-                    type="button" 
+                  <SecondaryButton
+                    type="button"
                     onClick={() => {
                       setRequires2FA(false)
                       setTempToken(null)
                       setTwoFactorCode('')
                       setMessage('')
                     }}
-                    style={{ background: 'var(--bg-light)', color: 'var(--text)' }}
                   >
                     Back
-                  </Button>
-                </div>
+                  </SecondaryButton>
+                </FormActionsRow>
               </Form>
             )}
           </TabContent>
