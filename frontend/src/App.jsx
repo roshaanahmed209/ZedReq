@@ -15,6 +15,7 @@ import AIInterviews from './pages/AIInterviews'
 import Notifications from './pages/Notifications'
 import Messages from './pages/Messages'
 import Profile from './pages/Profile'
+import PostDetail from './pages/PostDetail'
 import Settings from './pages/Settings'
 import ChoosePlan from './pages/ChoosePlan'
 import Checkout from './pages/Checkout'
@@ -103,6 +104,7 @@ function App() {
             }
           />
           <Route path="/feed" element={<WithPlanGate><Feed /></WithPlanGate>} />
+          <Route path="/post/:postId" element={<WithPlanGate><PostDetail /></WithPlanGate>} />
           <Route path="/network" element={<WithPlanGate><Network /></WithPlanGate>} />
           <Route path="/jobs" element={<WithPlanGate><Jobs /></WithPlanGate>} />
           <Route path="/lms" element={<WithPlanGate><LMS /></WithPlanGate>} />

@@ -198,7 +198,8 @@ class JobService:
                 or_(
                     JobPosting.title.ilike(search_pattern),
                     JobPosting.description.ilike(search_pattern),
-                    JobPosting.skills_required.ilike(search_pattern)
+                    JobPosting.skills_required.ilike(search_pattern),
+                    JobPosting.company_name.ilike(search_pattern),
                 )
             )
         

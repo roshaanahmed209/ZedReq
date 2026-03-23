@@ -16,6 +16,21 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
 
+# Tokens that indicate role/skill/topic search — not a "find person by name" query
+_PROFILE_SEARCH_ROLE_TOKENS = frozenset({
+    'software', 'engineer', 'engineering', 'developer', 'development', 'manager', 'management',
+    'professional', 'professionals', 'hr', 'human', 'resources', 'recruiter', 'recruiters',
+    'marketing', 'sales', 'designer', 'designers', 'analyst', 'analysts', 'data', 'science',
+    'scientist', 'full', 'stack', 'frontend', 'front', 'backend', 'devops', 'cloud', 'nurse',
+    'doctor', 'teacher', 'student', 'intern', 'senior', 'junior', 'lead', 'architect',
+    'consultant', 'specialist', 'associate', 'director', 'executive', 'product', 'project',
+    'jobs', 'job', 'role', 'roles', 'position', 'positions', 'opportunities', 'opportunity',
+    'remote', 'hybrid', 'onsite', 'ai', 'ml', 'java', 'python', 'react', 'node', 'net',
+    'accountant', 'lawyer', 'finance', 'accounting', 'nursing', 'pharmacy', 'mechanical',
+    'electrical', 'civil', 'chemical', 'biomedical', 'content', 'writer', 'copywriter',
+    'me', 'my', 'myself', 'someone', 'somebody', 'anyone', 'anybody', 'everyone', 'everybody',
+})
+
 
 # System prompt for conversational AI career assistant
 NEMZ_CONVERSATIONAL_PROMPT = """You are Nemz, an AI career assistant chatbot. You are friendly, helpful, and knowledgeable about careers, job searching, and professional development.
@@ -40,6 +55,8 @@ Search format: When you need to search, respond with:
 SEARCH: [search_type] [query]
 Where search_type is: "jobs", "profiles", "posts", or "all"
 And query is the search terms
+
+When the user asks to find a **specific person by name**, the query after SEARCH must be **only the name(s) they asked for** (e.g. "Hazim" or "Hazim Khan"). Never replace it with the logged-in user's name or details from User Context unless they explicitly ask about themselves (e.g. "my profile", "people like me").
 
 Example responses:
 - User: "hi" -> "Hello! I'm Nemz, your AI career assistant. I can help you find jobs, connect with professionals, discover content, and get career advice. How can I assist you today?"
@@ -694,6 +711,103 @@ Return ONLY the enhanced query text, nothing else. Do not add explanations or JS
         logger.debug(f"Refined query: '{query}' -> '{refined}'")
         return refined
     
+    def _strip_person_lookup_filler(self, raw: str) -> str:
+        """Remove leading find/search phrasing so 'find hazim' -> 'hazim'."""
+        q = raw.strip()
+        q = re.sub(r'(?i)^(find|search|lookup|show)(\s+me)?(\s+for)?\s+', '', q)
+        q = re.sub(r'(?i)^(a|the)\s+(user|users|people|person|profile|profiles)\s+', '', q)
+        q = re.sub(r'(?i)^(user|users|people|person|profile|profiles)\s+', '', q)
+        q = re.sub(r'(?i)^(named|called)\s+', '', q)
+        q = re.sub(r'(?i)\s+(profile|profiles)$', '', q)
+        return ' '.join(q.split())
+    
+    def _looks_like_person_name_phrase(self, phrase: str) -> bool:
+        """True if phrase is 1–4 alphabetic tokens and not obviously a role/skill query."""
+        phrase = phrase.strip()
+        if len(phrase) < 2 or len(phrase) > 100:
+            return False
+        tokens = phrase.split()
+        if not tokens or len(tokens) > 4:
+            return False
+        for t in tokens:
+            tl = re.sub(r'^[^\w]+|[^\w]+$', '', t.lower())
+            if len(tl) < 2:
+                return False
+            if not re.match(r"^[a-z][a-z'\-]*$", tl, re.I):
+                return False
+            if tl in _PROFILE_SEARCH_ROLE_TOKENS:
+                return False
+        return True
+    
+    def _extract_profile_name_search_term(self, query: str) -> Optional[str]:
+        """
+        If the user is clearly searching for a person by name, return a string for DB ILIKE search.
+        Otherwise None (use vector search).
+        """
+        explicit = re.search(
+            r'(?i)\b(?:user\s+whose\s+name\s+is|whose\s+name\s+is|name\s+is)\s+([^\.\!\?\n]{1,80})',
+            query,
+        )
+        if explicit:
+            term = explicit.group(1).strip().strip('\'"')
+            if len(term) >= 2:
+                return term[:100]
+        
+        stripped = self._strip_person_lookup_filler(query)
+        if self._looks_like_person_name_phrase(stripped):
+            return stripped[:100]
+        
+        return None
+    
+    def _search_profiles_by_name_db(self, name_query: str, limit: int) -> List[Dict[str, Any]]:
+        """Resolve profiles by display name/username in SQL — avoids bogus vector neighbors for proper nouns."""
+        try:
+            from config.database_orm import get_db
+            from services.user_service import UserService
+            from models.orm import User, Description
+            
+            db = next(get_db())
+            try:
+                svc = UserService(db)
+                users = svc.search_users(query=name_query, exclude_user_id=None, limit=limit)
+                if not users:
+                    return []
+                
+                uids = [u.get('uid') or u.get('id') for u in users if u.get('uid') or u.get('id')]
+                user_rows = db.query(User).filter(User.uid.in_(uids)).all() if uids else []
+                uid_to_user = {r.uid: r for r in user_rows}
+                desc_ids = [u.description_id for u in user_rows if u.description_id]
+                desc_map = {}
+                if desc_ids:
+                    for d in db.query(Description).filter(Description.desc_id.in_(desc_ids)).all():
+                        desc_map[d.desc_id] = d
+                
+                results: List[Dict[str, Any]] = []
+                for u in users:
+                    uid = u.get('uid') or u.get('id')
+                    ur = uid_to_user.get(uid)
+                    if not ur:
+                        continue
+                    desc = desc_map.get(ur.description_id) if ur.description_id else None
+                    results.append({
+                        'match_score': 1.0,
+                        'entity_type': 'user',
+                        'user_id': uid,
+                        'name': ur.name or u.get('name') or '',
+                        'about': (desc.about if desc else None) or '',
+                        'short_desc': (desc.short_desc if desc else None) or '',
+                        'skills': (desc.skills if desc else None) or '',
+                        'current_status': (desc.current_status if desc else None) or '',
+                        'profile_link': ur.profile_url or '',
+                        'profile_pic': (desc.profile_pic if desc else None) or '',
+                    })
+                return results
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Name-based profile DB search failed: {e}", exc_info=True)
+            return []
+    
     def search_profiles(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Search for user profiles matching the query
@@ -715,6 +829,14 @@ Return ONLY the enhanced query text, nothing else. Do not add explanations or JS
             limit = self.search_limit
         
         query = query.strip()
+        
+        name_term = self._extract_profile_name_search_term(query)
+        if name_term:
+            db_hits = self._search_profiles_by_name_db(name_term, limit)
+            logger.info(
+                f"Profile search used name DB lookup term={name_term!r} -> {len(db_hits)} results"
+            )
+            return db_hits
         
         # Refine query to extract key terms
         refined_query = self._refine_search_query(query)

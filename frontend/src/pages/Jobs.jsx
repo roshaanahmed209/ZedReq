@@ -406,6 +406,86 @@ const JobsSubtitle = styled.p`
   }
 `
 
+const JobSearchForm = styled.form`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 12px;
+  align-items: stretch;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    margin: 14px 0 10px;
+  }
+`
+
+const JobSearchInput = styled.input`
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95em;
+  color: var(--text);
+  background: var(--bg-light);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &::placeholder {
+    color: var(--text-lighter);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
+  }
+
+  @media (max-width: 480px) {
+    min-width: 0;
+    width: 100%;
+  }
+`
+
+const JobSearchSubmit = styled.button`
+  padding: 12px 22px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+`
+
+const JobSearchClear = styled.button`
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--text-light);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(10, 102, 194, 0.04);
+  }
+`
+
 const JobsContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -1563,6 +1643,10 @@ const Jobs = () => {
   const [showPostModal, setShowPostModal] = useState(false)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState(null)
+  const [jobSearchInput, setJobSearchInput] = useState('')
+  const [appliedJobSearch, setAppliedJobSearch] = useState('')
+  const [searchJobsList, setSearchJobsList] = useState([])
+  const [searchJobsLoading, setSearchJobsLoading] = useState(false)
   const [jobForm, setJobForm] = useState({
     title: '',
     description: '',
@@ -1621,6 +1705,39 @@ const Jobs = () => {
     }
   }
 
+  const fetchJobSearch = async (rawQuery) => {
+    const q = (rawQuery || '').trim()
+    if (!q) {
+      setAppliedJobSearch('')
+      setSearchJobsList([])
+      return
+    }
+    setSearchJobsLoading(true)
+    setError(null)
+    try {
+      const res = await jobAPI.getJobs({ query: q, limit: 50 })
+      setSearchJobsList(res.data.jobs || [])
+      setAppliedJobSearch(q)
+    } catch (err) {
+      console.error('Job search failed:', err)
+      setError('Job search failed. Please try again.')
+      setSearchJobsList([])
+    } finally {
+      setSearchJobsLoading(false)
+    }
+  }
+
+  const handleJobSearchSubmit = e => {
+    e.preventDefault()
+    fetchJobSearch(jobSearchInput)
+  }
+
+  const handleClearJobSearch = () => {
+    setJobSearchInput('')
+    setAppliedJobSearch('')
+    setSearchJobsList([])
+  }
+
   useEffect(() => {
     fetchJobs()
   }, [])
@@ -1649,6 +1766,7 @@ const Jobs = () => {
       setRemoteJobs(updateJobs)
       setSavedJobs(updateJobs)
       setPostedJobs(updateJobs)
+      setSearchJobsList(updateJobs)
       
       // Update context for job application
       contextAPI.updateContext('apply', 'job', jobId).catch(() => {})
@@ -1678,6 +1796,7 @@ const Jobs = () => {
       setAllJobs(updateJobs)
       setRemoteJobs(updateJobs)
       setPostedJobs(updateJobs)
+      setSearchJobsList(updateJobs)
       
       // Update saved jobs list
       if (isSaved) {
@@ -2104,11 +2223,45 @@ const Jobs = () => {
 
         <MainContainer>
           <JobsHeader>
-            <JobsTitle>{getFilterInfo().title}</JobsTitle>
-            <JobsSubtitle>{getFilterInfo().subtitle}</JobsSubtitle>
+            <JobsTitle>
+              {appliedJobSearch ? 'Search results' : getFilterInfo().title}
+            </JobsTitle>
+            <JobSearchForm onSubmit={handleJobSearchSubmit}>
+              <JobSearchInput
+                type="search"
+                value={jobSearchInput}
+                onChange={e => setJobSearchInput(e.target.value)}
+                placeholder="Search jobs — e.g. AI engineer, React developer, remote data science…"
+                aria-label="Search jobs by title, skills, or description"
+                autoComplete="off"
+              />
+              <JobSearchSubmit type="submit" disabled={searchJobsLoading}>
+                {searchJobsLoading ? 'Searching…' : 'Search'}
+              </JobSearchSubmit>
+              {appliedJobSearch ? (
+                <JobSearchClear type="button" onClick={handleClearJobSearch}>
+                  Clear
+                </JobSearchClear>
+              ) : null}
+            </JobSearchForm>
+            <JobsSubtitle>
+              {appliedJobSearch
+                ? `${searchJobsList.length} job${searchJobsList.length !== 1 ? 's' : ''} matching “${appliedJobSearch}”`
+                : getFilterInfo().subtitle}
+            </JobsSubtitle>
           </JobsHeader>
           <JobsContainer>
-            {loading || (activeFilter === 'recommended' && loadingRecommendations) ? (
+            {appliedJobSearch
+              ? searchJobsLoading
+                ? <LoadingSpinner />
+                : searchJobsList.length === 0
+                  ? (
+                    <EmptyState>
+                      No jobs found for “{appliedJobSearch}”. Try different keywords or clear search to browse by category.
+                    </EmptyState>
+                  )
+                  : searchJobsList.map((job, index) => renderJobCard(job, index))
+              : loading || (activeFilter === 'recommended' && loadingRecommendations) ? (
               <LoadingSpinner />
             ) : getCurrentJobs().length === 0 ? (
               <EmptyState>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { nemzAPI, vecAPI } from '../services/api'
 import Navbar from '../components/Navbar'
+import JobDetailSidePanel from '../components/JobDetailSidePanel'
 import { AiFormattedChatContent } from '../utils/aiChatFormat'
 import '../css/pages/AIMode.css'
 
@@ -662,7 +663,7 @@ const JobList = styled.div`
   gap: 16px;
 `
 
-const JobCard = styled.a`
+const JobCard = styled.div`
   display: block;
   padding: 20px;
   background: var(--hover-bg);
@@ -673,8 +674,8 @@ const JobCard = styled.a`
   animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation-delay: ${props => props.delay || '0s'};
   animation-fill-mode: both;
-  text-decoration: none;
   color: inherit;
+  outline: none;
 
   &:hover {
     border-color: rgba(10, 102, 194, 0.4);
@@ -682,9 +683,9 @@ const JobCard = styled.a`
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
-  
-  &:visited {
-    color: inherit;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--bg-white), 0 0 0 4px rgba(10, 102, 194, 0.5);
   }
 `
 
@@ -791,7 +792,7 @@ const PostList = styled.div`
   gap: 16px;
 `
 
-const PostCard = styled.a`
+const PostCardExternal = styled.a`
   display: block;
   padding: 20px;
   background: var(--hover-bg);
@@ -800,7 +801,7 @@ const PostCard = styled.a`
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  animation-delay: ${props => props.delay || '0s'};
+  animation-delay: ${props => props.$delay || '0s'};
   animation-fill-mode: both;
   text-decoration: none;
   color: inherit;
@@ -811,7 +812,29 @@ const PostCard = styled.a`
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
-  
+`
+
+const PostCard = styled(Link)`
+  display: block;
+  padding: 20px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  animation: ${slideInFromBottom} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: ${props => props.$delay || '0s'};
+  animation-fill-mode: both;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    border-color: rgba(10, 102, 194, 0.4);
+    background: rgba(10, 102, 194, 0.03);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+
   &:visited {
     color: inherit;
   }
@@ -1053,6 +1076,9 @@ const AIMode = () => {
   const [jobs, setJobs] = useState([])
   const [profiles, setProfiles] = useState([])
   const [posts, setPosts] = useState([])
+  const [aiJobPanelOpen, setAiJobPanelOpen] = useState(false)
+  const [aiJobPanelJobId, setAiJobPanelJobId] = useState(null)
+  const [aiJobPanelMatchScore, setAiJobPanelMatchScore] = useState(null)
   const [searchType, setSearchType] = useState('all') // Track what type of results we have
   const fileInputRef = React.useRef(null)
   const chatContainerRef = React.useRef(null)
@@ -1219,15 +1245,17 @@ const AIMode = () => {
               const mappedJobs = foundJobs.map((job, index) => {
                 const matchScore = Math.round((job.match_score || job.score || 0) * 100)
                 const jobData = job.payload || job
-                
+                const jobId = jobData.job_id ?? job.job_id ?? null
+
                 return {
-                  id: jobData.job_id || job.job_id || jobData.id || index + 1,
+                  job_id: jobId,
+                  id: jobId != null ? jobId : index + 1,
                   title: jobData.title || job.title || jobData.job_title || 'Job Title',
                   company: jobData.company_name || job.company_name || jobData.company || 'Company',
                   location: jobData.location || job.location || jobData.city || 'Location',
                   type: jobData.job_type || job.job_type || jobData.type || 'Full-time',
                   jobLink: jobData.job_link || job.job_link || '',
-                  matchScore: matchScore
+                  matchScore
                 }
               })
               
@@ -1251,19 +1279,26 @@ const AIMode = () => {
               const mappedPosts = foundPosts.map((post, index) => {
                 const matchScore = Math.round((post.match_score || post.score || 0) * 100)
                 const postData = post.payload || post
-                
+                const postId = postData.post_id ?? post.post_id ?? null
+                const rawLink = postData.post_link || post.post_link || ''
+                const postLink =
+                  rawLink && /^https?:\/\//i.test(rawLink)
+                    ? rawLink
+                    : rawLink || (postId != null ? `/post/${postId}` : '')
+
                 return {
-                  id: postData.post_id || post.post_id || postData.id || index + 1,
+                  post_id: postId,
+                  id: postId != null ? postId : `post-${index}`,
                   description: postData.post_desc || post.post_desc || postData.description || '',
                   userName: postData.user_name || post.user_name || postData.name || 'User',
                   userId: postData.user_id || post.user_id || null,
-                  postLink: postData.post_link || post.post_link || '',
+                  postLink,
                   likes: postData.likes || post.likes || 0,
                   comments: postData.comments || post.comments || 0,
                   mediaUrl: postData.media_url || post.media_url || null,
                   mediaType: postData.media_type || post.media_type || null,
                   createdAt: postData.created_at || post.created_at || null,
-                  matchScore: matchScore
+                  matchScore
                 }
               })
               
@@ -1369,8 +1404,30 @@ const AIMode = () => {
           time: "Just now"
         }
         setChatMessages(prev => [...prev, errorResponse])
-      }
     }
+  }
+
+  const handleNemzJobCardActivate = job => {
+    const id = job.job_id
+    if (id == null || Number.isNaN(Number(id))) {
+      return
+    }
+    setAiJobPanelMatchScore(job.matchScore ?? null)
+    setAiJobPanelJobId(Number(id))
+    setAiJobPanelOpen(true)
+  }
+
+  const handleNemzJobCardKeyDown = (e, job) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleNemzJobCardActivate(job)
+    }
+  }
+
+  const handleAiJobPanelJobStateChange = ({ jobId, patch }) => {
+    if (!jobId || !patch) return
+    setJobs(prev => prev.map(j => (j.job_id === jobId ? { ...j, ...patch } : j)))
+  }
 
   return (
     <Container>
@@ -1493,17 +1550,14 @@ const AIMode = () => {
                   ) : (
                     <JobList>
                       {jobs.length > 0 ? jobs.map((job, index) => (
-                        <JobCard 
-                          key={job.id} 
+                        <JobCard
+                          key={job.id}
                           delay={`${index * 0.1}s`}
-                          href={job.jobLink || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => {
-                            if (!job.jobLink) {
-                              e.preventDefault()
-                            }
-                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${job.title} at ${job.company}, ${job.matchScore}% match. Open details.`}
+                          onClick={() => handleNemzJobCardActivate(job)}
+                          onKeyDown={e => handleNemzJobCardKeyDown(e, job)}
                         >
                           <JobTitle>{job.title}</JobTitle>
                           <JobCompany>{job.company}</JobCompany>
@@ -1602,38 +1656,60 @@ const AIMode = () => {
                     </LoadingContainer>
                   ) : (
                     <PostList>
-                      {posts.length > 0 ? posts.map((post, index) => (
-                        <PostCard 
-                          key={post.id} 
-                          delay={`${index * 0.1}s`}
-                          href={post.postLink || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => {
-                            if (!post.postLink) {
-                              e.preventDefault()
-                            }
-                          }}
-                        >
-                          <PostAuthor><strong>{post.userName}</strong></PostAuthor>
-                          <PostContent>{post.description}</PostContent>
-                          <PostMeta>
-                            <JobMetaItem>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                              </svg>
-                              {post.likes} likes
-                            </JobMetaItem>
-                            <JobMetaItem>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                              </svg>
-                              {post.comments} comments
-                            </JobMetaItem>
-                          </PostMeta>
-                          <MatchScore>{post.matchScore}% Match</MatchScore>
-                        </PostCard>
-                      )) : null}
+                      {posts.length > 0 ? posts.map((post, index) => {
+                        const to = post.postLink || (post.post_id != null ? `/post/${post.post_id}` : '/feed')
+                        const isExternal = /^https?:\/\//i.test(to)
+                        if (isExternal) {
+                          return (
+                            <PostCardExternal
+                              key={post.id}
+                              href={to}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              $delay={`${index * 0.1}s`}
+                            >
+                              <PostAuthor><strong>{post.userName}</strong></PostAuthor>
+                              <PostContent>{post.description}</PostContent>
+                              <PostMeta>
+                                <JobMetaItem>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                  </svg>
+                                  {post.likes} likes
+                                </JobMetaItem>
+                                <JobMetaItem>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                  </svg>
+                                  {post.comments} comments
+                                </JobMetaItem>
+                              </PostMeta>
+                              <MatchScore>{post.matchScore}% Match</MatchScore>
+                            </PostCardExternal>
+                          )
+                        }
+                        return (
+                          <PostCard key={post.id} to={to} $delay={`${index * 0.1}s`}>
+                            <PostAuthor><strong>{post.userName}</strong></PostAuthor>
+                            <PostContent>{post.description}</PostContent>
+                            <PostMeta>
+                              <JobMetaItem>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                {post.likes} likes
+                              </JobMetaItem>
+                              <JobMetaItem>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                {post.comments} comments
+                              </JobMetaItem>
+                            </PostMeta>
+                            <MatchScore>{post.matchScore}% Match</MatchScore>
+                          </PostCard>
+                        )
+                      }) : null}
                     </PostList>
                   )}
                 </ContentCard>
@@ -1642,6 +1718,18 @@ const AIMode = () => {
           )}
         </MainContent>
       </MainContainer>
+
+      <JobDetailSidePanel
+        isOpen={aiJobPanelOpen}
+        jobId={aiJobPanelJobId}
+        matchScoreFromSearch={aiJobPanelMatchScore}
+        onClose={() => {
+          setAiJobPanelOpen(false)
+          setAiJobPanelJobId(null)
+          setAiJobPanelMatchScore(null)
+        }}
+        onJobStateChange={handleAiJobPanelJobStateChange}
+      />
     </Container>
   )
 }
