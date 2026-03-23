@@ -9,23 +9,10 @@
     background: #000000;
 }
 
-.combined-skill-network-wrapper::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('/static/bg_first.jpg');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.7;
-}
+/* Wave background: WaveBackgroundCanvas (section layer) */
 
-.combined-skill-network-wrapper > * {
+/* Don’t override the full-bleed wave layer (it must stay position: absolute) */
+.combined-skill-network-wrapper > *:not(.wave-bg-canvas-wrap) {
     position: relative;
     z-index: 1;
 }

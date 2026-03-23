@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import WaveBackgroundCanvas from './WaveBackgroundCanvas'
 import './NetworkExpansionGraph.css'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -385,6 +386,7 @@ const NetworkExpansionGraph = () => {
           {/* Left: Radial Network Graph (65%) */}
           <div className="network-graph-wrapper">
             <div className="network-graph-container">
+              <WaveBackgroundCanvas blurred phaseOffset={3.8} />
               <svg
                 viewBox="0 0 100 100"
                 className="network-svg"
@@ -448,6 +450,7 @@ const NetworkExpansionGraph = () => {
           {/* Right: Suggested Professionals Panel (35%) */}
           <div className="network-insights-panel">
             <div className="insights-card">
+              <WaveBackgroundCanvas blurred phaseOffset={6.2} />
               <h3 className="insights-card-title">Suggested Professionals</h3>
               <div className="suggested-list">
                 {SUGGESTED_PROFESSIONALS.map((prof, i) => (

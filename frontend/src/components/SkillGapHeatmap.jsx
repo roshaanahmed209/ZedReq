@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import WaveBackgroundCanvas from './WaveBackgroundCanvas'
 import './SkillGapHeatmap.css'
 
 /* ── demo data ─────────────────────────────────────────────── */
@@ -238,7 +239,8 @@ const SkillGapHeatmap = ({ skills = DEFAULT_SKILLS }) => {
 
           {/* Column 2: All graphics (radar + panel) */}
           <div className="sgh-content">
-          {/* LEFT — radar */}
+            <WaveBackgroundCanvas blurred phaseOffset={2.1} />
+            {/* LEFT — radar */}
           <div className="sgh-radar-area">
             <div className="sgh-radar-wrap">
               <svg viewBox="0 0 400 400" className="sgh-radar-svg" aria-label="Skill radar chart">

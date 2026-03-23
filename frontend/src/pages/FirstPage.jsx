@@ -356,7 +356,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/Ai mode Ai assistant.png" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
+                <img className="timeline-image" src="/static/Ai mode Ai assistant.jpg" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
               </div>
             </div>
           ),
@@ -386,7 +386,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI mock interview.png" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
+                <img className="timeline-image" src="/static/AI mock interview.jpg" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
               </div>
             </div>
           ),
@@ -416,7 +416,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI powered LMS.png" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
+                <img className="timeline-image" src="/static/AI powered LMS.jpg" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
               </div>
             </div>
           ),
