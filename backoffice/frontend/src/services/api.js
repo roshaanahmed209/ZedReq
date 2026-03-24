@@ -53,6 +53,8 @@ export const usersAPI = {
     api.put(`/admin/users/${userId}/role`, null, { params: { new_role: newRole } }),
   changePlan: (userId, plan) =>
     api.put(`/admin/users/${userId}/plan`, { plan }),
+  resetUsage: (userId, payload) =>
+    api.post(`/admin/users/${userId}/reset-usage`, payload),
   cancelSubscription: (userId, reason) =>
     api.post(`/admin/users/${userId}/cancel-subscription`, { reason }),
   suspend: (userId, reason) =>
@@ -73,6 +75,9 @@ export const usersAPI = {
     api.delete(`/admin/users/${userId}`, { data: { reason: reason || 'Admin deletion' } }),
   assignEnterprise: (email) =>
     api.post('/admin/users/assign-enterprise', { email }),
+  /** Main ZedReq app user only — not backoffice */
+  provisionMainApp: (payload) =>
+    api.post('/admin/users/provision-main-app', payload),
 }
 
 // Analytics API

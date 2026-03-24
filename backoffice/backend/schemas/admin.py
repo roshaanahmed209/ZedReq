@@ -57,6 +57,8 @@ class UserDetailsResponse(BaseModel):
     profile_url: Optional[str] = None
     subscription: Optional[dict] = None
     stats: Optional[dict] = None
+    usage_tracking: Optional[list[dict]] = None
+    usage_current_period_start: Optional[str] = None
     last_login: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -104,6 +106,42 @@ class SendNotificationRequest(BaseModel):
 class AssignEnterprisePlanRequest(BaseModel):
     """Request schema for assigning enterprise plan to a user by email"""
     email: EmailStr = Field(..., description="Registered user email to assign enterprise plan")
+
+
+class ProvisionMainAppUserRequest(BaseModel):
+    """Create a main ZedReq app user (main DB only — not a backoffice admin)."""
+
+    email: EmailStr = Field(..., description="Email the user will use to sign in on the main app")
+    full_name: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Display name (defaults to username derived from email)",
+    )
+
+
+class ProvisionMainAppUserResponse(BaseModel):
+    """One-time response including generated password for the main app."""
+
+    success: bool
+    message: str
+    user_id: int
+    username: str
+    email: str
+    temporary_password: str
+
+
+class ResetUsageRequest(BaseModel):
+    """Reset main-app subscription quota counters in usage_tracking."""
+
+    feature: str = Field(
+        ...,
+        pattern="^(ai_messages|course_enrollments|interview_sessions|all)$",
+        description="Single feature or all",
+    )
+    all_periods: bool = Field(
+        False,
+        description="If true, reset every stored month; if false, only the current UTC month",
+    )
 
 
 class RevenueAnalyticsResponse(BaseModel):

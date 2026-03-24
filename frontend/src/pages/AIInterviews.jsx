@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -223,6 +223,29 @@ const Video = styled.video`
   width: 100%;
   height: auto;
   display: block;
+`
+
+/** Tavus CVI runs on Daily — embed the returned conversation_url */
+const TavusFrame = styled.iframe`
+  width: 100%;
+  min-height: min(70vh, 580px);
+  aspect-ratio: 16 / 10;
+  border: none;
+  display: block;
+  background: #0a0a0a;
+`
+
+const OpenTavusLink = styled.a`
+  margin-top: 12px;
+  font-size: 0.85em;
+  color: var(--primary);
+  text-align: center;
+  display: block;
+  max-width: 900px;
+  width: 100%;
+  &:hover {
+    text-decoration: underline;
+  }
 `
 
 const CallControls = styled.div`
@@ -958,10 +981,19 @@ const AIInterviews = () => {
   const [startingInterview, setStartingInterview] = useState(false)
   const [completingInterview, setCompletingInterview] = useState(false)
   const [tavusConversationId, setTavusConversationId] = useState(null)
+  const [tavusConversationUrl, setTavusConversationUrl] = useState(null)
+  const [tavusMeetingToken, setTavusMeetingToken] = useState(null)
   const videoRef = useRef(null)
   const messagesEndRef = useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
+
+  const tavusEmbedSrc = useMemo(() => {
+    if (!tavusConversationUrl) return null
+    if (!tavusMeetingToken) return tavusConversationUrl
+    const sep = tavusConversationUrl.includes('?') ? '&' : '?'
+    return `${tavusConversationUrl}${sep}t=${encodeURIComponent(tavusMeetingToken)}`
+  }, [tavusConversationUrl, tavusMeetingToken])
 
   // Fetch interview history and recommendations on mount
   useEffect(() => {
@@ -1055,6 +1087,8 @@ const AIInterviews = () => {
     setCurrentInterview(null)
     setInterviewQuestions([])
     setTavusConversationId(null)
+    setTavusConversationUrl(null)
+    setTavusMeetingToken(null)
     setInterviewResults(null)
     setRizFeedback(null)
     if (videoRef.current) {
@@ -1095,6 +1129,8 @@ const AIInterviews = () => {
         const interview = response.data
         setCurrentInterview(interview)
         setTavusConversationId(interview.tavus_conversation_id)
+        setTavusConversationUrl(interview.tavus_conversation_url || null)
+        setTavusMeetingToken(interview.tavus_meeting_token || null)
         setInterviewQuestions(interview.questions || [])
         
         // Display questions in chat
@@ -1117,23 +1153,18 @@ const AIInterviews = () => {
           ...questionMessages,
           {
             id: prev.length + questionMessages.length + 2,
-            text: 'Please complete the interview via the Tavus platform using the conversation ID provided. After completion, click "Complete Interview" to get your results.',
+            text: interview.tavus_conversation_url
+              ? 'The live AI interview room is loaded above. Allow camera and microphone when your browser asks. Use the on-screen controls in the Tavus call to talk with your interviewer. When you are done, click "Complete Interview" below for your score and feedback.'
+              : 'Interview session created, but no Tavus room URL was returned. Check backend logs or your Tavus configuration. When finished on Tavus, click "Complete Interview".',
             isUser: false,
             timestamp: new Date()
           }
         ])
         
-        // Show Tavus conversation info
-        if (interview.tavus_conversation_id) {
-          alert(`Interview started successfully!\n\nTavus Conversation ID: ${interview.tavus_conversation_id}\n\nPlease complete the interview on the Tavus platform, then click "Complete Interview" to get your results.`)
-        } else {
-          alert('Interview started successfully!')
-        }
-        
         // Refresh interview list
         await fetchInterviews()
         
-        if (videoRef.current) {
+        if (!interview.tavus_conversation_url && videoRef.current) {
           videoRef.current.play()
           setIsPlaying(true)
         }
@@ -1259,6 +1290,8 @@ const AIInterviews = () => {
         
         // Refresh interview list
         await fetchInterviews()
+        setTavusConversationUrl(null)
+        setTavusMeetingToken(null)
       }
     } catch (err) {
       console.error('Error completing interview:', err)
@@ -1375,13 +1408,25 @@ const AIInterviews = () => {
           </DescriptionBanner>
 
           <VideoContainer>
-            <Video
-              ref={videoRef}
-            >
-              <source src="/static/video.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </Video>
+            {tavusEmbedSrc ? (
+              <TavusFrame
+                key={tavusEmbedSrc}
+                src={tavusEmbedSrc}
+                title="Tavus AI interview"
+                allow="camera; microphone; fullscreen; display-capture; autoplay"
+              />
+            ) : (
+              <Video ref={videoRef}>
+                <source src="/static/video.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </Video>
+            )}
           </VideoContainer>
+          {tavusEmbedSrc && (
+            <OpenTavusLink href={tavusEmbedSrc} target="_blank" rel="noopener noreferrer">
+              Open interview in a new tab if the room does not load above
+            </OpenTavusLink>
+          )}
 
           <CallControls>
             <CallButtonWrapper>
@@ -1443,6 +1488,8 @@ const AIInterviews = () => {
               </CallButtonWrapper>
             )}
 
+            {!tavusConversationUrl && (
+            <>
             <CallButtonWrapper>
               <CallButton active={isMuted} onClick={toggleMute}>
                 {isMuted ? (
@@ -1505,6 +1552,8 @@ const AIInterviews = () => {
               </EndCallButton>
               <CallButtonLabel>End</CallButtonLabel>
             </CallButtonWrapper>
+            </>
+            )}
           </CallControls>
 
           {selectedJob && (

@@ -18,6 +18,9 @@ from schemas.admin import (
     DeleteUserRequest,
     SendNotificationRequest,
     AssignEnterprisePlanRequest,
+    ProvisionMainAppUserRequest,
+    ProvisionMainAppUserResponse,
+    ResetUsageRequest,
 )
 import logging
 
@@ -219,6 +222,38 @@ async def cancel_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to cancel subscription"
+        )
+
+
+@router.post("/{user_id}/reset-usage")
+async def reset_user_usage(
+    user_id: int,
+    body: ResetUsageRequest,
+    request: Request,
+    current_admin: dict = Depends(require_admin_role),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Reset main-app subscription usage counters (usage_tracking) for one feature or all."""
+    if user_id < 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID")
+    try:
+        ip_address, user_agent = _extract_request_meta(request)
+        result = service.reset_user_usage(
+            user_id=user_id,
+            feature=body.feature,
+            all_periods=body.all_periods,
+            admin_id=current_admin["id"],
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error resetting usage: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset usage",
         )
 
 
@@ -443,6 +478,41 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete user"
+        )
+
+
+# ============================================================================
+# Main app user provisioning (super_admin only) — main ZedReq DB, not backoffice
+# ============================================================================
+
+@router.post("/provision-main-app", response_model=ProvisionMainAppUserResponse)
+async def provision_main_app_user(
+    body: ProvisionMainAppUserRequest,
+    request: Request,
+    current_admin: dict = Depends(require_super_admin),
+    service: AdminService = Depends(get_admin_service),
+):
+    """
+    Add a user to the main ZedReq application database with a random password.
+    Does not create or grant backoffice access.
+    """
+    try:
+        ip_address, user_agent = _extract_request_meta(request)
+        result = service.provision_main_app_user(
+            email=body.email,
+            full_name=body.full_name,
+            admin_id=current_admin["id"],
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        return ProvisionMainAppUserResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error provisioning main app user: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create main app user",
         )
 
 

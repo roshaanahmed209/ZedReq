@@ -120,6 +120,11 @@ class InterviewService:
                 logger.error("TAVUS_REPLICA_ID or TAVUS_REPLICA_IDS not configured")
                 raise ValueError("TAVUS_REPLICA_ID or TAVUS_REPLICA_IDS not configured")
             
+            persona_id = settings.TAVUS_PERSONA_ID
+            if not persona_id or not str(persona_id).strip():
+                logger.error("TAVUS_PERSONA_ID not configured")
+                raise ValueError("TAVUS_PERSONA_ID not configured")
+            
             logger.debug(f"Selected replica ID: {replica_id} (from {len(settings.get_tavus_replica_ids())} available)")
             
             # Sanitize conversation name
@@ -133,6 +138,7 @@ class InterviewService:
             try:
                 tavus_response = self.tavus_service.create_conversation(
                     replica_id=replica_id,
+                    persona_id=str(persona_id).strip(),
                     conversation_name=conversation_name,
                     system_prompt=system_prompt,
                     first_message=first_message,
@@ -174,6 +180,8 @@ class InterviewService:
             return {
                 'interview_id': interview.interview_id,
                 'tavus_conversation_id': tavus_conversation_id,
+                'tavus_conversation_url': tavus_response.get('conversation_url'),
+                'tavus_meeting_token': tavus_response.get('meeting_token'),
                 'questions': questions,
                 'status': interview.status,
                 'attempt_number': attempt_number,

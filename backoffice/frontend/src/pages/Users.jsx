@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { usersAPI } from '../services/api'
-import { Search, Crown } from 'lucide-react'
+import { Search, Crown, UserPlus } from 'lucide-react'
 import UserDetailModal from '../components/UserDetailModal'
 
 const Users = () => {
@@ -20,6 +20,11 @@ const Users = () => {
   const [enterpriseEmail, setEnterpriseEmail] = useState('')
   const [enterpriseLoading, setEnterpriseLoading] = useState(false)
   const [enterpriseResult, setEnterpriseResult] = useState(null)
+
+  const [provisionEmail, setProvisionEmail] = useState('')
+  const [provisionName, setProvisionName] = useState('')
+  const [provisionLoading, setProvisionLoading] = useState(false)
+  const [provisionResult, setProvisionResult] = useState(null)
 
   useEffect(() => {
     fetchUsers()
@@ -59,6 +64,44 @@ const Users = () => {
     fetchUsers()
   }
 
+  const handleProvisionMainApp = async () => {
+    if (!provisionEmail.trim()) return
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(provisionEmail.trim())) {
+      setProvisionResult({ type: 'error', message: 'Please enter a valid email address.' })
+      return
+    }
+    try {
+      setProvisionLoading(true)
+      setProvisionResult(null)
+      const body = {
+        email: provisionEmail.trim(),
+        ...(provisionName.trim() ? { full_name: provisionName.trim() } : {}),
+      }
+      const { data } = await usersAPI.provisionMainApp(body)
+      setProvisionResult({
+        type: 'success',
+        message: data?.message || 'User created.',
+        detail: {
+          username: data?.username,
+          email: data?.email,
+          temporary_password: data?.temporary_password,
+          user_id: data?.user_id,
+        },
+      })
+      setProvisionEmail('')
+      setProvisionName('')
+      fetchUsers()
+    } catch (err) {
+      setProvisionResult({
+        type: 'error',
+        message: err.response?.data?.detail || err.message || 'Failed to create main app user.',
+      })
+    } finally {
+      setProvisionLoading(false)
+    }
+  }
+
   const handleAssignEnterprise = async () => {
     if (!enterpriseEmail.trim()) return
     // Basic email format validation
@@ -90,6 +133,68 @@ const Users = () => {
         <h1 className="text-3xl font-bold">User Management</h1>
         <p className="text-muted-foreground">Manage all platform users</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            Create main app user
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Adds an account in the <strong>main ZedReq</strong> database so the person can sign in on the main product
+            with this email and a generated password. This does <strong>not</strong> create backoffice admin access.
+            <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+              Super admin only. Copy the password now — it is only shown once.
+            </span>
+          </p>
+          <div className="flex flex-col gap-3 max-w-lg">
+            <Input
+              type="email"
+              placeholder="Email (main app login)"
+              value={provisionEmail}
+              onChange={(e) => setProvisionEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleProvisionMainApp() }}
+            />
+            <Input
+              type="text"
+              placeholder="Display name (optional)"
+              value={provisionName}
+              onChange={(e) => setProvisionName(e.target.value)}
+            />
+            <div>
+              <Button
+                onClick={handleProvisionMainApp}
+                disabled={provisionLoading || !provisionEmail.trim()}
+              >
+                {provisionLoading ? 'Creating…' : 'Create main app user'}
+              </Button>
+            </div>
+          </div>
+          {provisionResult && (
+            <div
+              className={`mt-3 rounded-lg px-4 py-3 text-sm space-y-2 ${
+                provisionResult.type === 'success'
+                  ? 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              }`}
+            >
+              <div>{provisionResult.message}</div>
+              {provisionResult.type === 'success' && provisionResult.detail && (
+                <div className="font-mono text-xs space-y-1 border-t border-green-200/50 dark:border-green-700/50 pt-2 mt-2">
+                  <div>User ID: {provisionResult.detail.user_id}</div>
+                  <div>Username: {provisionResult.detail.username}</div>
+                  <div>Email: {provisionResult.detail.email}</div>
+                  <div className="break-all">
+                    Temporary password: {provisionResult.detail.temporary_password}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Assign Enterprise Plan Card */}
       <Card>

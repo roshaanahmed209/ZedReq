@@ -2,19 +2,32 @@
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc, text
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from models.orm.admin_activity_log import AdminActivityLog
 from models.orm.revenue_transaction import RevenueTransaction
 from models.orm.cost_transaction import CostTransaction
 from models.orm.financial_summary import FinancialSummary
 from config.database_orm import get_main_app_engine
 from config.settings import settings
+from sqlalchemy.exc import IntegrityError
+from utils.main_app_user import (
+    generate_profile_path,
+    generate_random_password,
+    hash_main_app_password,
+    is_valid_username_shape,
+    sanitize_username_base,
+    validate_main_app_email,
+)
 import secrets
-import hashlib
 import logging
 import json
 
 logger = logging.getLogger(__name__)
+
+# Main app usage_tracking.feature values (subscription_service.py)
+KNOWN_USAGE_FEATURES = frozenset(
+    {"ai_messages", "course_enrollments", "interview_sessions"}
+)
 
 
 class AdminService:
@@ -189,6 +202,26 @@ class AdminService:
                         (SELECT COUNT(*) FROM post WHERE uid = :user_id AND is_deleted = FALSE) as posts_count
                 """)
                 stats_result = conn.execute(stats_query, {'user_id': user_id}).fetchone()
+
+                usage_query = text("""
+                    SELECT feature, period_start, usage_count, updated_at
+                    FROM usage_tracking
+                    WHERE user_id = :user_id
+                    ORDER BY period_start DESC, feature
+                """)
+                usage_rows = conn.execute(usage_query, {'user_id': user_id}).fetchall()
+                usage_tracking = [
+                    {
+                        'feature': r.feature,
+                        'period_start': r.period_start.isoformat() if r.period_start else None,
+                        'usage_count': r.usage_count,
+                        'updated_at': r.updated_at.isoformat() + 'Z' if r.updated_at else None,
+                    }
+                    for r in usage_rows
+                ]
+
+                today_utc = datetime.now(timezone.utc).date()
+                current_period_start = today_utc.replace(day=1).isoformat()
                 
                 user_dict = {
                     'id': user_result.uid,
@@ -196,6 +229,8 @@ class AdminService:
                     'email': user_result.user_email,
                     'full_name': user_result.name,
                     'profile_url': user_result.profile_url,
+                    'usage_tracking': usage_tracking,
+                    'usage_current_period_start': current_period_start,
                     'subscription': {
                         'status': user_result.subscription_status or 'inactive',
                         'plan': user_result.subscription_plan or 'free',
@@ -382,6 +417,74 @@ class AdminService:
         
         return {'success': True, 'message': f'Plan changed to {new_plan}', 'plan': new_plan, 'status': new_status}
     
+    def reset_user_usage(
+        self,
+        user_id: int,
+        feature: str,
+        all_periods: bool,
+        admin_id: int,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Zero out main-app usage_tracking rows (subscription quotas) for a user.
+        feature: ai_messages | course_enrollments | interview_sessions | all
+        """
+        if feature != "all" and feature not in KNOWN_USAGE_FEATURES:
+            raise ValueError("Invalid feature")
+
+        engine = get_main_app_engine()
+        with engine.connect() as conn:
+            if not conn.execute(
+                text("SELECT uid FROM users WHERE uid = :uid"),
+                {"uid": user_id},
+            ).fetchone():
+                raise ValueError("User not found")
+
+        clauses: List[str] = ["user_id = :uid"]
+        params: Dict[str, Any] = {"uid": user_id}
+        if feature != "all":
+            clauses.append("feature = :feature")
+            params["feature"] = feature
+        if not all_periods:
+            period_start = datetime.now(timezone.utc).date().replace(day=1)
+            clauses.append("period_start = :period_start")
+            params["period_start"] = period_start
+
+        where_sql = " AND ".join(clauses)
+        with engine.begin() as conn:
+            result = conn.execute(
+                text(f"""
+                    UPDATE usage_tracking
+                    SET usage_count = 0, updated_at = NOW()
+                    WHERE {where_sql}
+                """),
+                params,
+            )
+            rows_updated = result.rowcount
+
+        scope = "all billing months" if all_periods else "current UTC month only"
+        feat_label = feature if feature != "all" else "all features"
+        self._log_admin_activity(
+            admin_id=admin_id,
+            action_type="reset_usage",
+            target_type="user",
+            target_id=user_id,
+            details={
+                "feature": feature,
+                "all_periods": all_periods,
+                "rows_updated": rows_updated,
+            },
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return {
+            "success": True,
+            "message": f"Reset usage for {feat_label} ({scope}). Rows updated: {rows_updated}.",
+            "rows_updated": rows_updated,
+        }
+
     def cancel_subscription(
         self,
         user_id: int,
@@ -464,6 +567,114 @@ class AdminService:
         
         return {'success': True, 'message': 'User unsuspended'}
     
+    def provision_main_app_user(
+        self,
+        email: str,
+        full_name: Optional[str],
+        admin_id: int,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a user in the main ZedReq database only (not a backoffice admin).
+        Returns a one-time temporary password for the main app login.
+        """
+        email_clean = (email or "").strip().lower()
+        if not validate_main_app_email(email_clean):
+            raise ValueError("Please provide a valid email address")
+
+        engine = get_main_app_engine()
+        with engine.connect() as conn:
+            if conn.execute(
+                text("SELECT uid FROM users WHERE LOWER(user_email) = LOWER(:e)"),
+                {"e": email_clean},
+            ).fetchone():
+                raise ValueError("Email already registered in the main app")
+
+        local = email_clean.split("@", 1)[0]
+        base = sanitize_username_base(local)
+        if len(base) < 3:
+            base = (base + secrets.token_hex(2))[:50]
+        if not is_valid_username_shape(base):
+            base = "user_" + secrets.token_hex(3)
+
+        name = (full_name or "").strip() or base[:100]
+        name = name[:100]
+        plain_password = generate_random_password()
+        password_hash = hash_main_app_password(plain_password)
+
+        uid: Optional[int] = None
+        username_final: Optional[str] = None
+
+        for attempt in range(50):
+            suffix = "" if attempt == 0 else "_" + secrets.token_hex(2)
+            candidate = (base + suffix)[:50]
+            if len(candidate) < 3:
+                candidate = "user_" + secrets.token_hex(3)
+            if not is_valid_username_shape(candidate):
+                candidate = "user_" + secrets.token_hex(3)
+
+            with engine.connect() as check_conn:
+                if check_conn.execute(
+                    text("SELECT uid FROM users WHERE LOWER(user_email) = LOWER(:e)"),
+                    {"e": email_clean},
+                ).fetchone():
+                    raise ValueError("Email already registered in the main app")
+                if check_conn.execute(
+                    text("SELECT uid FROM users WHERE LOWER(username) = LOWER(:u)"),
+                    {"u": candidate},
+                ).fetchone():
+                    continue
+
+            try:
+                with engine.begin() as conn:
+                    row = conn.execute(
+                        text("""
+                            INSERT INTO users (username, name, user_email, password_hash, email_verified, created_at, updated_at)
+                            VALUES (:username, :name, :email, :ph, TRUE, NOW(), NOW())
+                            RETURNING uid
+                        """),
+                        {
+                            "username": candidate,
+                            "name": name,
+                            "email": email_clean,
+                            "ph": password_hash,
+                        },
+                    ).fetchone()
+                    uid = int(row[0])
+                    profile_path = generate_profile_path(uid, candidate)
+                    if profile_path:
+                        conn.execute(
+                            text("UPDATE users SET profile_url = :p, updated_at = NOW() WHERE uid = :uid"),
+                            {"p": profile_path, "uid": uid},
+                        )
+                    username_final = candidate
+                break
+            except IntegrityError:
+                continue
+
+        if uid is None or username_final is None:
+            raise ValueError("Could not create user (try again or use a different email).")
+
+        self._log_admin_activity(
+            admin_id=admin_id,
+            action_type="provision_main_app_user",
+            target_type="user",
+            target_id=uid,
+            details={"email": email_clean, "username": username_final},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return {
+            "success": True,
+            "message": "Main app user created. Share the password securely; it is not stored in plain text.",
+            "user_id": uid,
+            "username": username_final,
+            "email": email_clean,
+            "temporary_password": plain_password,
+        }
+
     def reset_user_password(
         self,
         user_id: int,
@@ -475,15 +686,12 @@ class AdminService:
         """
         Reset a user's password to the admin-provided value.
         Single UPDATE on users table: password_hash.
-        Hashes using sha256$salt$hash (same format as the main app).
+        Uses the same PBKDF2 scheme as the main ZedReq app.
         """
         if len(new_password) < 8:
             raise ValueError("Password must be at least 8 characters")
-        
-        # Hash using the same algorithm as the main app (sha256$salt$hash)
-        salt = secrets.token_hex(16)
-        password_hash = hashlib.sha256((salt + new_password).encode('utf-8')).hexdigest()
-        stored_hash = f"sha256${salt}${password_hash}"
+
+        stored_hash = hash_main_app_password(new_password)
         
         engine = get_main_app_engine()
         with engine.begin() as conn:

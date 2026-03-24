@@ -10,6 +10,29 @@ _project_root = Path(__file__).parent.parent.parent
 _env_file = _project_root / ".env"
 
 
+def parse_tavus_replica_ids_value(raw: str | None) -> List[str]:
+    """
+    Parse replica ID(s) from env: comma-separated and/or bracket-wrapped lists.
+
+    Accepts e.g. ``rf1,rf2``, ``[rf1, rf2]``, or a single id. Strips quotes per token.
+    """
+    if not raw or not isinstance(raw, str):
+        return []
+    s = raw.strip()
+    if not s:
+        return []
+    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+        s = s[1:-1].strip()
+    if s.startswith("[") and s.endswith("]"):
+        s = s[1:-1].strip()
+    out: List[str] = []
+    for part in s.split(","):
+        p = part.strip().strip("'\"")
+        if p:
+            out.append(p)
+    return out
+
+
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables"""
     
@@ -39,9 +62,13 @@ class Settings(BaseSettings):
     
     # Tavus AI Configuration (optional)
     TAVUS_API_KEY: str | None = None
-    TAVUS_REPLICA_ID: str | None = None  # Single replica ID (for backward compatibility)
-    TAVUS_REPLICA_IDS: str | None = None  # Comma-separated list of replica IDs
-    TAVUS_API_URL: str = "https://api.tavus.ai/v2"
+    TAVUS_PERSONA_ID: str | None = None  # Required for POST /v2/conversations (full pipeline)
+    TAVUS_REPLICA_ID: str | None = None  # One id, or comma-separated / [id1, id2] list
+    TAVUS_REPLICA_IDS: str | None = None  # Comma-separated or [id1, id2] (preferred for multiple)
+    # Official v2 host: https://docs.tavus.io/api-reference/conversations/create-conversation
+    TAVUS_API_URL: str = "https://tavusapi.com/v2"
+    # Seconds with no participant before Tavus tears down the Daily room (Tavus default is 300).
+    TAVUS_PARTICIPANT_ABSENT_TIMEOUT: int = 1800
     
     # Firebase Google Auth Configuration (separate from messaging Firebase)
     FIREBASE_AUTH_PROJECT_ID: str | None = None  # Firebase project ID for Google Auth
@@ -69,23 +96,16 @@ class Settings(BaseSettings):
     
     def get_tavus_replica_ids(self) -> List[str]:
         """
-        Get list of Tavus replica IDs
-        
-        Returns:
-            List of replica IDs. Supports both TAVUS_REPLICA_IDS (comma-separated)
-            and TAVUS_REPLICA_ID (single ID for backward compatibility)
+        Get list of Tavus replica IDs.
+
+        ``TAVUS_REPLICA_IDS`` wins if set; otherwise ``TAVUS_REPLICA_ID``.
+        Each may be comma-separated or bracket-wrapped (e.g. ``[r1, r2]``).
         """
-        replica_ids = []
-        
-        # First, try TAVUS_REPLICA_IDS (comma-separated list)
         if self.TAVUS_REPLICA_IDS:
-            replica_ids = [rid.strip() for rid in self.TAVUS_REPLICA_IDS.split(",") if rid.strip()]
-        
-        # If no list, fall back to single TAVUS_REPLICA_ID (backward compatibility)
-        if not replica_ids and self.TAVUS_REPLICA_ID:
-            replica_ids = [self.TAVUS_REPLICA_ID]
-        
-        return replica_ids
+            return parse_tavus_replica_ids_value(self.TAVUS_REPLICA_IDS)
+        if self.TAVUS_REPLICA_ID:
+            return parse_tavus_replica_ids_value(self.TAVUS_REPLICA_ID)
+        return []
     
     def get_random_tavus_replica_id(self) -> Optional[str]:
         """

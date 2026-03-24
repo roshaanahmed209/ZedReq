@@ -4,8 +4,14 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import {
   X, User, CreditCard, Shield, LogOut, Download, Bell,
-  Trash2, Ban, CheckCircle, Key, Lock, ArrowUpCircle, Activity
+  Trash2, Ban, CheckCircle, Key, Lock, ArrowUpCircle, Activity, RotateCcw
 } from 'lucide-react'
+
+const USAGE_FEATURE_LABELS = {
+  ai_messages: 'AI messages',
+  course_enrollments: 'Course enrollments',
+  interview_sessions: 'Interview sessions',
+}
 
 // Two-step confirmation wrapper for destructive actions
 const ConfirmAction = ({ label, icon: Icon, variant, onConfirm, disabled, className, title }) => {
@@ -125,6 +131,14 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const resetUsageKey = (feature, allPeriods) => `resetUsage_${feature}_${allPeriods}`
+
+  const handleResetUsage = async (feature, allPeriods) => {
+    await handleAction(resetUsageKey(feature, allPeriods), () =>
+      usersAPI.resetUsage(userId, { feature, all_periods: allPeriods })
+    )
   }
 
   const handleExport = async () => {
@@ -308,6 +322,122 @@ const UserDetailModal = ({ userId, onClose, onUserUpdated }) => {
                 ) : (
                   <p className="text-sm text-muted-foreground">No subscription data available</p>
                 )}
+              </section>
+
+              {/* ================= Plan quota usage (main app DB) ================= */}
+              <section className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="font-semibold">Plan quota usage</h4>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Counters from the main app (<code className="text-xs">usage_tracking</code>).{' '}
+                  {user.usage_current_period_start && (
+                    <>Current UTC month starts <span className="font-mono">{user.usage_current_period_start}</span>.</>
+                  )}
+                </p>
+                {user.usage_tracking && user.usage_tracking.length > 0 ? (
+                  <div className="overflow-x-auto rounded-md border border-border text-sm">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b bg-muted/50 text-left">
+                          <th className="p-2 font-medium">Feature</th>
+                          <th className="p-2 font-medium">Period</th>
+                          <th className="p-2 font-medium">Count</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {user.usage_tracking.map((row, idx) => (
+                          <tr key={`${row.feature}-${row.period_start}-${idx}`} className="border-b border-border/60">
+                            <td className="p-2">
+                              {USAGE_FEATURE_LABELS[row.feature] || row.feature}
+                            </td>
+                            <td className="p-2 font-mono text-xs">{row.period_start || '—'}</td>
+                            <td className="p-2">{row.usage_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No usage rows (no quota consumption recorded yet, or counters are zero).
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">This month (UTC)</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading === resetUsageKey('ai_messages', false)}
+                      onClick={() => handleResetUsage('ai_messages', false)}
+                    >
+                      {actionLoading === resetUsageKey('ai_messages', false) ? '…' : 'Reset AI messages'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading === resetUsageKey('course_enrollments', false)}
+                      onClick={() => handleResetUsage('course_enrollments', false)}
+                    >
+                      {actionLoading === resetUsageKey('course_enrollments', false) ? '…' : 'Reset courses'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading === resetUsageKey('interview_sessions', false)}
+                      onClick={() => handleResetUsage('interview_sessions', false)}
+                    >
+                      {actionLoading === resetUsageKey('interview_sessions', false) ? '…' : 'Reset interviews'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={actionLoading === resetUsageKey('all', false)}
+                      onClick={() => handleResetUsage('all', false)}
+                    >
+                      {actionLoading === resetUsageKey('all', false) ? '…' : 'Reset all features'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-xs font-medium text-destructive">All billing months (entire history)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Zeros usage for every stored month, not only the current month.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <ConfirmAction
+                      label="AI — all months"
+                      variant="outline"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      disabled={actionLoading === resetUsageKey('ai_messages', true)}
+                      onConfirm={() => { void handleResetUsage('ai_messages', true) }}
+                    />
+                    <ConfirmAction
+                      label="Courses — all months"
+                      variant="outline"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      disabled={actionLoading === resetUsageKey('course_enrollments', true)}
+                      onConfirm={() => { void handleResetUsage('course_enrollments', true) }}
+                    />
+                    <ConfirmAction
+                      label="Interviews — all months"
+                      variant="outline"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      disabled={actionLoading === resetUsageKey('interview_sessions', true)}
+                      onConfirm={() => { void handleResetUsage('interview_sessions', true) }}
+                    />
+                    <ConfirmAction
+                      label="Everything — all months"
+                      variant="destructive"
+                      disabled={actionLoading === resetUsageKey('all', true)}
+                      onConfirm={() => { void handleResetUsage('all', true) }}
+                    />
+                  </div>
+                </div>
               </section>
 
               {/* ================= User Stats ================= */}

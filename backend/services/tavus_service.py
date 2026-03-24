@@ -66,10 +66,10 @@ class TavusService:
                 self.available = False
                 self.api_url = None
         
-        # Set headers only if API key is available
+        # Tavus v2 uses x-api-key (not Bearer). See https://docs.tavus.io/api-reference/authentication
         if self.available and self.api_key:
             self.headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "x-api-key": self.api_key,
                 "Content-Type": "application/json"
             }
         else:
@@ -78,20 +78,22 @@ class TavusService:
     def create_conversation(
         self,
         replica_id: str,
+        persona_id: str,
         conversation_name: str,
         system_prompt: str,
         first_message: str,
         max_call_duration: Optional[int] = None
     ) -> Dict[str, Any]:
         """
-        Create a new Tavus conversation
+        Create a new Tavus conversation (v2 API: POST /v2/conversations).
         
         Args:
             replica_id: Tavus replica ID for the interviewer
+            persona_id: Tavus persona ID (required by v2 full-pipeline conversations)
             conversation_name: Name for the conversation
-            system_prompt: System prompt for the interviewer
-            first_message: First message to start the conversation
-            max_call_duration: Maximum call duration in seconds (server-controlled, not client)
+            system_prompt: Interview context (sent as conversational_context)
+            first_message: Opening line (sent as custom_greeting)
+            max_call_duration: Maximum call duration in seconds (nested under properties)
             
         Returns:
             Dictionary with conversation details including conversation_id
@@ -105,26 +107,42 @@ class TavusService:
         
         # Sanitize and validate inputs
         replica_id = sanitize_input(str(replica_id), max_length=255)
+        persona_id = sanitize_input(str(persona_id), max_length=255)
         conversation_name = sanitize_input(conversation_name, max_length=255)
         system_prompt = sanitize_input(system_prompt, max_length=10000)  # Reasonable limit for prompts
         first_message = sanitize_input(first_message, max_length=1000)
         
         if not replica_id:
             raise ValueError("replica_id cannot be empty")
+        if not persona_id:
+            raise ValueError("persona_id cannot be empty")
         
         url = f"{self.api_url}/conversations"
         
-        payload = {
+        # v2 schema: https://docs.tavus.io/api-reference/conversations/create-conversation
+        payload: Dict[str, Any] = {
             "replica_id": replica_id,
+            "persona_id": persona_id,
             "conversation_name": conversation_name,
-            "system_prompt": system_prompt,
-            "first_message": first_message
         }
+        if system_prompt:
+            payload["conversational_context"] = system_prompt
+        if first_message:
+            payload["custom_greeting"] = first_message
         
-        # Add max_call_duration if provided (server-side control, not client-controlled)
+        properties: Dict[str, Any] = {}
         if max_call_duration is not None and isinstance(max_call_duration, int) and max_call_duration > 0:
-            payload["max_call_duration"] = max_call_duration
+            properties["max_call_duration"] = max_call_duration
             logger.info(f"Tavus conversation max_call_duration set to {max_call_duration}s")
+        # Avoid "meeting does not exist" when users join after Tavus' default 300s no-join window
+        pa = settings.TAVUS_PARTICIPANT_ABSENT_TIMEOUT
+        if isinstance(pa, int) and pa > 0:
+            properties["participant_absent_timeout"] = min(pa, 86400)
+            logger.info(
+                f"Tavus participant_absent_timeout set to {properties['participant_absent_timeout']}s"
+            )
+        if properties:
+            payload["properties"] = properties
         
         # Log API call (sanitized)
         safe_log_api_call(

@@ -79,6 +79,16 @@ class InterviewStartResponse(BaseModel):
     """Schema for interview start response"""
     interview_id: int = Field(..., gt=0)
     tavus_conversation_id: str = Field(..., max_length=255)
+    tavus_conversation_url: Optional[str] = Field(
+        None,
+        max_length=2048,
+        description="Daily/Tavus room URL to embed or open for the live CVI session",
+    )
+    tavus_meeting_token: Optional[str] = Field(
+        None,
+        max_length=4096,
+        description="JWT for private rooms (append as ?t=... to conversation_url)",
+    )
     questions: List[QuestionSchema] = Field(..., min_length=1, max_length=20)
     status: str = Field(..., max_length=20)
     attempt_number: int = Field(..., ge=1)

@@ -7,6 +7,26 @@ from unittest.mock import Mock, patch, MagicMock
 import httpx
 from services.tavus_service import TavusService
 from utils.api_security import validate_api_key
+from config.settings import parse_tavus_replica_ids_value
+
+
+class TestParseTavusReplicaIds:
+    """Bracket / CSV env values for TAVUS_REPLICA_ID and TAVUS_REPLICA_IDS"""
+
+    def test_bracket_list_with_spaces(self):
+        raw = "[rf4703150052, r92debe21318, r9fa0878977a, r6ae5b6efc9d]"
+        assert parse_tavus_replica_ids_value(raw) == [
+            "rf4703150052",
+            "r92debe21318",
+            "r9fa0878977a",
+            "r6ae5b6efc9d",
+        ]
+
+    def test_comma_separated(self):
+        assert parse_tavus_replica_ids_value("a,b, c") == ["a", "b", "c"]
+
+    def test_single_id(self):
+        assert parse_tavus_replica_ids_value("rf4703150052") == ["rf4703150052"]
 
 
 class TestTavusService:
@@ -14,25 +34,25 @@ class TestTavusService:
     
     def test_init_with_valid_api_key(self):
         """Test initialization with valid API key"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         assert service.available is True
         assert service.api_key == "test_key_12345"
-        assert "Authorization" in service.headers
+        assert "x-api-key" in service.headers
     
     def test_init_without_api_key(self):
         """Test initialization without API key"""
-        service = TavusService(api_key=None, api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key=None, api_url="https://tavusapi.com/v2")
         assert service.available is False
         assert service.api_key is None
     
     def test_init_with_invalid_api_key(self):
         """Test initialization with invalid API key"""
-        service = TavusService(api_key="", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="", api_url="https://tavusapi.com/v2")
         assert service.available is False
     
     def test_create_conversation_success(self):
         """Test successful conversation creation"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         mock_response = Mock()
         mock_response.json.return_value = {"conversation_id": "conv_123"}
@@ -43,6 +63,7 @@ class TestTavusService:
             
             result = service.create_conversation(
                 replica_id="replica_123",
+                persona_id="pcb7a34da5fe",
                 conversation_name="Test Interview",
                 system_prompt="You are an interviewer",
                 first_message="Hello"
@@ -52,7 +73,7 @@ class TestTavusService:
     
     def test_create_conversation_input_sanitization(self):
         """Test that inputs are sanitized"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         mock_response = Mock()
         mock_response.json.return_value = {"conversation_id": "conv_123"}
@@ -64,6 +85,7 @@ class TestTavusService:
             # Test with potentially dangerous input
             result = service.create_conversation(
                 replica_id="replica_123",
+                persona_id="pcb7a34da5fe",
                 conversation_name="Test<script>alert('xss')</script>",
                 system_prompt="You are an interviewer",
                 first_message="Hello"
@@ -76,7 +98,7 @@ class TestTavusService:
         """Test retry logic on server errors"""
         service = TavusService(
             api_key="test_key_12345",
-            api_url="https://api.tavus.ai/v2",
+            api_url="https://tavusapi.com/v2",
             max_retries=2
         )
         
@@ -102,6 +124,7 @@ class TestTavusService:
             
             result = service.create_conversation(
                 replica_id="replica_123",
+                persona_id="pcb7a34da5fe",
                 conversation_name="Test",
                 system_prompt="Prompt",
                 first_message="Hello"
@@ -112,7 +135,7 @@ class TestTavusService:
     
     def test_create_conversation_no_retry_on_client_error(self):
         """Test that client errors (4xx) are not retried"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         mock_response_error = Mock()
         mock_response_error.status_code = 400
@@ -130,6 +153,7 @@ class TestTavusService:
             with pytest.raises(Exception):
                 service.create_conversation(
                     replica_id="replica_123",
+                    persona_id="pcb7a34da5fe",
                     conversation_name="Test",
                     system_prompt="Prompt",
                     first_message="Hello"
@@ -140,7 +164,7 @@ class TestTavusService:
     
     def test_get_conversation_success(self):
         """Test successful conversation retrieval"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         mock_response = Mock()
         mock_response.json.return_value = {"conversation_id": "conv_123", "status": "active"}
@@ -156,7 +180,7 @@ class TestTavusService:
     
     def test_get_conversation_transcript_success(self):
         """Test successful transcript retrieval"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         mock_response = Mock()
         mock_response.json.return_value = {
@@ -175,7 +199,7 @@ class TestTavusService:
     
     def test_get_conversation_transcript_fallback(self):
         """Test transcript retrieval with 404 fallback"""
-        service = TavusService(api_key="test_key_12345", api_url="https://api.tavus.ai/v2")
+        service = TavusService(api_key="test_key_12345", api_url="https://tavusapi.com/v2")
         
         # First call returns 404
         mock_response_404 = Mock()

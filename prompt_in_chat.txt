@@ -164,3 +164,13 @@ By using ZedReq, you acknowledge that you have read, understood, and agreed to t
 
 
 add a terms and conditions check on the 
+
+
+
+
+
+
+
+(venv) PS E:\professional\ZEDREC sahi wala\ZedReq\backend> netstat -ano | findstr :5000
+  TCP    127.0.0.1:59312        127.0.0.1:5000         SYN_SENT        8912
+(venv) PS E:\professional\ZEDREC sahi wala\ZedReq\backend> taskkill /PID 8912 /F
