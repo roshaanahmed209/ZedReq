@@ -261,7 +261,9 @@ if _settings_loaded and settings:
 # Final fallback: Use defaults
 if not cors_origins:
     cors_origins = ["http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5000", "http://localhost:5000"]
-    logger.warning("Using default CORS origins. Set BACKOFFICE_CORS_ORIGINS in .env file to configure.")
+    logger.warning(
+    "Using default CORS origins. Set BACKOFFICE_CORS_ORIGINS in the project root .env to configure."
+)
 
 logger.info(f"CORS configured with origins: {cors_origins}")
 

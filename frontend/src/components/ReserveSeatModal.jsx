@@ -25,7 +25,7 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
 
     try {
       // Step 1: Reserve seat in backend (stores in database and generates promo code)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const apiUrl = import.meta.env.VITE_ZEDREQ_URL || import.meta.env.VITE_API_URL || ''
       const response = await fetch(`${apiUrl}/api/reserved-seats`, {
         method: 'POST',
         headers: {

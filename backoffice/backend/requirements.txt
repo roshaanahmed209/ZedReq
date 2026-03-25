@@ -16,7 +16,7 @@ werkzeug>=3.0.0
 # ===========================================
 # Database
 # ===========================================
-psycopg2
+psycopg2-binary
 psycopg-pool>=3.2.4
 sqlalchemy>=2.0.0
 

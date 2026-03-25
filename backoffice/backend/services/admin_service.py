@@ -158,7 +158,7 @@ class AdminService:
             error_msg = f"Error querying main app database for users: {e}"
             logger.error(error_msg, exc_info=True)
             # Re-raise with more context for API to handle
-            raise Exception(f"Database connection error: {str(e)}. Please check MAIN_APP_DB_* environment variables in backoffice/.env file.")
+            raise Exception(f"Database connection error: {str(e)}. Please check MAIN_APP_DB_* environment variables in the project root .env file.")
     
     def get_user_details(self, user_id: int) -> Optional[Dict[str, Any]]:
         """

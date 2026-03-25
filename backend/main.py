@@ -166,15 +166,15 @@ async def lifespan(app: FastAPI):
             print("Firebase Admin SDK app created, getting database reference...")
             db_ref = get_firebase_db()
             if db_ref:
-                print("✓ Firebase Realtime Database initialized successfully (using Admin SDK)")
+                print("[OK] Firebase Realtime Database initialized successfully (using Admin SDK)")
             else:
-                print("⚠ Warning: Firebase app created but database reference unavailable (will use REST API)")
+                print("[WARNING] Firebase app created but database reference unavailable (will use REST API)")
                 print("  This usually means there's an issue with the database connection")
         else:
-            print("⚠ Warning: Firebase Admin SDK not available (will use REST API fallback)")
+            print("[WARNING] Firebase Admin SDK not available (will use REST API fallback)")
             print("  Check that FIREBASE_CREDENTIALS_PATH is set or credentials.json exists in backend/firebase/")
     except Exception as e:
-        print(f"⚠ Warning: Firebase initialization failed: {e}")
+        print(f"[WARNING] Firebase initialization failed: {e}")
         import traceback
         traceback.print_exc()
         print("Messaging service will use REST API fallback")

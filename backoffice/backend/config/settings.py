@@ -1,12 +1,12 @@
-"""Application settings using Pydantic Settings - All values from backoffice/.env file"""
+"""Application settings using Pydantic Settings — unified .env at repository root."""
 from pydantic_settings import BaseSettings
 from typing import List
 from functools import lru_cache
 from pathlib import Path
 
-# Get backoffice root directory (parent of backend)
-_backoffice_root = Path(__file__).parent.parent.parent
-_env_file = _backoffice_root / ".env"
+# Repository root (parent of backoffice/) — same .env as main ZedReq backend
+_repo_root = Path(__file__).resolve().parent.parent.parent.parent
+_env_file = _repo_root / ".env"
 
 
 class Settings(BaseSettings):

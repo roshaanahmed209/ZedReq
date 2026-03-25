@@ -6,9 +6,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from dotenv import load_dotenv
 
-# Load .env from backoffice root
-_backoffice_root = Path(__file__).parent.parent.parent
-_env_file = _backoffice_root / ".env"
+# Unified .env at repository root (same as main ZedReq backend)
+_repo_root = Path(__file__).resolve().parent.parent.parent.parent
+_env_file = _repo_root / ".env"
 load_dotenv(_env_file)
 
 # Build database URL

@@ -63,7 +63,7 @@ async def get_all_users(
         logger.error(f"Error getting users: {e}", exc_info=True)
         error_detail = str(e)
         if "connection" in error_detail.lower() or "database" in error_detail.lower():
-            error_detail = f"Database connection failed: {error_detail}. Please verify MAIN_APP_DB_* settings in backoffice/.env"
+            error_detail = f"Database connection failed: {error_detail}. Please verify MAIN_APP_DB_* settings in the project root .env"
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail

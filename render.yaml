@@ -1,0 +1,165 @@
+databases:
+  - name: zedreq-db
+    plan: free
+    databaseName: zedreq
+    user: zedreq
+
+  - name: zedreq-backoffice-db
+    plan: free
+    databaseName: zedreq_backoffice
+    user: zedreq_backoffice
+
+services:
+  # ─── Main API + Frontend ──────────────────────────────────────────────────
+  - type: web
+    name: zedreq-main
+    runtime: python
+    plan: free
+    buildCommand: >
+      pip install -r backend/requirements.txt &&
+      cd frontend && npm install && npm run build
+    startCommand: START_BACKENDS=main python run_backends.py
+    healthCheckPath: /health
+    envVars:
+      - key: START_BACKENDS
+        value: main
+
+      # Set ZEDREQ_URL to this service's Render URL after first deploy, e.g.:
+      # https://zedreq-main.onrender.com
+      - key: ZEDREQ_URL
+        value: ""   # REPLACE with your Render URL
+
+      # CORS: include both the main URL and backoffice URL
+      # e.g. https://zedreq-main.onrender.com,https://zedreq-backoffice.onrender.com
+      - key: CORS_ORIGINS
+        value: ""   # REPLACE with comma-separated allowed origins
+
+      # PostgreSQL — use the Internal Database URL from zedreq-db
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zedreq-db
+          property: connectionString
+
+      # These are still needed by settings.py even when DATABASE_URL is set
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: zedreq-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: zedreq-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: zedreq-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: zedreq-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: zedreq-db
+          property: password
+
+      # Database pool
+      - key: DB_POOL_MIN
+        value: "2"
+      - key: DB_POOL_SIZE
+        value: "10"
+
+      # JWT — generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+
+      # App
+      - key: DEBUG
+        value: "false"
+
+      # Backoffice collector URL (set after deploying backoffice service)
+      # e.g. https://zedreq-backoffice.onrender.com/api/collect
+      - key: BACKOFFICE_COLLECTOR_URL
+        value: ""   # REPLACE after backoffice is deployed
+
+      # ── Optional AI / external services ──────────────────────────────────
+      # - key: OPENAI_API_KEY
+      #   value: ""
+      # - key: TAVUS_API_KEY
+      #   value: ""
+      # - key: TAVUS_PERSONA_ID
+      #   value: ""
+      # - key: TAVUS_REPLICA_IDS
+      #   value: ""
+      # - key: FIREBASE_AUTH_PROJECT_ID
+      #   value: ""
+      # - key: FIREBASE_AUTH_API_KEY
+      #   value: ""
+      # - key: QDRANT_URL
+      #   value: ""
+      # - key: QDRANT_API_KEY
+      #   value: ""
+
+  # ─── Backoffice API + Frontend ────────────────────────────────────────────
+  - type: web
+    name: zedreq-backoffice
+    runtime: python
+    plan: free
+    buildCommand: >
+      pip install -r backoffice/backend/requirements.txt &&
+      cd backoffice/frontend && npm install && npm run build
+    startCommand: START_BACKENDS=backoffice python run_backends.py
+    healthCheckPath: /health
+    envVars:
+      - key: START_BACKENDS
+        value: backoffice
+
+      # CORS: include the main app URL and backoffice URL
+      - key: BACKOFFICE_CORS_ORIGINS
+        value: ""   # REPLACE with comma-separated allowed origins
+
+      # PostgreSQL — use the Internal Database URL from zedreq-backoffice-db
+      - key: BACKOFFICE_DATABASE_URL
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: connectionString
+
+      - key: BACKOFFICE_DB_HOST
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: host
+      - key: BACKOFFICE_DB_PORT
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: port
+      - key: BACKOFFICE_DB_NAME
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: database
+      - key: BACKOFFICE_DB_USER
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: user
+      - key: BACKOFFICE_DB_PASSWORD
+        fromDatabase:
+          name: zedreq-backoffice-db
+          property: password
+
+      # JWT
+      - key: BACKOFFICE_JWT_SECRET_KEY
+        generateValue: true
+      - key: BACKOFFICE_JWT_ALGORITHM
+        value: HS256
+      - key: BACKOFFICE_JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+
+      # App
+      - key: BACKOFFICE_DEBUG
+        value: "false"
+      - key: BACKOFFICE_SERVER_HOST
+        value: "0.0.0.0"

@@ -21,8 +21,8 @@ PORT             Used when START_BACKENDS is ``main`` or ``backoffice`` if the
 
 UVICORN_RELOAD   Set to 1/true/yes to enable ``--reload`` (single-backend modes only).
 
-Optional: loads ``.env`` from the repo root and ``backoffice/.env`` when python-dotenv
-is installed (same as running each app from its directory).
+Optional: loads the repository root ``.env`` when python-dotenv is installed (unified
+config for main and backoffice).
 """
 from __future__ import annotations
 
@@ -45,11 +45,8 @@ def _load_dotenv_files() -> None:
     except ImportError:
         return
     root_env = ROOT / ".env"
-    bo_env = ROOT / "backoffice" / ".env"
     if root_env.is_file():
         load_dotenv(root_env)
-    if bo_env.is_file():
-        load_dotenv(bo_env, override=True)
 
 
 def _env_int(name: str, default: int) -> int:
