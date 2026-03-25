@@ -480,14 +480,18 @@ if __name__ == "__main__":
     if _settings_loaded and settings:
         try:
             debug_mode = settings.DEBUG
-        except:
+        except Exception:
             debug_mode = True
     else:
         debug_mode = True  # Default to debug mode if settings can't be loaded
-    
+
+    host = os.environ.get("ZEDREQ_HOST", "0.0.0.0")
+    port_raw = os.environ.get("ZEDREQ_PORT") or os.environ.get("PORT") or "5000"
+    port = int(port_raw)
+
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=5000,
-        reload=debug_mode
+        host=host,
+        port=port,
+        reload=debug_mode,
     )
