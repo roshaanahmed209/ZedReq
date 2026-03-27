@@ -123,9 +123,13 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting up FastAPI application...")
     
-    # Build frontend before starting
-    build_success = build_frontend()
-    
+    # Build frontend before starting (skip if SKIP_FRONTEND_BUILD=true)
+    if os.environ.get("SKIP_FRONTEND_BUILD", "false").lower() == "true":
+        build_success = False
+        print("Frontend build skipped (SKIP_FRONTEND_BUILD=true)")
+    else:
+        build_success = build_frontend()
+
     # Setup frontend routes after build
     if build_success:
         setup_frontend_routes()
