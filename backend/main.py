@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
+import asyncio
 import traceback
 import subprocess
 import sys
@@ -132,56 +133,52 @@ async def lifespan(app: FastAPI):
     else:
         print("Warning: Frontend build failed or skipped. Frontend routes may not work.")
     
-    try:
-        init_database()
-        print("Database initialized")
-    except Exception as e:
-        print(f"[WARN] Database init failed: {e} — continuing startup")
-
-    # Initialize ORM tables and seed subscription plans
-    try:
-        from config.database_orm import init_orm_tables, SessionLocal
-        init_orm_tables()
-        print("ORM tables initialized")
-
-        from services.subscription_service import SubscriptionService
-        seed_db = SessionLocal()
+    def _init_db():
         try:
-            SubscriptionService.seed_plans(seed_db)
-            print("Subscription plans seeded successfully")
-        finally:
-            seed_db.close()
-    except Exception as e:
-        print(f"Warning: Could not seed subscription plans: {e}")
-        import traceback
-        traceback.print_exc()
+            init_database()
+            print("Database initialized")
+        except Exception as e:
+            print(f"[WARN] Database init failed: {e}")
 
-    # Initialize Firebase (for messaging service)
-    try:
-        from utils.firebase_client import initialize_firebase, get_firebase_db
-        import logging
-        firebase_logger = logging.getLogger('utils.firebase_client')
-        firebase_logger.setLevel(logging.INFO)  # Ensure we see Firebase logs
-        
-        print("Initializing Firebase Realtime Database...")
-        firebase_app = initialize_firebase()
-        if firebase_app:
-            print("Firebase Admin SDK app created, getting database reference...")
-            db_ref = get_firebase_db()
-            if db_ref:
-                print("[OK] Firebase Realtime Database initialized successfully (using Admin SDK)")
+    def _init_orm():
+        try:
+            from config.database_orm import init_orm_tables, SessionLocal
+            init_orm_tables()
+            print("ORM tables initialized")
+            from services.subscription_service import SubscriptionService
+            seed_db = SessionLocal()
+            try:
+                SubscriptionService.seed_plans(seed_db)
+                print("Subscription plans seeded successfully")
+            finally:
+                seed_db.close()
+        except Exception as e:
+            print(f"[WARN] ORM/seed failed: {e}")
+
+    def _init_firebase():
+        try:
+            from utils.firebase_client import initialize_firebase, get_firebase_db
+            firebase_app = initialize_firebase()
+            if firebase_app:
+                db_ref = get_firebase_db()
+                if db_ref:
+                    print("[OK] Firebase initialized")
+                else:
+                    print("[WARN] Firebase app created but DB ref unavailable")
             else:
-                print("[WARN] Firebase app created but database reference unavailable (will use REST API)")
-                print("  This usually means there's an issue with the database connection")
-        else:
-            print("[WARN] Firebase Admin SDK not available (will use REST API fallback)")
-            print("  Check that FIREBASE_CREDENTIALS_PATH is set or credentials.json exists in backend/firebase/")
-    except Exception as e:
-        print(f"[WARN] Firebase initialization failed: {e}")
-        import traceback
-        traceback.print_exc()
-        print("Messaging service will use REST API fallback")
-    
+                print("[WARN] Firebase Admin SDK not available — using REST fallback")
+        except Exception as e:
+            print(f"[WARN] Firebase init failed: {e}")
+
+    # Run all blocking startup tasks in threads with a 20s timeout each
+    for name, fn in [("db", _init_db), ("orm", _init_orm), ("firebase", _init_firebase)]:
+        try:
+            await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
+        except asyncio.TimeoutError:
+            print(f"[WARN] {name} init timed out — continuing startup")
+        except Exception as e:
+            print(f"[WARN] {name} init error: {e}")
+
     # Start Vec agent scheduler
     try:
         start_scheduler()
