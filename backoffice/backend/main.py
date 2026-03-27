@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import HTTPException
 from contextlib import asynccontextmanager
 from pathlib import Path
+import os
 import subprocess
 import sys
 import traceback
@@ -436,20 +437,17 @@ if __name__ == "__main__":
     if _settings_loaded and settings:
         try:
             debug_mode = settings.BACKOFFICE_DEBUG
-            host = settings.BACKOFFICE_SERVER_HOST
             port = settings.BACKOFFICE_SERVER_PORT
         except:
             debug_mode = True
-            host = "127.0.0.1"
             port = 5001
     else:
         debug_mode = True
-        host = "127.0.0.1"
         port = 5001
-    
+
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", port)),
         reload=debug_mode
     )
