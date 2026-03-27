@@ -70,7 +70,8 @@ flask_session/
 
 
 env.example
-
+env_from_cluade.txt
+env_for_zedreq.txt
 
 creds.txt
 # PyInstaller
