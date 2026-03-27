@@ -2,15 +2,13 @@
 import secrets
 import re
 from typing import Optional, Tuple
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask import session
+from passlib.context import CryptContext
 from utils.errors import AuthenticationError
 from utils.logger import setup_logger
 
-logger = setup_logger(__name__)
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Password hashing configuration
-PASSWORD_HASH_METHOD = 'pbkdf2:sha256:600000'  # Strong key derivation
+logger = setup_logger(__name__)
 
 
 def hash_password(password: str) -> str:
@@ -23,7 +21,7 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password string (includes salt automatically)
     """
-    return generate_password_hash(password, method=PASSWORD_HASH_METHOD)
+    return _pwd_context.hash(password)
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
@@ -38,7 +36,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
         True if password matches, False otherwise
     """
     try:
-        return check_password_hash(stored_hash, password)
+        return _pwd_context.verify(password, stored_hash)
     except Exception as e:
         logger.error(f"Password verification error: {e}")
         return False
@@ -121,57 +119,23 @@ def validate_username(username: str) -> Tuple[bool, Optional[str]]:
 
 
 def get_current_user_id() -> Optional[int]:
-    """
-    Get the current logged-in user's ID from session
-    
-    Returns:
-        User ID if logged in, None otherwise
-    """
-    return session.get('user_id')
+    return None
 
 
 def get_current_username() -> Optional[str]:
-    """
-    Get the current logged-in user's username from session
-    
-    Returns:
-        Username if logged in, None otherwise
-    """
-    return session.get('username')
+    return None
 
 
 def is_authenticated() -> bool:
-    """
-    Check if current request is authenticated
-    
-    Returns:
-        True if user is logged in, False otherwise
-    """
-    return 'user_id' in session
+    return False
 
 
 def set_user_session(user_id: int, username: str, email: str = None) -> None:
-    """
-    Set user session data after successful login
-    
-    Args:
-        user_id: User's database ID
-        username: User's username
-        email: User's email (optional)
-    """
-    session['user_id'] = user_id
-    session['username'] = username
-    if email:
-        session['email'] = email
-    session.permanent = True  # Use permanent session with configured lifetime
-    logger.info(f"Session set for user: {username} (ID: {user_id})")
+    pass
 
 
 def clear_user_session() -> None:
-    """Clear all user session data"""
-    username = session.get('username', 'Unknown')
-    session.clear()
-    logger.info(f"Session cleared for user: {username}")
+    pass
 
 
 def generate_session_token() -> str:
