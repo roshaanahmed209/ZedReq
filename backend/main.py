@@ -132,8 +132,11 @@ async def lifespan(app: FastAPI):
     else:
         print("Warning: Frontend build failed or skipped. Frontend routes may not work.")
     
-    init_database()
-    print("Database initialized")
+    try:
+        init_database()
+        print("Database initialized")
+    except Exception as e:
+        print(f"[WARN] Database init failed: {e} — continuing startup")
 
     # Initialize ORM tables and seed subscription plans
     try:

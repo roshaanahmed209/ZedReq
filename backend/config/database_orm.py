@@ -45,11 +45,12 @@ DATABASE_URL = get_database_url()
 
 engine = create_engine(
     DATABASE_URL,
-    pool_size=int(os.environ.get('DB_POOL_SIZE', 50)),
-    max_overflow=int(os.environ.get('DB_POOL_MAX_OVERFLOW', 100)),
-    pool_timeout=30,
-    pool_recycle=3600,
-    pool_pre_ping=True,  # Verify connections before using
+    pool_size=int(os.environ.get('DB_POOL_SIZE', 5)),
+    max_overflow=int(os.environ.get('DB_POOL_MAX_OVERFLOW', 5)),
+    pool_timeout=15,
+    pool_recycle=1800,
+    pool_pre_ping=True,
+    connect_args={"connect_timeout": 15},
     echo=os.environ.get('SQL_ECHO', 'false').lower() == 'true'
 )
 

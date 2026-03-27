@@ -69,7 +69,7 @@ class Database:
         """Establish database connection"""
         if PSYCOPG_VERSION == 3:
             if 'conninfo' in self.params:
-                self._conn = psycopg.connect(self.params['conninfo'], row_factory=dict_row)
+                self._conn = psycopg.connect(self.params['conninfo'], row_factory=dict_row, connect_timeout=15)
             else:
                 self._conn = psycopg.connect(
                     host=self.params['host'],
@@ -77,13 +77,14 @@ class Database:
                     dbname=self.params['dbname'],
                     user=self.params['user'],
                     password=self.params['password'],
-                    row_factory=dict_row
+                    row_factory=dict_row,
+                    connect_timeout=15
                 )
         else:
             if 'conninfo' in self.params:
-                self._conn = psycopg2.connect(self.params['conninfo'])
+                self._conn = psycopg2.connect(self.params['conninfo'], connect_timeout=15)
             else:
-                self._conn = psycopg2.connect(**self.params)
+                self._conn = psycopg2.connect(**self.params, connect_timeout=15)
         
         self._conn.autocommit = True
     
