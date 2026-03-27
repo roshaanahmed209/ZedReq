@@ -38,7 +38,7 @@ class TwoFactorService:
     
     def _get_encryption_key(self) -> bytes:
         """Get or generate encryption key for 2FA secrets"""
-        key = os.environ.get('2FA_ENCRYPTION_KEY')
+        key = os.environ.get('TWO_FA_ENCRYPTION_KEY') or os.environ.get('2FA_ENCRYPTION_KEY')
         if not key:
             # Generate a key if not set (for development)
             # In production, this should be set in environment variables
@@ -100,7 +100,7 @@ class TwoFactorService:
         totp = pyotp.TOTP(secret)
         
         # Generate provisioning URI
-        issuer = os.environ.get('2FA_ISSUER_NAME', 'ZedRec')
+        issuer = os.environ.get('TWO_FA_ISSUER_NAME') or os.environ.get('2FA_ISSUER_NAME', 'ZedRec')
         account_name = f"{user.username} ({user.user_email})"
         provisioning_uri = totp.provisioning_uri(
             name=account_name,
