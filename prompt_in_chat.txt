@@ -174,3 +174,24 @@ add a terms and conditions check on the
 (venv) PS E:\professional\ZEDREC sahi wala\ZedReq\backend> netstat -ano | findstr :5000
   TCP    127.0.0.1:59312        127.0.0.1:5000         SYN_SENT        8912
 (venv) PS E:\professional\ZEDREC sahi wala\ZedReq\backend> taskkill /PID 8912 /F
+
+
+
+
+
+ You're setting up a Web Service manually on Render. Change these fields:
+
+  Language: Change from Node → Python 3
+
+  Build Command: Replace yarn with:
+  pip install -r backend/requirements.txt && cd frontend && npm install && npm run build
+
+  Start Command: Replace yarn start with:
+  START_BACKENDS=main python run_backends.py
+
+  Branch: main is correct if that's your deployment branch. You're currently on render/version1 locally — make sure you've pushed your recent changes (the fixes we made) 
+  to main before deploying.
+
+  Root Directory: Leave empty (commands run from repo root, which is correct since run_backends.py is at the root).
+
+  Region: Ohio (US East) is fine, keep it.
