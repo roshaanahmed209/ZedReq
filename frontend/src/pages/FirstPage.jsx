@@ -11,6 +11,44 @@ import JobDiscoveryFlow from '../components/JobDiscoveryFlow'
 import { Timeline } from '../components/Timeline'
 import '../css/pages/FirstPage.css'
 
+/* ── 3-D tilt card ─────────────────────────────────────────────────────── */
+const Card3D = ({ children, className }) => {
+  const ref = useRef(null)
+
+  const onMove = (e) => {
+    const el = ref.current
+    if (!el) return
+    const { left, top, width, height } = el.getBoundingClientRect()
+    const x = (e.clientX - left) / width  - 0.5   // -0.5 → 0.5
+    const y = (e.clientY - top)  / height - 0.5
+
+    el.style.transform = `perspective(900px) rotateY(${x * 18}deg) rotateX(${-y * 14}deg) translateZ(6px)`
+    el.style.transition = 'transform 0.08s ease'
+
+    const shine = el.querySelector('.trust-card-shine')
+    if (shine) {
+      shine.style.background = `radial-gradient(circle at ${(x + 0.5) * 100}% ${(y + 0.5) * 100}%, rgba(255,255,255,0.13) 0%, transparent 65%)`
+      shine.style.opacity = '1'
+    }
+  }
+
+  const onLeave = () => {
+    const el = ref.current
+    if (!el) return
+    el.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg) translateZ(0px)'
+    el.style.transition = 'transform 0.55s cubic-bezier(0.16,1,0.3,1)'
+    const shine = el.querySelector('.trust-card-shine')
+    if (shine) shine.style.opacity = '0'
+  }
+
+  return (
+    <article ref={ref} className={className} onMouseMove={onMove} onMouseLeave={onLeave}>
+      <div className="trust-card-shine" aria-hidden="true" />
+      {children}
+    </article>
+  )
+}
+
 const FirstPage = () => {
   const [activeLoop, setActiveLoop] = useState(0)
   const [activeTestimonial, setActiveTestimonial] = useState(0)
@@ -441,7 +479,7 @@ const FirstPage = () => {
           </header>
 
           <div className="trust-cards-grid">
-            <article className="trust-card scroll-reveal-scale">
+            <Card3D className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="End-to-end encryption icon">
@@ -460,9 +498,9 @@ const FirstPage = () => {
                 <span className="trust-link" />
                 <span className="trust-node">DB</span>
               </div>
-            </article>
+            </Card3D>
 
-            <article className="trust-card scroll-reveal-scale">
+            <Card3D className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Smart recommendations icon">
@@ -489,9 +527,9 @@ const FirstPage = () => {
                 </div>
                 <div className="trust-counter">{matchPercent}% match</div>
               </div>
-            </article>
+            </Card3D>
 
-            <article className="trust-card scroll-reveal-scale">
+            <Card3D className="trust-card scroll-reveal-scale">
               <div className="trust-card-head">
                 <div className="trust-icon-wrap" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Bias-aware AI systems icon">
@@ -514,7 +552,7 @@ const FirstPage = () => {
                 </div>
                 <span className="trust-fairness-badge">Fairness Check</span>
               </div>
-            </article>
+            </Card3D>
           </div>
 
           <div className="trust-badge-row scroll-reveal">
