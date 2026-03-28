@@ -8,7 +8,7 @@
 .sgh-section {
   position: relative;
   background: transparent;
-  padding: 120px 24px;
+  padding: 140px 24px;
   overflow: hidden;
 }
 
@@ -45,8 +45,8 @@
   position: relative;
   z-index: 1;
   opacity: 0;
-  transform: translateY(50px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transform: translateY(24px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sgh-container.sgh-visible {
@@ -57,10 +57,10 @@
 /* ── two-column layout: heading | graphics ──────────────────── */
 .sgh-layout {
   display: grid;
-  grid-template-columns: 0.95fr 1.05fr;
-  column-gap: 160px;
+  grid-template-columns: 0.7fr 1.3fr;
+  column-gap: 64px;
   row-gap: 48px;
-  align-items: start;
+  align-items: center;
 }
 
 /* ── header (left column) ─────────────────────────────────────── */
@@ -91,36 +91,40 @@
   margin: 26px 0 0;
   width: min(220px, 80%);
   height: 1px;
-  background: linear-gradient(90deg, rgba(0, 180, 216, 0.9), transparent);
-  box-shadow: 0 0 14px rgba(0, 180, 216, 0.35);
-  animation: sghDivGlow 4s ease-in-out infinite;
+  background: linear-gradient(90deg, rgba(0, 180, 216, 0.7), transparent);
 }
 
-/* ── content grid (right column: radar | panel) — glass morph ── */
+/* ── content grid (right column: radar | panel) — solid + corner gradient ── */
 .sgh-content {
   position: relative;
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 48px;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
   align-items: start;
-  padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 36px 32px;
+  background-color: #050c18;
+  border: 1px solid rgba(0, 180, 216, 0.18);
   border-radius: 20px;
   overflow: hidden;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
-
-/* Glass morph: animated wave layer = WaveBackgroundCanvas */
 
 .sgh-content::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: rgba(5, 12, 24, 0.55);
+  border-radius: inherit;
   pointer-events: none;
+  background-color: #050c18;
+  background-image: radial-gradient(
+    ellipse 120% 90% at 100% 0%,
+    rgba(0, 180, 216, 0.32) 0%,
+    rgba(0, 180, 216, 0.06) 42%,
+    transparent 68%
+  );
 }
 
 /* Exclude wave canvas — it must stay position:absolute or it becomes a grid item and breaks the 2-col layout */
@@ -140,7 +144,7 @@
 .sgh-radar-wrap {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
 }
 
 .sgh-radar-svg {
@@ -176,9 +180,9 @@
   stroke-width: 1.8;
   stroke-linejoin: round;
   transform-origin: 200px 200px;
-  transform: scale(0);
+  transform: scale(0.82);
   opacity: 0;
-  transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+  transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.7s ease;
 }
 
 .sgh-skill-poly.drawn {
@@ -212,9 +216,9 @@
 /* weak-area pulse */
 .sgh-pulse-ring {
   fill: none;
-  stroke: rgba(0, 180, 216, 0.55);
-  stroke-width: 1.4;
-  animation: sghPulse 2.6s ease-in-out infinite;
+  stroke: rgba(0, 180, 216, 0.5);
+  stroke-width: 1;
+  animation: sghPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* ── tooltip ───────────────────────────────────────────────── */
@@ -250,10 +254,9 @@
   gap: 14px;
   max-width: 420px;
   padding: 14px 18px;
-  border: 1px solid rgba(0, 180, 216, 0.35);
+  border: 1px solid rgba(0, 180, 216, 0.22);
   border-radius: 14px;
-  background: rgba(0, 180, 216, 0.06);
-  animation: sghInsightPulse 4.5s ease-in-out infinite;
+  background: rgba(0, 180, 216, 0.05);
 }
 
 .sgh-insight-icon {
@@ -299,14 +302,13 @@
 
 /* ── panel (right) ─────────────────────────────────────────── */
 .sgh-panel {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
-  border: 1px solid rgba(0, 180, 216, 0.3);
-  border-radius: 18px;
-  padding: 28px 24px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(0, 180, 216, 0.2);
+  border-radius: 14px;
+  padding: 28px 22px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 180, 216, 0.08);
+  gap: 22px;
 }
 
 /* ── score ring ────────────────────────────────────────────── */
@@ -314,13 +316,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sgh-ring-wrap {
   position: relative;
-  width: 110px;
-  height: 110px;
+  width: 128px;
+  height: 128px;
 }
 
 .sgh-ring-svg {
@@ -340,8 +342,8 @@
   stroke: #00b4d8;
   stroke-width: 7;
   stroke-linecap: round;
-  transition: stroke-dashoffset 1.4s cubic-bezier(0.25, 1, 0.5, 1);
-  filter: drop-shadow(0 0 6px rgba(0, 180, 216, 0.45));
+  transition: stroke-dashoffset 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 6px rgba(0, 180, 216, 0.4));
 }
 
 .sgh-ring-value {
@@ -350,7 +352,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6em;
+  font-size: 1.7em;
   font-weight: 300;
   color: #ffffff;
 }
@@ -363,10 +365,12 @@
 
 /* ── skill list ────────────────────────────────────────────── */
 .sgh-skill-list h3 {
-  font-size: 1.05em;
+  font-size: 0.78em;
   font-weight: 400;
-  color: #ffffff;
-  margin: 0 0 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
 }
 
 .sgh-no-weak {
@@ -435,7 +439,7 @@
 .sgh-bar-fill {
   height: 100%;
   border-radius: 5px;
-  transition: width 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sgh-bar-fill.weak {
@@ -759,30 +763,18 @@
 /* ═══════════════════════════════════════════════════════════
    Animations
    ═══════════════════════════════════════════════════════════ */
-@keyframes sghDivGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(0, 180, 216, 0.2); }
-  50% { box-shadow: 0 0 18px rgba(0, 180, 216, 0.5); }
-}
-
 @keyframes sghPulse {
-  0%, 100% { r: 10; opacity: 0; }
-  40% { r: 14; opacity: 0.6; }
-  70% { r: 18; opacity: 0.25; }
-  100% { r: 22; opacity: 0; }
+  0% { r: 6; opacity: 0.45; }
+  100% { r: 20; opacity: 0; }
 }
 
 @keyframes sghTooltipIn {
-  from { opacity: 0; transform: translate(-50%, -105%); }
+  from { opacity: 0; transform: translate(-50%, -108%); }
   to { opacity: 1; transform: translate(-50%, -115%); }
 }
 
-@keyframes sghInsightPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(0, 180, 216, 0); }
-  50% { box-shadow: 0 0 14px rgba(0, 180, 216, 0.18); }
-}
-
 @keyframes sghFadeDown {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -813,8 +805,8 @@
 
   .sgh-content {
     grid-template-columns: 1fr;
-    gap: 40px;
-    padding: 24px;
+    gap: 24px;
+    padding: 20px;
   }
 
   .sgh-radar-area {
@@ -826,7 +818,7 @@
   }
 
   .sgh-radar-wrap {
-    max-width: 400px;
+    max-width: 360px;
   }
 }
 
@@ -845,7 +837,7 @@
   }
 
   .sgh-radar-wrap {
-    max-width: 320px;
+    max-width: 300px;
   }
 
   .sgh-label {
@@ -904,9 +896,7 @@
     transition-duration: 0.01ms !important;
   }
 
-  .sgh-pulse-ring,
-  .sgh-divider,
-  .sgh-insight {
+  .sgh-pulse-ring {
     animation: none !important;
   }
 }

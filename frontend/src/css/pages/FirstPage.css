@@ -2576,12 +2576,68 @@ img, video, iframe {
 }
 
 .trust-card {
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
-    border: 1px solid rgba(0, 180, 216, 0.3);
-    border-radius: 16px;
+    position: relative;
+    background-color: #050c18;
+    border: 1px solid rgba(0, 180, 216, 0.15);
+    border-radius: 18px;
     padding: 28px 24px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 180, 216, 0.1);
-    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    overflow: hidden;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.28s ease,
+                border-color 0.28s ease;
+}
+
+/* Corner gradient — unique per card */
+.trust-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.trust-cards-grid article:nth-child(1)::before {
+    background: radial-gradient(
+        ellipse 85% 70% at 100% 0%,
+        rgba(0, 180, 216, 0.28) 0%,
+        rgba(0, 180, 216, 0.06) 45%,
+        transparent 68%
+    );
+}
+
+.trust-cards-grid article:nth-child(2)::before {
+    background: radial-gradient(
+        ellipse 80% 65% at 0% 0%,
+        rgba(0, 180, 216, 0.24) 0%,
+        rgba(0, 180, 216, 0.05) 42%,
+        transparent 65%
+    );
+}
+
+.trust-cards-grid article:nth-child(3)::before {
+    background: radial-gradient(
+        ellipse 85% 70% at 100% 100%,
+        rgba(0, 180, 216, 0.26) 0%,
+        rgba(0, 180, 216, 0.05) 44%,
+        transparent 67%
+    );
+}
+
+.trust-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 180, 216, 0.3);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        0 0 28px rgba(0, 180, 216, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.trust-card > * {
+    position: relative;
+    z-index: 1;
 }
 
 .trust-card-head {

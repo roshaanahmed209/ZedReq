@@ -1,375 +1,340 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import WaveBackgroundCanvas from './WaveBackgroundCanvas'
+import React, { useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import './NetworkExpansionGraph.css'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Radial Graph Configuration
+   Rotating Globe — canvas-based dot sphere
    ═══════════════════════════════════════════════════════════════════════════ */
-const CX = 50
-const CY = 50
-const RING1_R = 22
-const RING2_R = 40
-const FIRST_COUNT = 7
-const BASE_ANGLE = -Math.PI / 2
-const SIBLING_SPREAD = 0.22
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const toVec = (lat, lon) => {
+  const φ = (lat * Math.PI) / 180
+  const λ = (lon * Math.PI) / 180
+  return [Math.cos(φ) * Math.cos(λ), Math.sin(φ), Math.cos(φ) * Math.sin(λ)]
+}
 
-const NODE_R = { center: 5.5, first: 3.5, second: 2.5 }
+const slerp = (a, b, t) => {
+  let d = Math.min(1, Math.max(-1, a[0]*b[0] + a[1]*b[1] + a[2]*b[2]))
+  const θ = Math.acos(d)
+  if (θ < 0.0001) return [a[0], a[1], a[2]]
+  const s = Math.sin(θ)
+  const wa = Math.sin((1 - t) * θ) / s
+  const wb = Math.sin(t * θ) / s
+  return [wa*a[0]+wb*b[0], wa*a[1]+wb*b[1], wa*a[2]+wb*b[2]]
+}
 
-// Build-up timing
-const NODE_INTERVAL = 350 // ms between each node during initial build
+/* ── Network data ────────────────────────────────────────────────────────── */
+const NODE_COORDS = [
+  [ 40.7, -74.0], // 0  New York
+  [ 51.5,  -0.1], // 1  London
+  [ 48.9,   2.3], // 2  Paris
+  [ 52.5,  13.4], // 3  Berlin
+  [ 55.8,  37.6], // 4  Moscow
+  [ 25.2,  55.3], // 5  Dubai
+  [ 28.6,  77.2], // 6  Delhi
+  [ 22.3, 114.2], // 7  Hong Kong
+  [ 35.7, 139.7], // 8  Tokyo
+  [  1.3, 103.8], // 9  Singapore
+  [-33.9,  18.4], // 10 Cape Town
+  [-33.9, 151.2], // 11 Sydney
+  [ 37.8,-122.4], // 12 San Francisco
+  [ 34.1,-118.2], // 13 Los Angeles
+  [ 19.4, -99.1], // 14 Mexico City
+  [-23.5, -46.6], // 15 São Paulo
+  [  6.5,   3.4], // 16 Lagos
+  [ 30.0,  31.2], // 17 Cairo
+  [ 43.7, -79.4], // 18 Toronto
+  [ 41.0,  28.9], // 19 Istanbul
+  [ 59.9,  30.3], // 20 St. Petersburg
+  [ 37.6, 127.0], // 21 Seoul
+  [  3.1, 101.7], // 22 Kuala Lumpur
+  [-34.6, -58.4], // 23 Buenos Aires
+]
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-const polar = (angle, r) => ({
-  x: +(CX + r * Math.cos(angle)).toFixed(2),
-  y: +(CY + r * Math.sin(angle)).toFixed(2),
-})
+const EDGE_PAIRS = [
+  [0,1],[0,12],[0,13],[0,18],[0,2],
+  [1,2],[1,3],[1,17],[1,19],[1,20],
+  [2,3],[3,4],[3,19],
+  [4,5],[4,20],[4,17],
+  [5,6],[5,17],[5,19],
+  [6,7],[6,9],
+  [7,8],[7,9],[7,21],
+  [8,11],[8,21],
+  [9,11],[9,22],
+  [10,16],[10,17],
+  [11,22],
+  [12,13],[12,18],
+  [13,14],
+  [14,15],[14,23],
+  [15,23],
+  [16,17],
+  [19,20],
+  [1,4],[0,15],
+]
+
+const RotatingGlobe = () => {
+  const canvasRef = useRef(null)
+  const rafRef    = useRef(null)
+  const angleRef  = useRef(0)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const dpr = window.devicePixelRatio || 1
+    const PI2 = Math.PI * 2
+
+    const resize = () => {
+      const { offsetWidth: w, offsetHeight: h } = canvas.parentElement
+      canvas.width  = w * dpr
+      canvas.height = h * dpr
+      canvas.style.width  = w + 'px'
+      canvas.style.height = h + 'px'
+    }
+    resize()
+
+    const ctx = canvas.getContext('2d')
+
+    /* ── Sphere dot grid ───────────────────────────────────────────────── */
+    const N      = 5500
+    const golden = (1 + Math.sqrt(5)) / 2
+    const BX = new Float32Array(N)
+    const BY = new Float32Array(N)
+    const BZ = new Float32Array(N)
+    for (let i = 0; i < N; i++) {
+      const theta = Math.acos(1 - 2 * (i + 0.5) / N)
+      const phi   = 2 * Math.PI * i / golden
+      BX[i] = Math.sin(theta) * Math.cos(phi)
+      BY[i] = Math.cos(theta)
+      BZ[i] = Math.sin(theta) * Math.sin(phi)
+    }
+
+    /* ── Lighting ──────────────────────────────────────────────────────── */
+    const lx = -0.55, ly = 0.50, lz = 0.67
+    const lLen = Math.sqrt(lx*lx + ly*ly + lz*lz)
+
+    /* ── Network nodes ─────────────────────────────────────────────────── */
+    const APPEAR_GAP = 0.32   // seconds between each node appearing
+    const EDGE_DRAW_DUR = 0.9 // seconds to draw each edge
+
+    const nodes = NODE_COORDS.map((c, i) => ({
+      vec:        toVec(c[0], c[1]),
+      appearAt:   i * APPEAR_GAP,
+      phase:      i * 1.17,   // offset for pulsing ring
+      // projected each frame:
+      px: 0, py: 0, z: 0, front: false, alpha: 0,
+    }))
+
+    const edges = EDGE_PAIRS.map(([a, b]) => ({
+      a, b,
+      formAt:  Math.max(nodes[a].appearAt, nodes[b].appearAt) + 0.1,
+      drawProg: 0,
+      // pulse state (2 particles per edge, offset by 0.5)
+      speed: 0.18 + Math.random() * 0.10,
+      phase: Math.random(),
+    }))
+
+    const startTime = Date.now()
+
+    /* ── Draw loop ─────────────────────────────────────────────────────── */
+    const draw = () => {
+      const W = canvas.width
+      const H = canvas.height
+      ctx.clearRect(0, 0, W, H)
+
+      const elapsed = (Date.now() - startTime) / 1000
+
+      angleRef.current += 0.0016
+      const a    = angleRef.current
+      const cosA = Math.cos(a)
+      const sinA = Math.sin(a)
+
+      const R  = Math.min(W, H) * 0.58
+      const GX = W * 0.62
+      const GY = H * 0.84
+
+      /* Project helper */
+      const proj = (vec) => {
+        const x =  vec[0] * cosA + vec[2] * sinA
+        const y =  vec[1]
+        const z = -vec[0] * sinA + vec[2] * cosA
+        return { x, y, z, px: GX + x*R, py: GY - y*R, front: z > 0 }
+      }
+
+      /* ── 1. Sphere dots (dimmed — network is the focus) ─────────────── */
+      for (let i = 0; i < N; i++) {
+        const x =  BX[i] * cosA + BZ[i] * sinA
+        const y =  BY[i]
+        const z = -BX[i] * sinA + BZ[i] * cosA
+
+        if (z < 0.02) continue
+        const px = GX + x*R, py = GY - y*R
+        if (px < -R*0.15 || px > W+R*0.15 || py < -R*0.15 || py > H+R*0.15) continue
+
+        const light = Math.max(0, (x*lx + y*ly + z*lz) / lLen)
+        const wh    = Math.pow(light, 2.2) * 0.9
+        const rr    = Math.round(wh * 255)
+        const gg    = Math.round(((1-wh)*180 + wh*255) * (0.08 + light*0.92))
+        const bb    = Math.round(((1-wh)*216 + wh*255) * (0.08 + light*0.92))
+        const aa    = Math.min(1, 0.10 + light*0.55)   // dimmer than before
+
+        const dotR = Math.max(0.35*dpr, (0.45 + z*0.7)*dpr)
+        ctx.beginPath()
+        ctx.arc(px, py, dotR, 0, PI2)
+        ctx.fillStyle = `rgba(${rr},${gg},${bb},${aa})`
+        ctx.fill()
+      }
+
+      /* ── 2. Update node alphas & projected positions ─────────────────── */
+      for (const n of nodes) {
+        n.alpha = Math.min(1, Math.max(0, (elapsed - n.appearAt) / 0.45))
+        const p = proj(n.vec)
+        n.px = p.px; n.py = p.py; n.z = p.z; n.front = p.front
+      }
+
+      /* ── 3. Edges — draw great-circle arcs progressively ────────────── */
+      ctx.lineCap = 'round'
+
+      for (const e of edges) {
+        const nA = nodes[e.a], nB = nodes[e.b]
+        const edgeAlpha = Math.min(nA.alpha, nB.alpha)
+        if (edgeAlpha <= 0) continue
+
+        e.drawProg = Math.min(1, Math.max(0, (elapsed - e.formAt) / EDGE_DRAW_DUR))
+        if (e.drawProg <= 0) continue
+
+        /* Walk the great circle from 0 → drawProg */
+        const ESTEPS = 36
+        ctx.beginPath()
+        let started = false
+
+        for (let s = 0; s <= ESTEPS; s++) {
+          const t = (s / ESTEPS) * e.drawProg
+          const [bx, by, bz] = slerp(nA.vec, nB.vec, t)
+          const x =  bx * cosA + bz * sinA
+          const y =  by
+          const z = -bx * sinA + bz * cosA
+
+          if (z <= 0) { started = false; continue }
+          const px = GX + x*R, py = GY - y*R
+
+          if (!started) { ctx.moveTo(px, py); started = true }
+          else ctx.lineTo(px, py)
+        }
+
+        ctx.strokeStyle = `rgba(0,180,216,${edgeAlpha * 0.42})`
+        ctx.lineWidth   = 0.75 * dpr
+        ctx.stroke()
+      }
+
+      /* ── 4. Pulse particles along completed edges ────────────────────── */
+      for (const e of edges) {
+        if (e.drawProg < 1) continue
+        const nA = nodes[e.a], nB = nodes[e.b]
+        const edgeAlpha = Math.min(nA.alpha, nB.alpha)
+        if (edgeAlpha <= 0) continue
+
+        for (let p = 0; p < 2; p++) {
+          const t = ((elapsed * e.speed + e.phase + p * 0.5) % 1)
+
+          const [bx, by, bz] = slerp(nA.vec, nB.vec, t)
+          const x =  bx * cosA + bz * sinA
+          const y =  by
+          const z = -bx * sinA + bz * cosA
+          if (z <= 0) continue
+
+          const px = GX + x*R, py = GY - y*R
+
+          /* Glow halo */
+          const g = ctx.createRadialGradient(px, py, 0, px, py, 5*dpr)
+          g.addColorStop(0,   `rgba(0,220,255,${edgeAlpha * 0.75})`)
+          g.addColorStop(1,   'rgba(0,180,216,0)')
+          ctx.beginPath()
+          ctx.arc(px, py, 5*dpr, 0, PI2)
+          ctx.fillStyle = g
+          ctx.fill()
+
+          /* White core */
+          ctx.beginPath()
+          ctx.arc(px, py, 1.3*dpr, 0, PI2)
+          ctx.fillStyle = `rgba(255,255,255,${edgeAlpha * 0.92})`
+          ctx.fill()
+        }
+      }
+
+      /* ── 5. Nodes ────────────────────────────────────────────────────── */
+      for (const n of nodes) {
+        if (n.alpha <= 0 || !n.front) continue
+        const { px, py } = n
+
+        /* Pulsing glow ring */
+        const pulse = 0.5 + 0.5 * Math.sin(elapsed * 2.2 + n.phase)
+        const glowR = (4 + pulse * 3) * dpr
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, glowR)
+        grd.addColorStop(0, `rgba(0,200,255,${n.alpha * (0.45 + pulse * 0.25)})`)
+        grd.addColorStop(1, 'rgba(0,180,216,0)')
+        ctx.beginPath()
+        ctx.arc(px, py, glowR, 0, PI2)
+        ctx.fillStyle = grd
+        ctx.fill()
+
+        /* Outer ring */
+        ctx.beginPath()
+        ctx.arc(px, py, 3.2*dpr, 0, PI2)
+        ctx.strokeStyle = `rgba(0,210,255,${n.alpha * 0.55})`
+        ctx.lineWidth   = 0.7 * dpr
+        ctx.stroke()
+
+        /* Bright core dot */
+        ctx.beginPath()
+        ctx.arc(px, py, 1.8*dpr, 0, PI2)
+        ctx.fillStyle = `rgba(255,255,255,${n.alpha * 0.95})`
+        ctx.fill()
+      }
+
+      /* ── 6. Rim-light glow ───────────────────────────────────────────── */
+      const rimX = GX - R * 0.40
+      const rimY = GY - R * 0.38
+      const rim  = ctx.createRadialGradient(rimX, rimY, R*0.01, rimX, rimY, R*0.62)
+      rim.addColorStop(0,    'rgba(255,255,255,0.20)')
+      rim.addColorStop(0.28, 'rgba(180,230,255,0.08)')
+      rim.addColorStop(1,    'rgba(0,0,0,0)')
+      ctx.fillStyle = rim
+      ctx.fillRect(0, 0, W, H)
+
+      rafRef.current = requestAnimationFrame(draw)
+    }
+
+    draw()
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [])
+
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggested Professionals data
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SUGGESTED_PROFESSIONALS = [
+  { name: 'Emily Zhang',   role: 'ML Engineer',      mutual: 14 },
+  { name: 'Raj Malhotra',  role: 'Product Manager',  mutual: 9  },
+  { name: 'Sophie Laurent',role: 'Data Analyst',     mutual: 7  },
+]
 
 const getInitials = (name) => {
-  if (name === 'You') return 'Y'
   const p = name.split(' ')
   return p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Graph Data
-   ═══════════════════════════════════════════════════════════════════════════ */
-const FIRST_DEGREE_DATA = [
-  { name: 'Sarah Chen', role: 'Product Designer', industry: 'Design', mutual: 12 },
-  { name: 'James Miller', role: 'Software Engineer', industry: 'Technology', mutual: 8 },
-  { name: 'Priya Patel', role: 'Data Scientist', industry: 'Technology', mutual: 15 },
-  { name: 'Alex Johnson', role: 'Marketing Lead', industry: 'Marketing', mutual: 6 },
-  { name: 'Maria Garcia', role: 'UX Researcher', industry: 'Design', mutual: 9 },
-  { name: 'David Kim', role: 'Finance Analyst', industry: 'Finance', mutual: 4 },
-  { name: 'Emma Wilson', role: 'Project Manager', industry: 'Technology', mutual: 7 },
-]
-
-const SECOND_DEGREE_MAP = {
-  0: [
-    { name: 'Omar Hassan', role: 'DevOps Engineer', industry: 'Technology', mutual: 3 },
-    { name: 'Lisa Park', role: 'Content Strategist', industry: 'Marketing', mutual: 5 },
-  ],
-  1: [
-    { name: 'Ryan Taylor', role: 'Backend Developer', industry: 'Technology', mutual: 2 },
-    { name: 'Zara Ahmed', role: 'AI Engineer', industry: 'Technology', mutual: 11 },
-  ],
-  2: [
-    { name: 'Chris Brown', role: 'Graphic Designer', industry: 'Design', mutual: 3 },
-  ],
-  3: [
-    { name: 'Nina Petrov', role: 'Cloud Architect', industry: 'Technology', mutual: 7 },
-    { name: 'Aisha Khan', role: 'HR Specialist', industry: 'Human Resources', mutual: 1 },
-  ],
-  4: [
-    { name: 'Emily Zhang', role: 'ML Engineer', industry: 'Technology', mutual: 14 },
-  ],
-  5: [
-    { name: 'Raj Malhotra', role: 'Product Manager', industry: 'Technology', mutual: 9 },
-    { name: 'Sophie Laurent', role: 'Data Analyst', industry: 'Finance', mutual: 7 },
-  ],
-  6: [
-    { name: 'Tom Rivera', role: 'QA Engineer', industry: 'Technology', mutual: 5 },
-    { name: 'Lily Chen', role: 'Frontend Dev', industry: 'Technology', mutual: 6 },
-  ],
-}
-
-/* ─── Build complete graph (ordered for progressive reveal) ──────────────── */
-const buildCompleteGraph = () => {
-  const orderedNodes = []
-  const allEdges = []
-  const firstAngles = []
-
-  // Center
-  orderedNodes.push({
-    id: 'center', name: 'You', role: 'Your Profile',
-    industry: '', mutual: 0, x: CX, y: CY,
-    size: 'center', ring: 0,
-  })
-
-  // First-degree ring
-  FIRST_DEGREE_DATA.forEach((data, i) => {
-    const angle = BASE_ANGLE + (2 * Math.PI * i) / FIRST_COUNT
-    firstAngles.push(angle)
-    const pos = polar(angle, RING1_R)
-    orderedNodes.push({ ...data, id: `f${i}`, ...pos, size: 'first', ring: 1 })
-    allEdges.push({ from: 'center', to: `f${i}`, type: 'primary' })
-  })
-
-  // Second-degree ring (interleaved for spreading effect)
-  const allSecond = []
-  let sIdx = 0
-  Object.entries(SECOND_DEGREE_MAP).forEach(([pIdx, children]) => {
-    const parentAngle = firstAngles[parseInt(pIdx)]
-    children.forEach((child, ci) => {
-      const angle = parentAngle + (ci - (children.length - 1) / 2) * SIBLING_SPREAD
-      const pos = polar(angle, RING2_R)
-      allSecond.push({
-        ...child, id: `s${sIdx}`, ...pos,
-        size: 'second', ring: 2, parent: `f${pIdx}`, _ci: ci,
-      })
-      allEdges.push({ from: `f${pIdx}`, to: `s${sIdx}`, type: 'secondary' })
-      sIdx++
-    })
-  })
-  orderedNodes.push(
-    ...allSecond.filter((n) => n._ci === 0),
-    ...allSecond.filter((n) => n._ci === 1)
-  )
-
-  // Growth nodes
-  const g0Angle = BASE_ANGLE + (2 * Math.PI * 2) / FIRST_COUNT + SIBLING_SPREAD
-  const g0Pos = polar(g0Angle, RING2_R)
-  orderedNodes.push({
-    id: 'd0', name: 'Kai Nakamura', role: 'Security Engineer',
-    industry: 'Technology', mutual: 4, ...g0Pos,
-    size: 'second', ring: 2, parent: 'f2',
-  })
-  allEdges.push({ from: 'f2', to: 'd0', type: 'secondary' })
-
-  const g1Angle = BASE_ANGLE + (2 * Math.PI * 4) / FIRST_COUNT + SIBLING_SPREAD
-  const g1Pos = polar(g1Angle, RING2_R)
-  orderedNodes.push({
-    id: 'd1', name: 'Ava Williams', role: 'Brand Designer',
-    industry: 'Design', mutual: 8, ...g1Pos,
-    size: 'second', ring: 2, parent: 'f4',
-  })
-  allEdges.push({ from: 'f4', to: 'd1', type: 'secondary' })
-
-  // Cross-connections
-  allEdges.push({ from: 'f0', to: 'f1', type: 'cross' })
-  allEdges.push({ from: 'f2', to: 'f6', type: 'cross' })
-  allEdges.push({ from: 'f4', to: 'f5', type: 'cross' })
-  allEdges.push({ from: 's3', to: 's4', type: 'cross' })
-
-  return { orderedNodes, allEdges }
-}
-
-const GRAPH = buildCompleteGraph()
-
-// Static position map
-const POS_MAP = {}
-GRAPH.orderedNodes.forEach((n) => {
-  POS_MAP[n.id] = { x: n.x, y: n.y }
-})
-
-// Pre-compute stagger delays for edge loop animation (deterministic)
-const EDGE_LOOP_DELAYS = {}
-GRAPH.allEdges.forEach((e, i) => {
-  EDGE_LOOP_DELAYS[`${e.from}-${e.to}`] = (i * 1.3) % 7
-})
-
-/* ─── Edge visual styles ─────────────────────────────────────────────────── */
-const EDGE_STYLE = {
-  primary: { strokeWidth: 1.2, opacity: 0.4 },
-  secondary: { strokeWidth: 0.8, opacity: 0.28 },
-  cross: { strokeWidth: 0.6, opacity: 0.15 },
-}
-
-/* ─── Suggested Professionals data ───────────────────────────────────────── */
-const SUGGESTED_PROFESSIONALS = [
-  { name: 'Emily Zhang', role: 'ML Engineer', mutual: 14 },
-  { name: 'Raj Malhotra', role: 'Product Manager', mutual: 9 },
-  { name: 'Sophie Laurent', role: 'Data Analyst', mutual: 7 },
-]
-
-/* ═══════════════════════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════════════════════ */
 const NetworkExpansionGraph = () => {
-  const [visibleCount, setVisibleCount] = useState(0)
-  const [buildComplete, setBuildComplete] = useState(false)
-  const [hoveredNode, setHoveredNode] = useState(null)
-  const [suggestedId, setSuggestedId] = useState(null)
   const sectionRef = useRef(null)
-  const visibleCountRef = useRef(0)
-
-  visibleCountRef.current = visibleCount
-
-  /* ─── One-time build-up ───────────────────────────────────────────────── */
-  useEffect(() => {
-    const totalNodes = GRAPH.orderedNodes.length
-    const timeouts = []
-
-    for (let i = 1; i <= totalNodes; i++) {
-      timeouts.push(setTimeout(() => setVisibleCount(i), i * NODE_INTERVAL))
-    }
-
-    // Mark build as complete shortly after last node
-    timeouts.push(
-      setTimeout(() => setBuildComplete(true), totalNodes * NODE_INTERVAL + 600)
-    )
-
-    return () => timeouts.forEach((t) => clearTimeout(t))
-  }, [])
-
-  /* ─── Suggested highlight (second-degree only) ────────────────────────── */
-  useEffect(() => {
-    const iv = setInterval(() => {
-      const count = visibleCountRef.current
-      const secondIds = GRAPH.orderedNodes
-        .slice(0, count)
-        .filter((n) => n.ring === 2)
-        .map((n) => n.id)
-      if (secondIds.length > 0) {
-        setSuggestedId(secondIds[Math.floor(Math.random() * secondIds.length)])
-      } else {
-        setSuggestedId(null)
-      }
-    }, 5000)
-    return () => clearInterval(iv)
-  }, [])
-
-  /* ─── Derived visible data ────────────────────────────────────────────── */
-  const visibleNodes = useMemo(
-    () => GRAPH.orderedNodes.slice(0, visibleCount),
-    [visibleCount]
-  )
-
-  const visibleNodeIds = useMemo(
-    () => new Set(visibleNodes.map((n) => n.id)),
-    [visibleNodes]
-  )
-
-  const visibleEdges = useMemo(
-    () =>
-      GRAPH.allEdges.filter(
-        (e) => visibleNodeIds.has(e.from) && visibleNodeIds.has(e.to)
-      ),
-    [visibleNodeIds]
-  )
-
-  /* ─── Edge elements ───────────────────────────────────────────────────── */
-  const edgeElements = useMemo(() => {
-    return visibleEdges.map((edge) => {
-      const from = POS_MAP[edge.from]
-      const to = POS_MAP[edge.to]
-      if (!from || !to) return null
-      const s = EDGE_STYLE[edge.type] || EDGE_STYLE.secondary
-      const edgeKey = `${edge.from}-${edge.to}`
-      const loopDelay = EDGE_LOOP_DELAYS[edgeKey] || 0
-
-      return (
-        <motion.line
-          key={edgeKey}
-          x1={from.x}
-          y1={from.y}
-          x2={to.x}
-          y2={to.y}
-          stroke="#00B4D8"
-          strokeWidth={s.strokeWidth}
-          strokeLinecap="round"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={
-            buildComplete
-              ? {
-                  pathLength: [0, 1, 1, 0],
-                  opacity: [0, s.opacity, s.opacity * 0.8, 0],
-                }
-              : {
-                  pathLength: 1,
-                  opacity: s.opacity,
-                }
-          }
-          transition={
-            buildComplete
-              ? {
-                  duration: 5,
-                  times: [0, 0.25, 0.7, 1],
-                  repeat: Infinity,
-                  delay: loopDelay,
-                  ease: 'easeInOut',
-                }
-              : { duration: 0.8 }
-          }
-        />
-      )
-    })
-  }, [visibleEdges, buildComplete])
-
-  /* ─── Node elements (clean — no glow rings, no floating) ──────────────── */
-  const nodeElements = useMemo(() => {
-    return visibleNodes.map((node) => {
-      const r = NODE_R[node.size] || 2.5
-      const isSuggested = suggestedId === node.id && node.id !== 'center'
-      const isCenter = node.id === 'center'
-
-      return (
-        <motion.g
-          key={node.id}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        >
-          {/* Node body */}
-          <motion.circle
-            cx={node.x}
-            cy={node.y}
-            r={r}
-            fill={isCenter ? '#00B4D8' : 'rgba(4, 12, 24, 0.95)'}
-            stroke={isSuggested ? '#00d4ff' : isCenter ? '#00d4ff' : '#00B4D8'}
-            strokeWidth={isCenter ? 1.2 : isSuggested ? 1.2 : 0.8}
-            style={{
-              cursor: 'pointer',
-              filter: `drop-shadow(0 0 ${isCenter ? 6 : isSuggested ? 5 : 2}px rgba(0,180,216,${isSuggested ? '0.6' : '0.4'}))`,
-            }}
-            onMouseEnter={() => setHoveredNode(node)}
-            onMouseLeave={() => setHoveredNode(null)}
-            whileHover={{ scale: 1.15 }}
-          />
-
-          {/* Initials label */}
-          <text
-            x={node.x}
-            y={node.y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={r * 0.85}
-            fill={isCenter ? '#fff' : isSuggested ? '#00d4ff' : '#00B4D8'}
-            fontWeight="600"
-            fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-            style={{ pointerEvents: 'none', userSelect: 'none' }}
-          >
-            {getInitials(node.name)}
-          </text>
-
-          {/* Suggested match badge */}
-          {isSuggested && (
-            <motion.g
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <rect
-                x={node.x - 6.5}
-                y={node.y - r - 5}
-                width={13}
-                height={2.8}
-                rx={1.4}
-                fill="rgba(0,180,216,0.2)"
-                stroke="#00B4D8"
-                strokeWidth="0.25"
-              />
-              <text
-                x={node.x}
-                y={node.y - r - 3.4}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="#00d4ff"
-                fontSize="1.6"
-                fontWeight="500"
-                fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-              >
-                Suggested Match
-              </text>
-            </motion.g>
-          )}
-        </motion.g>
-      )
-    })
-  }, [visibleNodes, suggestedId])
 
   return (
     <section className="network-expansion-section scroll-reveal" ref={sectionRef}>
       <div className="network-expansion-container">
+
         {/* Section Header */}
         <div className="network-header">
           <h2 className="network-headline">
@@ -381,109 +346,52 @@ const NetworkExpansionGraph = () => {
           </p>
         </div>
 
-        {/* Main Content */}
-        <div className="network-content">
-          {/* Left: Radial Network Graph (65%) */}
-          <div className="network-graph-wrapper">
-            <div className="network-graph-container">
-              <WaveBackgroundCanvas blurred phaseOffset={3.8} />
-              <svg
-                viewBox="0 0 100 100"
-                className="network-svg"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* Subtle reference rings */}
-                <circle
-                  cx={CX} cy={CY} r={RING1_R}
-                  fill="none" stroke="rgba(0,180,216,0.05)"
-                  strokeWidth="0.25" strokeDasharray="1.5 1.5"
-                />
-                <circle
-                  cx={CX} cy={CY} r={RING2_R}
-                  fill="none" stroke="rgba(0,180,216,0.035)"
-                  strokeWidth="0.25" strokeDasharray="1.5 1.5"
-                />
+        {/* Unified card */}
+        <div className="network-unified-card">
 
-                {/* Connection edges */}
-                {edgeElements}
-
-                {/* Nodes */}
-                {nodeElements}
-              </svg>
-
-              {/* Hover tooltip */}
-              <AnimatePresence>
-                {hoveredNode && hoveredNode.id !== 'center' && (
-                  <motion.div
-                    className="node-tooltip"
-                    initial={{ opacity: 0, y: 8, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
-                    style={{
-                      left: `${hoveredNode.x}%`,
-                      top: `${hoveredNode.y - 8}%`,
-                    }}
-                  >
-                    <div className="tooltip-avatar-circle">
-                      <span className="tooltip-initials">
-                        {getInitials(hoveredNode.name)}
-                      </span>
-                    </div>
-                    <div className="tooltip-info">
-                      <span className="tooltip-name">{hoveredNode.name}</span>
-                      <span className="tooltip-role">{hoveredNode.role}</span>
-                      {hoveredNode.industry && (
-                        <span className="tooltip-industry">{hoveredNode.industry}</span>
-                      )}
-                      <span className="tooltip-mutual">
-                        {hoveredNode.mutual} Mutual Connections
-                      </span>
-                    </div>
-                    <button className="tooltip-connect-btn">Connect</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Right: Suggested Professionals Panel (35%) */}
-          <div className="network-insights-panel">
-            <div className="insights-card">
-              <WaveBackgroundCanvas blurred phaseOffset={6.2} />
-              <h3 className="insights-card-title">Suggested Professionals</h3>
-              <div className="suggested-list">
-                {SUGGESTED_PROFESSIONALS.map((prof, i) => (
-                  <motion.div
-                    className="suggested-card"
-                    key={prof.name}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + i * 0.15 }}
-                    whileHover={{
-                      y: -3,
-                      boxShadow: '0 8px 24px rgba(0,180,216,0.15)',
-                    }}
-                  >
-                    <span className="suggested-avatar-circle">
-                      <span className="suggested-avatar-initials">
-                        {getInitials(prof.name)}
-                      </span>
+          {/* Left — suggested professionals */}
+          <div className="network-unified-left">
+            <h3 className="insights-card-title">Suggested Professionals</h3>
+            <div className="suggested-list">
+              {SUGGESTED_PROFESSIONALS.map((prof, i) => (
+                <motion.div
+                  className="suggested-card"
+                  key={prof.name}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + i * 0.15 }}
+                  whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,180,216,0.15)' }}
+                >
+                  <span className="suggested-avatar-circle">
+                    <span className="suggested-avatar-initials">
+                      {getInitials(prof.name)}
                     </span>
-                    <div className="suggested-info">
-                      <span className="suggested-name">{prof.name}</span>
-                      <span className="suggested-role">{prof.role}</span>
-                      <span className="suggested-mutual">{prof.mutual} mutual</span>
-                    </div>
-                    <button className="suggested-connect-btn">Connect</button>
-                  </motion.div>
-                ))}
-              </div>
+                  </span>
+                  <div className="suggested-info">
+                    <span className="suggested-name">{prof.name}</span>
+                    <span className="suggested-role">{prof.role}</span>
+                    <span className="suggested-mutual">{prof.mutual} mutual</span>
+                  </div>
+                  <button className="suggested-connect-btn">Connect</button>
+                </motion.div>
+              ))}
             </div>
           </div>
+
+          {/* Right — rotating globe */}
+          <div className="network-unified-right">
+            <RotatingGlobe />
+            <div className="globe-text-overlay">
+              <span className="globe-text-eyebrow">Live Network</span>
+              <h3 className="globe-text-heading">Your connections,<br />mapped globally.</h3>
+              <p className="globe-text-sub">
+                24 cities · 6 continents · real-time
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
-      
     </section>
   )
 }

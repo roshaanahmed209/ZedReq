@@ -49,186 +49,80 @@
     font-weight: 400;
 }
 
-/* ─── Two-Column Layout ──────────────────────────────────────────────────── */
-.network-content {
+/* ─── Unified card ───────────────────────────────────────────────────────── */
+.network-unified-card {
     display: grid;
-    grid-template-columns: 65% 35%;
-    column-gap: 96px;
-    row-gap: 32px;
-    align-items: start;
-}
-
-/* ─── Network Graph Container (glass morph) ───────────────────────────── */
-.network-graph-wrapper {
-    position: relative;
-}
-
-.network-graph-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    max-height: 620px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
+    grid-template-columns: 1fr 1.4fr;
+    background: #040a14;
+    border: 1px solid rgba(0, 180, 216, 0.14);
+    border-radius: 22px;
     overflow: hidden;
     box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        0 12px 48px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    min-height: 520px;
 }
 
-/* Animated wave layer: WaveBackgroundCanvas */
-
-.network-graph-container::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: rgba(5, 12, 24, 0.55);
-    pointer-events: none;
-}
-
-.network-svg {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-/* ─── Node Tooltip ───────────────────────────────────────────────────────── */
-.node-tooltip {
-    position: absolute;
-    transform: translate(-50%, -100%);
-    background: rgba(10, 15, 25, 0.95);
-    border: 1px solid rgba(0, 180, 216, 0.4);
-    border-radius: 14px;
-    padding: 14px 16px;
-    min-width: 200px;
-    z-index: 100;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 180, 216, 0.15);
-    pointer-events: auto;
+/* Left — suggestions */
+.network-unified-left {
+    padding: 36px 32px;
+    border-right: 1px solid rgba(0, 180, 216, 0.1);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.tooltip-avatar-circle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(0, 180, 216, 0.15);
-    border: 2px solid rgba(0, 180, 216, 0.5);
-    display: flex;
-    align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-}
-
-.tooltip-initials {
-    color: #00B4D8;
-    font-size: 1em;
-    font-weight: 600;
-    line-height: 1;
-}
-
-.tooltip-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.tooltip-name {
-    color: #ffffff;
-    font-weight: 500;
-    font-size: 0.95em;
-}
-
-.tooltip-role {
-    color: #00B4D8;
-    font-size: 0.85em;
-}
-
-.tooltip-industry {
-    color: #888;
-    font-size: 0.78em;
-}
-
-.tooltip-mutual {
-    color: rgba(0, 180, 216, 0.8);
-    font-size: 0.78em;
-    margin-top: 2px;
-}
-
-.tooltip-connect-btn {
-    margin-top: 6px;
-    padding: 6px 20px;
-    background: #00B4D8;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.82em;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tooltip-connect-btn:hover {
-    background: #0096b8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
-}
-
-/* ─── Insights Panel ─────────────────────────────────────────────────────── */
-.network-insights-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.insights-card {
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 24px;
-    overflow: hidden;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-/* Animated wave layer: WaveBackgroundCanvas */
-
-.insights-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: rgba(5, 12, 24, 0.6);
-    pointer-events: none;
-}
-
-/* Exclude wave canvas — in-flow it steals layout space above title / list */
-.insights-card > *:not(.wave-bg-canvas-wrap) {
-    position: relative;
-    z-index: 2;
-}
-
-.insights-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 180, 216, 0.1);
 }
 
 .insights-card-title {
-    color: #ffffff;
-    font-size: 1.05em;
+    font-size: 0.78em;
     font-weight: 400;
-    margin-bottom: 18px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(0, 180, 216, 0.15);
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 22px;
+}
+
+/* Right — globe */
+.network-unified-right {
+    position: relative;
+    overflow: hidden;
+    background: #040a14;
+}
+
+/* Globe text overlay */
+.globe-text-overlay {
+    position: absolute;
+    top: 28px;
+    left: 28px;
+    z-index: 10;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.globe-text-eyebrow {
+    font-size: 0.72em;
+    font-weight: 400;
+    color: #00b4d8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+}
+
+.globe-text-heading {
+    font-size: clamp(1.1em, 2.2vw, 1.55em);
+    font-weight: 300;
+    line-height: 1.25;
+    color: #ffffff;
+    margin: 0;
+}
+
+.globe-text-sub {
+    font-size: 0.78em;
+    color: rgba(0, 180, 216, 0.6);
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 0.02em;
 }
 
 /* ─── Network Strength ───────────────────────────────────────────────────── */
@@ -404,25 +298,29 @@
    Responsive Design
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 1100px) {
-    .network-content {
-        grid-template-columns: 60% 40%;
-        gap: 24px;
-    }
-}
-
 @media (max-width: 968px) {
     .network-expansion-section {
         padding: 90px 20px;
     }
 
-    .network-content {
+    .network-unified-card {
         grid-template-columns: 1fr;
-        gap: 40px;
+        min-height: unset;
     }
 
-    .network-graph-container {
-        max-height: 500px;
+    .network-unified-left {
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 180, 216, 0.1);
+        padding: 28px 24px;
+    }
+
+    .network-unified-right {
+        min-height: 360px;
+    }
+
+    .globe-text-overlay {
+        top: 20px;
+        left: 20px;
     }
 }
 
@@ -443,12 +341,12 @@
         font-size: 1em;
     }
 
-    .network-graph-container {
-        max-height: 360px;
+    .network-unified-left {
+        padding: 24px 20px;
     }
 
-    .insights-card {
-        padding: 18px;
+    .network-unified-right {
+        min-height: 300px;
     }
 }
 
@@ -465,31 +363,13 @@
         font-size: 0.92em;
     }
 
-    .network-graph-container {
-        max-height: 300px;
-    }
-
-    .node-tooltip {
-        min-width: 160px;
-        padding: 10px 12px;
-    }
-
-    .industry-bar-row {
-        grid-template-columns: 70px 1fr 30px;
-        gap: 6px;
-    }
-
-    .industry-name {
-        font-size: 0.75em;
+    .network-unified-right {
+        min-height: 260px;
     }
 }
 
 @media (max-width: 360px) {
     .network-headline {
         font-size: 1.5em;
-    }
-
-    .network-graph-container {
-        max-height: 260px;
     }
 }
