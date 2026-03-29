@@ -2,41 +2,39 @@
 import secrets
 import re
 from typing import Optional, Tuple
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 from utils.errors import AuthenticationError
 from utils.logger import setup_logger
-
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 logger = setup_logger(__name__)
 
 
 def hash_password(password: str) -> str:
     """
-    Hash a password using PBKDF2-SHA256 (industry standard)
-    
+    Hash a password using bcrypt.
+
     Args:
         password: Plain text password
-    
+
     Returns:
         Hashed password string (includes salt automatically)
     """
-    return _pwd_context.hash(password)
+    return _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
     """
-    Verify a password against a stored hash
-    
+    Verify a password against a stored hash.
+
     Args:
         password: Plain text password to verify
         stored_hash: Stored hash from database
-    
+
     Returns:
         True if password matches, False otherwise
     """
     try:
-        return _pwd_context.verify(password, stored_hash)
+        return _bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
     except Exception as e:
         logger.error(f"Password verification error: {e}")
         return False
