@@ -115,13 +115,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         connect_src = _build_connect_src()
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://cdn.paddle.com https://sandbox-cdn.paddle.com https://public.profitwell.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; "
             "img-src 'self' data: https: blob:; "
             "media-src 'self' data: https: blob:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             f"connect-src {connect_src}; "
-            "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.google.com https://checkout.paddle.com https://sandbox-checkout.paddle.com; "
+            "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.google.com https://checkout.paddle.com https://sandbox-checkout.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com; "
             "frame-ancestors 'none';"
         )
         response.headers["Content-Security-Policy"] = csp
