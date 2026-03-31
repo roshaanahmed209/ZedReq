@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import './NetworkExpansionGraph.css'
 
@@ -354,8 +354,31 @@ const getInitials = (name) => {
 /* ═══════════════════════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════════════════════ */
+const GLOBE_TEXTS = [
+  { line1: 'Your connections,', line2: 'mapped globally.' },
+  { line1: 'Opportunities,', line2: 'waiting worldwide.' },
+  { line1: 'Talent meets', line2: 'talent, everywhere.' },
+  { line1: 'Grow your network,', line2: 'grow your future.' },
+  { line1: 'Every city,', line2: 'a new connection.' },
+]
+
 const NetworkExpansionGraph = () => {
   const sectionRef = useRef(null)
+  const [textIdx, setTextIdx] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setTextIdx(i => (i + 1) % GLOBE_TEXTS.length)
+        setVisible(true)
+      }, 500)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const current = GLOBE_TEXTS[textIdx]
 
   return (
     <section className="network-expansion-section scroll-reveal" ref={sectionRef}>
@@ -409,10 +432,12 @@ const NetworkExpansionGraph = () => {
             <RotatingGlobe />
             <div className="globe-text-overlay">
               <span className="globe-text-eyebrow">Live Network</span>
-              <h3 className="globe-text-heading">Your connections,<br />mapped globally.</h3>
-              <p className="globe-text-sub">
-                24 cities · 6 continents · real-time
-              </p>
+              <h3
+                className="globe-text-heading"
+                style={{ transition: 'opacity 0.5s ease', opacity: visible ? 1 : 0 }}
+              >
+                {current.line1}<br />{current.line2}
+              </h3>
             </div>
           </div>
 
