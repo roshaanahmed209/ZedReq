@@ -1,1 +1,0 @@
-"""Backoffice configuration package"""

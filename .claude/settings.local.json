@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(uv --version)"
+      "Bash(uv --version)",
+      "Bash(find 'E:\\\\professional\\\\ZEDREC sahi wala\\\\ZedReq/frontend/src' -type f \\\\\\(-name *nav* -o -name *header* -o -name *sidebar* -o -name *layout* -o -name *menu* \\\\\\))",
+      "Bash(find 'E:/professional/ZEDREC sahi wala/ZedReq' -maxdepth 2 -name *.yaml -o -name *.yml -o -name run_*.py -o -name Procfile)"
     ]
   }
 }

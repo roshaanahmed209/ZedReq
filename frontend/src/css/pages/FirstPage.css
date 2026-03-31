@@ -2516,9 +2516,10 @@ img, video, iframe {
     width: 360px;
     height: 360px;
     border-radius: 50%;
-    filter: blur(80px);
+    filter: blur(60px);
     background: radial-gradient(circle, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.05) 45%, transparent 75%);
     animation: trustFloat 14s ease-in-out infinite;
+    will-change: transform;
 }
 
 .trust-particles::before {

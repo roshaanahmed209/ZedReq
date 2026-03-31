@@ -57,47 +57,6 @@ const FirstPage = () => {
   const [matchPercent, setMatchPercent] = useState(0)
   const trustSectionRef = useRef(null)
 
-  // 3D card tilt effect
-  const handleCardMouseMove = (e) => {
-    const card = e.currentTarget
-    const rect = card.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    
-    const percentX = (x / rect.width) * 100
-    const percentY = (y / rect.height) * 100
-    
-    const rotateX = ((percentX - 50) / 5).toFixed(2)
-    const rotateY = (-(percentY - 50) / 4).toFixed(2)
-    
-    card.style.setProperty('--pointer-x', `${percentX}%`)
-    card.style.setProperty('--pointer-y', `${percentY}%`)
-    card.style.setProperty('--rotate-x', `${rotateX}deg`)
-    card.style.setProperty('--rotate-y', `${rotateY}deg`)
-    card.style.setProperty('--background-x', `${35 + (percentX / 100) * 30}%`)
-    card.style.setProperty('--background-y', `${35 + (percentY / 100) * 30}%`)
-    
-    const fromCenter = Math.min(Math.hypot(percentY - 50, percentX - 50) / 50, 1)
-    card.style.setProperty('--pointer-from-center', fromCenter)
-    card.style.setProperty('--pointer-from-top', percentY / 100)
-    card.style.setProperty('--pointer-from-left', percentX / 100)
-  }
-
-  const handleCardMouseLeave = (e) => {
-    const card = e.currentTarget
-    card.style.setProperty('--pointer-x', '50%')
-    card.style.setProperty('--pointer-y', '50%')
-    card.style.setProperty('--rotate-x', '0deg')
-    card.style.setProperty('--rotate-y', '0deg')
-    card.style.setProperty('--background-x', '50%')
-    card.style.setProperty('--background-y', '50%')
-    card.style.setProperty('--pointer-from-center', '0')
-    card.style.setProperty('--pointer-from-top', '0.5')
-    card.style.setProperty('--pointer-from-left', '0.5')
-  }
-
   const loopTexts = [
     'Curated to your skills.',
     'Optimized for hiring managers.',
@@ -204,6 +163,7 @@ const FirstPage = () => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible')
+          setTimeout(() => { entry.target.style.willChange = 'auto' }, 800)
           observer.unobserve(entry.target)
         }
       })
@@ -394,7 +354,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/Ai mode Ai assistant.jpg" alt="AI Career Assistant interface showing chat, profile matching, and job search" />
+                <img className="timeline-image" src="/static/Ai mode Ai assistant.jpg" alt="AI Career Assistant interface showing chat, profile matching, and job search" loading="lazy" decoding="async" />
               </div>
             </div>
           ),
@@ -424,7 +384,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI mock interview.jpg" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" />
+                <img className="timeline-image" src="/static/AI mock interview.jpg" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" loading="lazy" decoding="async" />
               </div>
             </div>
           ),
@@ -454,7 +414,7 @@ const FirstPage = () => {
                 </li>
               </ul>
               <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI powered LMS.jpg" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" />
+                <img className="timeline-image" src="/static/AI powered LMS.jpg" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" loading="lazy" decoding="async" />
               </div>
             </div>
           ),
@@ -627,7 +587,7 @@ const FirstPage = () => {
           <Beams
             beamWidth={1.5}
             beamHeight={25}
-            beamNumber={40}
+            beamNumber={22}
             speed={3.1}
             noiseIntensity={2.4}
             scale={0.29}
