@@ -14,6 +14,8 @@ export const Timeline = ({ data }) => {
   const ref = useRef(null);
   const containerRef = useRef(null);
   const [height, setHeight] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(null);
+  const entryRefs = useRef([]);
 
   useEffect(() => {
     if (ref.current) {
@@ -21,6 +23,27 @@ export const Timeline = ({ data }) => {
       setHeight(rect.height);
     }
   }, [ref]);
+
+  useEffect(() => {
+    const observers = [];
+    const visibleRatios = new Array(data.length).fill(0);
+
+    entryRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          visibleRatios[i] = entry.intersectionRatio;
+          const best = visibleRatios.indexOf(Math.max(...visibleRatios));
+          setActiveIndex(visibleRatios[best] > 0 ? best : null);
+        },
+        { threshold: Array.from({ length: 21 }, (_, k) => k / 20) }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    return () => observers.forEach((obs) => obs.disconnect());
+  }, [data.length]);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -34,18 +57,22 @@ export const Timeline = ({ data }) => {
     <div className="timeline-wrapper" ref={containerRef}>
       <div ref={ref} className="timeline-entries">
         {data.map((item, index) => (
-          <div key={index} className="timeline-entry">
+          <div
+            key={index}
+            className="timeline-entry"
+            ref={(el) => { entryRefs.current[index] = el; }}
+          >
             <div className="timeline-entry-left">
               <div className="timeline-dot-wrapper">
                 <div className="timeline-dot" />
               </div>
-              <h3 className="timeline-entry-title timeline-entry-title-desktop">
+              <h3 className={`timeline-entry-title timeline-entry-title-desktop${activeIndex === index ? ' timeline-entry-title--active' : ''}`}>
                 {item.title}
               </h3>
             </div>
 
             <div className="timeline-entry-right">
-              <h3 className="timeline-entry-title timeline-entry-title-mobile">
+              <h3 className={`timeline-entry-title timeline-entry-title-mobile${activeIndex === index ? ' timeline-entry-title--active' : ''}`}>
                 {item.title}
               </h3>
               {item.content}
