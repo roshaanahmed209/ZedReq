@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import SiteFooter from '../components/SiteFooter'
+import TiltedCard from '../components/TiltedCard'
 import { ZEDREQ_EMAIL, zedreqMailto } from '../config/contact'
+import roshaanImg from '../../static/roshaan.png'
 import '../css/pages/About.css'
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/roshaan-ahmed'
@@ -253,7 +255,27 @@ export default function About() {
           className={`ap-founder-wrap${founderOn ? ' ap-on' : ''}`}
         >
           <div className="ap-founder-left">
-            <div className="ap-founder-mono" aria-hidden="true">RA</div>
+            <TiltedCard
+              imageSrc={roshaanImg}
+              altText="Roshaan Ahmed — Founder & CEO, ZedReq"
+              captionText="Roshaan Ahmed"
+              containerWidth="340px"
+              containerHeight="440px"
+              imageWidth="340px"
+              imageHeight="440px"
+              spotlightRadius={160}
+              rotateAmplitude={12}
+              scaleOnHover={1.05}
+              showMobileWarning={false}
+              showTooltip
+              displayOverlayContent
+              overlayContent={
+                <div className="ap-founder-card-overlay">
+                  <span>Roshaan Ahmed</span>
+                  <span>Founder &amp; CEO</span>
+                </div>
+              }
+            />
             <ul className="ap-founder-tags" aria-label="Roles">
               <li>Founder.</li>
               <li>Engineer.</li>

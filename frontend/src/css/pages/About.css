@@ -1,54 +1,46 @@
 /* ═══════════════════════════════════════════════════════
    About.css — ZedReq luxury editorial about page
-   Palette:  teal #14b8a6 · cyan #06b6d4 · amber #f59e0b
+   Triadic palette (120° apart, maximum contrast):
+     violet  #8b5cf6  — brand, CTAs, card borders
+     emerald #10b981  — accents, labels, dividers
+     amber   #f59e0b  — warmth, hero underline, quote
    ═══════════════════════════════════════════════════════ */
 
-/* ── tokens ── */
 :root {
-  --ap-bg:      #08080d;
-  --ap-bg-mid:  #0c0c14;
-  --ap-bg-alt:  #0f0f18;
-  --ap-text:    #f0f0f2;
-  --ap-muted:   #5c5c72;
-  --ap-dim:     #38384c;
+  --ap-bg:     #07070e;
+  --ap-bg-mid: #0b0b16;
+  --ap-bg-alt: #0e0e1c;
+  --ap-text:   #f0f0f2;
+  --ap-muted:  #5c5c72;
+  --ap-dim:    #38384c;
+  --ap-line:   rgba(255, 255, 255, 0.07);
+  --ap-max:    1140px;
+  --ap-pad:    clamp(1.5rem, 5vw, 4rem);
 
-  /* 3-color accent system */
-  --c-te:  #14b8a6;   /* teal   — primary brand     */
-  --c-cy:  #06b6d4;   /* cyan   — technical depth   */
-  --c-am:  #f59e0b;   /* amber  — luxury warmth     */
+  /* ── The 3 accent colors ── */
+  --vi:    #8b5cf6;   /* violet  */
+  --em:    #10b981;   /* emerald */
+  --am:    #f59e0b;   /* amber   */
 
-  /* gradient shortcuts */
-  --g-te-cy:   linear-gradient(135deg, #14b8a6, #06b6d4);
-  --g-am-te:   linear-gradient(135deg, #f59e0b 0%, #2dd4bf 60%, #06b6d4 100%);
-  --g-text-te: linear-gradient(135deg, #99f6e4 0%, #2dd4bf 50%, #67e8f9 100%);
+  /* ── Accent solids (used for dividers, marks, pills) ── */
+  --c-gold:  #c8922a;
+  --c-blue:  #1a4bbd;
+  --c-green: #3adb7a;
 
-  /* card gradient border — teal → cyan → amber hint */
-  --g-border: linear-gradient(
-    135deg,
-    rgba(20, 184, 166, 0.55) 0%,
-    rgba(6, 182, 212, 0.3)   50%,
-    rgba(245, 158, 11, 0.2)  100%
-  );
-  /* card bg */
-  --g-card: linear-gradient(
-    145deg,
-    rgba(20, 184, 166, 0.07) 0%,
-    rgba(8, 8, 20, 0.9)      100%
-  );
-
-  --ap-line: rgba(255, 255, 255, 0.07);
-  --ap-max:  1140px;
-  --ap-pad:  clamp(1.5rem, 5vw, 4rem);
+  /* Card surface — frosted glass base */
+  --card-bg:     rgba(255, 255, 255, 0.028);
+  --card-border: rgba(255, 255, 255, 0.07);
+  --card-shine:  rgba(255, 255, 255, 0.06);
 }
 
 /* ── keyframes ── */
 @keyframes ap-fade-up {
   from { opacity: 0; transform: translateY(22px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes ap-slide-open {
   from { opacity: 0; transform: translateY(-5px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes ap-draw-line {
   from { transform: scaleX(0); }
@@ -56,12 +48,24 @@
 }
 @keyframes ap-hero-in {
   from { opacity: 0; transform: translateY(38px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── base ── */
 .ap {
-  background: var(--ap-bg);
+  /*
+    Three deep "light-pool" radials layered over the near-black base:
+      golden     #c8922a  — top-left corner, warm sunrise bleed
+      royal-blue #1a4bbd  — right side, cool depth
+      light-green #3adb7a — bottom-left, grounding glow
+    Each pool is very large (60-80 vw) but extremely dim (≤ 12% opacity)
+    so the dark luxury feel is preserved while the page breathes with colour.
+  */
+  background-color: #07070e;
+  background-image:
+    radial-gradient(ellipse 80vw 70vh at 0% 0%,   rgba(200, 146, 42,  0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 65vw 80vh at 100% 40%, rgba(26,  75,  189, 0.11) 0%, transparent 60%),
+    radial-gradient(ellipse 70vw 60vh at 15% 100%, rgba(58,  219, 122, 0.09) 0%, transparent 60%);
   color: var(--ap-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -72,6 +76,7 @@
 
 /* ══════════════════════════════════════════
    NAV
+   — violet → emerald logo, violet CTA
    ══════════════════════════════════════════ */
 .ap-nav {
   position: sticky;
@@ -82,19 +87,16 @@
   justify-content: space-between;
   padding: 0.9rem var(--ap-pad);
   border-bottom: 1px solid var(--ap-line);
-  background: rgba(8, 8, 13, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(7, 7, 14, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 .ap-nav-logo {
   font-weight: 800;
   font-size: 1.2rem;
   letter-spacing: 0.01em;
   text-decoration: none;
-  background: var(--g-te-cy);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f0f0f2;
 }
 .ap-nav-links { display: flex; align-items: center; gap: 2rem; }
 .ap-nav-links a {
@@ -107,25 +109,24 @@
 .ap-nav-cta {
   padding: 0.45rem 1.05rem;
   border-radius: 6px;
-  background: var(--g-te-cy) !important;
-  -webkit-background-clip: unset !important;
-  -webkit-text-fill-color: #fff !important;
-  background-clip: unset !important;
-  color: #fff !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  -webkit-text-fill-color: #f0f0f2 !important;
+  color: #f0f0f2 !important;
   font-weight: 700;
   font-size: 0.8125rem;
   letter-spacing: 0.01em;
-  transition: opacity .2s, transform .2s, box-shadow .2s !important;
-  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.28);
+  transition: border-color .2s, background .2s, transform .2s !important;
 }
 .ap-nav-cta:hover {
-  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.42) !important;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.42);
 }
 
 /* ══════════════════════════════════════════
    HERO
+   — amber → violet underline on italic
    ══════════════════════════════════════════ */
 .ap-hero {
   max-width: var(--ap-max);
@@ -153,7 +154,6 @@
   margin: 0 0 2.75rem;
   animation: ap-hero-in 0.75s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-/* gradient underline — amber → teal → cyan */
 .ap-hero-h1 em {
   font-style: italic;
   color: var(--ap-text);
@@ -166,9 +166,9 @@
   bottom: 0.06em;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   border-radius: 2px;
-  background: var(--g-am-te);
+  background: #c8922a;
   transform-origin: left;
   animation: ap-draw-line 0.9s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -196,11 +196,12 @@
 
 /* ══════════════════════════════════════════
    QUOTE
+   — amber on "potential" (warmth, luxury)
    ══════════════════════════════════════════ */
 .ap-quote-sec {
   padding: 5.5rem var(--ap-pad);
   background:
-    radial-gradient(ellipse 70% 60% at 10% 50%, rgba(20, 184, 166, 0.05) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 60% at 8% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
 }
 .ap-quote {
   max-width: var(--ap-max);
@@ -215,12 +216,14 @@
 }
 .ap-quote mark {
   background: none;
-  color: var(--c-am);
+  color: var(--am);    /* amber — the only warm spark here */
   font-style: italic;
 }
 
 /* ══════════════════════════════════════════
-   STATS — luxury gradient-border cards
+   STATS — luxury cards
+   — border: violet→emerald→amber (all 3)
+   — numbers: violet→emerald text gradient
    ══════════════════════════════════════════ */
 .ap-stats-sec {
   padding: 3.5rem var(--ap-pad);
@@ -238,25 +241,41 @@
   gap: 0.4rem;
   padding: 1.75rem 1.5rem;
   border-radius: 14px;
-  background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.07), rgba(8, 8, 20, 0.92)) padding-box,
-    linear-gradient(135deg, rgba(20, 184, 166, 0.5), rgba(6, 182, 212, 0.25) 55%, rgba(245, 158, 11, 0.18)) border-box;
-  border: 1px solid transparent;
-  transition: transform .28s, box-shadow .28s;
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: inset 0 1px 0 var(--card-shine);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform .28s, border-color .28s, box-shadow .28s;
+}
+/* golden top accent bar */
+.ap-stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(200,146,42,0.0) 0%, rgba(200,146,42,0.75) 40%, rgba(200,146,42,0.0) 100%);
+  opacity: 0;
+  transition: opacity .28s;
 }
 .ap-stat-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 48px rgba(20, 184, 166, 0.14), 0 4px 14px rgba(0, 0, 0, 0.5);
+  border-color: rgba(200, 146, 42, 0.22);
+  box-shadow:
+    inset 0 1px 0 var(--card-shine),
+    0 0 0 1px rgba(200, 146, 42, 0.08),
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(200, 146, 42, 0.07);
 }
+.ap-stat-card:hover::before { opacity: 1; }
 .ap-stat-n {
   font-size: 2.75rem;
   font-weight: 900;
   letter-spacing: -0.05em;
   display: block;
-  background: var(--g-text-te);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f0f0f2;
 }
 .ap-stat-l {
   font-size: 0.78rem;
@@ -270,7 +289,7 @@
    ══════════════════════════════════════════ */
 .ap-section {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: 4rem;
   max-width: var(--ap-max);
   margin: 0 auto;
@@ -295,6 +314,7 @@
 
 /* ══════════════════════════════════════════
    PILLARS — accordion rows
+   — violet on open state
    ══════════════════════════════════════════ */
 .ap-rows { display: flex; flex-direction: column; }
 .ap-row {
@@ -306,10 +326,11 @@
   transition: opacity .45s ease, transform .45s ease, background .2s;
   outline: none;
 }
-.ap-row:focus-visible { outline: 2px solid var(--c-te); outline-offset: -2px; }
+.ap-row:focus-visible { outline: 2px solid var(--vi); outline-offset: -2px; }
 .ap-row:last-child    { border-bottom: 1px solid var(--ap-line); }
 .ap-row.ap-on         { opacity: 1; transform: translateY(0); }
-.ap-row-open          { background: linear-gradient(90deg, rgba(20, 184, 166, 0.05), transparent 60%); }
+/* subtle violet wash when open */
+.ap-row-open { background: linear-gradient(90deg, rgba(139, 92, 246, 0.055), transparent 60%); }
 
 .ap-row-head {
   display: flex;
@@ -326,7 +347,7 @@
   width: 2rem;
   transition: color .2s;
 }
-.ap-row-open .ap-row-n    { color: var(--c-te); }
+.ap-row-open .ap-row-n    { color: var(--vi); }
 .ap-row-title {
   font-size: 1.125rem;
   font-weight: 700;
@@ -345,7 +366,7 @@
   line-height: 1;
   transition: color .2s;
 }
-.ap-row-open .ap-row-arrow { color: var(--c-te); }
+.ap-row-open .ap-row-arrow { color: var(--vi); }
 
 .ap-row-body {
   max-height: 0;
@@ -362,7 +383,9 @@
 }
 
 /* ══════════════════════════════════════════
-   VALUES — luxury gradient-border cards
+   VALUES — luxury cards
+   — border: violet→emerald→amber
+   — top bar: emerald→amber (distinct from stat cards)
    ══════════════════════════════════════════ */
 .ap-vals-grid {
   display: grid;
@@ -372,26 +395,47 @@
 .ap-val {
   padding: 1.85rem 1.75rem;
   border-radius: 14px;
-  background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.06), rgba(8, 8, 20, 0.9)) padding-box,
-    linear-gradient(135deg, rgba(20, 184, 166, 0.42), rgba(6, 182, 212, 0.22) 60%, rgba(245, 158, 11, 0.14)) border-box;
-  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: inset 0 1px 0 var(--card-shine);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity .5s ease, transform .5s ease, box-shadow .28s;
+  transition: opacity .5s ease, transform .5s ease, border-color .25s, box-shadow .25s;
 }
 .ap-val.ap-on { opacity: 1; transform: translateY(0); }
-.ap-val:hover {
-  box-shadow: 0 16px 40px rgba(20, 184, 166, 0.12), 0 4px 12px rgba(0, 0, 0, 0.45);
-  transform: translateY(-2px);
-  transition: opacity .5s ease, transform .22s ease, box-shadow .22s;
+/* royal-blue left accent stripe */
+.ap-val::before {
+  content: '';
+  position: absolute;
+  top: 16% ; left: 0;
+  width: 2px;
+  height: 68%;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, transparent, rgba(26,75,189,0.85), transparent);
+  opacity: 0;
+  transition: opacity .25s;
 }
-/* top accent bar — teal → cyan */
+.ap-val:hover {
+  border-color: rgba(26, 75, 189, 0.22);
+  box-shadow:
+    inset 0 1px 0 var(--card-shine),
+    -4px 0 20px rgba(26, 75, 189, 0.08),
+    0 16px 40px rgba(0, 0, 0, 0.42);
+  transform: translateY(-2px);
+  transition: opacity .5s ease, transform .22s ease, border-color .22s, box-shadow .22s;
+}
+.ap-val:hover::before { opacity: 1; }
+/* green dot accent replacing the old gradient bar */
 .ap-val-top {
-  width: 2.5rem;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--g-te-cy);
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #3adb7a;
+  box-shadow: 0 0 8px rgba(58, 219, 122, 0.5);
   margin-bottom: 1.1rem;
 }
 .ap-val-t {
@@ -410,6 +454,7 @@
 
 /* ══════════════════════════════════════════
    TIMELINE
+   — emerald year labels (distinct from violet)
    ══════════════════════════════════════════ */
 .ap-tl-list {
   display: flex;
@@ -432,7 +477,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--c-te);
+  color: var(--em);   /* emerald year labels */
 }
 .ap-tl-bar {
   display: block;
@@ -449,17 +494,21 @@
 
 /* ══════════════════════════════════════════
    FOUNDER
+   — emerald → amber divider (warm gradient)
+   — skill pills: violet border
+   — project cards: all-3-color border
+   — linkedin: emerald
    ══════════════════════════════════════════ */
 .ap-founder-sec {
   padding: 6rem var(--ap-pad);
   background:
-    radial-gradient(ellipse 80% 70% at 15% 50%, rgba(20, 184, 166, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 85% 50%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 70% at 15% 50%, rgba(139, 92, 246, 0.055) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 50%, rgba(16, 185, 129, 0.035) 0%, transparent 50%),
     var(--ap-bg-alt);
 }
 .ap-founder-wrap {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: 5.5rem;
   max-width: var(--ap-max);
   margin: 0 auto;
@@ -471,22 +520,39 @@
 .ap-founder-wrap.ap-on { opacity: 1; transform: translateY(0); }
 
 .ap-founder-left { position: sticky; top: 5.5rem; }
-/* RA monogram — white → teal */
-.ap-founder-mono {
-  font-size: clamp(5rem, 9vw, 9rem);
-  font-weight: 900;
-  letter-spacing: -0.06em;
-  line-height: 0.88;
-  margin-bottom: 1.35rem;
-  background: linear-gradient(145deg, #f0f0f2 0%, #5eead4 55%, #14b8a6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+
+/* photo card overlay */
+.ap-founder-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(to top, rgba(8,8,13,0.9) 0%, transparent 100%);
+  border-radius: 0 0 15px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
+.ap-founder-card-overlay span:first-child {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+/* amber role label — the third color appearing here */
+.ap-founder-card-overlay span:last-child {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(252, 211, 77, 0.95);   /* light amber */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .ap-founder-tags {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 1.1rem 0 0;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -512,13 +578,14 @@
   color: var(--ap-muted);
   margin: 0 0 0.3rem;
 }
-.ap-founder-role a { color: var(--c-te); text-decoration: none; }
+.ap-founder-role a { color: var(--vi); text-decoration: none; }   /* violet link */
 .ap-founder-role a:hover { text-decoration: underline; }
 .ap-founder-loc { font-size: 0.78rem; color: var(--ap-dim); letter-spacing: 0.02em; }
-/* gradient divider — teal → cyan → transparent */
+
+/* emerald → amber divider — warm, organic feel */
 .ap-founder-divider {
   height: 1px;
-  background: linear-gradient(90deg, rgba(20,184,166,0.5), rgba(6,182,212,0.2), transparent);
+  background: linear-gradient(90deg, rgba(16,185,129,0.5), rgba(245,158,11,0.3), transparent);
   margin: 1.75rem 0;
 }
 .ap-founder-bio {
@@ -529,7 +596,7 @@
 }
 .ap-founder-bio strong { color: rgba(240, 240, 242, 0.9); font-weight: 600; }
 
-/* skill pills */
+/* violet-bordered skill pills */
 .ap-founder-pills {
   display: flex;
   flex-wrap: wrap;
@@ -545,11 +612,14 @@
   text-transform: uppercase;
   padding: 0.28rem 0.7rem;
   border-radius: 5px;
-  background:
-    rgba(20, 184, 166, 0.06) padding-box,
-    linear-gradient(135deg, rgba(20,184,166,0.38), rgba(6,182,212,0.2)) border-box;
-  border: 1px solid transparent;
-  color: rgba(94, 234, 212, 0.88);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(240, 240, 242, 0.65);
+  transition: border-color .2s, color .2s;
+}
+.ap-founder-pills li:hover {
+  border-color: rgba(200, 146, 42, 0.4);
+  color: rgba(240, 240, 242, 0.9);
 }
 
 /* project cards */
@@ -562,41 +632,62 @@
 .ap-proj-card {
   padding: 1.35rem 1.25rem;
   border-radius: 12px;
-  background:
-    linear-gradient(145deg, rgba(20, 184, 166, 0.06), rgba(8,8,20,0.92)) padding-box,
-    linear-gradient(135deg, rgba(20,184,166,0.4), rgba(6,182,212,0.18) 60%, rgba(245,158,11,0.12)) border-box;
-  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: inset 0 1px 0 var(--card-shine);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  transition: transform .24s, box-shadow .24s;
+  transition: transform .24s, border-color .24s, box-shadow .24s;
+}
+/* light-green bottom edge glow line */
+.ap-proj-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(58,219,122,0.55), transparent);
+  opacity: 0;
+  transition: opacity .24s;
 }
 .ap-proj-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(20, 184, 166, 0.12), 0 2px 8px rgba(0, 0, 0, 0.45);
+  border-color: rgba(58, 219, 122, 0.18);
+  box-shadow:
+    inset 0 1px 0 var(--card-shine),
+    0 12px 32px rgba(0, 0, 0, 0.42),
+    0 0 24px rgba(58, 219, 122, 0.06);
 }
+.ap-proj-card:hover::after { opacity: 1; }
 .ap-proj-name   { font-size: 0.85rem; font-weight: 700; color: #fff; }
-.ap-proj-stack  { font-size: 0.72rem; color: rgba(255, 255, 255, 0.75); letter-spacing: 0.02em; }
-.ap-proj-detail { font-size: 0.8125rem; line-height: 1.65; color: rgba(255, 255, 255, 0.7); margin: 0.2rem 0 0; }
+.ap-proj-stack  { font-size: 0.72rem; color: rgba(255,255,255,0.72); letter-spacing: 0.02em; }
+.ap-proj-detail { font-size: 0.8125rem; line-height: 1.65; color: rgba(255,255,255,0.68); margin: 0.2rem 0 0; }
 
+/* emerald linkedin — third accent, clearly different */
 .ap-linkedin {
   display: inline-block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--c-te);
+  color: var(--em);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color .2s;
 }
-.ap-linkedin:hover { border-color: var(--c-te); }
+.ap-linkedin:hover { border-color: var(--em); }
 
 /* ══════════════════════════════════════════
    CTA
+   — violet → emerald gradient button
+   — subtle violet radial glow in bg
    ══════════════════════════════════════════ */
 .ap-cta {
   border-top: 1px solid var(--ap-line);
   background:
-    radial-gradient(ellipse 80% 80% at 50% 50%, rgba(6, 182, 212, 0.065) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 70% at 50% 50%, rgba(139, 92, 246, 0.07) 0%, transparent 70%),
     linear-gradient(180deg, var(--ap-bg-mid), var(--ap-bg));
   padding: 6rem var(--ap-pad);
 }
@@ -628,20 +719,20 @@
   display: inline-block;
   padding: 0.85rem 1.85rem;
   border-radius: 8px;
-  background: var(--g-te-cy);
-  color: #fff;
+  background: #c8922a;
+  color: #07070e;
   text-decoration: none;
   font-weight: 800;
   font-size: 0.9375rem;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  box-shadow: 0 6px 22px rgba(20, 184, 166, 0.32);
-  transition: opacity .2s, transform .2s, box-shadow .2s;
+  box-shadow: 0 6px 22px rgba(200, 146, 42, 0.3);
+  transition: background .2s, transform .2s, box-shadow .2s;
 }
 .ap-cta-btn:hover {
-  opacity: 0.9;
+  background: #daa43a;
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(20, 184, 166, 0.45);
+  box-shadow: 0 10px 32px rgba(200, 146, 42, 0.45);
 }
 .ap-cta-email {
   font-size: 0.8125rem;
@@ -659,19 +750,18 @@
   .ap-section-lbl p  { max-width: none; }
   .ap-stats-grid     { grid-template-columns: 1fr 1fr; gap: 1rem; }
   .ap-founder-wrap   { grid-template-columns: 1fr; gap: 2.5rem; }
-  .ap-founder-left   { position: static; }
-  .ap-founder-mono   { font-size: clamp(4rem, 12vw, 7rem); }
+  .ap-founder-left   { position: static; width: 340px; margin: 0 auto; }
   .ap-projects-grid  { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
-  .ap-hero-split     { grid-template-columns: 1fr; gap: 1.75rem; }
-  .ap-hero-aside     { padding-left: 0; border-left: none; padding-top: 1.25rem; border-top: 1px solid var(--ap-dim); }
-  .ap-vals-grid      { grid-template-columns: 1fr; }
-  .ap-cta-inner      { flex-direction: column; align-items: flex-start; }
-  .ap-cta-actions    { align-items: flex-start; }
+  .ap-hero-split  { grid-template-columns: 1fr; gap: 1.75rem; }
+  .ap-hero-aside  { padding-left: 0; border-left: none; padding-top: 1.25rem; border-top: 1px solid var(--ap-dim); }
+  .ap-vals-grid   { grid-template-columns: 1fr; }
+  .ap-cta-inner   { flex-direction: column; align-items: flex-start; }
+  .ap-cta-actions { align-items: flex-start; }
 }
 @media (max-width: 580px) {
   .ap-nav-links a:not(.ap-nav-cta) { display: none; }
-  .ap-stats-grid     { grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-  .ap-tl             { grid-template-columns: 48px 12px 1fr; gap: 0 0.75rem; }
+  .ap-stats-grid  { grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  .ap-tl          { grid-template-columns: 48px 12px 1fr; gap: 0 0.75rem; }
 }
