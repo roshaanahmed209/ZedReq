@@ -89,7 +89,7 @@ export default function DarkVeil({
     const parent = canvas.parentElement;
 
     const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
+      dpr: Math.min(window.devicePixelRatio, 1),
       canvas
     });
 
@@ -124,8 +124,22 @@ export default function DarkVeil({
 
     const start = performance.now();
     let frame = 0;
+    let lastFrameTime = 0;
+    let visible = true;
+    const TARGET_FPS = 30;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-    const loop = () => {
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => { visible = entries[0].isIntersecting; },
+      { threshold: 0 }
+    );
+    visibilityObserver.observe(canvas);
+
+    const loop = (now) => {
+      frame = requestAnimationFrame(loop);
+      if (!visible) return;
+      if (now - lastFrameTime < FRAME_INTERVAL) return;
+      lastFrameTime = now;
       program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
       program.uniforms.uHueShift.value = hueShift;
       program.uniforms.uNoise.value = noiseIntensity;
@@ -133,14 +147,14 @@ export default function DarkVeil({
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = warpAmount;
       renderer.render({ scene: mesh });
-      frame = requestAnimationFrame(loop);
     };
 
-    loop();
+    frame = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
+      visibilityObserver.disconnect();
     };
   }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
   return <canvas ref={ref} className="darkveil-canvas" />;
