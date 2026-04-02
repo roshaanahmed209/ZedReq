@@ -14,6 +14,8 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
+from utils.api_security import normalize_env_secret
+
 logger = logging.getLogger(__name__)
 
 # Tokens that indicate role/skill/topic search — not a "find person by name" query
@@ -139,8 +141,8 @@ class NemzAgent:
             self.qdrant_client = None
             self.qdrant_available = False
         
-        # Initialize OpenAI API key
-        openai_api_key = openai_api_key or os.environ.get('OPENAI_API_KEY')
+        # Initialize OpenAI API key (normalize: Render/UI often adds trailing newline or quotes)
+        openai_api_key = openai_api_key or normalize_env_secret(os.environ.get("OPENAI_API_KEY"))
         if not openai_api_key:
             logger.warning("OpenAI API key not found. Search will not work.")
             self.openai_available = False
@@ -1198,7 +1200,12 @@ IMPORTANT: Use this context to provide personalized responses. You have access t
             }
             
         except Exception as e:
-            logger.error(f"Error in chat: {e}", exc_info=True)
+            logger.error(
+                "Nemz chat LLM error (%s): %s",
+                type(e).__name__,
+                e,
+                exc_info=True,
+            )
             return {
                 "response": "I apologize, but I encountered an error. Please try again.",
                 "should_search": False,

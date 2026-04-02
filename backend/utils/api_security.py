@@ -11,6 +11,21 @@ from urllib.parse import quote
 logger = logging.getLogger(__name__)
 
 
+def normalize_env_secret(value: Optional[str]) -> Optional[str]:
+    """
+    Normalize secrets pasted from dashboards (Render, etc.): trim whitespace,
+    strip one layer of wrapping quotes, remove UTF-8 BOM.
+    """
+    if value is None or not isinstance(value, str):
+        return None
+    s = value.strip()
+    if s.startswith("\ufeff"):
+        s = s.lstrip("\ufeff").strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
+        s = s[1:-1].strip()
+    return s or None
+
+
 def validate_api_key(api_key: Optional[str], key_name: str = "API_KEY") -> bool:
     """
     Validate API key format and presence
@@ -54,7 +69,8 @@ def get_api_key_from_env(key_name: str, required: bool = True) -> Optional[str]:
     Raises:
         ValueError: If required key is missing or invalid
     """
-    api_key = os.environ.get(key_name)
+    raw = os.environ.get(key_name)
+    api_key = normalize_env_secret(raw)
     
     if not api_key and required:
         raise ValueError(f"Required environment variable {key_name} is not set")
