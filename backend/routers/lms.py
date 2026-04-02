@@ -654,8 +654,46 @@ async def generate_recommendations(
     user_id = current_user["id"]
     logger.info(f"[LMS] generate-recommendations: user_id={user_id}, limit={limit}")
 
-    # ── Server-side rate-limit check ────────────────────────────────────────
     rl_service = RateLimitService(service.db)
+
+    def _rate_limit_payload(remaining: int) -> dict:
+        return {
+            "action": ACTION_GENERATE_RECOMMENDATIONS,
+            "remaining": remaining,
+            "max_calls": _MAX_REC_REFRESHES,
+        }
+
+    # Do not consume quota or dismiss recs if generation cannot run (avoids empty UI + burned limits).
+    recommendation_enabled = os.environ.get('COURSE_RECOMMENDATION_ENABLED', 'true').lower() == 'true'
+    if not recommendation_enabled:
+        fresh = service.get_recommendations(user_id, limit=limit)
+        rem = rl_service.get_remaining(
+            user_id, ACTION_GENERATE_RECOMMENDATIONS, _MAX_REC_REFRESHES
+        )
+        return {
+            "success": False,
+            "error": "Course recommendation feature is disabled",
+            "recommendations": fresh,
+            "total": len(fresh),
+            "rate_limit": _rate_limit_payload(rem),
+        }
+
+    from agents.Course_recommendation_agent import get_course_recommendation_agent
+    agent = get_course_recommendation_agent()
+    if not agent.is_available():
+        fresh = service.get_recommendations(user_id, limit=limit)
+        rem = rl_service.get_remaining(
+            user_id, ACTION_GENERATE_RECOMMENDATIONS, _MAX_REC_REFRESHES
+        )
+        return {
+            "success": False,
+            "error": "Course Recommendation Agent not available",
+            "recommendations": fresh,
+            "total": len(fresh),
+            "rate_limit": _rate_limit_payload(rem),
+        }
+
+    # ── Server-side rate-limit check (only when we will actually regenerate) ──
     try:
         remaining = rl_service.check_and_increment(
             user_id=user_id,
@@ -673,25 +711,12 @@ async def generate_recommendations(
             },
         )
 
-    # 1. Dismiss existing non-dismissed recommendations so the agent creates fresh ones
     service.dismiss_all_recommendations(user_id)
 
-    # 2. Invalidate dashboard cache so the next load reflects new recs
     from config.cache import invalidate_dashboard_cache
     invalidate_dashboard_cache(user_id)
 
-    # 3. Trigger the Course Recommendation Agent
-    recommendation_enabled = os.environ.get('COURSE_RECOMMENDATION_ENABLED', 'true').lower() == 'true'
-    if not recommendation_enabled:
-        return {"success": False, "error": "Course recommendation feature is disabled", "recommendations": []}
-
     try:
-        from agents.Course_recommendation_agent import get_course_recommendation_agent
-        agent = get_course_recommendation_agent()
-
-        if not agent.is_available():
-            return {"success": False, "error": "Course Recommendation Agent not available", "recommendations": []}
-
         result = agent.generate_course_recommendations(user_id, limit=limit)
 
         if result.get('success'):
@@ -699,18 +724,13 @@ async def generate_recommendations(
         else:
             logger.warning(f"[LMS] generate-recommendations: Agent returned: {result.get('error')}")
 
-        # Return fresh recommendations
         fresh_recs = service.get_recommendations(user_id, limit=limit)
         return {
             "success": result.get('success', False),
             "recommendations_created": result.get('recommendations_created', 0),
             "recommendations": fresh_recs,
             "total": len(fresh_recs),
-            "rate_limit": {
-                "action": ACTION_GENERATE_RECOMMENDATIONS,
-                "remaining": remaining,
-                "max_calls": _MAX_REC_REFRESHES,
-            },
+            "rate_limit": _rate_limit_payload(remaining),
         }
     except HTTPException:
         raise

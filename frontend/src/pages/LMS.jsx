@@ -2497,6 +2497,18 @@ const LMS = () => {
         console.log(`[LMS] fetchAllData: SUCCESS - Recommendations loaded (${data.recommendations.recommendations.length} entries)`)
       }
 
+      // Sync AI action quotas from server (authoritative — avoids stale localStorage vs deployed DB)
+      if (data.rate_limits?.generate_recommendations != null) {
+        const rem = data.rate_limits.generate_recommendations.remaining
+        const used = MAX_RECS_REFRESHES - rem
+        setRecsRefreshCount(Math.max(0, Math.min(MAX_RECS_REFRESHES, used)))
+      }
+      if (data.rate_limits?.generate_questions != null) {
+        const rem = data.rate_limits.generate_questions.remaining
+        const used = MAX_GENERATE_QUESTIONS - rem
+        setGenerateQuestionsCount(Math.max(0, Math.min(MAX_GENERATE_QUESTIONS, used)))
+      }
+
       // Set deadlines
       if (data.deadlines?.deadlines) {
         setDeadlines(data.deadlines.deadlines)
@@ -2525,13 +2537,6 @@ const LMS = () => {
       setLoading(false)
     }
   }
-
-  // Auto-refresh recommendations on every page load (runs after initial data fetch)
-  useEffect(() => {
-    if (!loading) {
-      handleRefreshRecommendations(true) // silent = true (no extra loading UI on initial load)
-    }
-  }, [loading]) // fires once loading flips to false after fetchAllData
 
   /**
    * Refresh AI recommendations by calling the backend generate-recommendations
@@ -2568,10 +2573,9 @@ const LMS = () => {
         setRecommendations(data.recommendations)
         console.log(`[LMS] handleRefreshRecommendations: SUCCESS - ${data.recommendations.length} recommendations`)
       }
-      // Sync frontend counter with authoritative server value
-      if (!silent && data?.rate_limit != null) {
+      if (data?.rate_limit != null) {
         const usedOnServer = MAX_RECS_REFRESHES - data.rate_limit.remaining
-        setRecsRefreshCount(usedOnServer)
+        setRecsRefreshCount(Math.max(0, Math.min(MAX_RECS_REFRESHES, usedOnServer)))
       }
     } catch (err) {
       if (err?.response?.status === 429) {

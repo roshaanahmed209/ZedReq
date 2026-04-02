@@ -19,8 +19,17 @@ from config.cache import (
     get_cached_dashboard, cache_dashboard, invalidate_dashboard_cache,
     get_cached, set_cached,
 )
+from services.rate_limit_service import (
+    RateLimitService,
+    ACTION_GENERATE_RECOMMENDATIONS,
+    ACTION_GENERATE_QUESTIONS,
+)
 
 logger = logging.getLogger(__name__)
+
+# Must match backend/routers/lms.py caps for LMS AI actions
+_MAX_LMS_REC_REFRESHES = 3
+_MAX_LMS_QUESTION_GENS = 3
 
 
 class LMSService:
@@ -643,6 +652,24 @@ class LMSService:
         """Update dashboard stats (called after answer submission)"""
         self._recalculate_dashboard_stats(user_id)
     
+    def get_lms_rate_limits_snapshot(self, user_id: int) -> Dict[str, Any]:
+        """Read-only quota remaining for LMS AI actions (no increment)."""
+        rl = RateLimitService(self.db)
+        return {
+            "generate_recommendations": {
+                "remaining": rl.get_remaining(
+                    user_id, ACTION_GENERATE_RECOMMENDATIONS, _MAX_LMS_REC_REFRESHES
+                ),
+                "max_calls": _MAX_LMS_REC_REFRESHES,
+            },
+            "generate_questions": {
+                "remaining": rl.get_remaining(
+                    user_id, ACTION_GENERATE_QUESTIONS, _MAX_LMS_QUESTION_GENS
+                ),
+                "max_calls": _MAX_LMS_QUESTION_GENS,
+            },
+        }
+    
     def get_dashboard_all(self, user_id: int) -> Dict[str, Any]:
         """Fetch ALL dashboard data in a single service call.
         
@@ -653,7 +680,8 @@ class LMSService:
         cache_key = f"lms:dashboard_all:{user_id}"
         cached = get_cached(cache_key)
         if cached:
-            return cached
+            # Rate limits must reflect current DB state (do not serve stale counts from cache)
+            return {**cached, "rate_limits": self.get_lms_rate_limits_snapshot(user_id)}
         
         # Fetch everything in the same DB session (single connection)
         courses = self.get_user_courses(user_id=user_id, limit=100)
@@ -685,6 +713,7 @@ class LMSService:
             "recommendations": {"recommendations": recommendations, "total": len(recommendations)},
             "deadlines": {"deadlines": deadlines, "total": len(deadlines)},
             "certificates": {"certificates": certificates, "total": len(certificates)},
+            "rate_limits": self.get_lms_rate_limits_snapshot(user_id),
         }
         
         # Cache for 2 minutes

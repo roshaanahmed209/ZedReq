@@ -94,19 +94,19 @@ def cache_dashboard(user_id: int, data: dict, ttl: int = 300):
 
 
 def invalidate_dashboard_cache(user_id: int):
-    """Invalidate dashboard cache in both Redis and in-memory"""
+    """Invalidate dashboard cache in both Redis and in-memory (all LMS dashboard keys)."""
     redis_client, available = _init_redis()
-    key = f"lms:dashboard:{user_id}"
+    keys = (f"lms:dashboard:{user_id}", f"lms:dashboard_all:{user_id}")
     
     if available and redis_client is not None:
         try:
-            redis_client.delete(key)
+            redis_client.delete(*keys)
         except (ConnectionError, RedisError, Exception) as e:
             logger.warning(f"Redis cache invalidation failed: {e}")
     
-    # Always also clear from memory cache
     with _memory_cache_lock:
-        _memory_cache.pop(key, None)
+        for key in keys:
+            _memory_cache.pop(key, None)
 
 
 # ========================================================================
