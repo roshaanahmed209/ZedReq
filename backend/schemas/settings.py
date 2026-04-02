@@ -87,10 +87,6 @@ class SubscriptionInfo(BaseModel):
     subscription_end: Optional[str] = None
     requires_plan_selection: bool = True
 
-    class Config:
-        # Allow None values to be converted to defaults
-        orm_mode = False
-
 
 class EnterpriseInquiryRequest(BaseModel):
     """Enterprise sales inquiry (authenticated user)"""

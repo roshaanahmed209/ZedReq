@@ -2,7 +2,7 @@
 Nemz Agent Router - AI Career Assistant Endpoints
 """
 from fastapi import APIRouter, HTTPException, status, Depends, Header
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, validator
 from typing import Optional, List, Dict, Any
 import logging
 
@@ -40,6 +40,15 @@ class SearchResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "message": "Hello, can you help me find software engineering jobs?",
+                "session_id": "550e8400-e29b-41d4-a716-446655440000",
+            }
+        }
+    )
+
     message: str = Field(..., min_length=1, max_length=5000, description="User message")
     session_id: Optional[str] = Field(None, description="Chat session ID (optional, will create if not provided)")
     
@@ -57,14 +66,6 @@ class ChatRequest(BaseModel):
         if v is not None and not InputSanitizer.validate_session_id(v):
             raise ValueError("Invalid session ID format")
         return v
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "message": "Hello, can you help me find software engineering jobs?",
-                "session_id": "550e8400-e29b-41d4-a716-446655440000"
-            }
-        }
 
 
 class ChatResponse(BaseModel):
