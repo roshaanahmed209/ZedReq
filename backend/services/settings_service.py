@@ -9,12 +9,13 @@ from typing import Dict, Any, Optional
 from functools import wraps
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from contextlib import contextmanager
 from fastapi import UploadFile
 
 import cloudinary
 import cloudinary.uploader
+import cloudinary.utils
 
 from models.orm import User, Description, UsersContext, Payment
 from models.orm.subscription_plan import SubscriptionPlan
@@ -162,6 +163,42 @@ class SettingsService:
             logger.error(f"URL validation error: {e}")
             return False
     
+    def _cloudinary_signed_raw_url(self, resume_url: str) -> Optional[str]:
+        """
+        Signed delivery URL for Cloudinary raw files when anonymous GET returns 401
+        (e.g. authenticated/restricted delivery).
+        """
+        parsed = urlparse(resume_url)
+        host = (parsed.hostname or "").lower()
+        if "res.cloudinary.com" not in host and "cloudinary.com" not in host:
+            return None
+        if not os.environ.get("CLOUDINARY_API_SECRET"):
+            return None
+        match = re.search(r"/raw/upload/(?:v\d+/)?([^?]+)", resume_url)
+        if not match:
+            return None
+        public_id = unquote(match.group(1).rstrip("/"))
+        if not public_id:
+            return None
+        candidates = [public_id]
+        base, dot, ext = public_id.rpartition(".")
+        if dot and ext.lower() in ("pdf", "doc", "docx", "txt") and base:
+            candidates.append(base)
+        for pid in candidates:
+            try:
+                signed, _ = cloudinary.utils.cloudinary_url(
+                    pid,
+                    resource_type="raw",
+                    sign_url=True,
+                    secure=True,
+                )
+                if signed:
+                    return signed
+            except Exception as e:
+                logger.debug(f"Signed URL attempt failed for public_id={pid!r}: {e}")
+        logger.warning("Could not build signed Cloudinary URL for resume")
+        return None
+    
     def _extract_resume_text(self, resume_url: str) -> Optional[str]:
         """
         Extract text content from resume file (PDF, Word, or TXT)
@@ -188,12 +225,23 @@ class SettingsService:
             # Download file from URL with size limit and timeout
             timeout = validate_request_timeout(REQUEST_TIMEOUT, default=30.0)
             response = self._session.get(
-                resume_url, 
-                timeout=timeout, 
+                resume_url,
+                timeout=timeout,
                 stream=True,
                 allow_redirects=True,
-                verify=True  # SSL verification enabled
+                verify=True,  # SSL verification enabled
             )
+            if response.status_code == 401 and "cloudinary" in resume_url.lower():
+                signed = self._cloudinary_signed_raw_url(resume_url)
+                if signed:
+                    logger.info("Retrying resume download with signed Cloudinary URL")
+                    response = self._session.get(
+                        signed,
+                        timeout=timeout,
+                        stream=True,
+                        allow_redirects=True,
+                        verify=True,
+                    )
             response.raise_for_status()
             
             # Check content length
@@ -386,7 +434,8 @@ class SettingsService:
                 resource_type='raw',
                 folder='resumes',
                 public_id=f"user_{user_id}_{int(time.time())}",
-                overwrite=False
+                overwrite=False,
+                access_mode='public',
             )
             
             resume_url = upload_result.get('secure_url')
@@ -407,14 +456,26 @@ class SettingsService:
                 # Sanitize and store text
                 sanitized_resume = sanitize_text_for_storage(resume_text, max_length=50000)
                 
-                # Update description with resume text
+                # Ensure Description row exists (same as update_profile) so resume text persists
                 user = self.db.query(User).filter(User.uid == user_id).first()
-                if user and user.description_id:
-                    description = self.db.query(Description).filter(Description.desc_id == user.description_id).first()
-                    if description:
-                        description.resume = sanitized_resume
-                        self.db.commit()
-                        logger.info(f"Resume text extracted and stored for user {user_id} ({len(sanitized_resume)} chars)")
+                if not user:
+                    raise ValidationError("User not found")
+                description = None
+                if user.description_id:
+                    description = (
+                        self.db.query(Description)
+                        .filter(Description.desc_id == user.description_id)
+                        .first()
+                    )
+                if not description:
+                    description = Description()
+                    self.db.add(description)
+                    self.db.flush()
+                    user.description_id = description.desc_id
+                    self.db.flush()
+                description.resume = sanitized_resume
+                self.db.commit()
+                logger.info(f"Resume text extracted and stored for user {user_id} ({len(sanitized_resume)} chars)")
                 
                 # Update runtime context
                 self._update_runtime_context(
