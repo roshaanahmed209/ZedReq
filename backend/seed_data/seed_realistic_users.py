@@ -665,134 +665,215 @@ USERS = [
 USER_POSTS = {
     "sarah_chen_dev": [
         {
-            "text": (
-                "Yesterday our on-call rotation caught a deploy that doubled latency on one shard — not a hero moment, "
-                "just someone who read the dashboard and rolled back within minutes. That's the culture I'm trying to protect."
-            ),
+            "text": """Last Thursday looked ordinary until our latency graph for merchant onboarding started climbing — not a spike, a slow bleed across two regions.
+
+On-call paged me while I was in a school pickup line. I handed the phone to my partner, drove home, and joined a bridge with two engineers I trust to disagree with me politely. The first theory was a bad deploy; git history said otherwise. The second theory was database — replication lag looked fine. The third was a feature flag that increased payload size on a path that had always been 'low risk.'
+
+We split work: one person reproduced with recorded traffic, one traced the flag rollout timeline, I coordinated with risk so we didn't freeze payments longer than necessary. We rolled back the flag for 12% of traffic first, watched error budgets, then the rest.
+
+What I keep thinking about isn't the rollback — it's that the engineer who shipped the flag had followed every checklist we wrote. The checklist didn't include 'measure body size percentiles on this endpoint under peak.' We're adding that now, plus a blameless review invite to the PM who asked for the experiment.
+
+If you lead platform: your next incident might be 'by the book' and still wrong. Update the book.""",
             "image": None,
         },
         {
-            "text": (
-                "Junior on the team asked whether they should 'learn Kubernetes' or 'get better at SQL.' "
-                "I said: pick the problem your team is actually fighting next quarter. Generic career ladders mislead people."
-            ),
+            "text": """A junior engineer pulled me aside after planning and asked a question I've heard a hundred times in shorter form: 'Should I go deep on Kubernetes or double down on SQL this year?'
+
+I used to answer with frameworks and skill matrices. This time I asked what problem their squad will fight in Q3. They talked about slow queries in a reporting service and fear of touching Helm charts. We mapped two milestones: one month on SQL explain plans with a buddy, one spike on reading — not rewriting — our current charts.
+
+Career advice isn't one-size-fits-all. The best learning plan I've seen is tied to a real constraint your team pays for in incidents or velocity. Everything else is procrastination with a LinkedIn certificate.
+
+Happy to compare notes if you're mentoring someone early in platform work — what's worked for your folks?""",
             "image": POST_MEDIA_URLS[0],
         },
     ],
     "marcus_thompson_pm": [
         {
-            "text": (
-                "We almost built a 'manager override' for the scheduling rules. User research showed managers hated the idea — "
-                "they wanted fewer exceptions, not more power. Back to the drawing board, and honestly relieved."
-            ),
+            "text": """We spent six weeks designing a 'manager override' for scheduling rules — the story was that store managers needed flexibility when the algorithm was too strict.
+
+When we finally put paper prototypes in front of eight managers, the mood surprised me. They didn't want more power; they wanted fewer edge cases that made them look unfair to staff. One person said, quietly, 'If I override, someone posts about it on Facebook that night.'
+
+We killed the override concept and reframed the roadmap around transparency: show why a shift was proposed, let staff swap within guardrails, and give managers an audit trail instead of a magic button. Engineering pushed back on scope — fair — so we cut a different feature that had lukewarm research.
+
+The lesson I'm carrying: sometimes 'empowerment' in a PRD is actually liability in real life. Listen for the fear behind the feature request.
+
+If you've ever killed something expensive after research, how did you communicate it upward without sounding like you wasted time?""",
             "image": None,
         },
         {
-            "text": "Tip for PMs in regulated spaces: bring Legal in early on copy, not just on policy. Saves weeks.",
+            "text": """Six months ago Legal flagged copy in our mobile onboarding for a state we were about to launch in. We had already built screens, animations, the whole sprint was 'done.'
+
+The old me would have negotiated wording in Slack threads for weeks. This time I booked Legal, Design, and Compliance for a single working session with the actual strings in Figma comments. We resolved 80% of blockers live, documented the rest as a checklist for the next state rollout, and shipped two weeks later than hoped — but with zero emergency weekend rewrites.
+
+Bring Legal early on words, not only on policy documents. Saves money, saves marriages, saves whatever patience your engineers have left.""",
             "image": POST_MEDIA_URLS[1],
         },
     ],
     "priya_sharma_ml": [
         {
-            "text": (
-                "Our offline metric looked great; online, click-through barely moved. Turns out we were optimizing for the wrong slice. "
-                "Humbling week — but the partnership with merchandising is stronger now."
-            ),
+            "text": """Our offline ranking model looked like a win: NDCG up, calibration pretty, stakeholders smiling in the review deck.
+
+Then we shipped to a slice of live traffic and… almost nothing moved where it mattered — add-to-cart on long-tail categories. Two painful days later we realized we had been optimizing for users who already converted; the model barely touched cold visitors. Merchandising had been saying this in softer language for weeks; I wish I'd listened harder sooner.
+
+We regrouped with a simple rule: every metric has a name and a person who loses sleep if it lies. We rebuilt the training slice with explicit cold-start buckets, added a human spot-check ritual before large experiments, and — this mattered — put a merchandising partner in the weekly model review, not just in the launch meeting.
+
+I'm sharing this because the mistake wasn't math; it was storytelling with the wrong protagonist. If you work in applied ML: whose reality does your metric actually represent?
+
+Drop a comment if you've caught a similar mismatch — I'd love to learn what signals you watch now.""",
             "image": None,
         },
         {
-            "text": "If you're training ranking models, spend time on position bias before you tune architecture. Boring advice, still true.",
+            "text": """Interviewing candidates for our team last month, I spent almost half of each loop on a single theme: 'Tell me about a time your model looked good offline and disappointed online — what did you check first?'
+
+The best answers weren't textbook. They named specific leaks, delayed labels, inventory quirks, or UX changes that broke assumptions. The weakest answers jumped straight to architecture shopping.
+
+It reminded me to prep candidates the way I'd want to be prepped: fundamentals plus war stories. If you're interviewing for applied roles, consider weighting diagnosis over buzzwords.""",
             "image": None,
         },
     ],
     "james_rodriguez_devops": [
         {
-            "text": (
-                "Post-incident: we didn't have a single root cause — we had three contributing factors and one lucky break. "
-                "Anyone selling 'five whys to perfection' hasn't run ops at scale."
-            ),
+            "text": """We closed a sev-2 last night. The post-incident template asked for 'root cause.' I wrote three bullets and left the root cause field blank on purpose.
+
+We had: a traffic shift from a marketing campaign nobody told ops about, a cache TTL change that was technically correct but untested under that shape of load, and on-call fatigue that slowed the first rollback decision. Any single label would have made someone the villain.
+
+Instead we documented contributing factors, added a lightweight 'campaign calendar' integration for infra, and scheduled a dry-run of rollback steps with the team that owns the cache — not as punishment, as practice.
+
+If your culture still demands one neat root cause: you're optimizing for slides, not learning. Five whys is a tool, not a religion.
+
+Curious how other teams phrase this without sounding like philosophy class.""",
             "image": POST_MEDIA_URLS[2],
         },
         {
-            "text": "Shoutout to finance for approving the reserved instances we asked for in August. Capacity planning is a team sport.",
+            "text": """August was the month I finally stopped hand-waving capacity. Finance asked for reserved instances; I brought utilization trends, risk of spot interruption on batch jobs, and a worst-case cost if Black Friday behaved like two years ago.
+
+They approved less than I asked for — and the right amount. We revisited in October with real data instead of pride.
+
+Capacity planning is a relationship between engineering credibility and finance trust. Charts help; honesty helps more.""",
             "image": None,
         },
     ],
     "aisha_okafor_design": [
         {
-            "text": (
-                "Accessibility audit on our patient intake form: 14 issues, half were label/input mismatches. "
-                "Fixing them reduced support calls from clinics. Design details are business details."
-            ),
+            "text": """We ran an accessibility audit on our clinic intake flow expecting a few color-contrast tweaks. Fourteen issues came back. Half were embarrassingly basic: labels not wired to inputs, error text that only changed color, focus traps in modals that broke on mobile.
+
+I was defensive for about ten minutes — then I called our CS lead and asked for the last twenty tickets that mentioned 'couldn't finish form.' The pattern matched the audit.
+
+We fixed the blockers in two sprints, measured support volume, and saw a real drop — not viral LinkedIn numbers, but enough that nurses stopped apologizing on the phone for 'the computer.'
+
+Design quality isn't only what wins awards; it's what stops someone from feeling stupid while they're trying to care for patients.
+
+If you're building health-adjacent products: fight for time on forms. They're where trust lives or dies.""",
             "image": None,
         },
         {
-            "text": "Running a 45-min Figma session for customer success tomorrow — they asked to learn components. Excited.",
+            "text": """Tomorrow I'm running a 45-minute Figma walkthrough for our customer success team — not 'design 101,' but how to find the source of truth for components so they stop screenshotting six-month-old screens in tickets.
+
+I used to think enablement was extra. Now I see it as defect prevention. Every hour we spend aligning language between CS and Design saves three hours of triage.
+
+If you've run similar sessions, what actually landed? I'm stealing good ideas.""",
             "image": POST_MEDIA_URLS[3],
         },
     ],
     "liam_walsh_backend": [
         {
-            "text": (
-                "Webhook partner changed their retry policy without telling us. We handled it, but I'm drafting a clearer SLA section "
-                "for the next contract. Communication beats clever code."
-            ),
+            "text": """Our largest webhook partner changed retry intervals without a changelog entry. Subscriptions started stacking duplicate events at the edges; finance noticed before engineering did — not a great moment.
+
+We hotfixed deduplication keys and backoff, then I did something I should have done a year ago: scheduled a quarterly sync with their integrations team, wrote SLA language into the contract draft for notification of behavioral changes, and built a dashboard that shows 'partner behavior drift' as a first-class alert.
+
+Clever code saved the weekend; boring process might save the next quarter.
+
+If you own integrations: when did you last read your partner's docs like a skeptic, not a believer?""",
             "image": None,
         },
         {
-            "text": "Django admin saved us again for an internal ops task. Sometimes the boring tool is the right tool.",
+            "text": """Internal ops asked for a tool to replay failed payouts for review. Part of me wanted a microservice; the adult in the room used Django admin with tight permissions and audit logs.
+
+Two weeks later they're exporting CSVs for compliance without opening tickets to my team. Not glamorous — effective.
+
+Sometimes the right architecture is the one your org can operate when you're on holiday.""",
             "image": None,
         },
     ],
     "mei_zhang_ai": [
         {
-            "text": (
-                "We turned off a 'helpful' suggestion model after reps said it added cognitive load. Metrics aren't the whole story — "
-                "listen to the people on the phone."
-            ),
+            "text": """We shipped an assistive drafting feature for support reps — suggested replies based on ticket context. Offline evals looked strong; pilot NPS was fine.
+
+Then I sat with four reps for two hours. Half of them said the suggestions made them slower because they had to mentally 'undo' confident-sounding wrong text before sending. A/B said they'd trust it more if we showed confidence and sources, even if that meant fewer suggestions.
+
+We turned the feature off for a week — politically scary — and relaunched a simpler version: shorter snippets, explicit 'use / edit / ignore,' and a weekly feedback button that actually routes to me.
+
+The takeaway I want to repeat: the metric isn't clicks; it's whether humans feel respected at work. Models serve people, not dashboards.
+
+If you build copilots: when did you last watch someone use your product with their real queue, not a demo script?""",
             "image": None,
         },
         {
-            "text": "Writing eval sets is unglamorous work. If your team skips it, you'll pay in production weirdness.",
+            "text": """Spent three afternoons this month labeling edge cases for eval sets — duplicate tickets, sarcasm, multilingual fragments. Nobody claps for that work in roadmap reviews.
+
+Then we caught a regression before it hit 10% of traffic because the eval moved. I'll take the boring win.
+
+If your team skips eval maintenance: you're not saving time; you're borrowing incidents.""",
             "image": POST_MEDIA_URLS[4],
         },
     ],
     "daniel_osei_frontend": [
         {
-            "text": (
-                "Shipped keyboard navigation fixes for our claims table — one insurance partner actually sent a thank-you email. "
-                "Rare and motivating."
-            ),
+            "text": """We shipped keyboard navigation and visible focus states across our claims review table — work that sounded small until we realized partners had been tabbing into invisible traps for years.
+
+A week later an email arrived from an insurance ops lead I'd never met. It wasn't long; it said thank you, named two people on their team with motor difficulties who could finally do reviews without a mouse.
+
+I printed that email for myself — not for the wall of fame, as a reminder that accessibility tickets are revenue and dignity, not polish.
+
+If you're debating whether to prioritize a11y this quarter: find one high-friction workflow and fix it end-to-end. The feedback might be quieter than a viral post, but it lands harder.""",
             "image": None,
         },
         {
-            "text": "Working from Accra with CET overlap means my mornings are quiet. I've learned to protect deep work then.",
+            "text": """Working from Accra with CET overlap means my mornings are mine if I defend them. I stopped pretending I could do deep work while half of Europe wakes up and pings.
+
+I blocked 8–10 local for implementation, moved standup later once, and told my manager honestly when a school morning blew the plan. The team adjusted — not perfectly, but enough that I stopped lying in Slack statuses.
+
+Remote work isn't about being always on; it's about negotiating reality with humans who also have calendars.""",
             "image": None,
         },
     ],
     "emma_sullivan_sec": [
         {
-            "text": (
-                "Ran a threat modeling session with the checkout squad — developers brought better abuse cases than the slide deck. "
-                "Security works when it's a conversation, not a gate."
-            ),
+            "text": """We ran threat modeling for checkout with developers, not at them. I brought a thin STRIDE outline; they brought nightmares — gift card stacking, race conditions on promo application, abuse of partial refunds.
+
+Within an hour the whiteboard had scenarios our slide deck missed entirely. We prioritized two fixes for the next sprint, filed three backlog items with clear owners, and scheduled a retest after deployment.
+
+Security as a gate gets eye rolls. Security as a shared imagination exercise gets fixes.
+
+If you're in AppSec: try pizza, markers, and 'how would you steal your own feature?' before you open Burp.""",
             "image": POST_MEDIA_URLS[5],
         },
         {
-            "text": "If you're new to AppSec: learn to read stack traces calmly. Half of triage is patience.",
+            "text": """When I started, I thought triage speed meant typing fast. Now I know it means breathing once, opening the stack trace, and refusing to panic when the first line looks alien.
+
+Half of findings are configuration ghosts; the other half need a calm human to trace data, not ego.
+
+If you're new: your job isn't to know everything on day one. It's to document what you checked so the next person starts smarter.""",
             "image": None,
         },
     ],
     "arjun_mehta_fullstack": [
         {
-            "text": (
-                "Encoding queue backlog last night — not glamorous, but we added a temporary worker fleet and cleared it by morning. "
-                "Thanks to whoever documented the runbook last year."
-            ),
+            "text": """The encoding queue backed up at midnight — classic story. Marketing dropped a surprise content batch; our autoscaler hesitated; on-call woke up tired.
+
+We could have thrown money at nodes. Instead we followed the runbook someone wrote last year: verify upstream ingest, check stuck jobs by codec, drain poison messages, scale workers only after the queue head looked healthy. By morning the backlog cleared without a second incident.
+
+I don't know who wrote that runbook — if you're reading this, thank you. Documentation is love.
+
+If you own pipelines: when someone saves you with a checklist, add one line to that checklist so the next fire is shorter.""",
             "image": None,
         },
         {
-            "text": "Mentoring note: explaining distributed systems with a coffee shop analogy still works in 2026.",
+            "text": """Mentored a bootcamp grad this month who was drowning in 'learn Kafka, learn K8s, learn everything' anxiety.
+
+We drew a coffee shop on the whiteboard — orders, queue, baristas, overflow line — and mapped it to our actual services. Their shoulders dropped. They asked better questions the next day.
+
+Fundamentals wear fancy names in job posts. Teach the boring map first; the buzzwords attach faster afterward.""",
             "image": None,
         },
     ],

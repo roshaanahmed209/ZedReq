@@ -349,155 +349,215 @@ USERS = [
 USER_POST_CANDIDATES: dict[str, list[dict]] = {
     "danielle_okonkwo_hr": [
         {
-            "text": "If your interview process has seven rounds and a 'culture chat' that nobody can define, you're not hiring carefully — you're just slow.\n\nWe cut ours to four touchpoints last year and quality of hire went up. Candidates talk.",
+            "text": """If your interview process has seven rounds and a "culture chat" that nobody can define, you're not hiring carefully — you're just slow.
+
+Last year our TA lead and I mapped every touchpoint candidates actually experienced. Three steps were legacy from when we copied a tech-company playbook we don't need. Two steps duplicated the same competency screen. We cut to four intentional conversations: recruiter screen, hiring manager depth, peer panel with a real work sample, and a final values conversation with clear rubrics.
+
+Candidates started finishing in under two weeks instead of six. Quality of hire didn't tank — our hiring manager satisfaction scores went up because they weren't fatigued before day one.
+
+What I'd do differently if I started again: involve nursing directors earlier so clinical credibility shows up in the first message, not the third.
+
+If you're in HR in healthcare: how many steps exist because of fear, not evidence?""",
             "image": None,
         },
         {
-            "text": "Night shift nurses deserve the same professional development budget as days. Full stop.\n\nWe finally aligned stipends and the number of people signing up for CEUs on nights doubled. Wasn't magic — was respect.",
+            "text": """Night shift nurses deserve the same professional development budget as days. Full stop.
+
+For years our CEU stipend was effectively a day-shift perk — classes were scheduled when nights were sleeping. We piloted asynchronous modules plus two paid on-shift education hours per month. Uptake on nights doubled in a quarter. Retention conversations got easier because people stopped feeling like second-class citizens on their own units.
+
+The pushback I expected from finance was real; we showed reduced OT from coverage gaps tied to burnout. Not perfect science, but enough to extend the pilot.
+
+Equity isn't a poster; it's whether someone can access growth without quitting their life.""",
             "image": PM[3],
         },
         {
-            "text": "Me explaining to a hiring manager why we can't list 'young and energetic' in the job posting:\n\nThem: 'But we need someone who can keep up'\n\nMe: 'Then write what the job actually requires.'",
+            "text": """True story from last Tuesday: a hiring manager wanted the phrase "young and energetic" in a posting for a patient transport role.
+
+I walked through the legal risk, then asked what problem they were solving — turns out they needed someone who could lift safely and pass a physical. We rewrote the posting around OSHA-aligned requirements and shift stamina. They got a stronger slate, including two candidates over 50 who crushed the work sample.
+
+My takeaway: push back with a question, not a lecture. People usually have a legitimate worry hiding behind lazy language.""",
             "image": None,
         },
         {
-            "text": "Year-end open enrollment wrapped. I owe our benefits broker a coffee the size of my head.\n\nIf you're in Toledo area HR and want to swap notes on high-deductible uptake, my DMs are open.",
+            "text": """Open enrollment closed Friday. I owe our benefits broker something caffeinated the size of my head.
+
+This year we added office hours in the cafeteria with translators for two languages our night staff actually speaks. Enrollment errors dropped; calls to my team dropped. Small change, loud relief.
+
+If you're in Toledo-area HR and want to compare notes on HDHP uptake or communication tactics, DM me — always learning.""",
             "image": PM[5],
         },
         {
-            "text": "Unpopular opinion: pizza in the break room is not a retention strategy. It's lunch.\n\nPay people fairly, fix the schedule, and listen when someone says they're drowning.",
+            "text": """Unpopular opinion: pizza in the break room is not a retention strategy. It's lunch.
+
+Last month a nurse told me she was drowning on back-to-back twelves while we celebrated "culture week" with snacks. I didn't fix her schedule in one conversation — but I did escalate staffing ratios with data from our own overtime logs. Pizza stayed; we also moved two float positions.
+
+Listen for the sentence under the thank-you. That's usually the real work.""",
             "image": None,
-        },
-        {
-            "text": "Shoutout to our EVS team — the hospital doesn't run without you and we don't say it enough.",
-            "image": PM[4],
-        },
-        {
-            "text": "Posted a role for a talent acquisition coordinator. Already got 200 applications in 48 hours.\n\nI'm reading every single one this weekend because that's the job.",
-            "image": None,
-        },
-        {
-            "text": "Reminder (mostly to myself): you are allowed to log off after an employee relations case that drained you. The email will still be there Monday.",
-            "image": PM[0],
         },
     ],
     "ryan_mcelroy_supply": [
         {
-            "text": "Supplier missed a delivery window by 6 hours and threw off three production lines. Not angry — just tired.\n\nIf you sell into cold chain, communicate early when you're slipping. We can reroute. Silence costs everyone money.",
+            "text": """A supplier missed a delivery window by six hours and threw off three production lines. I wasn't angry — I was tired in that specific way that makes you calm.
+
+I called the account manager instead of firing off email. Turns out their dock had a refrigeration alarm failure; they were embarrassed and already rerouting. We split the cost of an expedited lane for one pallet and documented a new escalation path for temperature-sensitive delays.
+
+Silence would have cost us more than the lane. If you sell into cold chain: tell your buyers early when you're slipping. We can often reroute — we can't read minds.""",
             "image": None,
         },
         {
-            "text": "Spent my morning in a -10°F dock comparing pallet wrap specs. Glamorous career, I know.\n\nActually learned something: the 'cheaper' wrap was costing us more in rework.",
+            "text": """I spent yesterday morning in a -10°F dock comparing pallet wrap specs. Glamorous career, I know.
+
+Finance pushed the cheaper roll. Operations showed me rescan data — more tears, more rework, more temp labor. We ran a two-week A/B on one lane. The "expensive" wrap saved money once you counted labor and shrink.
+
+Spreadsheets lie until you watch the floor. I should have done the walk sooner.""",
             "image": PM[1],
         },
         {
-            "text": "Anyone else drowning in year-end inventory counts or is that just me and my coffee machine?",
-            "image": PM[2],
-        },
-        {
-            "text": "Hired a temp buyer while we're backfilling a role. She's ex-Army logistics and already caught a duplicate PO nobody else noticed.",
+            "text": """We brought in a temp buyer while backfilling a permanent role. She's ex-Army logistics — first week she caught a duplicate PO that three of us had stared at.
+
+Sometimes the best hire isn't the fanciest degree; it's someone trained to check assumptions when everyone else is rushing.
+
+If you're hiring in supply chain: look for systems thinking and nerves of steel, not just category keywords.""",
             "image": None,
         },
         {
-            "text": "Trade tip: if your vendor rep only calls when they want volume, get a new rep.\n\nGood partners show up when volumes are down too.",
-            "image": None,
-        },
-        {
-            "text": "Boat update: replaced the bilge pump. Still leaks a little. Still love it.",
+            "text": """Boat update: replaced the bilge pump. Still leaks a little when I'm dramatic about it. Still love it.
+
+Why post this on LinkedIn? Because careers aren't linear glamour — they're maintenance, patience, and fixing what you can on a Sunday before Monday's inventory count.
+
+Also: if you know a good marine electrician near Grand Rapids, my inbox is open.""",
             "image": PM[3],
         },
         {
-            "text": "Driving back from Lansing with a trailer full of rejected cheese crates (long story). Midwest logistics is just vibes and DOT weigh stations.",
+            "text": """Drove back from Lansing with a trailer of rejected cheese crates — long story involving specs, humidity, and a label font nobody agreed on.
+
+Midwest logistics is part DOT weigh stations, part group chat apologies, part showing up the next day anyway.
+
+What I handled differently this time: I called the customer before they saw the truck turn around. Trust recovered faster than the last incident when we hid behind email.""",
             "image": None,
         },
     ],
     "nate_kim_pe": [
         {
-            "text": "Field visit today: contractor installed the wrong anchor embed depth on a brace frame. Caught it before pour.\n\nThis is why you show up in person sometimes instead of only redlining PDFs from your desk.",
+            "text": """Field visit yesterday: contractor had installed the wrong anchor embed depth on a brace frame. Caught it before pour — not because I'm a genius, because someone on site texted a photo when it felt "off."
+
+I used to live in PDFs. Now I start with eyes on steel. The code is non-negotiable; the conversation with trades goes better when you show up before concrete is expensive.
+
+If you're early in structural: learn to listen to supers. They know the lie of the land better than your laptop.""",
             "image": PM[2],
         },
         {
-            "text": "Studying for SE2 and my brain is mostly equations and guilt about not studying more.\n\nIf you took it recently — coffee on me in Walker's Point if you want to commiserate.",
+            "text": """Studying for SE2. My brain is equations, guilt, and more guilt.
+
+What helps: study groups that admit confusion, not performance. I'm buying coffee in Walker's Point for anyone who took structural II recently and wants to commiserate — no resume swap required.
+
+Exams measure persistence as much as intelligence. Still nerve-wracking.""",
             "image": None,
         },
         {
-            "text": "Small firm perk: I get to see a project from schematic design through the ribbon cutting. Big firm friends tell me they miss that.",
+            "text": """Small firm perk: I see projects from schematic design to ribbon cutting. Big-firm friends say they miss that end-to-end ownership.
+
+Tradeoff is longer hours and wearing more hats. Win is walking past a fire station with my kids and saying "I helped hold that roof up."
+
+If you're choosing firm size: ask what feedback loop you need to feel sane.""",
             "image": PM[0],
         },
         {
-            "text": "Owner asked if we could 'value engineer' out shear walls. I sent a one-paragraph email with a diagram and no jargon. Sometimes that's all it takes.",
+            "text": """Owner asked if we could "value engineer" out shear walls. I sent one email: short paragraph, simple diagram, code reference, and two options that actually saved money without deleting lateral resistance.
+
+Sometimes panic wants paragraphs of jargon. Clarity is faster — and safer.""",
             "image": None,
         },
         {
-            "text": "Rain delay on site means I finally cleaned up my Revit template. Yes, I'm fun at parties.",
-            "image": PM[4],
-        },
-        {
-            "text": "Habitat build this Saturday — if you're local and free, we need bodies for sheathing. No PE license required 🙂",
+            "text": """Habitat build this Saturday — need bodies for sheathing. No PE license required; just gloves and willingness to take direction.
+
+I show up because structures should serve people, not only balance sheets. Also: hammering is cheaper therapy than my gym membership.""",
             "image": PM[5],
         },
     ],
     "vanessa_rios_mktg": [
         {
-            "text": "Our booth at Pack Expo was next to a robot arm demo and nobody cared about our sample boxes. So we leaned into it — handed out stress toys shaped like tiny cartons.\n\nSometimes boring products need silly swag.",
+            "text": """Pack Expo: our booth sat next to a flashy robot arm demo. Nobody cared about our corrugated samples for the first hour.
+
+We leaned in — handed out stress toys shaped like tiny cartons, ran a "guess the burst strength" game with a cheap tester, and suddenly people stayed long enough to hear what we actually sell.
+
+Sometimes boring products need silly doors to open serious conversations.
+
+Marketing lesson: attention first, spec sheet second.""",
             "image": PM[4],
         },
         {
-            "text": "Wrote a case study that was honest about a delayed shipment. Sales was nervous. The prospect said it was the reason they trusted us.\n\nTransparency > polish.",
+            "text": """I wrote a case study that admitted a delayed shipment — sales was terrified.
+
+The prospect later told our rep that honesty was why they trusted us. Transparency beat polish.
+
+We're not perfect at logistics; we're rigorous about communication. That's the story worth telling.""",
             "image": None,
         },
         {
-            "text": "If your LinkedIn headline says 'storyteller' and you sell corrugated, I'm not mad — I'm just confused what story we're telling.\n\n(Mine says Marketing Manager. Boring wins.)",
-            "image": None,
-        },
-        {
-            "text": "Hiring a marketing coordinator. Must like spreadsheets, tolerate trade shows, and not roll eyes when I say 'dieline' for the 40th time.\n\nElk Grove Village / hybrid.",
+            "text": """Hiring a marketing coordinator: spreadsheets, trade shows, tolerance for the word "dieline," sense of humor required. Elk Grove Village / hybrid.
+
+I'll read every application myself for the first pass — not because I'm a hero, because I want someone who reads emails from customers the way I'd want mine read.
+
+DM if you want the JD; please share with detail-oriented humans in your network.""",
             "image": PM[0],
         },
         {
-            "text": "Cold email I got today: 'Revolutionize your packaging stack with AI.'\n\nBuddy, we need pallets that don't crush in humidity. Save the revolution for someone else's inbox.",
+            "text": """Cold email of the week: "Revolutionize your packaging stack with AI."
+
+Buddy, we need pallets that don't crush in humidity during a July unload. Save the revolution for someone else's inbox.
+
+If you sell to industrial buyers: lead with a problem we actually have on the dock, not a keynote slide.""",
             "image": None,
         },
         {
-            "text": "Printed spec wrong on a rush quote — caught it at 10pm because the client asked one clarifying question. Shoutout to clients who read the fine print.",
+            "text": """I misprinted a spec on a rush quote — caught it at 10pm because the client asked one clarifying question instead of assuming.
+
+Shoutout to buyers who read fine print. You saved both of us a very expensive Monday.
+
+I'm adding a peer review step for anything under 24-hour turnaround. Pride isn't worth scrap.""",
             "image": PM[2],
-        },
-        {
-            "text": "UIC night class gang — who's going to the alumni mixer next month?",
-            "image": PM[5],
         },
     ],
     "tony_gallagher_acct": [
         {
-            "text": "Month-end close on a short week because of a holiday. My closing checklist is taped to the monitor like a hostage note.\n\nWe'll get there. We always do.",
+            "text": """Month-end close on a short week thanks to a holiday. My checklist is taped to the monitor like a hostage note.
+
+We'll get there — we always do — because the field supers need payroll funded and subs need lien waivers clean.
+
+If you're in accounting: solidarity. If you're not: thank your controller quietly; they're holding chaos in Excel.""",
             "image": None,
         },
         {
-            "text": "Project manager tried to expense a $400 'team building' dinner without a job code. Buddy. I like you. Use the code.",
+            "text": """PM tried to expense a $400 team dinner without a job code. I like the guy — which is why I walked to his desk instead of rejecting it anonymously.
+
+Ten minutes later we had the right code and a saved template for next time. Relationship intact, audit trail intact.
+
+Policy without conversation breeds resentment. Conversation without policy breeds chaos. Do both.""",
             "image": None,
         },
         {
-            "text": "Union fringe rates changed Jan 1. Payroll and I have been in the same conference room for two days. Send snacks.",
+            "text": """Union fringe rates changed January 1. Payroll and I lived in the same conference room for two days. Send snacks next time; we ran out of pretzels.
+
+Construction accounting isn't glamorous — it's translation between agreements, job costing, and reality on site.
+
+CPA friends in GC work: how are you handling embedded service leases on equipment? I want war stories, not theory.""",
             "image": PM[1],
         },
         {
-            "text": "CPA friends in construction — how are you handling the new lease standard on equipment with embedded service? DMs open. Not looking for theory; looking for what actually works on Sage.",
-            "image": None,
-        },
-        {
-            "text": "Took the kids to a job site Saturday (hard hats, the whole thing). Youngest asked why concrete takes so long to dry. I had no good answer.",
+            "text": """Took the kids to a job site Saturday — hard hats, the whole thing. Youngest asked why concrete takes so long to dry.
+
+I had no good answer that fits in a car ride. Parenting and accounting: both involve admitting what you don't know, then looking it up together.
+
+Also: safety briefing with children is excellent audience training.""",
             "image": PM[3],
         },
         {
-            "text": "Auditors showed up prepared this year. I respect it. Still stressful. Still done.",
-            "image": PM[4],
-        },
-        {
-            "text": "If your job costing report doesn't match the field superintendent's notebook, trust the notebook first — then reconcile.",
-            "image": None,
-        },
-        {
-            "text": "Bank finally approved a modest line increase. Means we can bid the school addition without losing sleep over bonding. Small wins.",
+            "text": """Bank approved a modest line increase — not flashy, but it means we can bid the school addition without losing sleep over bonding capacity.
+
+Small win on paper; huge relief in Monday estimating meetings.
+
+Grateful for lenders who understand family contractors aren't spreadsheets with legs.""",
             "image": PM[0],
         },
     ],
@@ -508,8 +568,9 @@ def pick_posts_for_user(username: str, rng: random.Random) -> list[dict]:
     pool = USER_POST_CANDIDATES.get(username, [])
     if not pool:
         return []
-    n_max = min(len(pool), 7)
-    n_min = min(3, n_max)
+    # Fewer posts per user — each candidate is long-form (LinkedIn-style narrative).
+    n_max = min(len(pool), 4)
+    n_min = min(2, n_max)
     k = rng.randint(n_min, n_max)
     shuffled = pool[:]
     rng.shuffle(shuffled)

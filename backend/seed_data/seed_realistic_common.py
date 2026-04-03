@@ -55,141 +55,161 @@ POST_MEDIA_URLS = [
     ("https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80", "image"),
 ]
 
-# Text-only LinkedIn cadence: personal moments, advice, mundane wins, questions
+# Long-form LinkedIn-style narratives (original copy): situation → tension → what we did → outcome / lesson.
+# Augmentation adds fewer of these per user because each post is lengthy.
 TEXT_POST_POOL: list[str] = [
-    "Coffee with a former teammate this morning — we talked more about kids and sleep schedules than work. Still valuable.",
-    "If you're job searching: send the thank-you note. It doesn't guarantee anything, but people remember courtesy.",
-    "Rough week. Logging off early today. The deck will still be there Monday.",
-    "Reminder: your calendar doesn't have to look like a game of Tetris to prove you're productive.",
-    "Read something yesterday that stuck with me — 'competence builds confidence faster than the reverse.' Still thinking about it.",
-    "Shoutout to whoever fixed the flaky CI job. You saved the team a lot of collective sighing.",
-    "Three things that helped me this quarter: a paper notebook, saying no once a week, and one walk without a podcast.",
-    "Not every meeting needs slides. Sometimes a doc link and 25 minutes is enough.",
-    "Parent-teacher night ran long. Grateful for managers who don't ping after 7 unless it's urgent.",
-    "If you're early career and afraid to ask questions — ask. The senior people who judge you for it aren't the ones you want to learn from anyway.",
-    "Took PTO for a long weekend. Phone stayed in a drawer. Highly recommend.",
-    "We shipped something small this week that only internal teams see. Still proud — it removes a daily annoyance for ~200 people.",
-    "Hot take: most 'urgent' emails aren't urgent tomorrow morning either.",
-    "Volunteered at a resume workshop last Saturday. Met someone switching careers at 41. Rooting for them hard.",
-    "My dog learned nothing new this week but looked supportive during standup. Good enough.",
-    "Budget season is messy. If you're in finance adjacent roles — solidarity.",
-    "Learned that our vendor contract auto-renews in Q4. Added a calendar reminder 60 days out. Future me says thanks.",
-    "Grateful post: a colleague covered for me when daycare called. Team culture shows up in moments like that.",
-    "Trying to leave Slack statuses honest — 'focused' actually means focused.",
-    "If you manage people: tell them what you appreciated specifically, not just 'good job.'",
-    "Rain delay on my commute meant I finally listened to that podcast episode everyone recommended. Worth it.",
-    "Year-end reflection — I said 'I don't know' more often this year and things got better, not worse.",
-    "Someone on the team proposed we cancel a recurring meeting nobody needed. Hero behavior.",
-    "Working from the kitchen table today because the office AC sounds like a helicopter. Small joys.",
-    "Posted a dumb question in the internal forum and got three helpful answers in an hour. Culture matters.",
-    "If you're writing specs: one clear example beats five paragraphs of theory.",
-    "Took a mentee for lunch (their pick, cheap place). They asked better questions than some VPs I've met.",
-    "Deadlines slip. How you communicate the slip is what people remember.",
-    "Signed up for a night class. Nervous and excited in equal measure.",
-    "We lost a bid. Debrief was blame-free and focused on what we'd change next time. That's how you keep good people.",
-    "Trying to reply to emails in under 24h even when the answer is 'I'll get back to you Tuesday.'",
-    "My plant survived six months. This is not a metaphor. I'm just happy.",
-    "Conference hallway conversations > half the sessions. Fight me (politely).",
-    "If onboarding docs are outdated, fix one page this week. Compound interest.",
-    "Said no to a project that stretched us too thin. Hard conversation. Right call.",
-    "Bike commute resumed — forgot how much clearer my head feels afterward.",
-    "Celebrated a teammate's promotion properly. Lifts the whole floor.",
-    "Writing this while waiting for a build. Classic.",
-    "Therapy isn't a career strategy but it helps my judgment at work. Normalize it.",
-    "We whiteboarded for 20 minutes and solved what email couldn't in two weeks.",
-    "Snow day = kids home = meeting on mute with occasional chaos. Thanks for grace, team.",
-    "Reminder to file expenses before finance chases you. Speaking for a friend.",
-    "Good 1:1s end with one clear next step. Everything else is a nice chat.",
-    "Industry news is loud this week. Stepping back to focus on customers and teammates.",
-    "Left work on time twice this week. Trying to make it a habit.",
-    "If you're hiring: speed matters. Good candidates have options.",
-    "Backup your stuff. Learned the annoying way last year. You're welcome.",
-    "Quietly fixed a typo in the wiki that confused new hires for months. Felt good.",
-    "Networking doesn't have to mean events — sometimes it's one thoughtful DM.",
-    "Grateful for a boss who asks 'what do you need from me' and listens.",
-    "End of quarter always feels like a sprint. Hydrate and eat something green. Or don't — I'm not your mom.",
-    "Someone thanked me in public for help I barely remembered giving. Be that person when you can.",
-    "Trying to read one non-work book a month. January: done. February: optimistic.",
-    "If the meeting could be an email, send the email. Revolutionary, I know.",
-    "Our ERG hosted a talk on financial wellness. Packed room. People are hungry for practical support.",
-    "Small win: cleared inbox to zero for exactly eleven minutes.",
-    "Mentor told me to document decisions, not just outcomes. Game changer for reviews.",
-    "Weekend hike cleared my head. Back Monday with slightly fewer sharp edges.",
-    "Apologized for a curt message. Relationship repair > being technically right.",
-    "New hire asked why we do something a certain way. Good question — we updated the doc.",
-    "Burnout isn't a badge. Rest is part of the job.",
-    "Celebrated a vendor who actually hit a deadline. Positive reinforcement works on adults too.",
-    "Trying 'no meeting Wednesdays.' Week one: partial success. Still calling it a win.",
-    "If you're presenting: rehearse once out loud. Catches awkward transitions every time.",
-    "Team lunch was awkward at first, then someone mentioned cats. Instant bonding.",
-    "Reflecting on a mistake from last month. Owning it openly built more trust than hiding it would have.",
-    "Coffee machine broke. Minor crisis. We survived.",
-    "Posted an internal job opening — please share with anyone who's been on the fence about applying.",
-    "Grateful the office has decent headphones. Open floor plans need diplomacy.",
-    "Sometimes the right answer is 'let's sleep on it.'",
-    "Helped someone prep for an interview at another company. Rooting for them even if we lose a great person.",
-    "Quarterly planning is messy. Clear priorities > long wishlists.",
-    "Trying to leave Slack threads with a summary when I close a topic. Small courtesy.",
-    "If you work remotely: change rooms once a day. Sounds silly, helps focus.",
-    "Acknowledged a mistake in a group channel. The relief in the replies was visible.",
-    "Good feedback is specific and timely. Vague praise feels hollow.",
-    "Weekend project: organized home office cables. Monday me is already calmer.",
-    "We debated a feature for weeks. User research settled it in 45 minutes.",
-    "Shoutout to IT for the quick laptop swap. Downtime under an hour.",
-    "Trying not to schedule meetings before 9:30. Not everyone is a morning person.",
-    "If you're stuck: talk to someone outside your team. Fresh eyes spot assumptions.",
-    "Left a thank-you note for the cleaning crew. They keep the place humane.",
-    "Sometimes progress is invisible. Document small wins for yourself.",
-    "Negotiated a deadline instead of silently drowning. Should have done it sooner.",
-    "Team retro was actually useful — we picked two experiments for next sprint.",
-    "Rain + deadline day = mood. Still shipped.",
-    "If onboarding buddy programs exist, volunteer. You learn as much as they do.",
-    "Celebrated a quiet release — no drama, no rollback. Those count.",
-    "Trying to batch email twice a day. Inbox anxiety down slightly.",
-    "Good design is when nobody tweets about it because it just works.",
-    "Someone brought donuts. Morale scientifically improved.",
-    "If you're a manager reading this: block focus time on your calendar too. Model it.",
-    "Wrote a doc instead of a meeting. Three people commented async. Efficient.",
-    "Grateful for flexible hours on dentist day. Small policies matter.",
-    "We had a hard customer conversation. Handled with empathy. Proud of the team.",
-    "Trying one new recipe a week. Unrelated to work but brain needs variety.",
-    "If you ghost candidates, they remember. Communicate even when it's a no.",
-    "Sprint goal felt ambitious. We hit 80% and learned what to cut. Honest retro helped.",
-    "Coffee chat turned into a referral for someone great. Network quietly.",
-    "Sometimes the best productivity hack is closing the laptop.",
-    "Documented a runbook after an incident. Future on-call you sends thanks.",
-    "If you're senior: make space in meetings for quieter voices.",
-    "Weekend: family, chores, zero Slack. Monday energy noticeably better.",
-    "We simplified a form — completion rate jumped. Small UX wins compound.",
-    "Trying to give feedback in person when it's nuanced. Tone gets lost in text.",
-    "Applauded someone for pushing back on scope creep. Protect the team.",
-    "If you're learning something new: find a buddy. Accountability helps.",
-    "Office dog visited. Productivity questionable. Happiness improved.",
-    "Reflected on what I'd tell myself five years ago: ask for help sooner.",
-    "Good leaders say 'I don't know' and then find out.",
-    "We celebrated a launch with bad pizza and genuine smiles. I'll take it.",
-    "Trying to end days with a 2-line journal: one win, one tension. Patterns emerge.",
-    "If your team is distributed: rotate meeting times. Fairness matters.",
-    "Someone shared a failure story in all-hands. More of that, please.",
-    "Hydrated. Stretched. Emailed. Adulting complete.",
-    "Quarterly OKR check — we're green on two, yellow on one. Adjusting plan, not panicking.",
-    "If you're new: over-communicate early. You can't read the room you don't know yet.",
-    "Grateful for teammates who cover when life happens. Pay it forward.",
-    "Trying 'walk and think' instead of 'stare at screen and panic.'",
-    "We cut a feature nobody used. Data-backed decisions feel good.",
-    "Someone asked for async updates before a meeting. Saved 20 minutes for everyone.",
-    "If you're burned out: tell someone safe. Silence makes it heavier.",
-    "Small team ritual: Friday wins thread. Cheesy but it lands.",
-    "Negotiated scope with stakeholders. Everyone left aligned. Rare and nice.",
-    "Trying to praise effort in public, critique in private. Still practicing.",
-    "Backup worked when I needed it. Test restores, people.",
-    "If you hire: write the job post like you're talking to one person.",
-    "Community event this weekend — met neighbors I usually only nod at. Felt human.",
-    "We improved error messages users actually see. Support tickets dropped. Obvious in hindsight.",
-    "Trying one deep-work block daily. Phone in another room. Works half the time — still worth it.",
-    "If you're leading a project: name a deputy. Bus factor is real.",
-    "Grateful for clear writing. Saves meetings.",
-    "End of thread: be kind to yourself this week.",
+    """Two Tuesdays ago, our checkout API started returning intermittent 503s during lunch rush. Nothing had shipped that morning — or so we thought.
+
+I pulled three of us into a war room: on-call, the engineer who last touched caching, and a product partner so we didn't optimize for the wrong thing. For the first hour we chased ghosts: one dashboard said CPU was fine, another hinted at connection pool exhaustion. We stopped guessing and reproduced traffic in staging with the same feature flags as prod.
+
+What actually happened: a background job had started holding DB connections longer after a config tweak the night before. Under combined load, the API tier starved. We rolled back the config, added a guardrail alert on pool wait time, and wrote a two-page incident note the same day.
+
+What I'm proud of isn't the fix — it's that nobody threw blame across teams. We named the gap in our change process and added a 24h soak checklist for pool-related settings.
+
+If you're running a similar stack: watch connection wait metrics as closely as you watch CPU. The failure mode hides until it's expensive.""",
+    """I used to think the best 1:1s were the ones where my report walked away inspired. I've changed my mind.
+
+Last month one of my engineers seemed off — quieter in standup, slower on reviews. I almost sent a generic 'how can I help' message. Instead I blocked 45 minutes, turned my camera on, and asked one specific question: 'What's eating the most mental energy right now?'
+
+They talked about a parent in hospital and unrealistic deadlines on a side project with another team. We didn't solve everything in one conversation. We did agree on three concrete changes: I escalated the cross-team pressure, we shifted one deadline, and they took a day of PTO without guilt.
+
+The lesson for me: inspiration is cheap; clarity and follow-through are respect. If you're a manager, try swapping one motivational speech for one boring, specific problem you remove from someone's plate.""",
+    """I interviewed for a senior role last quarter and walked out genuinely surprised — not by the algorithms, but by how much time we spent on how I'd debug a model that looked good offline and failed in production.
+
+The panel asked about leakage, delayed labels, and how I'd communicate uncertainty to non-technical stakeholders. I had prepared LeetCode; I should have prepared stories.
+
+Here's what I changed in how I prep now:
+• I keep a one-pager of three real projects: goal, metric, what broke, what I learned.
+• I practice explaining trade-offs in plain English — latency vs accuracy, cost vs coverage.
+• I ask interviewers how they measure 'success' for the role in the first 90 days.
+
+Offers aren't guaranteed, but my last two conversations felt more mutual and less like a test. If you're job searching, consider spending as much time on narrative as on flashcards.""",
+    """We almost shipped a 'smart default' that would have auto-selected shipping options for small business customers. The model looked great in notebooks.
+
+Then we sat with five merchants for ninety minutes. Three of them said the same thing in different words: 'If you choose for me and it's wrong, my customer blames me — not your algorithm.' We killed the auto-select and shipped transparent recommendations with one-click apply instead. Conversion dipped slightly in the experiment, but support tickets and churn risk dropped more than we expected.
+
+I'm sharing this because it's easy to fall in love with automation scores. Sometimes the right product is slower, more visible, and more human. Our PM wrote that sentence on the wall of our team room; I think it belongs in more roadmaps.""",
+    """Friday at 4:58 p.m., finance emailed: 'Can we get a cut of revenue by SKU for the board deck Monday?' The honest answer was no — not without risking a fragile legacy report job.
+
+Instead of saying no outright, I called the requester, repeated back what decision the numbers would drive, and proposed a narrower slice we could certify by Sunday. We agreed on three KPIs, not fifteen. I paired with an analyst, documented assumptions in the sheet, and sent a short note about what we didn't include and why.
+
+The board got what they needed. The team didn't burn the weekend. The relationship with finance is warmer because we negotiated scope instead of hiding behind process.
+
+If you work with data: clarity on the decision beats completeness of the spreadsheet.""",
+    """I used to dread giving corrective feedback. I'd soften it until it meant nothing, or delay it until I was frustrated — then it came out sharp.
+
+A coach had me try a stupidly simple format: observation (fact), impact (on team or customer), request (one behavior), support (what I'll do). I practiced on paper until it felt robotic, then used it in a real conversation about missed code review turnaround.
+
+The other person pushed back at first. We stayed on the facts. By the end they said, 'I didn't realize it blocked release that way.' Two weeks later their stats improved without me nagging.
+
+I'm not claiming one script fixes culture. I am saying structure reduced my anxiety and made the conversation fairer. If feedback is hard for you too, consider stealing a template before improvising every time.""",
+    """Our design system had beautiful components and almost nobody used them. Designers said engineering variants were outdated; engineers said Figma didn't match states in production.
+
+We didn't launch a big task force. We picked one flow — password reset — and rebuilt it end-to-end using only system pieces, with one designer and one engineer full-time for two weeks. We screenshotted before/after, measured time-to-implement for the next three features, and presented those numbers internally.
+
+Adoption didn't hit 100% overnight. But teams started opening tickets to align tokens instead of inventing new grays. Small proof beat a big mandate.
+
+If your design ops effort feels stuck, shrink the scope until you can show a win on a single journey.""",
+    """I spent six months feeling like a fraud after switching from backend to a more ML-adjacent role. Everyone seemed to speak in paper titles and framework names I hadn't read.
+
+What helped wasn't more courses — it was admitting 'I don't follow' in meetings until I did. I found two peers who traded lunch for whiteboard sessions. I kept a running doc of terms I looked up so I didn't ask the same question twice.
+
+Last week I presented an eval plan to leadership without shaking. The content wasn't magic; the confidence came from repetition and honest questions.
+
+If you're pivoting careers: the gap feels huge from the inside. From the outside, people mostly want reliability and curiosity. Give yourself permission to be a beginner in public.""",
+    """We had a classic standoff: Security wanted stricter SSO for internal tools; a product squad argued it would slow experiments with contractors.
+
+Instead of escalating to executives immediately, we ran a joint threat modeling lunch — pizza, whiteboard, no slides. The app owner explained real workflows; we mapped where data actually lived. Turns out the risk wasn't contractors logging in — it was shared service accounts nobody rotated.
+
+We fixed the accounts, scoped MFA to the sensitive paths only, and shipped in two sprints instead of six months of debate.
+
+Takeaway: align on the asset and the adversary before you argue about the tool. Saves a lot of politics.""",
+    """I volunteer as a mock interviewer at a local bootcamp twice a year. This year one candidate froze on a simple SQL question — then, when I switched to 'tell me about a hard bug,' they lit up and explained a distributed tracing issue beautifully.
+
+Afterward I told them the truth: some interview loops overweight trivia; others weight problem-solving. They should ask recruiters which style to expect and prep both stories and syntax.
+
+It reminded me how arbitrary gates feel from the outside. If you hire: be explicit about what you're testing. If you interview: ask what 'good' looks like for that company. Everyone saves time.""",
+    """Remote work + two kids means my 'deep work' used to happen at 10 p.m. I was proud of it until my spouse pointed out I was cranky all weekend.
+
+I tried something mundane: I blocked 7:30–9:00 a.m. three days a week as 'no meetings unless on fire,' moved standup later once, and told my manager honestly that afternoons are fragmented. Not everyone has that flexibility — I get that. In my case, protecting one predictable window did more for output than any productivity app.
+
+If you're burning the candle at both ends: audit your calendar for one defensible block and defend it for a month. Measure mood and throughput before optimizing further.""",
+    """Our customer success team forwarded an angry email chain about a 'bug' that was actually misunderstood pricing on the invoice PDF. Engineering could have dismissed it.
+
+We didn't. CS, a PM, and I joined one call with the customer. We listened for twenty minutes, repeated their concern, showed them exactly where the line item came from, and fixed the wording on the PDF the same week. No code defect — but a real trust defect.
+
+Support tickets on that topic dropped to near zero. Sales said renewals got easier.
+
+Lesson: not every ticket needs a Jira epic. Sometimes it needs empathy and clearer language. Product quality includes the words next to the numbers.""",
+    """I used to think networking meant conferences and LinkedIn DMs to strangers. Last year a project went sideways and I needed a second opinion fast. I messaged three former coworkers I hadn't spoken to in years — honestly, expecting silence.
+
+Two replied within a day. One introduced me to someone who had solved the same compliance wrinkle. The problem unraveled over coffee chats, not pitches.
+
+I learned maintenance matters: a short note when someone changes jobs, a congrats on a launch, nothing transactional. The 'network' isn't a Rolodex — it's people who remember you as decent when you aren't asking for anything.
+
+If you're early career: invest in a few real relationships, not a thousand shallow connections.""",
+    """We debated for three sprints whether to rebuild an internal admin tool or patch it. The discussion was exhausting — everyone had opinions, nobody had shared data.
+
+We time-boxed one week to instrument actual usage: who logged in, which actions fired, how often support filed tickets. The data was boring and decisive: three power users, high pain on one workflow. We rebuilt that slice only.
+
+Six weeks later those users sent a thank-you note. Leadership asked why we hadn't done it sooner. The honest answer: we were arguing from anecdotes.
+
+If you're stuck on build vs buy vs patch: buy yourself clarity with lightweight analytics before you buy software.""",
+    """I bombed a presentation to executives — rushed, too many slides, lost the thread when someone asked a sharp question. I wanted to disappear.
+
+My manager's feedback afterward was specific: 'You tried to prove you worked hard instead of proving we should fund the next step.' She made me rewrite the deck to five slides: problem, options, recommendation, risk, ask. We rehearsed with her interrupting me on purpose.
+
+The redo wasn't glamorous, but the project got funded.
+
+If you present to leadership: they usually want a decision frame, not your entire journey. Save the journey for the appendix or the blog post.""",
+    """On-call woke me at 2 a.m. — payment webhooks backing up. My instinct was to scale workers immediately. A teammate said, 'Prove it's compute first.'
+
+We traced the bottleneck to a third-party sandbox that had started rate-limiting us after an unannounced change. We added backoff, contacted the vendor, and temporarily split traffic. Scaling would have masked the issue and cost money.
+
+I'm grateful for the teammate who slowed me down. Speed of reaction matters; correctness of diagnosis matters more.
+
+If you're building runbooks: include a 'what would prove us wrong' step before the 'scale up' step.""",
+    """I used to say yes to every mentorship request because it felt rude to decline. I ended up half-present on calls and resentful.
+
+Now I keep two slots a month, same time, same format: 30 minutes, one agenda item they send in advance, and I follow up with one resource. If someone needs more, I point them to communities and cohort programs.
+
+Quality of attention went up; guilt went down. A few mentees told me the structure helped them prepare better too.
+
+Boundaries aren't rejection — they're how you show up fully when you say yes.""",
+    """Our 'diversity initiative' used to mean one slide in onboarding. Then an engineer spoke up in retro: 'We celebrate hiring but not retention — and I'm tired.'
+
+That comment started a smaller, messier program: mentorship pairings with opt-in, anonymous pulse checks every quarter, and managers trained on promotion packet bias. We're not done; attrition improved modestly but honestly.
+
+I'm posting because the catalyst wasn't a corporate strategy deck — it was someone brave in a retro. If you lead teams: make space for uncomfortable truths in low-stakes forums before they become exit interviews.""",
+    """I spent a weekend building a side automation that 'saves hours.' It broke on Monday because I skipped input validation and didn't log errors.
+
+I fixed it, added tests, and laughed at myself — I preach the same things at work. Side projects are fun precisely because they're risky; production habits still apply if you hate redoing work.
+
+Humble reminder to myself and anyone shipping fast: the boring parts exist because someone learned the hard way.""",
+    """A junior asked why we don't use the newest JS framework everyone tweets about. The senior answer was honest: 'Our customers need stability more than our repo needs novelty. We upgrade on purpose, not on hype.'
+
+We then carved half a day every month for a 'spike budget' — try new tools on non-critical paths. People felt heard; the core stack stayed sane.
+
+Balance isn't ignoring innovation; it's scheduling it so it doesn't derail commitments. Might be worth trying if your team argues about tech churn.""",
+    """I almost declined a speaking slot at a local meetup — imposter syndrome, slides not perfect. A friend said, 'Share one real failure; you'll help someone more than ten best practices.'
+
+I talked about a rollback I caused and what we changed in CI. Three people came up afterward with similar stories. One became a coworker a year later.
+
+Visibility compounds in ways you can't spreadsheet. If you're on the fence about a small stage: take it, tell the truth, be kind to yourself after.""",
+    """We inherited a 'temporary' cron job that became permanent for four years. Nobody wanted to own it because the original author had left.
+
+Finally we scheduled a 'debt funeral' sprint item: document, add monitoring, or delete. The team voted delete after discovering downstream consumers had migrated. We turned it off with a feature flag and watched metrics for 48 hours.
+
+The emotional weight of mystery jobs is real. Naming them and time-boxing decisions beats pretending they're fine.
+
+If you have a mysterious script: give it an owner or a sunset date this quarter.""",
+    """Customer called us incompetent in a public thread. My gut said respond with facts and screenshots.
+
+Our head of CS asked for one hour delay. She drafted a reply that started with an apology for their experience, summarized what we knew, and promised a named owner and timeline — no defensiveness. The thread de-escalated; the customer edited their comment.
+
+I learned tone travels faster than truth online. Facts still matter — they came in comment two — but leading with humanity isn't weakness.
+
+If you own comms during incidents: draft angry, send calm.""",
 ]
 
 _desc_columns_cache: set[str] | None = None
@@ -484,11 +504,11 @@ def build_augmented_posts(
     username: str,
     base_posts: list[dict],
     rng: random.Random,
-    extra_text_min: int = 3,
-    extra_text_max: int = 6,
-    image_probability: float = 0.28,
+    extra_text_min: int = 1,
+    extra_text_max: int = 3,
+    image_probability: float = 0.12,
 ) -> list[dict]:
-    """Merge curated posts with random text-only (and some image) posts from pools."""
+    """Merge curated posts with random long-form narratives from TEXT_POST_POOL (fewer per user — each is lengthy)."""
     pool = [p for p in TEXT_POST_POOL if p]
     rng.shuffle(pool)
     n_extra = rng.randint(extra_text_min, extra_text_max)
