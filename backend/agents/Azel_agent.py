@@ -402,30 +402,31 @@ Return a JSON array of topic strings."""
     
     def _perform_google_search(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
         """
-        Perform web search (DuckDuckGo via ddgs) and return URLs with metadata
-        
-        Args:
-            query: Search query
-            num_results: Number of results to return
-            
-        Returns:
-            List of dictionaries with url, title, snippet
+        Perform web search and return URLs with metadata.
+
+        Strategy:
+        1. Try DuckDuckGo via ``ddgs`` (free, no API key required).
+           Cloud server IPs are commonly blocked by DDG; if it returns nothing
+           or raises, fall through to the Wikipedia fallback.
+        2. Wikipedia opensearch API — works from any server, no auth needed,
+           always returns educational content which is ideal for question gen.
+
+        We intentionally do NOT re-fetch each result URL for metadata — DDG
+        already returns title + snippet, and extra HTTP crawling per URL
+        adds 60–160 s of blocking on a background thread.
         """
         try:
             results: List[Dict[str, Any]] = []
 
-            # Primary web search via DuckDuckGo (ddgs)
+            # --- Primary: DuckDuckGo ---
             try:
                 ddgs = DDGS()
-                # ddgs.text returns an iterator of result dicts
                 for item in ddgs.text(query, max_results=num_results):
                     url = item.get("href") or item.get("url")
                     if not url:
                         continue
-
                     title_text = item.get("title") or url
                     snippet = item.get("body") or item.get("snippet") or ""
-
                     results.append(
                         {
                             "url": url,
@@ -433,53 +434,47 @@ Return a JSON array of topic strings."""
                             "snippet": snippet[:500] if snippet else "",
                         }
                     )
-
                 logger.info(f"DDG search returned {len(results)} results for query: {query}")
             except Exception as e:
-                logger.error(f"DuckDuckGo search failed for query '{query}': {e}")
+                logger.warning(f"DuckDuckGo search failed for query '{query}': {e}")
 
-            # Fallback: fetch HTML metadata for any URLs we have (or if DDG failed but results list is empty)
-            enriched_results: List[Dict[str, Any]] = []
-            for result in results:
-                url = result.get("url")
-                if not url:
-                    continue
+            # --- Fallback: Wikipedia opensearch (works on all servers) ---
+            if not results:
                 try:
-                    response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-                    soup = BeautifulSoup(response.content, "html.parser")
-
-                    title_tag = soup.find("title")
-                    title_text = title_tag.string if title_tag else result.get("title") or url
-
-                    meta_desc = soup.find("meta", attrs={"name": "description"})
-                    snippet = meta_desc.get("content", "") if meta_desc else result.get("snippet") or ""
-
-                    if not snippet:
-                        first_p = soup.find("p")
-                        snippet = first_p.get_text()[:200] if first_p else ""
-
-                    enriched_results.append(
-                        {
-                            "url": url,
-                            "title": title_text[:500] if title_text else url,
-                            "snippet": snippet[:500] if snippet else "",
-                        }
+                    # Use the first meaningful phrase of the query as the search term
+                    wiki_query = query.split("tutorial")[0].strip() or query
+                    wiki_resp = requests.get(
+                        "https://en.wikipedia.org/w/api.php",
+                        params={
+                            "action": "query",
+                            "list": "search",
+                            "srsearch": wiki_query,
+                            "srlimit": min(num_results, 10),
+                            "format": "json",
+                            "utf8": 1,
+                        },
+                        timeout=10,
+                        headers={"User-Agent": "ZedReq-AzelAgent/1.0 (educational; contact@zedreq.com)"},
                     )
-
-                    # Simple pacing to avoid hammering sites
-                    time.sleep(1)
+                    wiki_resp.raise_for_status()
+                    wiki_data = wiki_resp.json()
+                    for item in wiki_data.get("query", {}).get("search", []):
+                        title = item.get("title", "")
+                        snippet = BeautifulSoup(item.get("snippet", ""), "html.parser").get_text()
+                        page_url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                        results.append(
+                            {
+                                "url": page_url,
+                                "title": title[:500],
+                                "snippet": snippet[:500],
+                            }
+                        )
+                    logger.info(f"Wikipedia fallback returned {len(results)} results for query: {query}")
                 except Exception as e:
-                    logger.warning(f"Failed to fetch metadata for {url}: {e}")
-                    enriched_results.append(
-                        {
-                            "url": url,
-                            "title": result.get("title") or url,
-                            "snippet": result.get("snippet") or "",
-                        }
-                    )
+                    logger.warning(f"Wikipedia fallback failed for query '{query}': {e}")
 
-            logger.info(f"Finalized {len(enriched_results)} search results for query: {query}")
-            return enriched_results
+            logger.info(f"Finalized {len(results)} search results for query: {query}")
+            return results
 
         except Exception as e:
             logger.error(f"Web search failed for query '{query}': {e}")
