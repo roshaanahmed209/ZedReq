@@ -66,6 +66,11 @@ def fetch_seed_uids(db) -> tuple[list[int], list[int]]:
     return uids, desc_ids
 
 
+def _any_bind(ids: list[int]) -> list[int]:
+    """For WHERE col = ANY(%s): pass a list — psycopg2 sends a PG array; a tuple is sent as ROW and breaks ANY."""
+    return list(ids)
+
+
 def _count(db, sql: str, params: tuple) -> int:
     r = db.fetch_one(sql, params)
     if not r or r.get("c") is None:
@@ -77,77 +82,77 @@ def dry_run_summary(db, uids: list[int]) -> None:
     if not uids:
         print("No users match *@zedreq.dev — nothing to clean.")
         return
-    ut = tuple(uids)
+    arr = _any_bind(uids)
     print(f"Found {len(uids)} user(s) with email matching *@zedreq.dev: uids {uids}\nRelated row counts:")
     pairs: list[tuple[str, str, tuple]] = [
-        ("post", "SELECT COUNT(*) AS c FROM post WHERE uid = ANY(%s)", (ut,)),
+        ("post", "SELECT COUNT(*) AS c FROM post WHERE uid = ANY(%s)", (arr,)),
         (
             "likes",
             """SELECT COUNT(*) AS c FROM likes
                WHERE uid = ANY(%s)
                   OR post_id IN (SELECT post_id FROM post WHERE uid = ANY(%s))""",
-            (ut, ut),
+            (arr, arr),
         ),
         (
             "connections",
             """SELECT COUNT(*) AS c FROM connections
                WHERE follower_uid = ANY(%s) OR followed_uid = ANY(%s)""",
-            (ut, ut),
+            (arr, arr),
         ),
-        ("network", "SELECT COUNT(*) AS c FROM network WHERE uid = ANY(%s)", (ut,)),
+        ("network", "SELECT COUNT(*) AS c FROM network WHERE uid = ANY(%s)", (arr,)),
         (
             "notifications",
             """SELECT COUNT(*) AS c FROM notifications
                WHERE user_id = ANY(%s) OR related_user_id = ANY(%s)""",
-            (ut, ut),
+            (arr, arr),
         ),
         (
             "connection_requests",
             """SELECT COUNT(*) AS c FROM connection_requests
                WHERE sender_id = ANY(%s) OR receiver_id = ANY(%s)""",
-            (ut, ut),
+            (arr, arr),
         ),
-        ("payment", "SELECT COUNT(*) AS c FROM payment WHERE uid = ANY(%s)", (ut,)),
-        ("user_subscriptions", "SELECT COUNT(*) AS c FROM user_subscriptions WHERE user_id = ANY(%s)", (ut,)),
-        ("usage_tracking", "SELECT COUNT(*) AS c FROM usage_tracking WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_dashboard", "SELECT COUNT(*) AS c FROM lms_dashboard WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_user_courses", "SELECT COUNT(*) AS c FROM lms_user_courses WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_activities", "SELECT COUNT(*) AS c FROM lms_activities WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_deadlines", "SELECT COUNT(*) AS c FROM lms_deadlines WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_certificates", "SELECT COUNT(*) AS c FROM lms_certificates WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_recommendations", "SELECT COUNT(*) AS c FROM lms_recommendations WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_user_domain_performance", "SELECT COUNT(*) AS c FROM lms_user_domain_performance WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_weekly_performance", "SELECT COUNT(*) AS c FROM lms_weekly_performance WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_user_course_performance", "SELECT COUNT(*) AS c FROM lms_user_course_performance WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_user_section_progress", "SELECT COUNT(*) AS c FROM lms_user_section_progress WHERE user_id = ANY(%s)", (ut,)),
-        ("lms_user_answers", "SELECT COUNT(*) AS c FROM lms_user_answers WHERE user_id = ANY(%s)", (ut,)),
-        ("azel_search_urls", "SELECT COUNT(*) AS c FROM azel_search_urls WHERE user_id = ANY(%s)", (ut,)),
-        ("user_experience", "SELECT COUNT(*) AS c FROM user_experience WHERE user_id = ANY(%s)", (ut,)),
-        ("user_education", "SELECT COUNT(*) AS c FROM user_education WHERE user_id = ANY(%s)", (ut,)),
-        ("user_projects", "SELECT COUNT(*) AS c FROM user_projects WHERE user_id = ANY(%s)", (ut,)),
+        ("payment", "SELECT COUNT(*) AS c FROM payment WHERE uid = ANY(%s)", (arr,)),
+        ("user_subscriptions", "SELECT COUNT(*) AS c FROM user_subscriptions WHERE user_id = ANY(%s)", (arr,)),
+        ("usage_tracking", "SELECT COUNT(*) AS c FROM usage_tracking WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_dashboard", "SELECT COUNT(*) AS c FROM lms_dashboard WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_user_courses", "SELECT COUNT(*) AS c FROM lms_user_courses WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_activities", "SELECT COUNT(*) AS c FROM lms_activities WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_deadlines", "SELECT COUNT(*) AS c FROM lms_deadlines WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_certificates", "SELECT COUNT(*) AS c FROM lms_certificates WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_recommendations", "SELECT COUNT(*) AS c FROM lms_recommendations WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_user_domain_performance", "SELECT COUNT(*) AS c FROM lms_user_domain_performance WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_weekly_performance", "SELECT COUNT(*) AS c FROM lms_weekly_performance WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_user_course_performance", "SELECT COUNT(*) AS c FROM lms_user_course_performance WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_user_section_progress", "SELECT COUNT(*) AS c FROM lms_user_section_progress WHERE user_id = ANY(%s)", (arr,)),
+        ("lms_user_answers", "SELECT COUNT(*) AS c FROM lms_user_answers WHERE user_id = ANY(%s)", (arr,)),
+        ("azel_search_urls", "SELECT COUNT(*) AS c FROM azel_search_urls WHERE user_id = ANY(%s)", (arr,)),
+        ("user_experience", "SELECT COUNT(*) AS c FROM user_experience WHERE user_id = ANY(%s)", (arr,)),
+        ("user_education", "SELECT COUNT(*) AS c FROM user_education WHERE user_id = ANY(%s)", (arr,)),
+        ("user_projects", "SELECT COUNT(*) AS c FROM user_projects WHERE user_id = ANY(%s)", (arr,)),
         (
             "user_recommendations",
             """SELECT COUNT(*) AS c FROM user_recommendations
                WHERE user_id = ANY(%s) OR recommender_id = ANY(%s)""",
-            (ut, ut),
+            (arr, arr),
         ),
-        ("user_interests", "SELECT COUNT(*) AS c FROM user_interests WHERE user_id = ANY(%s)", (ut,)),
+        ("user_interests", "SELECT COUNT(*) AS c FROM user_interests WHERE user_id = ANY(%s)", (arr,)),
         (
             "profile_analytics",
             """SELECT COUNT(*) AS c FROM profile_analytics
                WHERE user_id = ANY(%s) OR viewer_id = ANY(%s)""",
-            (ut, ut),
+            (arr, arr),
         ),
-        ("job_postings", "SELECT COUNT(*) AS c FROM job_postings WHERE poster_id = ANY(%s)", (ut,)),
-        ("job_applications (as applicant)", "SELECT COUNT(*) AS c FROM job_applications WHERE applicant_id = ANY(%s)", (ut,)),
-        ("job_saved (as saver)", "SELECT COUNT(*) AS c FROM job_saved WHERE user_id = ANY(%s)", (ut,)),
-        ("live_interviews (as candidate)", "SELECT COUNT(*) AS c FROM live_interviews WHERE user_id = ANY(%s)", (ut,)),
-        ("user_job_preferences", "SELECT COUNT(*) AS c FROM user_job_preferences WHERE user_id = ANY(%s)", (ut,)),
-        ("user_job_recommendations_cache", "SELECT COUNT(*) AS c FROM user_job_recommendations_cache WHERE user_id = ANY(%s)", (ut,)),
-        ("azel_jobs", "SELECT COUNT(*) AS c FROM azel_jobs WHERE user_id = ANY(%s)", (ut,)),
-        ("job (legacy)", "SELECT COUNT(*) AS c FROM job WHERE uid = ANY(%s)", (ut,)),
-        ("enterprise_inquiries", "SELECT COUNT(*) AS c FROM enterprise_inquiries WHERE user_id = ANY(%s)", (ut,)),
-        ("reserved_seats (linked)", "SELECT COUNT(*) AS c FROM reserved_seats WHERE user_id = ANY(%s)", (ut,)),
+        ("job_postings", "SELECT COUNT(*) AS c FROM job_postings WHERE poster_id = ANY(%s)", (arr,)),
+        ("job_applications (as applicant)", "SELECT COUNT(*) AS c FROM job_applications WHERE applicant_id = ANY(%s)", (arr,)),
+        ("job_saved (as saver)", "SELECT COUNT(*) AS c FROM job_saved WHERE user_id = ANY(%s)", (arr,)),
+        ("live_interviews (as candidate)", "SELECT COUNT(*) AS c FROM live_interviews WHERE user_id = ANY(%s)", (arr,)),
+        ("user_job_preferences", "SELECT COUNT(*) AS c FROM user_job_preferences WHERE user_id = ANY(%s)", (arr,)),
+        ("user_job_recommendations_cache", "SELECT COUNT(*) AS c FROM user_job_recommendations_cache WHERE user_id = ANY(%s)", (arr,)),
+        ("azel_jobs", "SELECT COUNT(*) AS c FROM azel_jobs WHERE user_id = ANY(%s)", (arr,)),
+        ("job (legacy)", "SELECT COUNT(*) AS c FROM job WHERE uid = ANY(%s)", (arr,)),
+        ("enterprise_inquiries", "SELECT COUNT(*) AS c FROM enterprise_inquiries WHERE user_id = ANY(%s)", (arr,)),
+        ("reserved_seats (linked)", "SELECT COUNT(*) AS c FROM reserved_seats WHERE user_id = ANY(%s)", (arr,)),
     ]
     for label, sql, params in pairs:
         table = label.split()[0]
@@ -161,7 +166,7 @@ def dry_run_summary(db, uids: list[int]) -> None:
         r = db.fetch_one(
             """SELECT COUNT(*) AS c FROM job_applications ja
                WHERE ja.job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-            (ut,),
+            (arr,),
         )
         c = int(r["c"]) if r and r.get("c") else 0
         if c:
@@ -170,7 +175,7 @@ def dry_run_summary(db, uids: list[int]) -> None:
         r = db.fetch_one(
             """SELECT COUNT(*) AS c FROM live_interviews li
                WHERE li.job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-            (ut,),
+            (arr,),
         )
         c = int(r["c"]) if r and r.get("c") else 0
         if c:
@@ -179,7 +184,7 @@ def dry_run_summary(db, uids: list[int]) -> None:
         r = db.fetch_one(
             """SELECT COUNT(*) AS c FROM job_saved js
                WHERE js.job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-            (ut,),
+            (arr,),
         )
         c = int(r["c"]) if r and r.get("c") else 0
         if c:
@@ -191,11 +196,11 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
         print("Nothing to delete.")
         return
 
-    uid_tuple = tuple(uids)
+    uid_arr = _any_bind(uids)
 
     def run(sql: str, params=None):
         if params is None:
-            params = (uid_tuple,)
+            params = (uid_arr,)
         db.execute(sql, params)
 
     # Notifications before connection_requests (FK related_request_id)
@@ -203,13 +208,13 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
         run(
             """DELETE FROM notifications
                WHERE user_id = ANY(%s) OR related_user_id = ANY(%s)""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
     if _table_exists(db, "connection_requests"):
         run(
             """DELETE FROM connection_requests
                WHERE sender_id = ANY(%s) OR receiver_id = ANY(%s)""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
 
     # Job portal: children of postings by seed posters first
@@ -218,19 +223,19 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
             db.execute(
                 """DELETE FROM live_interviews
                    WHERE job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-                (uid_tuple,),
+                (uid_arr,),
             )
         if _table_exists(db, "job_applications"):
             db.execute(
                 """DELETE FROM job_applications
                    WHERE job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-                (uid_tuple,),
+                (uid_arr,),
             )
         if _table_exists(db, "job_saved"):
             db.execute(
                 """DELETE FROM job_saved
                    WHERE job_id IN (SELECT job_id FROM job_postings WHERE poster_id = ANY(%s))""",
-                (uid_tuple,),
+                (uid_arr,),
             )
         run("DELETE FROM job_postings WHERE poster_id = ANY(%s)")
 
@@ -246,7 +251,7 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
             """DELETE FROM likes
                WHERE uid = ANY(%s)
                   OR post_id IN (SELECT post_id FROM post WHERE uid = ANY(%s))""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
     if _table_exists(db, "post"):
         run("DELETE FROM post WHERE uid = ANY(%s)")
@@ -255,7 +260,7 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
         run(
             """DELETE FROM connections
                WHERE follower_uid = ANY(%s) OR followed_uid = ANY(%s)""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
     if _table_exists(db, "network"):
         run("DELETE FROM network WHERE uid = ANY(%s)")
@@ -293,24 +298,24 @@ def delete_seed_users(db, uids: list[int], desc_ids: list[int]) -> None:
         run(
             """DELETE FROM user_recommendations
                WHERE user_id = ANY(%s) OR recommender_id = ANY(%s)""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
     if _table_exists(db, "profile_analytics"):
         run(
             """DELETE FROM profile_analytics
                WHERE user_id = ANY(%s) OR viewer_id = ANY(%s)""",
-            (uid_tuple, uid_tuple),
+            (uid_arr, uid_arr),
         )
 
     if _table_exists(db, "reserved_seats"):
-        db.execute("UPDATE reserved_seats SET user_id = NULL WHERE user_id = ANY(%s)", (uid_tuple,))
+        db.execute("UPDATE reserved_seats SET user_id = NULL WHERE user_id = ANY(%s)", (uid_arr,))
 
     run("DELETE FROM users WHERE uid = ANY(%s)")
 
     if desc_ids and _table_exists(db, "description"):
         db.execute(
             "DELETE FROM description WHERE desc_id = ANY(%s)",
-            (tuple(desc_ids),),
+            (_any_bind(desc_ids),),
         )
 
     print(f"Deleted {len(uids)} user(s) and {len(desc_ids)} profile row(s) (description).")
