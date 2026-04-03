@@ -558,8 +558,9 @@ export const lmsAPI = {
       sectionId ? { section_id: sectionId } : {},
       { timeout: 120000 }
     ),
+  // Generous timeout: server can be slow under load while Azel holds the GIL / DB pool
   getAzelJobStatus: (jobId) =>
-    api.get(`/api/lms/azel/process-course/jobs/${jobId}`, { timeout: 45000 }),
+    api.get(`/api/lms/azel/process-course/jobs/${jobId}`, { timeout: 120000 }),
   
   // Course performance endpoint
   getCoursePerformance: (courseId) =>

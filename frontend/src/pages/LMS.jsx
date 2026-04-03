@@ -2989,15 +2989,32 @@ const LMS = () => {
         while (polls < maxPolls) {
           await new Promise((r) => setTimeout(r, pollIntervalMs))
           polls += 1
-          const stRes = await lmsAPI.getAzelJobStatus(jobId)
-          const row = stRes.data
-          lastStatus = row?.status || lastStatus
-          console.log(`[LMS] handleGenerateQuestions: poll #${polls} job=${jobId} status=${lastStatus}`)
-          if (row?.status === 'queued' || row?.status === 'running') {
+          try {
+            const stRes = await lmsAPI.getAzelJobStatus(jobId)
+            const row = stRes.data
+            lastStatus = row?.status || lastStatus
+            console.log(`[LMS] handleGenerateQuestions: poll #${polls} job=${jobId} status=${lastStatus}`)
+            if (row?.status === 'queued' || row?.status === 'running') {
+              continue
+            }
+            payload = row
+            break
+          } catch (pollErr) {
+            if (pollErr.response?.status === 404) {
+              alert(
+                'Could not find this generation job (server may have restarted). Try generating questions again.'
+              )
+              return
+            }
+            const isTimeout =
+              pollErr.code === 'ECONNABORTED' ||
+              (typeof pollErr.message === 'string' && pollErr.message.includes('timeout'))
+            console.warn(
+              `[LMS] handleGenerateQuestions: poll #${polls} ${isTimeout ? 'timed out' : 'failed'}, retrying`,
+              pollErr
+            )
             continue
           }
-          payload = row
-          break
         }
         if (payload?.status === 'queued' || payload?.status === 'running') {
           alert(

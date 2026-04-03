@@ -66,8 +66,29 @@ def _websocket_connect_origins(http_origin: str) -> list[str]:
     return []
 
 
-def _build_connect_src() -> str:
+def _host_header_connect_origins(request: Request) -> list[str]:
+    """
+    CSP connect-src 'self' is same scheme as the document (https), so it does NOT
+    allow wss:// on the same host. Browsers block WebSockets unless wss:// is listed.
+    Use Host + X-Forwarded-Proto (Render, etc.) so production same-origin WS works
+    without relying on VITE_API_URL in the Python process.
+    """
+    host = (request.headers.get("host") or "").strip()
+    if not host:
+        return []
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip().lower()
+    if proto == "https":
+        return [f"https://{host}", f"wss://{host}"]
+    if proto == "http":
+        return [f"http://{host}", f"ws://{host}"]
+    return [f"https://{host}", f"wss://{host}"]
+
+
+def _build_connect_src(request: Optional[Request] = None) -> str:
     parts: list[str] = ["'self'", _FIREBASE_AND_GOOGLE_CONNECT, _PADDLE_CONNECT]
+
+    if request is not None:
+        parts.extend(_host_header_connect_origins(request))
 
     # Extra origins from env (production API URL, staging, etc.) — space or comma separated
     extra = os.getenv("CSP_CONNECT_SRC_EXTRA", "").replace(",", " ").split()
@@ -112,7 +133,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
 
-        connect_src = _build_connect_src()
+        connect_src = _build_connect_src(request)
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://cdn.paddle.com https://sandbox-cdn.paddle.com https://public.profitwell.com; "
