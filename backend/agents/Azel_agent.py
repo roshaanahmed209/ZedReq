@@ -25,6 +25,7 @@ from config.database import get_connection_params, Database
 from config.database_orm import get_db
 from models.orm.azel_search_url import AzelSearchUrl
 from models.orm.lms_question import LMSQuestion
+from utils.api_security import normalize_env_secret
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +123,8 @@ class AzelAgent:
             self.qdrant_client = None
             self.qdrant_available = False
         
-        # Initialize OpenAI API key
-        openai_api_key = openai_api_key or os.environ.get('OPENAI_API_KEY')
+        # Initialize OpenAI API key (normalize: hosting UIs often add whitespace/quotes)
+        openai_api_key = openai_api_key or normalize_env_secret(os.environ.get("OPENAI_API_KEY"))
         if not openai_api_key:
             logger.warning("OpenAI API key not found. Question generation will not work.")
             self.openai_available = False
@@ -962,12 +963,30 @@ Return a JSON array of question objects."""
             step_elapsed = time.time() - step_start
             
             if not context:
-                result['error'] = "No Zed context found for user"
+                # Production users often have profile/resume but no merged `zed` yet (Zed runs on logout).
+                try:
+                    from agents.Zed_agent import get_zed_agent
+                    profile_text = get_zed_agent()._get_user_profile(user_id)
+                    if profile_text and len(profile_text.strip()) > 20:
+                        context = profile_text.strip()
+                        logger.info(
+                            f"[AZEL-AGENT] Step 1: No users_context.zed; using user profile fallback "
+                            f"({len(context)} chars) for user_id={user_id}"
+                        )
+                except Exception as fb_e:
+                    logger.warning(f"[AZEL-AGENT] Profile context fallback failed: {fb_e}")
+            
+            if not context:
+                result['error'] = (
+                    "No career context found. Add profile/resume in Settings, use the app for a bit, "
+                    "or sign out once to refresh your context — then try again."
+                )
                 logger.warning(f"[AZEL-AGENT] Step 1 FAILED: No Zed context found for user_id={user_id} (took {step_elapsed:.2f}s)")
                 return result
             
+            step_elapsed = time.time() - step_start
             context_length = len(context) if context else 0
-            logger.info(f"[AZEL-AGENT] Step 1 SUCCESS: Retrieved Zed context ({context_length} chars) in {step_elapsed:.2f}s")
+            logger.info(f"[AZEL-AGENT] Step 1 SUCCESS: Context ready ({context_length} chars) in {step_elapsed:.2f}s")
             
             # Step 2: Extract highlighted topics (scoped to course subject)
             step_start = time.time()
@@ -976,12 +995,19 @@ Return a JSON array of question objects."""
             result['topics_extracted'] = highlighted_topics
             step_elapsed = time.time() - step_start
             
+            if not highlighted_topics and course_title:
+                highlighted_topics = [course_title.strip()]
+                result['topics_extracted'] = highlighted_topics
+                logger.warning(
+                    f"[AZEL-AGENT] Step 2: No topics from context; using course title as search seed: {highlighted_topics}"
+                )
+            
             if not highlighted_topics:
-                result['error'] = "No highlighted topics extracted"
-                logger.warning(f"[AZEL-AGENT] Step 2 FAILED: No highlighted topics extracted for user_id={user_id}, course_id={course_id} (took {step_elapsed:.2f}s)")
+                result['error'] = "No highlighted topics extracted and no course title to fall back on"
+                logger.warning(f"[AZEL-AGENT] Step 2 FAILED: No highlighted topics for user_id={user_id}, course_id={course_id} (took {step_elapsed:.2f}s)")
                 return result
             
-            logger.info(f"[AZEL-AGENT] Step 2 SUCCESS: Extracted {len(highlighted_topics)} topics: {highlighted_topics} (took {step_elapsed:.2f}s)")
+            logger.info(f"[AZEL-AGENT] Step 2 SUCCESS: Using {len(highlighted_topics)} topics: {highlighted_topics} (took {step_elapsed:.2f}s)")
             
             # Step 3: Perform Google searches for each topic (parallelized)
             step_start = time.time()
@@ -1123,8 +1149,26 @@ Return a JSON array of question objects."""
                 logger.warning(f"[AZEL-AGENT] Step 8 SKIPPED: No questions to save")
             
             total_elapsed = time.time() - pipeline_start
-            result['success'] = True
-            logger.info(f"[AZEL-AGENT] ===== PIPELINE COMPLETE: Successfully processed course context for user_id={user_id}, course_id={course_id} in {total_elapsed:.2f}s =====")
+            if result['questions_saved'] > 0:
+                result['success'] = True
+                logger.info(
+                    f"[AZEL-AGENT] ===== PIPELINE COMPLETE: Saved {result['questions_saved']} questions "
+                    f"for user_id={user_id}, course_id={course_id} in {total_elapsed:.2f}s ====="
+                )
+            else:
+                result['success'] = False
+                if not result.get('error'):
+                    if result['questions_generated'] > 0:
+                        result['error'] = "Questions were generated but could not be saved to the database"
+                    else:
+                        result['error'] = (
+                            "No questions were produced. Check OpenAI responses, web search results, "
+                            "and Render logs for [AZEL-AGENT]. Ensure QDRANT_URL points to a reachable Qdrant."
+                        )
+                logger.warning(
+                    f"[AZEL-AGENT] ===== PIPELINE FINISHED WITH NO SAVED QUESTIONS: user_id={user_id}, "
+                    f"course_id={course_id} in {total_elapsed:.2f}s — {result.get('error')} ====="
+                )
             
         except Exception as e:
             total_elapsed = time.time() - pipeline_start
