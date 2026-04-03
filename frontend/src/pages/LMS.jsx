@@ -2959,8 +2959,6 @@ const LMS = () => {
       return
     }
 
-    setGenerateQuestionsCount(c => c + 1)
-
     const sectionId = selectedSectionId
     const sectionLabel = selectedSectionTitle || 'Basic'
 
@@ -2972,21 +2970,54 @@ const LMS = () => {
       setQuestionsLoading(true)
       console.log('[LMS] handleGenerateQuestions: Button disabled, loading state set')
       
-      // Call Azel agent to process course and generate questions for the selected section
-      // This is a long-running operation (30-150 seconds)
-      console.log(`[LMS] handleGenerateQuestions: Making API call to trigger Azel agent with section_id=${sectionId}`)
+      console.log(`[LMS] handleGenerateQuestions: Queue Azel job section_id=${sectionId}`)
       const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id, sectionId)
-      
-      const apiTime = performance.now() - startTime
-      console.log(`[LMS] handleGenerateQuestions: API call completed in ${apiTime.toFixed(2)}ms`)
-      
-      if (response.data) {
-        const result = response.data.result || {}
-        const success = response.data.success !== false && result.success !== false
 
-        // Sync counter with authoritative server value
-        if (response.data.rate_limit != null) {
-          const usedOnServer = MAX_GENERATE_QUESTIONS - response.data.rate_limit.remaining
+      let payload = response.data
+
+      // 202 = background job (poll); 200 = legacy synchronous response
+      if (response.status === 202 && payload?.job_id) {
+        if (payload.rate_limit != null) {
+          const usedOnServer = MAX_GENERATE_QUESTIONS - payload.rate_limit.remaining
+          setGenerateQuestionsCount(usedOnServer)
+        }
+        const jobId = payload.job_id
+        const pollIntervalMs = 2500
+        const maxPolls = 150 // ~6+ minutes
+        let polls = 0
+        let lastStatus = 'queued'
+        while (polls < maxPolls) {
+          await new Promise((r) => setTimeout(r, pollIntervalMs))
+          polls += 1
+          const stRes = await lmsAPI.getAzelJobStatus(jobId)
+          const row = stRes.data
+          lastStatus = row?.status || lastStatus
+          console.log(`[LMS] handleGenerateQuestions: poll #${polls} job=${jobId} status=${lastStatus}`)
+          if (row?.status === 'queued' || row?.status === 'running') {
+            continue
+          }
+          payload = row
+          break
+        }
+        if (payload?.status === 'queued' || payload?.status === 'running') {
+          alert(
+            'Question generation is still running on the server. Wait a minute, refresh this course, and check the questions list.'
+          )
+          const totalTime = performance.now() - startTime
+          console.warn(`[LMS] handleGenerateQuestions: Stopped polling after ${totalTime.toFixed(2)}ms (status=${lastStatus})`)
+          return
+        }
+      }
+
+      const apiTime = performance.now() - startTime
+      console.log(`[LMS] handleGenerateQuestions: Job pipeline finished polling/response in ${apiTime.toFixed(2)}ms`)
+      
+      if (payload) {
+        const result = payload.result || {}
+        const success = payload.success !== false && result.success !== false
+
+        if (payload.rate_limit != null) {
+          const usedOnServer = MAX_GENERATE_QUESTIONS - payload.rate_limit.remaining
           setGenerateQuestionsCount(usedOnServer)
         }
 
@@ -3019,7 +3050,7 @@ const LMS = () => {
           console.log(`[LMS] ===== GENERATE QUESTIONS END (SUCCESS): Completed in ${totalTime.toFixed(2)}ms =====`)
         } else {
           // Show detailed error message
-          const errorMsg = result.error || response.data.message || 'Failed to generate questions'
+          const errorMsg = result.error || payload.message || 'Failed to generate questions'
           
           console.error(`[LMS] handleGenerateQuestions: FAILED - ${errorMsg}`)
           
@@ -3040,7 +3071,7 @@ const LMS = () => {
           console.log(`[LMS] ===== GENERATE QUESTIONS END (FAILED): Completed in ${totalTime.toFixed(2)}ms =====`)
         }
       } else {
-        console.warn(`[LMS] handleGenerateQuestions: No response data received`)
+        console.warn(`[LMS] handleGenerateQuestions: No payload after job`)
         alert('Question generation completed, but no questions were generated. Please check your Zed context and try again.')
       }
     } catch (err) {

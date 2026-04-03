@@ -3,6 +3,7 @@ import os
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
@@ -26,6 +27,12 @@ _MAX_QUESTION_GENERATIONS = 3
 _MAX_EVALUATIONS = 3
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
 from agents.Azel_agent import get_azel_agent
+from services.azel_async_jobs import (
+    create_job,
+    get_job,
+    job_belongs_to_user,
+    spawn_azel_job_thread,
+)
 from agents.Seez_agent import get_seez_agent
 from schemas.lms import (
     CourseCreate, CourseUpdate, CourseResponse, CourseListResponse,
@@ -870,6 +877,43 @@ async def update_section_progress(
 # Azel Agent Endpoints
 # ============================================================================
 
+@router.get("/azel/process-course/jobs/{job_id}")
+async def get_azel_job_status(
+    job_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Poll status of a background Azel question-generation job.
+    Returns the same JSON shape as the historical synchronous POST once completed.
+    """
+    user_id = current_user.get("id") or current_user.get("uid")
+    if not job_belongs_to_user(job_id, user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    row = get_job(job_id)
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    job_status = row.get("status")
+    base = {"job_id": job_id, "status": job_status}
+    if job_status in ("queued", "running"):
+        return base
+    resp = row.get("response")
+    if isinstance(resp, dict):
+        return {**base, **resp}
+    return {
+        **base,
+        "success": False,
+        "message": "Job finished without response payload",
+        "result": {"success": False, "error": row.get("error")},
+        "rate_limit": None,
+    }
+
+
 @router.post("/azel/process-course/{course_id}")
 async def trigger_azel_agent(
     course_id: int,
@@ -897,7 +941,9 @@ async def trigger_azel_agent(
     9. Generates questions with detailed answers (difficulty matches section)
     10. Saves questions to database with section_id set
     
-    Note: This is a long-running operation (can take 30-120 seconds)
+    Queues a background job and returns **202 Accepted** with `job_id`.
+    Poll ``GET /api/lms/azel/process-course/jobs/{job_id}`` until ``status`` is
+    ``completed`` or ``failed`` (avoids HTTP proxy timeouts on long runs).
     """
     from models.orm.lms_course_section import LMSCourseSection
     
@@ -916,27 +962,6 @@ async def trigger_azel_agent(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You must be enrolled in this course to generate questions"
-            )
-
-        # --- Server-side rate-limit check (per user per course) ---
-        rl_service = RateLimitService(service.db)
-        try:
-            rl_remaining = rl_service.check_and_increment(
-                user_id=user_id,
-                action=ACTION_GENERATE_QUESTIONS,
-                max_calls=_MAX_QUESTION_GENERATIONS,
-                course_id=course_id,
-            )
-        except RateLimitExceeded as exc:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "message": str(exc),
-                    "action": ACTION_GENERATE_QUESTIONS,
-                    "course_id": course_id,
-                    "max_calls": _MAX_QUESTION_GENERATIONS,
-                    "remaining": 0,
-                },
             )
         
         # --- Seed sections + backfill orphan questions (POST is mutation-safe) ---
@@ -963,7 +988,7 @@ async def trigger_azel_agent(
         
         section_title = section.title if section else "Basic"
         
-        # Get Azel agent and check availability
+        # Require Azel dependencies before consuming a rate-limit slot
         azel_agent = get_azel_agent()
         
         if not azel_agent.is_available():
@@ -977,20 +1002,28 @@ async def trigger_azel_agent(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Azel agent is not available. {'; '.join(error_details)}. Please check your configuration."
             )
-        
-        # Process course context
-        logger.info(f"Starting Azel agent processing for user_id={user_id}, course_id={course_id}, section_id={section_id} ({section_title})")
-        
-        result = azel_agent.process_course_context(
-            user_id=user_id,
-            course_id=course_id,
-            section_id=section_id,
-            level=section_title,
-            course_title=course.title,
-        )
-        
-        # Always return result, even if not fully successful
-        # This allows frontend to show partial results
+
+        # --- Server-side rate-limit check (per user per course) ---
+        rl_service = RateLimitService(service.db)
+        try:
+            rl_remaining = rl_service.check_and_increment(
+                user_id=user_id,
+                action=ACTION_GENERATE_QUESTIONS,
+                max_calls=_MAX_QUESTION_GENERATIONS,
+                course_id=course_id,
+            )
+        except RateLimitExceeded as exc:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "message": str(exc),
+                    "action": ACTION_GENERATE_QUESTIONS,
+                    "course_id": course_id,
+                    "max_calls": _MAX_QUESTION_GENERATIONS,
+                    "remaining": 0,
+                },
+            )
+
         _rate_limit_payload = {
             "action": ACTION_GENERATE_QUESTIONS,
             "course_id": course_id,
@@ -998,22 +1031,31 @@ async def trigger_azel_agent(
             "max_calls": _MAX_QUESTION_GENERATIONS,
         }
 
-        if not result.get('success'):
-            logger.warning(f"Azel agent processing completed with errors: {result.get('error')}")
-            return {
-                "message": "Course context processing completed with errors",
-                "result": result,
-                "success": False,
-                "rate_limit": _rate_limit_payload,
-            }
+        job_id = create_job(user_id)
+        spawn_azel_job_thread(
+            job_id=job_id,
+            user_id=user_id,
+            course_id=course_id,
+            section_id=section_id,
+            level=section_title,
+            course_title=course.title,
+            rate_limit_payload=_rate_limit_payload,
+        )
+        logger.info(
+            f"Queued Azel job job_id={job_id} for user_id={user_id}, course_id={course_id}, "
+            f"section_id={section_id} ({section_title})"
+        )
 
-        logger.info(f"Azel agent processing completed successfully for user_id={user_id}, course_id={course_id}, section_id={section_id}")
-        return {
-            "message": "Course context processed successfully",
-            "result": result,
-            "success": True,
-            "rate_limit": _rate_limit_payload,
-        }
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={
+                "job_id": job_id,
+                "status": "queued",
+                "message": "Question generation started. Poll the job URL until status is completed or failed.",
+                "poll_path": f"/api/lms/azel/process-course/jobs/{job_id}",
+                "rate_limit": _rate_limit_payload,
+            },
+        )
         
     except HTTPException:
         raise
