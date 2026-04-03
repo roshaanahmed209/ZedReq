@@ -170,8 +170,20 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] Firebase init failed: {e}")
 
+    def _init_azel_jobs_table():
+        try:
+            from db.migrations.add_azel_jobs_table import CREATE_AZEL_JOBS_TABLE, CREATE_AZEL_JOBS_INDEXES
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            db.execute(CREATE_AZEL_JOBS_TABLE)
+            db.execute(CREATE_AZEL_JOBS_INDEXES)
+            db.close()
+            print("[OK] azel_jobs table ready")
+        except Exception as e:
+            print(f"[WARN] azel_jobs table init failed: {e}")
+
     # Run all blocking startup tasks in threads with a 20s timeout each
-    for name, fn in [("db", _init_db), ("orm", _init_orm), ("firebase", _init_firebase)]:
+    for name, fn in [("db", _init_db), ("orm", _init_orm), ("firebase", _init_firebase), ("azel_jobs", _init_azel_jobs_table)]:
         try:
             await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
         except asyncio.TimeoutError:

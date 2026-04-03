@@ -3,9 +3,14 @@ Background Azel (LMS question generation) jobs for long-running pipelines.
 
 Avoids HTTP proxy timeouts (e.g. Render ~100s) by returning 202 immediately and
 letting the client poll for completion.
+
+Jobs are persisted to the ``azel_jobs`` PostgreSQL table so they survive
+service restarts and redeployments (previously in-memory only, which caused
+404 "Job not found" errors when Render restarted mid-job).
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -14,58 +19,88 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-_lock = threading.Lock()
-_jobs: Dict[str, Dict[str, Any]] = {}
-_MAX_JOBS = 200
-_JOB_TTL_SECONDS = 3600
+# ---------------------------------------------------------------------------
+# Helpers — thin wrappers around the azel_jobs DB table
+# ---------------------------------------------------------------------------
 
-
-def _prune_locked(now: float) -> None:
-    if len(_jobs) <= _MAX_JOBS:
-        return
-    # Drop oldest by created_at
-    sorted_ids = sorted(_jobs.keys(), key=lambda jid: _jobs[jid].get("created_at", 0))
-    for jid in sorted_ids[: max(0, len(_jobs) - _MAX_JOBS + 50)]:
-        if now - _jobs[jid].get("created_at", now) > _JOB_TTL_SECONDS:
-            _jobs.pop(jid, None)
+def _db():
+    """Return a fresh Database connection (caller must .close() it)."""
+    from config.database import get_connection_params, Database
+    return Database(get_connection_params())
 
 
 def create_job(user_id: int) -> str:
     job_id = str(uuid.uuid4())
-    now = time.time()
-    with _lock:
-        _prune_locked(now)
-        _jobs[job_id] = {
-            "user_id": user_id,
-            "status": "queued",
-            "created_at": now,
-            "result": None,
-            "error": None,
-            "response": None,
-        }
+    db = _db()
+    try:
+        db.execute(
+            """
+            INSERT INTO azel_jobs (job_id, user_id, status, created_at, updated_at)
+            VALUES (%s, %s, 'queued', NOW(), NOW())
+            """,
+            (job_id, user_id),
+        )
+    finally:
+        db.close()
     return job_id
 
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
-    with _lock:
-        row = _jobs.get(job_id)
-        if row is None:
-            return None
-        return dict(row)
+    db = _db()
+    try:
+        row = db.fetch_one(
+            "SELECT job_id, user_id, status, response, error, created_at FROM azel_jobs WHERE job_id = %s",
+            (job_id,),
+        )
+        return dict(row) if row else None
+    finally:
+        db.close()
 
 
 def job_belongs_to_user(job_id: str, user_id: int) -> bool:
-    with _lock:
-        row = _jobs.get(job_id)
-        return row is not None and row.get("user_id") == user_id
+    db = _db()
+    try:
+        row = db.fetch_one(
+            "SELECT 1 FROM azel_jobs WHERE job_id = %s AND user_id = %s",
+            (job_id, user_id),
+        )
+        return row is not None
+    finally:
+        db.close()
 
 
 def _set_job(job_id: str, **kwargs) -> None:
-    with _lock:
-        if job_id not in _jobs:
+    if not kwargs:
+        return
+    db = _db()
+    try:
+        # Build SET clause dynamically for the fields that are provided
+        allowed = {"status", "response", "error"}
+        sets = []
+        values = []
+        for key, val in kwargs.items():
+            if key not in allowed:
+                continue
+            sets.append(f"{key} = %s")
+            # response must be stored as JSON
+            if key == "response" and val is not None and not isinstance(val, str):
+                val = json.dumps(val)
+            values.append(val)
+        if not sets:
             return
-        _jobs[job_id].update(kwargs)
+        sets.append("updated_at = NOW()")
+        values.append(job_id)
+        db.execute(
+            f"UPDATE azel_jobs SET {', '.join(sets)} WHERE job_id = %s",
+            tuple(values),
+        )
+    finally:
+        db.close()
 
+
+# ---------------------------------------------------------------------------
+# Background job runner
+# ---------------------------------------------------------------------------
 
 def run_azel_job(
     job_id: str,
@@ -76,7 +111,7 @@ def run_azel_job(
     course_title: str,
     rate_limit_payload: Dict[str, Any],
 ) -> None:
-    """Runs in a daemon thread; updates job record when done."""
+    """Runs in a daemon thread; persists job state to DB when done."""
     try:
         _set_job(job_id, status="running")
         from agents.Azel_agent import get_azel_agent
@@ -90,10 +125,7 @@ def run_azel_job(
             course_title=course_title,
         )
         success = bool(result.get("success"))
-        if success:
-            message = "Course context processed successfully"
-        else:
-            message = "Course context processing completed with errors"
+        message = "Course context processed successfully" if success else "Course context processing completed with errors"
 
         response_body = {
             "message": message,
@@ -105,7 +137,6 @@ def run_azel_job(
             job_id,
             status="completed",
             response=response_body,
-            result=result,
             error=result.get("error"),
         )
         logger.info(
