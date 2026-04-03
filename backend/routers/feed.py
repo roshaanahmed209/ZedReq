@@ -24,7 +24,8 @@ async def get_feed(
 ):
     """
     Get personalized feed for current user.
-    Shows posts from followed users and own posts.
+    Connection posts (self + followed users) are returned first; after those are
+    exhausted, posts from other users appear (discovery). Cursor is opaque to clients.
     """
     try:
         user_id = current_user["id"]
