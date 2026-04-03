@@ -23,13 +23,17 @@ _FIREBASE_AND_GOOGLE_CONNECT = (
 )
 
 # Paddle.js / checkout (when using billing)
+# checkout-service.paddle.com is the actual transaction API endpoint hit during checkout
 _PADDLE_CONNECT = (
     "https://cdn.paddle.com "
     "https://sandbox-cdn.paddle.com "
     "https://checkout.paddle.com "
     "https://sandbox-checkout.paddle.com "
+    "https://checkout-service.paddle.com "
+    "https://sandbox-checkout-service.paddle.com "
     "https://buy.paddle.com "
-    "https://sandbox-buy.paddle.com"
+    "https://sandbox-buy.paddle.com "
+    "https://*.paddle.com"
 )
 
 
@@ -142,7 +146,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "media-src 'self' data: https: blob:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             f"connect-src {connect_src}; "
-            "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.google.com https://checkout.paddle.com https://sandbox-checkout.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com; "
+            "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.google.com https://*.paddle.com; "
             "frame-ancestors 'none';"
         )
         response.headers["Content-Security-Policy"] = csp
