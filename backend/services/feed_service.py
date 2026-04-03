@@ -224,7 +224,7 @@ class FeedService:
             .filter(
                 and_(
                     Post.uid.in_(circle_uids),
-                    Post.is_deleted == False
+                    Post.not_deleted()
                 )
             )
         )
@@ -248,7 +248,7 @@ class FeedService:
             self.db.query(Post)
             .join(User, Post.uid == User.uid)
             .outerjoin(Description, User.description_id == Description.desc_id)
-            .filter(Post.is_deleted == False)
+            .filter(Post.not_deleted())
         )
         if exclude_uids:
             query = query.filter(~Post.uid.in_(exclude_uids))
@@ -262,7 +262,7 @@ class FeedService:
         return self._format_post_rows(posts)
     
     def _discovery_has_any(self, exclude_uids: List[int]) -> bool:
-        q = self.db.query(Post.post_id).filter(Post.is_deleted == False)
+        q = self.db.query(Post.post_id).filter(Post.not_deleted())
         if exclude_uids:
             q = q.filter(~Post.uid.in_(exclude_uids))
         return q.first() is not None

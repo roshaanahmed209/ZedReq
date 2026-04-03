@@ -72,7 +72,7 @@ class PostService:
             .filter(
                 and_(
                     Post.post_id == post_id,
-                    Post.is_deleted == False
+                    Post.not_deleted()
                 )
             )
             .first()
@@ -119,7 +119,7 @@ class PostService:
                 self.db.query(Post)
                 .join(User, Post.uid == User.uid)
                 .outerjoin(Description, User.description_id == Description.desc_id)
-                .filter(Post.is_deleted == False)
+                .filter(Post.not_deleted())
                 .order_by(desc(Post.created_at))
                 .limit(limit)
                 .offset(offset)
@@ -181,7 +181,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.uid == target_user_id,
-                        Post.is_deleted == False
+                        Post.not_deleted()
                     )
                 )
                 .count()
@@ -196,7 +196,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.uid == target_user_id,
-                        Post.is_deleted == False
+                        Post.not_deleted()
                     )
                 )
                 .order_by(desc(Post.created_at))
@@ -299,7 +299,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.uid == target_user_id,
-                        Post.is_deleted == False,
+                        Post.not_deleted(),
                         Post.media_url.isnot(None),
                         Post.media_url != ''
                     )
@@ -316,7 +316,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.uid == target_user_id,
-                        Post.is_deleted == False,
+                        Post.not_deleted(),
                         Post.media_url.isnot(None),
                         Post.media_url != ''
                     )
@@ -462,7 +462,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.post_id == post_id,
-                        Post.is_deleted == False
+                        Post.not_deleted()
                     )
                 )
                 .first()
@@ -500,7 +500,7 @@ class PostService:
                 .filter(
                     and_(
                         Post.post_id == post_id,
-                        Post.is_deleted == False
+                        Post.not_deleted()
                     )
                 )
                 .first()

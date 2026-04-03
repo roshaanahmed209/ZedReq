@@ -137,7 +137,7 @@ class SearchService:
             .outerjoin(Description, User.description_id == Description.desc_id)
             .filter(
                 and_(
-                    Post.is_deleted == False,
+                    Post.not_deleted(),
                     Post.post_desc.ilike(search_pattern)
                 )
             )

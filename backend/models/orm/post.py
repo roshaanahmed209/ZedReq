@@ -1,6 +1,6 @@
 """Post ORM Model"""
 from typing import TYPE_CHECKING
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index, or_
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy.sql import func
 
@@ -44,6 +44,11 @@ class Post(Base):
         Index('idx_post_created', created_at.desc()),
         Index('idx_post_uid_created_deleted', 'uid', created_at.desc(), 'is_deleted'),
     )
+    
+    @classmethod
+    def not_deleted(cls):
+        """SQL filter: row is visible (not soft-deleted). NULL is treated as not deleted."""
+        return or_(cls.is_deleted.is_(False), cls.is_deleted.is_(None))
     
     def __repr__(self):
         return f"<Post(post_id={self.post_id}, uid={self.uid}, is_deleted={self.is_deleted})>"

@@ -1001,7 +1001,7 @@ class VecAgent:
             # Build base query with join to user
             base_query = db.query(Post, User).join(
                 User, Post.uid == User.uid
-            ).filter(Post.is_deleted == False)
+            ).filter(Post.not_deleted())
             
             if since:
                 base_query = base_query.filter(Post.created_at >= since)

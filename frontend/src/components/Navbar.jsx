@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react'
 import styled from 'styled-components'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
-import Messages from '../pages/Messages'
 import './Navbar.css'
+
+/** Lazy-loaded to avoid circular import: Messages → Navbar → Messages (TDZ in production bundle). */
+const Messages = lazy(() => import('../pages/Messages'))
 
 /* ═══════════════════════════════════════════════════════════════
    Styled Components (Extracted from Feed.jsx)
@@ -879,7 +881,9 @@ function Navbar() {
             </MobileSidePanel>
 
             <MessagesPanel isOpen={messagesOpen}>
-                <Messages overlay={true} onClose={() => setMessagesOpen(false)} />
+                <Suspense fallback={<div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Loading messages…</div>}>
+                    <Messages overlay={true} onClose={() => setMessagesOpen(false)} />
+                </Suspense>
             </MessagesPanel>
         </>
     )

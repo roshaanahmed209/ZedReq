@@ -379,7 +379,7 @@ Industry: {industry}
                 post = (
                     self.db.query(Post)
                     .filter(Post.post_id == entity_id)
-                    .filter(Post.is_deleted == False)
+                    .filter(Post.not_deleted())
                     .first()
                 )
                 
