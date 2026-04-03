@@ -29,6 +29,9 @@ wheels/
 .env
 .venv
 
+# Seed script mirrors (optional local copies of remote images)
+backend/seed_data/assets/
+
 # Database
 *.db
 *.db-journal

@@ -1,6 +1,9 @@
 """
 Create All Tables for ZedReq Database
-Generates SQL for creating all tables and indexes in the correct order (respecting foreign keys)
+Generates SQL for creating all tables and indexes in the correct order (respecting foreign keys).
+
+Consolidates schema from init_database.py, create_profile_tables.py, and db/migrations/.
+Requires PostgreSQL with the pgvector extension for embedding columns on description and job_postings.
 """
 
 import os
@@ -26,6 +29,10 @@ CREATE TABLE IF NOT EXISTS users (
     description_id INTEGER,
     pay_id INTEGER,
     job_id INTEGER,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
+    two_factor_secret TEXT,
+    two_factor_backup_codes TEXT,
+    two_factor_verified BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -43,6 +50,11 @@ CREATE TABLE IF NOT EXISTS description (
     current_status VARCHAR(100),
     profile_pic TEXT,
     cover_pic TEXT,
+    resume TEXT,
+    profile_version INTEGER DEFAULT 1,
+    city VARCHAR(150),
+    country VARCHAR(150),
+    embedding vector(3072),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -84,6 +96,7 @@ CREATE TABLE IF NOT EXISTS post (
     media_url TEXT,
     media_type VARCHAR(20),
     post_desc TEXT,
+    post_link TEXT,
     is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -128,6 +141,33 @@ CREATE TABLE IF NOT EXISTS network (
     num_connections INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+CONNECTION_REQUESTS_TABLE = '''
+CREATE TABLE IF NOT EXISTS connection_requests (
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    receiver_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pending',
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(sender_id, receiver_id)
+);
+'''
+
+NOTIFICATIONS_TABLE = '''
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    related_user_id INTEGER REFERENCES users(uid) ON DELETE SET NULL,
+    related_request_id INTEGER REFERENCES connection_requests(id) ON DELETE SET NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 '''
 
@@ -358,6 +398,10 @@ CREATE TABLE IF NOT EXISTS lms_user_section_progress (
     section_id INTEGER NOT NULL REFERENCES lms_course_sections(id) ON DELETE CASCADE,
     completed_items INTEGER DEFAULT 0,
     is_completed BOOLEAN DEFAULT FALSE,
+    questions_answered INTEGER DEFAULT 0,
+    correct_answers INTEGER DEFAULT 0,
+    accuracy_percentage NUMERIC(5,2) DEFAULT 0.00,
+    total_points_earned INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, section_id)
@@ -437,6 +481,208 @@ CREATE TABLE IF NOT EXISTS usage_tracking (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, feature, period_start)
+);
+'''
+
+# Profile feature tables (LinkedIn-style sections; see create_profile_tables.py)
+USER_EXPERIENCE_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_experience (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    company VARCHAR(150) NOT NULL,
+    location VARCHAR(150),
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    employment_type VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_EDUCATION_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_education (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    school VARCHAR(200) NOT NULL,
+    degree VARCHAR(150),
+    field_of_study VARCHAR(150),
+    start_year INTEGER,
+    end_year INTEGER,
+    grade VARCHAR(50),
+    activities TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_PROJECTS_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_projects (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    url TEXT,
+    start_date DATE,
+    end_date DATE,
+    associated_with VARCHAR(200),
+    technologies JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_PROFILE_RECOMMENDATIONS_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_recommendations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    recommender_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    relationship VARCHAR(100),
+    recommendation_text TEXT NOT NULL,
+    is_visible BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_INTERESTS_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_interests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    interest_type VARCHAR(50) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+PROFILE_ANALYTICS_TABLE = '''
+CREATE TABLE IF NOT EXISTS profile_analytics (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    viewer_id INTEGER REFERENCES users(uid) ON DELETE SET NULL,
+    view_type VARCHAR(50) NOT NULL,
+    source VARCHAR(50),
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+JOB_POSTINGS_TABLE = '''
+CREATE TABLE IF NOT EXISTS job_postings (
+    job_id SERIAL PRIMARY KEY,
+    poster_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    company_name VARCHAR(150),
+    location VARCHAR(150),
+    city VARCHAR(150),
+    country VARCHAR(150),
+    job_type VARCHAR(50) DEFAULT 'full-time',
+    is_remote BOOLEAN DEFAULT FALSE,
+    experience_level VARCHAR(50),
+    skills_required TEXT,
+    salary_min INTEGER,
+    salary_max INTEGER,
+    status VARCHAR(20) DEFAULT 'active',
+    job_link TEXT,
+    embedding vector(3072),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+JOB_APPLICATIONS_TABLE = '''
+CREATE TABLE IF NOT EXISTS job_applications (
+    application_id SERIAL PRIMARY KEY,
+    job_id INTEGER NOT NULL REFERENCES job_postings(job_id) ON DELETE CASCADE,
+    applicant_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    status VARCHAR(30) DEFAULT 'pending',
+    cover_letter TEXT,
+    match_score INTEGER,
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(job_id, applicant_id)
+);
+'''
+
+JOB_SAVED_TABLE = '''
+CREATE TABLE IF NOT EXISTS job_saved (
+    saved_id SERIAL PRIMARY KEY,
+    job_id INTEGER NOT NULL REFERENCES job_postings(job_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(job_id, user_id)
+);
+'''
+
+LIVE_INTERVIEWS_TABLE = '''
+CREATE TABLE IF NOT EXISTS live_interviews (
+    interview_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    job_id INTEGER NOT NULL REFERENCES job_postings(job_id) ON DELETE CASCADE,
+    tavus_conversation_id VARCHAR(255),
+    tavus_response JSONB,
+    questions JSONB,
+    user_responses JSONB,
+    overall_score INTEGER,
+    score_breakdown JSONB,
+    feedback TEXT,
+    riz_feedback JSONB,
+    attempt_number INTEGER NOT NULL DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'pending',
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_JOB_PREFERENCES_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_job_preferences (
+    user_id INTEGER PRIMARY KEY REFERENCES users(uid) ON DELETE CASCADE,
+    preferred_location TEXT,
+    preferred_job_type VARCHAR(50),
+    preferred_remote BOOLEAN,
+    salary_expectation_min INTEGER,
+    salary_expectation_max INTEGER,
+    experience_level VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+USER_JOB_RECOMMENDATIONS_CACHE_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_job_recommendations_cache (
+    user_id INTEGER PRIMARY KEY REFERENCES users(uid) ON DELETE CASCADE,
+    recommendations JSONB NOT NULL,
+    cache_version INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP
+);
+'''
+
+RESERVED_SEATS_TABLE = '''
+CREATE TABLE IF NOT EXISTS reserved_seats (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    user_id INTEGER REFERENCES users(uid) ON DELETE SET NULL,
+    promo_code VARCHAR(20) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
+AZEL_JOBS_TABLE = '''
+CREATE TABLE IF NOT EXISTS azel_jobs (
+    job_id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'queued',
+    response JSONB,
+    error TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 '''
 
@@ -529,6 +775,73 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_plan ON user_subscriptions(plan_id)',
     'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status)',
     'CREATE INDEX IF NOT EXISTS idx_usage_tracking_lookup ON usage_tracking(user_id, feature, period_start)',
+
+    # Connection requests & notifications
+    'CREATE INDEX IF NOT EXISTS idx_conn_req_sender ON connection_requests(sender_id)',
+    'CREATE INDEX IF NOT EXISTS idx_conn_req_receiver ON connection_requests(receiver_id)',
+    'CREATE INDEX IF NOT EXISTS idx_conn_req_status ON connection_requests(status)',
+    'CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(user_id, is_read) WHERE is_read = FALSE',
+
+    # Profile feature tables
+    'CREATE INDEX IF NOT EXISTS idx_user_experience_user_id ON user_experience(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_education_user_id ON user_education(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_projects_user_id ON user_projects(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_recommendations_user_id ON user_recommendations(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_recommendations_recommender_id ON user_recommendations(recommender_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_interests_user_id ON user_interests(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_interests_type ON user_interests(interest_type)',
+    'CREATE INDEX IF NOT EXISTS idx_profile_analytics_user_id ON profile_analytics(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_profile_analytics_viewer_id ON profile_analytics(viewer_id)',
+    'CREATE INDEX IF NOT EXISTS idx_profile_analytics_viewed_at ON profile_analytics(viewed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_profile_analytics_user_viewed ON profile_analytics(user_id, viewed_at)',
+
+    # Job portal
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_poster ON job_postings(poster_id)',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_location ON job_postings(location)',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_type ON job_postings(job_type)',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_remote_active ON job_postings(is_remote, status)',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_created_desc ON job_postings(created_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_city ON job_postings(city) WHERE city IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_country ON job_postings(country) WHERE country IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_job_postings_city_country ON job_postings(city, country) WHERE city IS NOT NULL AND country IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_job_applications_job ON job_applications(job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_job_applications_applicant ON job_applications(applicant_id)',
+    'CREATE INDEX IF NOT EXISTS idx_job_applications_job_status ON job_applications(job_id, status)',
+    'CREATE INDEX IF NOT EXISTS idx_job_saved_job ON job_saved(job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_job_saved_user ON job_saved(user_id)',
+
+    # Live interviews
+    'CREATE INDEX IF NOT EXISTS idx_live_interviews_user_id ON live_interviews(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_live_interviews_job_id ON live_interviews(job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_live_interviews_user_job ON live_interviews(user_id, job_id)',
+    'CREATE INDEX IF NOT EXISTS idx_live_interviews_status ON live_interviews(status) WHERE status IN (\'pending\', \'in_progress\')',
+    'CREATE INDEX IF NOT EXISTS idx_live_interviews_tavus_conversation_id ON live_interviews(tavus_conversation_id) WHERE tavus_conversation_id IS NOT NULL',
+
+    # Recommendations cache & preferences
+    'CREATE INDEX IF NOT EXISTS idx_recommendations_cache_user_id ON user_job_recommendations_cache(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_recommendations_cache_expires ON user_job_recommendations_cache(expires_at) WHERE expires_at IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_description_profile_version ON description(profile_version) WHERE profile_version IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_user_job_preferences_user_id ON user_job_preferences(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_user_job_preferences_location ON user_job_preferences(preferred_location) WHERE preferred_location IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_user_job_preferences_job_type ON user_job_preferences(preferred_job_type) WHERE preferred_job_type IS NOT NULL',
+
+    # Reserved seats & Azel jobs
+    'CREATE INDEX IF NOT EXISTS idx_reserved_seats_email ON reserved_seats(email)',
+    'CREATE INDEX IF NOT EXISTS idx_reserved_seats_user_id ON reserved_seats(user_id) WHERE user_id IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_reserved_seats_promo_code ON reserved_seats(promo_code)',
+    'CREATE INDEX IF NOT EXISTS idx_reserved_seats_created_at ON reserved_seats(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_azel_jobs_user_id ON azel_jobs(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_azel_jobs_status ON azel_jobs(status)',
+    'CREATE INDEX IF NOT EXISTS idx_azel_jobs_created_at ON azel_jobs(created_at)',
+
+    # pgvector IVFFLAT (may fail until extension exists or with empty tables — safe to re-run later)
+    'CREATE INDEX IF NOT EXISTS idx_job_embeddings ON job_postings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)',
+    'CREATE INDEX IF NOT EXISTS idx_description_embeddings ON description USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)',
+
+    # User location on description
+    'CREATE INDEX IF NOT EXISTS idx_description_city ON description(city) WHERE city IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_description_country ON description(country) WHERE country IS NOT NULL',
 ]
 
 # ============================================================================
@@ -536,29 +849,37 @@ INDEXES = [
 # ============================================================================
 
 TABLES_IN_ORDER = [
-    # Level 0: No dependencies
+    # Level 0: No dependencies (description uses vector — requires pgvector extension)
     ("users", USERS_TABLE),
     ("description", DESCRIPTION_TABLE),
     ("lms_courses", LMS_COURSES_TABLE),
     ("lms_domains", LMS_DOMAINS_TABLE),
-    
-    # Level 1: Depends on users
+    ("subscription_plans", SUBSCRIPTION_PLANS_TABLE),
+    ("user_subscriptions", USER_SUBSCRIPTIONS_TABLE),
+    ("usage_tracking", USAGE_TRACKING_TABLE),
+    ("user_job_preferences", USER_JOB_PREFERENCES_TABLE),
+
+    # Level 1: Depends on users (and post before likes)
     ("post", POST_TABLE),
     ("job", JOB_TABLE),
-    ("likes", LIKES_TABLE),  # Depends on post
+    ("likes", LIKES_TABLE),
     ("connections", CONNECTIONS_TABLE),
     ("network", NETWORK_TABLE),
+    ("connection_requests", CONNECTION_REQUESTS_TABLE),
+    ("notifications", NOTIFICATIONS_TABLE),
     ("lms_dashboard", LMS_DASHBOARD_TABLE),
-    
-    # Subscription system (must come before payment due to FK)
-    ("subscription_plans", SUBSCRIPTION_PLANS_TABLE),           # Level 0: No deps
-    ("user_subscriptions", USER_SUBSCRIPTIONS_TABLE),           # Level 1: users + subscription_plans
-    ("usage_tracking", USAGE_TRACKING_TABLE),                    # Level 1: users
-    
+
+    ("user_experience", USER_EXPERIENCE_TABLE),
+    ("user_education", USER_EDUCATION_TABLE),
+    ("user_projects", USER_PROJECTS_TABLE),
+    ("user_recommendations", USER_PROFILE_RECOMMENDATIONS_TABLE),
+    ("user_interests", USER_INTERESTS_TABLE),
+    ("profile_analytics", PROFILE_ANALYTICS_TABLE),
+
     # Payment (depends on users + user_subscriptions via subscription_id FK)
     ("payment", PAYMENT_TABLE),
-    
-    # Level 2: Depends on users and lms_courses
+
+    # LMS: users + lms_courses
     ("lms_user_courses", LMS_USER_COURSES_TABLE),
     ("lms_activities", LMS_ACTIVITIES_TABLE),
     ("lms_deadlines", LMS_DEADLINES_TABLE),
@@ -567,20 +888,23 @@ TABLES_IN_ORDER = [
     ("lms_course_sections", LMS_COURSE_SECTIONS_TABLE),
     ("lms_course_resources", LMS_COURSE_RESOURCES_TABLE),
     ("azel_search_urls", AZEL_SEARCH_URLS_TABLE),
-    
-    # Level 3: Depends on users and lms_domains
+
     ("lms_user_domain_performance", LMS_USER_DOMAIN_PERFORMANCE_TABLE),
     ("lms_weekly_performance", LMS_WEEKLY_PERFORMANCE_TABLE),
-    
-    # Level 3: Depends on users and lms_courses
     ("lms_user_course_performance", LMS_USER_COURSE_PERFORMANCE_TABLE),
-    
-    # Level 4: Depends on lms_course_sections
+
     ("lms_questions", LMS_QUESTIONS_TABLE),
     ("lms_user_section_progress", LMS_USER_SECTION_PROGRESS_TABLE),
-    
-    # Level 5: Depends on lms_questions
     ("lms_user_answers", LMS_USER_ANSWERS_TABLE),
+
+    # Job portal + related
+    ("job_postings", JOB_POSTINGS_TABLE),
+    ("job_applications", JOB_APPLICATIONS_TABLE),
+    ("job_saved", JOB_SAVED_TABLE),
+    ("live_interviews", LIVE_INTERVIEWS_TABLE),
+    ("user_job_recommendations_cache", USER_JOB_RECOMMENDATIONS_CACHE_TABLE),
+    ("reserved_seats", RESERVED_SEATS_TABLE),
+    ("azel_jobs", AZEL_JOBS_TABLE),
 ]
 
 
@@ -601,10 +925,17 @@ def create_all_tables(db=None):
     print("=" * 60)
     print("Creating all tables for ZedReq database...")
     print("=" * 60)
-    
+
+    try:
+        db.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        print("  [OK] pgvector extension available (embedding columns enabled)")
+    except Exception as e:
+        print(f"  [WARN] pgvector extension: {e}")
+        print("  [INFO] Install pgvector or use a pgvector image; CREATE TABLE may fail on embedding columns.")
+
     success_count = 0
     error_count = 0
-    
+
     for table_name, sql in TABLES_IN_ORDER:
         try:
             db.execute(sql)
@@ -638,7 +969,12 @@ def create_all_tables(db=None):
 
 def get_create_sql():
     """Get all CREATE TABLE SQL as a single string"""
-    sql_parts = ["-- ZedReq Database Schema", "-- Generated table creation script\n"]
+    sql_parts = [
+        "-- ZedReq Database Schema",
+        "-- Generated table creation script",
+        "-- Requires: CREATE EXTENSION IF NOT EXISTS vector;\n",
+        "CREATE EXTENSION IF NOT EXISTS vector;\n",
+    ]
     
     for table_name, sql in TABLES_IN_ORDER:
         sql_parts.append(f"-- Table: {table_name}")
