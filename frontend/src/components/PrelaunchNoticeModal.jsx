@@ -1,12 +1,15 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import '../css/components/PrelaunchNoticeModal.css'
 
-const BUG_EMAIL = 'zed.req@yahoo.com'
-const MAILTO_SUBJECT = encodeURIComponent('ZedReq bug report')
-const MAILTO_HREF = `mailto:${BUG_EMAIL}?subject=${MAILTO_SUBJECT}`
-
-export default function PrelaunchNoticeModal({ onDismiss }) {
+export default function PrelaunchNoticeModal({ config, onDismiss }) {
   const primaryRef = useRef(null)
+
+  const mailtoHref = useMemo(() => {
+    const email = (config?.bug_email || '').trim()
+    const sub = encodeURIComponent(config?.mailto_subject || 'ZedReq bug report')
+    if (!email) return '#'
+    return `mailto:${email}?subject=${sub}`
+  }, [config?.bug_email, config?.mailto_subject])
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow
@@ -23,6 +26,13 @@ export default function PrelaunchNoticeModal({ onDismiss }) {
     }
   }, [onDismiss])
 
+  const badge = config?.badge_label ?? 'Pre-launch'
+  const title = config?.title ?? ''
+  const body = config?.body ?? ''
+  const primaryLabel = config?.primary_button_label ?? 'Continue'
+  const secondaryLabel = config?.secondary_button_label ?? 'Email us'
+  const bugEmail = config?.bug_email ?? ''
+
   return (
     <div
       className="prelaunch-notice-overlay"
@@ -37,14 +47,12 @@ export default function PrelaunchNoticeModal({ onDismiss }) {
         aria-describedby="prelaunch-notice-desc"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="prelaunch-notice-badge">Pre-launch</div>
+        <div className="prelaunch-notice-badge">{badge}</div>
         <h2 id="prelaunch-notice-title" className="prelaunch-notice-title">
-          ZedReq is not officially live yet
+          {title}
         </h2>
         <p id="prelaunch-notice-desc" className="prelaunch-notice-body">
-          You are using an early version of the product. Features and data may change,
-          and you may occasionally run into bugs or rough edges. Thank you for trying
-          ZedReq—we rely on your feedback to improve.
+          {body}
         </p>
         <div className="prelaunch-notice-email-row">
           <svg
@@ -63,14 +71,17 @@ export default function PrelaunchNoticeModal({ onDismiss }) {
           </svg>
           <div>
             <div className="prelaunch-notice-email-label">Report bugs</div>
-            <a className="prelaunch-notice-email-link" href={MAILTO_HREF}>
-              {BUG_EMAIL}
+            <a className="prelaunch-notice-email-link" href={mailtoHref}>
+              {bugEmail}
             </a>
           </div>
         </div>
         <div className="prelaunch-notice-actions">
-          <a className="prelaunch-notice-btn prelaunch-notice-btn-secondary" href={MAILTO_HREF}>
-            Email us
+          <a
+            className="prelaunch-notice-btn prelaunch-notice-btn-secondary"
+            href={mailtoHref}
+          >
+            {secondaryLabel}
           </a>
           <button
             ref={primaryRef}
@@ -78,7 +89,7 @@ export default function PrelaunchNoticeModal({ onDismiss }) {
             className="prelaunch-notice-btn prelaunch-notice-btn-primary"
             onClick={onDismiss}
           >
-            Continue
+            {primaryLabel}
           </button>
         </div>
       </div>

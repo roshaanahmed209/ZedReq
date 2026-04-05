@@ -101,4 +101,5 @@ def init_orm_tables():
     """Create all ORM tables (if they don't exist)"""
     # Ensure models are registered on Base before create_all
     import models.orm.enterprise_inquiry  # noqa: F401
+    import models.orm.app_site_setting  # noqa: F401
     Base.metadata.create_all(bind=engine)

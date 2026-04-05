@@ -13,6 +13,10 @@ const api = axios.create({
   timeout: 250000, // 250 second default timeout (increased for LLM and complex queries)
 })
 
+/** Public (no auth) — post-login pre-launch modal copy from backoffice. */
+export const fetchPublicPrelaunchNotice = () =>
+  api.get('/api/public/prelaunch-notice')
+
 // Token management functions
 export const tokenService = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),

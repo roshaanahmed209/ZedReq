@@ -125,8 +125,10 @@ async def get_current_user_profile(
     profile = profile_service.get_user_profile(current_user["id"])
     
     if profile:
+        uid = profile.get("id") or profile.get("uid")
         return {
-            "uid": profile.get("id") or profile.get("uid"),
+            "id": uid,
+            "uid": uid,
             "username": profile.get("username"),
             "name": profile.get("name"),
             "email": profile.get("email") or profile.get("user_email"),

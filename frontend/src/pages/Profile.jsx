@@ -1406,6 +1406,22 @@ function Profile() {
 
   const userId = getUserIdFromUrl()
 
+  const currentUserId =
+    currentUser != null ? Number(currentUser.id ?? currentUser.uid) : null
+  const currentUserIdValid = currentUserId != null && !Number.isNaN(currentUserId)
+
+  /* ── Refetch profile when settings (or elsewhere) updates photos for this user ── */
+  useEffect(() => {
+    if (!userId) return
+    const onUpdated = (e) => {
+      const vid = e.detail?.userId
+      if (vid == null || Number(vid) !== Number(userId)) return
+      userAPI.getUserProfile(userId).then((r) => setProfile(r.data)).catch(() => {})
+    }
+    window.addEventListener('zedreq:profile-updated', onUpdated)
+    return () => window.removeEventListener('zedreq:profile-updated', onUpdated)
+  }, [userId])
+
   /* ── Data loading ────────────────────────────────────────── */
   useEffect(() => {
     if (userId) {
@@ -1422,7 +1438,7 @@ function Profile() {
       setError('Invalid profile URL')
       setLoading(false)
     }
-  }, [userId, location.pathname])
+  }, [userId, location.pathname, location.key])
 
   const loadProfile = async () => {
     if (!userId) { setError('Invalid user ID'); setLoading(false); return }
@@ -1442,7 +1458,7 @@ function Profile() {
   }
 
   const checkConnectionStatus = async () => {
-    if (!currentUser || !userId || userId === currentUser.id) return
+    if (!currentUser || !userId || (currentUserIdValid && Number(userId) === currentUserId)) return
     try {
       // Check if already connected - API returns list of connected users with id/uid fields
       const connectionsResponse = await networkAPI.getConnections()
@@ -1559,7 +1575,7 @@ function Profile() {
   }
 
   const trackProfileView = async () => {
-    if (!userId || !currentUser || userId === currentUser.id) return
+    if (!userId || !currentUser || (currentUserIdValid && Number(userId) === currentUserId)) return
     try {
       const fire = () => {
         profileFeaturesAPI.trackProfileView(userId, 'direct').catch(() => { })
@@ -1840,7 +1856,12 @@ function Profile() {
   }
 
   /* ── Derived data ────────────────────────────────────────── */
-  const isOwn = currentUser && currentUser.id === userId
+  const isOwn =
+    currentUserIdValid && userId != null && currentUserId === Number(userId)
+  const displayCoverPic =
+    profile.cover_pic ?? (isOwn ? currentUser?.cover_pic : null)
+  const displayProfilePic =
+    profile.profile_pic ?? (isOwn ? currentUser?.profile_pic : null)
   const skills = parseSkills(profile.skills)
   const legacyCerts = parseCertificates(profile.certificates || '')
   const initials = profile.name
@@ -2371,14 +2392,14 @@ function Profile() {
 
       <Shell>
         {/* Cover Photo */}
-        <CoverWrap $src={profile.cover_pic} />
+        <CoverWrap key={displayCoverPic || 'cover'} $src={displayCoverPic} />
 
         {/* Header Card */}
         <HeaderCard>
           <AvatarRow>
             <AvatarCircle>
-              {profile.profile_pic
-                ? <img src={profile.profile_pic} alt={profile.name} />
+              {displayProfilePic
+                ? <img key={displayProfilePic} src={displayProfilePic} alt={profile.name} />
                 : <AvatarFallback>{initials}</AvatarFallback>
               }
             </AvatarCircle>

@@ -784,6 +784,15 @@ const Settings = () => {
         if (updateUser && response.data) {
           updateUser({ ...user, ...response.data })
         }
+
+        if ((updateData.profile_pic || updateData.cover_pic) && response?.data) {
+          const vid = response.data.id ?? response.data.uid ?? user?.id ?? user?.uid
+          if (vid != null) {
+            window.dispatchEvent(
+              new CustomEvent('zedreq:profile-updated', { detail: { userId: vid } })
+            )
+          }
+        }
         
         // Show specific success message if resume was uploaded
         if (resume) {

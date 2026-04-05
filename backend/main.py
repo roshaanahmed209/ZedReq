@@ -45,6 +45,7 @@ from routers import (
 )
 from routers.reserved_seats import router as reserved_seats_router
 from routers.monitoring import router as monitoring_router
+from routers.prelaunch_public import router as prelaunch_public_router
 from middleware.monitoring_middleware import MonitoringMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.body_limit import BodySizeLimitMiddleware
@@ -152,6 +153,16 @@ async def lifespan(app: FastAPI):
                 print("Subscription plans seeded successfully")
             finally:
                 seed_db.close()
+            try:
+                from services.prelaunch_notice_service import ensure_prelaunch_row_seeded
+
+                seed2 = SessionLocal()
+                try:
+                    ensure_prelaunch_row_seeded(seed2)
+                finally:
+                    seed2.close()
+            except Exception as e:
+                print(f"[WARN] Prelaunch notice seed failed: {e}")
         except Exception as e:
             print(f"[WARN] ORM/seed failed: {e}")
 
@@ -361,6 +372,7 @@ app.include_router(profile_features_router, prefix="/api/profile", tags=["Profil
 app.include_router(context_router, prefix="/api/context", tags=["Context"])
 app.include_router(reserved_seats_router)
 app.include_router(monitoring_router)
+app.include_router(prelaunch_public_router, prefix="/api")
 
 
 # Get paths for static files
