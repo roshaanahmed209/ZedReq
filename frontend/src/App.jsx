@@ -32,6 +32,7 @@ import TermsOfService from './pages/TermsOfService'
 import CookiePolicy from './pages/CookiePolicy'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePlanSelected from './components/RequirePlanSelected'
+import PrelaunchNoticeHost from './components/PrelaunchNoticeHost'
 import { initAnalytics, trackPageView } from './utils/analytics'
 
 function WithPlanGate({ children }) {
@@ -64,6 +65,7 @@ function App() {
       <AuthProvider>
         <Router>
           <RouteTracker />
+          <PrelaunchNoticeHost />
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />

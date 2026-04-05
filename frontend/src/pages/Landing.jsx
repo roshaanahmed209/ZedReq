@@ -6,6 +6,7 @@ import { signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider } from '../config/firebase'
 import api, { tokenService } from '../services/api'
 import { extractApiErrorMessage } from '../utils/apiError'
+import { markPrelaunchNoticePending } from '../utils/prelaunchNotice'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -535,6 +536,7 @@ const Landing = () => {
     }
     
     if (result.success) {
+      markPrelaunchNoticePending()
       navigate('/feed')
     } else {
       showMessage(result.message || 'Login failed', true)
@@ -559,6 +561,7 @@ const Landing = () => {
       setRequires2FA(false)
       setTempToken(null)
       setTwoFactorCode('')
+      markPrelaunchNoticePending()
       navigate('/feed')
     } else {
       showMessage(result.message || 'Invalid 2FA code', true)
@@ -594,6 +597,7 @@ const Landing = () => {
           await checkAuthStatus()
         }
 
+        markPrelaunchNoticePending()
         navigate('/feed')
       } else {
         showMessage(
@@ -676,6 +680,7 @@ const Landing = () => {
     const result = await register(userData)
     
     if (result.success) {
+      markPrelaunchNoticePending()
       navigate('/feed')
     } else {
       showMessage(result.message || 'Registration failed', true, result.errors || [])

@@ -36,6 +36,9 @@ _PADDLE_CONNECT = (
     "https://*.paddle.com"
 )
 
+# @emailjs/browser sends from the client to EmailJS REST API
+_EMAILJS_CONNECT = "https://api.emailjs.com"
+
 
 def _parse_origin(url: str) -> Optional[str]:
     """Return scheme://host:port (or host only) for CSP connect-src."""
@@ -89,7 +92,12 @@ def _host_header_connect_origins(request: Request) -> list[str]:
 
 
 def _build_connect_src(request: Optional[Request] = None) -> str:
-    parts: list[str] = ["'self'", _FIREBASE_AND_GOOGLE_CONNECT, _PADDLE_CONNECT]
+    parts: list[str] = [
+        "'self'",
+        _FIREBASE_AND_GOOGLE_CONNECT,
+        _PADDLE_CONNECT,
+        _EMAILJS_CONNECT,
+    ]
 
     if request is not None:
         parts.extend(_host_header_connect_origins(request))

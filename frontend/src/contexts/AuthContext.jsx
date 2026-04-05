@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { authAPI, tokenService, NotificationWebSocket } from '../services/api'
+import { clearPrelaunchNoticePending } from '../utils/prelaunchNotice'
 
 const AuthContext = createContext()
 
@@ -269,6 +270,7 @@ export const AuthProvider = ({ children }) => {
     setUnreadNotifications(0)
     setSessionFeedStats(null)
     clearStoredFeedStats()
+    clearPrelaunchNoticePending()
 
     // Fire backend logout (context update) in the background — don't await
     authAPI.logout().catch(err => console.warn('Background logout call failed:', err))
