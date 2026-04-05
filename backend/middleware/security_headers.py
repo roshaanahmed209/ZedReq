@@ -144,6 +144,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # strict same-origin COOP breaks cross-origin popups (Firebase signInWithPopup,
+        # some payment flows) — parent cannot read window.closed / call window.close.
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
 
         connect_src = _build_connect_src(request)
         csp = (
