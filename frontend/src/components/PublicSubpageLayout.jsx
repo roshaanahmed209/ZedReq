@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import SiteFooter from './SiteFooter'
 import '../css/pages/PublicSubpage.css'
 
-export default function PublicSubpageLayout({ title, children, mainClassName = '' }) {
+export default function PublicSubpageLayout({ title, children, mainClassName = '', preFooter = null }) {
   const mainClass = ['public-subpage-main', mainClassName].filter(Boolean).join(' ')
   return (
     <div className="public-subpage">
@@ -18,6 +18,7 @@ export default function PublicSubpageLayout({ title, children, mainClassName = '
         {title ? <h1 className="public-subpage-title">{title}</h1> : null}
         {children}
       </main>
+      {preFooter ? <div className="public-subpage-prefooter">{preFooter}</div> : null}
       <SiteFooter />
     </div>
   )
