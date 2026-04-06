@@ -78,6 +78,16 @@ class Settings(BaseSettings):
     RECOMMENDATION_CACHE_ENABLED: bool = True
     RECOMMENDATION_CACHE_TTL_HOURS: int = 24  # Optional TTL for cache expiration
     JOB_EMBEDDING_BACKFILL_BATCH_SIZE: int = 100
+
+    # Paddle Billing (optional — webhooks + subscription cancel/change APIs)
+    PADDLE_API_KEY: str | None = None
+    PADDLE_WEBHOOK_SECRET: str | None = None
+    # Sandbox API host differs; default production api.paddle.com
+    PADDLE_SANDBOX: bool = False
+    PADDLE_PRICE_PRO: str | None = None
+    PADDLE_PRICE_PREMIUM: str | None = None
+    # Max age (seconds) for webhook ts when verifying Paddle-Signature (SDK default 5 is strict)
+    PADDLE_WEBHOOK_MAX_AGE_SECONDS: int = 3600
     
     class Config:
         env_file = str(_env_file)

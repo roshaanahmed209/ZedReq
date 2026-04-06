@@ -46,6 +46,10 @@ class Payment(Base):
         nullable=True,
         index=True
     )
+
+    # Paddle Billing (provider subscription id — not the same as subscription_id FK above)
+    paddle_subscription_id = Column(String(255), nullable=True, index=True)
+    paddle_price_id = Column(String(255), nullable=True)
     
     # Payment amount and transaction details
     amount = Column(Numeric(10, 2), nullable=True)  # Payment amount

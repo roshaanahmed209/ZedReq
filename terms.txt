@@ -151,8 +151,19 @@ Subscription Terms
 •	We reserve the right to offer free trials or promotional pricing, which may be subject to additional terms.
 
 Refund Policy
-All subscription fees are non-refundable except where required by applicable law. If you believe you were charged in error, contact us at zed.req@yahoo.com within 14 days of the charge. We will review your request in good faith, but we are under no obligation to issue refunds outside of legal requirements.
-
+All payments are processed by Paddle (paddle.com), who acts as the Merchant of Record for all ZedReq transactions. As Merchant of Record, Paddle owns and controls the refund process entirely. All refund requests must be submitted directly to Paddle at paddle.net — ZedReq does not process, approve, or deny refunds.
+30-Day Refund Window (First Payment Only)
+In compliance with Paddle's seller requirements, we offer a 30-day money-back window on your first subscription payment only, subject to the conditions below. This window does not apply to any subsequent renewal payments.
+Conditions That Must Be Met
+To be eligible, you must demonstrate that the Services did not perform materially as described. Refunds are not available for change of mind, dissatisfaction with AI outputs, failure to use the Services, or where you have actively used and benefited from premium AI features during the period.
+Digital Content Waiver
+By accessing any AI-powered feature — including job matching, skill gap analysis, mock interviews, or learning recommendations — you acknowledge you are consuming digital content and expressly consent to waiving your statutory withdrawal right with respect to that content. This waiver is consistent with applicable consumer protection law and Paddle's buyer terms.
+Renewals Are Non-Refundable
+All subscription renewal payments are strictly non-refundable. You may cancel at any time through your account settings, and cancellation takes effect at the end of the current billing period. No partial refunds are issued for unused time within a paid period.
+Paddle's Discretion
+All refund decisions are made by Paddle at their sole discretion on a case-by-case basis. Submission of a refund request does not guarantee approval. Paddle may refuse requests where there is evidence of fraud, refund abuse, or manipulative behaviour.
+Chargebacks
+Before initiating any chargeback with your bank or card issuer, you must first submit a refund request to Paddle at paddle.net. Chargebacks initiated without first attempting resolution through Paddle may result in immediate account suspension.
 Payment Disputes
 Any disputes regarding charges must first be raised with us directly before initiating a chargeback with your payment provider. Chargebacks initiated without first contacting us may result in account suspension. We reserve the right to contest any chargebacks we believe are made in bad faith.
 

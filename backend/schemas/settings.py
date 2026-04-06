@@ -1,6 +1,6 @@
 """Settings Schemas"""
 from pydantic import BaseModel, Field, EmailStr, validator
-from typing import Optional
+from typing import Literal, Optional
 from utils.api_security import sanitize_text_for_storage, validate_url_safe
 
 
@@ -79,6 +79,17 @@ class SubscriptionUpdate(BaseModel):
     billing_email: Optional[EmailStr] = None
 
 
+class SubscriptionCancelRequest(BaseModel):
+    """Cancel Paddle subscription (stops renewals per effective_from)."""
+    effective_from: Literal["immediately", "next_billing_period"] = "next_billing_period"
+
+
+class SubscriptionChangePlanRequest(BaseModel):
+    """Change existing Paddle subscription to another paid tier."""
+    plan: Literal["pro", "premium"]
+    proration_billing_mode: str = Field(default="prorated_immediately")
+
+
 class SubscriptionInfo(BaseModel):
     """Subscription information response"""
     plan: str = "free"
@@ -86,6 +97,7 @@ class SubscriptionInfo(BaseModel):
     subscription_start: Optional[str] = None
     subscription_end: Optional[str] = None
     requires_plan_selection: bool = True
+    paddle_subscription_id: Optional[str] = None
 
 
 class EnterpriseInquiryRequest(BaseModel):

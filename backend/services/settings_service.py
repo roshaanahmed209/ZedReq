@@ -1045,6 +1045,14 @@ class SettingsService:
         """Subscription dict plus requires_plan_selection for API responses."""
         info = self.get_subscription_info(user_id)
         info['requires_plan_selection'] = self.requires_plan_selection(user_id)
+        user = self.db.query(User).filter(User.uid == user_id).first()
+        if user:
+            if user.pay_id:
+                pay = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
+            else:
+                pay = self.db.query(Payment).filter(Payment.uid == user_id).first()
+            if pay:
+                info['paddle_subscription_id'] = pay.paddle_subscription_id
         return info
 
     def update_subscription(
@@ -1070,7 +1078,13 @@ class SettingsService:
         try:
             if plan not in ['free', 'pro', 'premium']:
                 raise ValidationError('Invalid subscription plan. Enterprise is admin-only.')
-            
+
+            if plan in ('pro', 'premium'):
+                raise ValidationError(
+                    'Paid plans are managed through Paddle. Use checkout to subscribe, or '
+                    'POST /api/user/subscription/change-plan if you already have an active subscription.'
+                )
+
             user = self.db.query(User).filter(User.uid == user_id).first()
             if not user:
                 raise NotFoundError('User')

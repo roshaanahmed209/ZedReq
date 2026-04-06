@@ -211,7 +211,10 @@ export const userAPI = {
   getConnectionCounts: (userId) => api.get(`/api/user/${userId}/connections/count`),
   getUserCertificates: (userId) => api.get(`/api/user/${userId}/certificates`),
   // Subscription & quota usage
+  getSubscription: () => api.get('/api/user/subscription'),
   getSubscriptionUsage: () => api.get('/api/user/subscription/usage'),
+  cancelSubscription: (body) => api.post('/api/user/subscription/cancel', body),
+  changeSubscriptionPlan: (body) => api.post('/api/user/subscription/change-plan', body),
 }
 
 // Profile Features API methods

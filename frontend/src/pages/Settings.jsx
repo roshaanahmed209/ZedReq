@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import api, { userAPI } from '../services/api'
@@ -525,6 +525,9 @@ const Settings = () => {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
   const [quotaUsage, setQuotaUsage] = useState(null)
+  const [paddleSubscriptionId, setPaddleSubscriptionId] = useState(null)
+  const [cancelEffectiveFrom, setCancelEffectiveFrom] = useState('next_billing_period')
+  const [billingBusy, setBillingBusy] = useState(false)
 
   // Refs for timeout cleanup
   const timeoutRefs = useRef([])
@@ -551,17 +554,26 @@ const Settings = () => {
     const loadSubscriptionUsage = async () => {
       try {
         setSubscriptionLoading(true)
-        const response = await userAPI.getSubscriptionUsage()
-        if (response.data) {
-          const { plan, usage } = response.data
+        const [usageRes, subRes] = await Promise.all([
+          userAPI.getSubscriptionUsage(),
+          userAPI.getSubscription().catch(() => ({ data: null })),
+        ])
+        if (usageRes.data) {
+          const { plan, usage } = usageRes.data
           setSubscriptionPlan(plan?.plan_name || 'free')
           setSubscriptionStatus(plan?.status || 'active')
           setQuotaUsage(usage)
+        }
+        if (subRes.data?.paddle_subscription_id) {
+          setPaddleSubscriptionId(subRes.data.paddle_subscription_id)
+        } else {
+          setPaddleSubscriptionId(null)
         }
       } catch (err) {
         console.error('Failed to load subscription usage:', err)
         setSubscriptionPlan('free')
         setSubscriptionStatus('active')
+        setPaddleSubscriptionId(null)
       } finally {
         setSubscriptionLoading(false)
         setSubscriptionLoaded(true)
@@ -569,6 +581,67 @@ const Settings = () => {
     }
     loadSubscriptionUsage()
   }, [user])
+
+  const refreshSubscriptionData = async () => {
+    try {
+      const [usageRes, subRes] = await Promise.all([
+        userAPI.getSubscriptionUsage(),
+        userAPI.getSubscription().catch(() => ({ data: null })),
+      ])
+      if (usageRes.data) {
+        const { plan, usage } = usageRes.data
+        setSubscriptionPlan(plan?.plan_name || 'free')
+        setSubscriptionStatus(plan?.status || 'active')
+        setQuotaUsage(usage)
+      }
+      if (subRes.data?.paddle_subscription_id) {
+        setPaddleSubscriptionId(subRes.data.paddle_subscription_id)
+      } else {
+        setPaddleSubscriptionId(null)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleCancelPaddleSubscription = async () => {
+    setBillingBusy(true)
+    setError('')
+    setSuccess('')
+    try {
+      await userAPI.cancelSubscription({ effective_from: cancelEffectiveFrom })
+      setSuccess(
+        cancelEffectiveFrom === 'immediately'
+          ? 'Cancellation requested. Access may end shortly once Paddle confirms.'
+          : 'Cancellation scheduled for the end of your billing period.'
+      )
+      await refreshSubscriptionData()
+    } catch (err) {
+      const d = err.response?.data?.detail
+      setError(typeof d === 'string' ? d : err.message || 'Could not cancel subscription')
+    } finally {
+      setBillingBusy(false)
+    }
+  }
+
+  const handleChangePaddlePlan = async (targetPlan) => {
+    setBillingBusy(true)
+    setError('')
+    setSuccess('')
+    try {
+      await userAPI.changeSubscriptionPlan({
+        plan: targetPlan,
+        proration_billing_mode: 'prorated_immediately',
+      })
+      setSuccess('Plan change submitted. It may take a moment to appear.')
+      await refreshSubscriptionData()
+    } catch (err) {
+      const d = err.response?.data?.detail
+      setError(typeof d === 'string' ? d : err.message || 'Could not change plan')
+    } finally {
+      setBillingBusy(false)
+    }
+  }
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -1651,8 +1724,8 @@ const Settings = () => {
                 color: 'var(--text-light)'
               }}>
                 <p style={{ margin: 0, fontSize: '0.9em' }}>
-                  <strong>Note:</strong> Plan upgrades will be available in the future. 
-                  Enterprise plans are assigned by administrators.
+                  <strong>Note:</strong> Enterprise plans are assigned by administrators.
+                  Paid self-serve plans use Paddle; use Manage subscription below when linked.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>
@@ -1702,6 +1775,80 @@ const Settings = () => {
                 </SecondaryButton>
               </div>
             </FormGroup>
+
+            {(subscriptionPlan === 'free' || subscriptionPlan === 'pro' || subscriptionPlan === 'premium') && (
+              <FormGroup>
+                <Label>Manage subscription</Label>
+                {subscriptionPlan === 'free' && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.9em' }}>Upgrade to a paid plan:</span>
+                    <Link to="/choose-plan" style={{ color: 'var(--primary)', fontWeight: 600 }}>Choose a plan</Link>
+                  </div>
+                )}
+                {(subscriptionPlan === 'pro' || subscriptionPlan === 'premium') && !paddleSubscriptionId && (
+                  <p style={{ color: 'var(--text-light)', fontSize: '0.9em', margin: 0 }}>
+                    Billing is still syncing, or this account was not billed through Paddle. If you need to cancel or
+                    change plans, contact support.
+                  </p>
+                )}
+                {(subscriptionPlan === 'pro' || subscriptionPlan === 'premium') && paddleSubscriptionId && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                      {subscriptionPlan === 'pro' && (
+                        <Button
+                          type="button"
+                          disabled={billingBusy}
+                          onClick={() => handleChangePaddlePlan('premium')}
+                        >
+                          {billingBusy ? 'Working…' : 'Upgrade to Premium'}
+                        </Button>
+                      )}
+                      {subscriptionPlan === 'premium' && (
+                        <SecondaryButton
+                          type="button"
+                          disabled={billingBusy}
+                          onClick={() => handleChangePaddlePlan('pro')}
+                        >
+                          {billingBusy ? 'Working…' : 'Downgrade to Pro'}
+                        </SecondaryButton>
+                      )}
+                    </div>
+                    <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-light)' }}>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.9em', fontWeight: 600 }}>Cancel subscription</p>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.85em', color: 'var(--text-light)' }}>
+                        Stops renewal with Paddle. You can cancel at the end of the current period or immediately.
+                      </p>
+                      <select
+                        value={cancelEffectiveFrom}
+                        onChange={(e) => setCancelEffectiveFrom(e.target.value)}
+                        disabled={billingBusy}
+                        style={{
+                          marginBottom: '12px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg-white)',
+                          color: 'var(--text)',
+                        }}
+                      >
+                        <option value="next_billing_period">End of current billing period</option>
+                        <option value="immediately">Immediately</option>
+                      </select>
+                      <div>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          disabled={billingBusy}
+                          onClick={handleCancelPaddleSubscription}
+                        >
+                          {billingBusy ? 'Submitting…' : 'Cancel subscription'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </FormGroup>
+            )}
           </>
         )
 

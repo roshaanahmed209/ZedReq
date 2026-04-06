@@ -46,6 +46,7 @@ from routers import (
 from routers.reserved_seats import router as reserved_seats_router
 from routers.monitoring import router as monitoring_router
 from routers.prelaunch_public import router as prelaunch_public_router
+from routers.paddle_webhook import router as paddle_billing_router
 from middleware.monitoring_middleware import MonitoringMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.body_limit import BodySizeLimitMiddleware
@@ -193,8 +194,27 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] azel_jobs table init failed: {e}")
 
+    def _init_paddle_billing_columns():
+        try:
+            from db.migrations.add_paddle_billing_columns import run_migration
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            try:
+                run_migration(db)
+            finally:
+                db.close()
+            print("[OK] Paddle billing DB objects ready")
+        except Exception as e:
+            print(f"[WARN] Paddle billing migration failed: {e}")
+
     # Run all blocking startup tasks in threads with a 20s timeout each
-    for name, fn in [("db", _init_db), ("orm", _init_orm), ("firebase", _init_firebase), ("azel_jobs", _init_azel_jobs_table)]:
+    for name, fn in [
+        ("db", _init_db),
+        ("orm", _init_orm),
+        ("firebase", _init_firebase),
+        ("azel_jobs", _init_azel_jobs_table),
+        ("paddle_billing", _init_paddle_billing_columns),
+    ]:
         try:
             await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
         except asyncio.TimeoutError:
@@ -373,6 +393,7 @@ app.include_router(context_router, prefix="/api/context", tags=["Context"])
 app.include_router(reserved_seats_router)
 app.include_router(monitoring_router)
 app.include_router(prelaunch_public_router, prefix="/api")
+app.include_router(paddle_billing_router, prefix="/api")
 
 
 # Get paths for static files

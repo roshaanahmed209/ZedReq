@@ -16,6 +16,7 @@ from services.profile_service import ProfileService
 from services.context_updater import ContextUpdater
 from services.lms_service import LMSService
 from services.settings_service import SettingsService
+from services.subscription_billing_service import SubscriptionBillingService
 from services.two_factor_service import TwoFactorService
 from services.search_service import SearchService
 from schemas.settings import (
@@ -24,6 +25,8 @@ from schemas.settings import (
     EmailUpdate,
     SubscriptionUpdate,
     SubscriptionInfo,
+    SubscriptionCancelRequest,
+    SubscriptionChangePlanRequest,
     EnterpriseInquiryRequest,
 )
 from schemas.two_factor import (
@@ -103,6 +106,10 @@ def get_lms_service(db: Session = Depends(get_db)) -> LMSService:
 def get_settings_service(db: Session = Depends(get_db)) -> SettingsService:
     """Dependency to get settings service with ORM session"""
     return SettingsService(db)
+
+
+def get_subscription_billing_service(db: Session = Depends(get_db)) -> SubscriptionBillingService:
+    return SubscriptionBillingService(db)
 
 
 def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
@@ -258,6 +265,7 @@ def _normalize_subscription_response(subscription: Dict[str, Any]) -> Subscripti
         subscription_start=_dt_str(subscription.get("subscription_start")),
         subscription_end=_dt_str(subscription.get("subscription_end")),
         requires_plan_selection=bool(subscription.get("requires_plan_selection", True)),
+        paddle_subscription_id=subscription.get("paddle_subscription_id"),
     )
 
 
@@ -307,7 +315,7 @@ async def update_subscription(
     current_user: dict = Depends(get_current_user),
     settings_service: SettingsService = Depends(get_settings_service)
 ):
-    """Update user subscription plan"""
+    """Update user subscription plan (free only; paid tiers use Paddle checkout or change-plan)."""
     try:
         subscription = settings_service.update_subscription(
             user_id=current_user["id"],
@@ -330,6 +338,51 @@ async def update_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update subscription"
+        )
+
+
+@router.post("/subscription/cancel")
+async def cancel_paddle_subscription(
+    body: SubscriptionCancelRequest,
+    current_user: dict = Depends(write_rate_limit),
+    billing: SubscriptionBillingService = Depends(get_subscription_billing_service),
+):
+    """Request cancellation of the user's Paddle subscription (renewals stop per effective_from)."""
+    try:
+        return billing.cancel_paddle_subscription(
+            current_user["id"],
+            effective_from=body.effective_from,
+        )
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    except Exception as e:
+        logger.error(f"Cancel subscription error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to cancel subscription",
+        )
+
+
+@router.post("/subscription/change-plan")
+async def change_paddle_subscription_plan(
+    body: SubscriptionChangePlanRequest,
+    current_user: dict = Depends(write_rate_limit),
+    billing: SubscriptionBillingService = Depends(get_subscription_billing_service),
+):
+    """Change an existing Paddle subscription between pro and premium."""
+    try:
+        return billing.change_paddle_plan(
+            current_user["id"],
+            target_plan=body.plan,
+            proration_billing_mode=body.proration_billing_mode,
+        )
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    except Exception as e:
+        logger.error(f"Change plan error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change subscription plan",
         )
 
 
