@@ -607,8 +607,11 @@ class SettingsService:
             if len(file_content) > max_image_size:
                 raise ValidationError(f"Image too large. Maximum size is {max_image_size / (1024*1024)}MB")
             
-            # Validate file type
-            if not image_file.content_type or not image_file.content_type.startswith('image/'):
+            # Validate file type (some browsers omit content_type; allow common image extensions)
+            ct = (image_file.content_type or "").strip().lower()
+            ext = os.path.splitext(image_file.filename or "")[1].lower().lstrip(".")
+            image_exts = {"jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "avif"}
+            if not ct.startswith("image/") and ext not in image_exts:
                 raise ValidationError("Invalid file type. Only image files are supported.")
             
             # Upload to Cloudinary using file content

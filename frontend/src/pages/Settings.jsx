@@ -652,34 +652,6 @@ const Settings = () => {
     }
   }, [])
 
-  const uploadToCloudinary = async (file, type = 'image') => {
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
-
-    if (!cloudName || !uploadPreset) {
-      throw new Error('Cloudinary configuration missing')
-    }
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', uploadPreset)
-
-    const resourceType = type === 'pdf' ? 'raw' : 'image'
-
-    try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
-        { method: 'POST', body: formData }
-      )
-      const data = await response.json()
-      if (data.error) throw new Error(data.error.message)
-      return data.secure_url
-    } catch (error) {
-      console.error('Cloudinary upload error:', error)
-      throw error
-    }
-  }
-
   const handleProfilePicChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -753,134 +725,74 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      const updateData = {}
-
-      // Validate and upload profile picture
-      if (profilePic) {
-        try {
-          const url = await uploadToCloudinary(profilePic, 'image')
-          updateData.profile_pic = url
-        } catch (uploadError) {
-          setError('Failed to upload profile picture. Please try again.')
-          setLoading(false)
-          return
-        }
+      const trimmedInterests = (interests && interests.trim()) || ''
+      if (trimmedInterests.length > 1000) {
+        setError('Interests must be less than 1000 characters')
+        setLoading(false)
+        return
       }
 
-      // Validate and upload cover picture
-      if (coverPic) {
-        try {
-          const url = await uploadToCloudinary(coverPic, 'image')
-          updateData.cover_pic = url
-        } catch (uploadError) {
-          setError('Failed to upload cover picture. Please try again.')
-          setLoading(false)
-          return
-        }
+      const trimmedLocation = (location && location.trim()) || ''
+      if (trimmedLocation.length > 150) {
+        setError('Location must be less than 150 characters')
+        setLoading(false)
+        return
       }
 
-      // Handle resume upload - send file directly to backend
-      if (resume) {
-        setResumeFileName(resume.name) // Store file name for display
-        // Resume will be sent as multipart/form-data
-      }
+      const hasFiles = !!(resume || profilePic || coverPic)
+      const jsonPayload = {}
+      if (trimmedInterests) jsonPayload.interests = trimmedInterests
+      if (trimmedLocation) jsonPayload.location = trimmedLocation
 
-      // Validate and sanitize interests (client-side validation)
-      if (interests && interests.trim()) {
-        const trimmedInterests = interests.trim()
-        if (trimmedInterests.length > 1000) {
-          setError('Interests must be less than 1000 characters')
-          setLoading(false)
-          return
-        }
-        updateData.interests = trimmedInterests
-      }
-
-      // Validate and sanitize location (client-side validation)
-      if (location && location.trim()) {
-        const trimmedLocation = location.trim()
-        if (trimmedLocation.length > 150) {
-          setError('Location must be less than 150 characters')
-          setLoading(false)
-          return
-        }
-        updateData.location = trimmedLocation
-      }
-
-      // Check if we have resume file to upload (multipart/form-data) or just data (JSON)
-      // Note: profile_pic and cover_pic still use frontend Cloudinary upload for now
-      const hasResumeFile = resume
-      
-      if (hasResumeFile || Object.keys(updateData).length > 0) {
-        let response
-        
-        if (hasResumeFile) {
-          // Use multipart/form-data for resume file upload
-          const formData = new FormData()
-          
-          // Send resume file directly to backend
-          formData.append('resume', resume)
-          
-          // Include other fields
-          if (interests && interests.trim()) {
-            formData.append('interests', interests.trim())
-          }
-          if (location && location.trim()) {
-            formData.append('location', location.trim())
-          }
-          
-          // Also include profile_pic and cover_pic URLs if they were uploaded to Cloudinary
-          if (updateData.profile_pic) {
-            formData.append('profile_pic', updateData.profile_pic)
-          }
-          if (updateData.cover_pic) {
-            formData.append('cover_pic', updateData.cover_pic)
-          }
-          
-          response = await api.put('/api/user/profile', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          })
-        } else {
-          // Use JSON for non-file updates
-          response = await api.put('/api/user/profile', updateData)
-        }
-        
-        if (updateUser && response.data) {
-          updateUser({ ...user, ...response.data })
-        }
-
-        if ((updateData.profile_pic || updateData.cover_pic) && response?.data) {
-          const vid = response.data.id ?? response.data.uid ?? user?.id ?? user?.uid
-          if (vid != null) {
-            window.dispatchEvent(
-              new CustomEvent('zedreq:profile-updated', { detail: { userId: vid } })
-            )
-          }
-        }
-        
-        // Show specific success message if resume was uploaded
-        if (resume) {
-          setSuccess(`Resume "${resumeFileName}" uploaded and processed successfully! Your profile has been updated.`)
-          setResumeUploaded(true)
-        } else {
-          setSuccess('Profile updated successfully!')
-        }
-        
-        setProfilePic(null)
-        setCoverPic(null)
-        setResume(null) // Clear file input
-        
-        // Clear success message after 5 seconds
-        const timeoutId = setTimeout(() => {
-          setSuccess('')
-          setResumeUploaded(false)
-        }, 5000)
-        timeoutRefs.current.push(timeoutId)
-      } else {
+      if (!hasFiles && Object.keys(jsonPayload).length === 0) {
         setError('No changes to save')
+        setLoading(false)
+        return
       }
+
+      const resumeLabel = resume?.name
+      let response
+
+      if (hasFiles) {
+        const formData = new FormData()
+        if (resume) formData.append('resume', resume)
+        if (profilePic) formData.append('profile_pic', profilePic)
+        if (coverPic) formData.append('cover_pic', coverPic)
+        if (trimmedInterests) formData.append('interests', trimmedInterests)
+        if (trimmedLocation) formData.append('location', trimmedLocation)
+        response = await api.put('/api/user/profile', formData)
+      } else {
+        response = await api.put('/api/user/profile', jsonPayload)
+      }
+
+      if (updateUser && response.data) {
+        updateUser({ ...user, ...response.data })
+      }
+
+      const vid = response.data?.id ?? response.data?.uid ?? user?.id ?? user?.uid
+      if (vid != null) {
+        window.dispatchEvent(new CustomEvent('zedreq:profile-updated', { detail: { userId: vid } }))
+      }
+
+      if (response.data?.profile_pic) setProfilePicPreview(response.data.profile_pic)
+      if (response.data?.cover_pic) setCoverPicPreview(response.data.cover_pic)
+
+      if (resumeLabel) {
+        setSuccess(`Resume "${resumeLabel}" uploaded and processed successfully! Your profile has been updated.`)
+        setResumeUploaded(true)
+      } else {
+        setSuccess('Profile updated successfully!')
+      }
+
+      setProfilePic(null)
+      setCoverPic(null)
+      setResume(null)
+
+      const timeoutId = setTimeout(() => {
+        setSuccess('')
+        setResumeUploaded(false)
+      }, 5000)
+      timeoutRefs.current.push(timeoutId)
     } catch (error) {
       // Handle rate limiting errors
       if (error.response?.status === 429) {
