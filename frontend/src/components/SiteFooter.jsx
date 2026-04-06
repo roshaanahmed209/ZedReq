@@ -32,7 +32,7 @@ export default function SiteFooter() {
         <div className="footer-section scroll-reveal">
           <h4>Legal</h4>
           <ul>
-            <li><a href={sitePath('/terms')}>Terms of Service</a></li>
+            <li><a href={sitePath('/terms')}>Terms of Use</a></li>
             <li><a href={sitePath('/privacy')}>Privacy Policy</a></li>
             <li><a href={sitePath('/cookies')}>Cookie Policy</a></li>
           </ul>

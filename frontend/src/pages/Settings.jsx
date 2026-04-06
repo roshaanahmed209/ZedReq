@@ -6,6 +6,9 @@ import { useTheme } from '../contexts/ThemeContext'
 import api, { userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import { ZEDREQ_EMAIL } from '../config/contact'
+import { LegalPrivacyBody } from '../content/LegalPrivacyBody'
+import { LegalTermsBody } from '../content/LegalTermsBody'
+import '../css/pages/GetStarted.css'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -470,24 +473,14 @@ const SuccessMessage = styled.div`
   font-size: 0.9em;
 `
 
-const PrivacyPolicyContent = styled.div`
-  max-height: 500px;
+const LegalDocumentScroll = styled.div`
+  max-height: min(70vh, 820px);
   overflow-y: auto;
   padding: 20px;
   background: var(--bg-light);
   border-radius: 8px;
   line-height: 1.6;
   color: var(--text);
-
-  h3 {
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: var(--primary);
-  }
-
-  p {
-    margin-bottom: 10px;
-  }
 `
 
 const Settings = () => {
@@ -1781,58 +1774,19 @@ const Settings = () => {
         return (
           <>
             <SectionTitle>Privacy Policy</SectionTitle>
-            <PrivacyPolicyContent>
-              <h3>1. Information We Collect</h3>
-              <p>
-                ZedReq collects information that you provide directly to us, including your name, email address, 
-                profile information, and any content you post on our platform.
-              </p>
+            <LegalDocumentScroll className="settings-legal-embed">
+              <LegalPrivacyBody />
+            </LegalDocumentScroll>
+          </>
+        )
 
-              <h3>2. How We Use Your Information</h3>
-              <p>
-                We use the information we collect to provide, maintain, and improve our services, process your 
-                requests, send you communications, and personalize your experience.
-              </p>
-
-              <h3>3. Information Sharing</h3>
-              <p>
-                We do not sell, trade, or rent your personal information to third parties. We may share your 
-                information only in specific circumstances, such as with your consent or to comply with legal obligations.
-              </p>
-
-              <h3>4. Data Security</h3>
-              <p>
-                We implement appropriate security measures to protect your personal information against unauthorized 
-                access, alteration, disclosure, or destruction.
-              </p>
-
-              <h3>5. Your Rights</h3>
-              <p>
-                You have the right to access, update, or delete your personal information at any time through 
-                your account settings.
-              </p>
-
-              <h3>6. Cookies</h3>
-              <p>
-                We use cookies and similar tracking technologies to track activity on our platform and hold 
-                certain information to improve your experience.
-              </p>
-
-              <h3>7. Changes to This Policy</h3>
-              <p>
-                We may update this Privacy Policy from time to time. We will notify you of any changes by 
-                posting the new Privacy Policy on this page.
-              </p>
-
-              <h3>8. Contact Us</h3>
-              <p>
-                If you have any questions about this Privacy Policy, please contact us at {ZEDREQ_EMAIL}
-              </p>
-
-              <p style={{ marginTop: '20px', fontSize: '0.9em', color: 'var(--text-lighter)' }}>
-                Last updated: {new Date().toLocaleDateString()}
-              </p>
-            </PrivacyPolicyContent>
+      case 'terms':
+        return (
+          <>
+            <SectionTitle>Terms of Use</SectionTitle>
+            <LegalDocumentScroll className="settings-legal-embed">
+              <LegalTermsBody />
+            </LegalDocumentScroll>
           </>
         )
 
@@ -1918,6 +1872,19 @@ const Settings = () => {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             Privacy Policy
+          </SidePanelSection>
+
+          <SidePanelSection 
+            className={activeSection === 'terms' ? 'active' : ''}
+            onClick={() => setActiveSection('terms')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Terms of Use
           </SidePanelSection>
         </SidePanel>
 

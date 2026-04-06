@@ -9,7 +9,9 @@ export function LegalCookieBody() {
       <p className="get-started-modal-updated"><strong>Last Updated:</strong> February 2026</p>
       <p>
         This Cookie Policy explains how ZedReq (&quot;we&quot;, &quot;us&quot;) uses cookies and similar technologies when you visit or use our website and services. It should be read together with our{' '}
-        <a href={sitePath('/privacy')} className="get-started-modal-email">Privacy Policy</a>.
+        <a href={sitePath('/privacy')} className="get-started-modal-email">Privacy Policy</a>
+        {' '}and{' '}
+        <a href={sitePath('/terms')} className="get-started-modal-email">Terms of Use</a>.
       </p>
 
       <h3>1. What are cookies?</h3>

@@ -280,7 +280,7 @@ const ChoosePlan = () => {
           </div>
           <p className="pricing-note scroll-reveal visible">
             Limits are enforced server-side per plan. Enterprise is available by arrangement. Security and privacy practices
-            are described in our Privacy Policy.
+            are described in our <Link to="/privacy">Privacy Policy</Link> and <Link to="/terms">Terms of Use</Link>.
           </p>
         </div>
       </section>

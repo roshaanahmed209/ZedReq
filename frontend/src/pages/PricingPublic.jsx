@@ -17,7 +17,9 @@ export default function PricingPublic() {
           Enterprise plans include unlimited usage for AI, courses, and interviews by agreement—contact us from the pricing section on the home page.
         </p>
         <p>
-          Details on data use: <a href={sitePath('/privacy')}>Privacy Policy</a>.
+          Details on data use: <a href={sitePath('/privacy')}>Privacy Policy</a>
+          {' · '}
+          <a href={sitePath('/terms')}>Terms of Use</a>.
         </p>
         <p className="public-subpage-inline-links">
           <Link to="/">View pricing on home</Link>

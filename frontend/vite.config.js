@@ -16,15 +16,26 @@ export default defineConfig(({ mode }) => {
     (env.ZEDREQ_EMAIL || env.VITE_ZEDREQ_EMAIL || env.VITE_COMPANY_EMAIL || '').trim() ||
     'zed.req@yahoo.com'
 
+  const repoPackageRoot = path.resolve(__dirname, '..')
+
   return {
     plugins: [react()],
     envDir: rootDir,
+    resolve: {
+      alias: {
+        // ZedReq/privacy.txt and terms.txt (sibling of frontend/)
+        '@repoLegal': repoPackageRoot,
+      },
+    },
     define: {
       'import.meta.env.VITE_ZEDREQ_URL': JSON.stringify(zedreqUrl),
       'import.meta.env.VITE_ZEDREQ_EMAIL': JSON.stringify(zedreqEmail),
     },
     server: {
       port: 3000,
+      fs: {
+        allow: [path.resolve(__dirname), repoPackageRoot],
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:5000',

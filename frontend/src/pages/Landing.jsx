@@ -863,7 +863,7 @@ const Landing = () => {
               </InputWrapper>
               <AgreementNote>
                 By creating an account, you agree to our{' '}
-                <Link to="/terms">Terms of Service</Link>
+                <Link to="/terms">Terms of Use</Link>
                 {' '}and{' '}
                 <Link to="/privacy">Privacy Policy</Link>.
               </AgreementNote>

@@ -13,7 +13,7 @@ export default function HelpCenter() {
           <li><Link to="/get-started">Create an account</Link></li>
           <li><Link to="/contact">Contact support</Link></li>
           <li><a href={sitePath('/privacy')}>Privacy Policy</a></li>
-          <li><a href={sitePath('/terms')}>Terms of Service</a></li>
+          <li><a href={sitePath('/terms')}>Terms of Use</a></li>
         </ul>
         <p>
           For billing or plan changes, use in-app settings after you sign in, or email <a href={zedreqMailto()}>{ZEDREQ_EMAIL}</a>.
