@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
-import { contextAPI } from '../services/api'
 import Messages from './Messages'
 import { generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
@@ -1029,27 +1028,36 @@ const PostAction = styled.button`
   }
   
   &.liked {
-    color: #e74c3c;
-    
+    color: var(--primary);
+
     svg {
-      color: #e74c3c;
+      color: var(--primary);
     }
   }
-  
+
+  @media (max-width: 768px) {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
   @media (max-width: 480px) {
-    padding: 6px 10px;
-    gap: 6px;
-    font-size: 0.85em;
-    
+    padding: 8px 12px;
+    gap: 8px;
+    font-size: 0.9em;
+    min-height: 44px;
+
     svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
   }
 `
 
 const LikeCount = styled.span`
   font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  min-width: 1ch;
 `
 
 const Loading = styled.div`
@@ -1416,6 +1424,7 @@ const Feed = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { logout, sessionFeedStats } = useAuth()
   const navigate = useNavigate()
+  const likingPostIdsRef = useRef(new Set())
 
   useEffect(() => {
     loadUser()
@@ -1635,29 +1644,49 @@ const Feed = () => {
   }
 
   const handleLike = async (postId) => {
+    if (likingPostIdsRef.current.has(postId)) return
+    const target = posts.find(p => p.id === postId)
+    if (!target) return
+
+    const prevLiked = !!target.is_liked
+    const prevCount = Number(target.like_count) || 0
+
+    likingPostIdsRef.current.add(postId)
+    setPosts(prev =>
+      prev.map(post =>
+        post.id === postId
+          ? {
+              ...post,
+              is_liked: !prevLiked,
+              like_count: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+            }
+          : post
+      )
+    )
+
     try {
       const response = await api.post(`/api/posts/${postId}/like`)
-      // Handle FastAPI response (direct) or Flask response (wrapped in data)
       const data = response.data?.data || response.data
       if (data) {
-        // Update the specific post's like count
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { 
-                ...post, 
-                like_count: data.like_count,
-                is_liked: data.is_liked 
-              }
-            : post
-        ))
-        
-        // Update context if post was liked
-        if (data.is_liked) {
-          contextAPI.updateContext('like', 'post', postId).catch(() => {})
-        }
+        setPosts(prev =>
+          prev.map(post =>
+            post.id === postId
+              ? { ...post, like_count: data.like_count, is_liked: data.is_liked }
+              : post
+          )
+        )
       }
     } catch (error) {
       console.error('Error toggling like:', error)
+      setPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? { ...post, is_liked: prevLiked, like_count: prevCount }
+            : post
+        )
+      )
+    } finally {
+      likingPostIdsRef.current.delete(postId)
     }
   }
 
@@ -1971,12 +2000,14 @@ const Feed = () => {
                     </PostMedia>
                   )}
                   <PostActions>
-                    <PostAction 
+                    <PostAction
+                      type="button"
+                      aria-label={post.is_liked ? 'Unlike' : 'Like'}
                       className={post.is_liked ? 'liked' : ''}
                       onClick={() => handleLike(post.id)}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill={post.is_liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                       </svg>
                       <LikeCount>{post.like_count}</LikeCount>
                     </PostAction>

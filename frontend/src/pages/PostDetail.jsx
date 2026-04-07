@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { postAPI, contextAPI } from '../services/api'
+import { postAPI } from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
 
 const fadeIn = keyframes`
@@ -60,7 +60,11 @@ const FeedLink = styled(Link)`
 const Main = styled.main`
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 20px 48px;
+  padding: 12px 16px 40px;
+
+  @media (min-width: 480px) {
+    padding: 16px 20px 48px;
+  }
 `
 
 const PostCard = styled.article`
@@ -148,8 +152,9 @@ const PostMedia = styled.div`
 
 const Actions = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 12px 20px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
 `
@@ -163,21 +168,45 @@ const ActionBtn = styled.button`
   color: ${p => (p.$active ? 'var(--primary)' : 'var(--text-light)')};
   cursor: pointer;
   font-size: 0.9em;
-  padding: 6px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-height: 44px;
+  transition: color 0.15s ease, background 0.15s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     color: var(--primary);
+    background: var(--hover-bg);
+  }
+
+  &:disabled {
+    opacity: 0.85;
+    cursor: wait;
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 769px) {
+    min-height: 40px;
+    padding: 6px 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 `
 
 const MetaStat = styled.span`
   font-size: 0.9em;
   color: var(--text-lighter);
+`
+
+const LikeCountText = styled.span`
+  font-variant-numeric: tabular-nums;
 `
 
 const Centered = styled.div`
@@ -240,22 +269,43 @@ export default function PostDetail() {
 
   const handleLike = async () => {
     if (!post || likeBusy) return
+    const id = post.id
+    const prevLiked = !!post.is_liked
+    const prevCount = Number(post.like_count) || 0
+
     setLikeBusy(true)
+    setPost(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        is_liked: !prevLiked,
+        like_count: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+      }
+    })
+
     try {
-      await postAPI.toggleLike(post.id)
-      setPost(prev => {
-        if (!prev) return prev
-        const nextLiked = !prev.is_liked
-        const delta = nextLiked ? 1 : -1
-        return {
-          ...prev,
-          is_liked: nextLiked,
-          like_count: Math.max(0, (prev.like_count || 0) + delta),
-        }
-      })
-      contextAPI.updateContext('like', 'post', post.id).catch(() => {})
+      const r = await postAPI.toggleLike(id)
+      const data = r.data
+      setPost(prev =>
+        prev
+          ? {
+              ...prev,
+              is_liked: data.is_liked,
+              like_count: data.like_count,
+            }
+          : prev
+      )
     } catch (e) {
       console.error(e)
+      setPost(prev =>
+        prev
+          ? {
+              ...prev,
+              is_liked: prevLiked,
+              like_count: prevCount,
+            }
+          : prev
+      )
     } finally {
       setLikeBusy(false)
     }
@@ -321,11 +371,17 @@ export default function PostDetail() {
             )}
 
             <Actions>
-              <ActionBtn type="button" $active={post.is_liked} onClick={handleLike} disabled={likeBusy}>
-                <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              <ActionBtn
+                type="button"
+                aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                $active={post.is_liked}
+                onClick={handleLike}
+                disabled={likeBusy}
+              >
+                <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                 </svg>
-                {post.like_count ?? 0}
+                <LikeCountText>{post.like_count ?? 0}</LikeCountText>
               </ActionBtn>
               <MetaStat>{post.comment_count ?? 0} comments</MetaStat>
             </Actions>

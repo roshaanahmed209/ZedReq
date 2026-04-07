@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes, css } from 'styled-components'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, contextAPI, networkAPI } from '../services/api'
+import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, networkAPI } from '../services/api'
 import api from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
@@ -1075,25 +1075,42 @@ const PostFooter = styled.div`
 const LikeBtn = styled.button`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: none;
   border: none;
-  color: ${p => p.$liked ? 'var(--primary)' : 'var(--text-lighter)'};
+  color: ${p => (p.$liked ? 'var(--primary)' : 'var(--text-lighter)')};
   cursor: pointer;
-  transition: all 0.2s;
-  padding: 6px 12px;
+  transition: color 0.15s ease, background 0.15s ease;
+  padding: 8px 14px;
   border-radius: 8px;
   font-size: 0.9em;
   font-weight: 500;
+  min-height: 44px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--hover-bg);
     color: var(--primary);
   }
 
+  &:disabled {
+    opacity: 0.85;
+    cursor: wait;
+  }
+
   svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 769px) {
+    min-height: 36px;
+    padding: 6px 12px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 `
 
@@ -1383,7 +1400,8 @@ function Profile() {
   const [activeTab, setActiveTab] = useState('About')
   const [suggestions, setSuggestions] = useState([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
-  
+  const likingPostIdsRef = useRef(new Set())
+
   // Edit modal states
   const [editModal, setEditModal] = useState(null) // 'description', 'about', 'skills', 'experience', 'education', 'projects', 'recommendations'
   const [editingItem, setEditingItem] = useState(null) // For editing specific items
@@ -1585,19 +1603,53 @@ function Profile() {
   }
 
   const handleLike = async (postId) => {
-    try {
-      const r = await postAPI.toggleLike(postId)
-      setPosts(prev => prev.map(p =>
-        (p.id === postId || p.post_id === postId)
-          ? { ...p, is_liked: r.data.is_liked, like_count: r.data.like_count }
+    const pid = postId
+    if (likingPostIdsRef.current.has(pid)) return
+    const row = posts.find(p => p.id === pid || p.post_id === pid)
+    if (!row) return
+
+    const prevLiked = !!row.is_liked
+    const prevCount = Number(row.like_count ?? row.likes) || 0
+
+    likingPostIdsRef.current.add(pid)
+    setPosts(prev =>
+      prev.map(p =>
+        p.id === pid || p.post_id === pid
+          ? {
+              ...p,
+              is_liked: !prevLiked,
+              like_count: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+              likes: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+            }
           : p
-      ))
-      
-      // Update context if post was liked
-      if (r.data.is_liked) {
-        contextAPI.updateContext('like', 'post', postId)
-      }
-    } catch { }
+      )
+    )
+
+    try {
+      const r = await postAPI.toggleLike(pid)
+      setPosts(prev =>
+        prev.map(p =>
+          p.id === pid || p.post_id === pid
+            ? {
+                ...p,
+                is_liked: r.data.is_liked,
+                like_count: r.data.like_count,
+                likes: r.data.like_count,
+              }
+            : p
+        )
+      )
+    } catch {
+      setPosts(prev =>
+        prev.map(p =>
+          p.id === pid || p.post_id === pid
+            ? { ...p, is_liked: prevLiked, like_count: prevCount, likes: prevCount }
+            : p
+        )
+      )
+    } finally {
+      likingPostIdsRef.current.delete(pid)
+    }
   }
 
   /* ── Edit handlers ─────────────────────────────────────────── */
@@ -2353,11 +2405,16 @@ function Profile() {
                   </PostMedia>
                 )}
                 <PostFooter>
-                  <LikeBtn $liked={post.is_liked} onClick={() => handleLike(post.id || post.post_id)}>
-                    <svg viewBox="0 0 24 24" fill={post.is_liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  <LikeBtn
+                    type="button"
+                    aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                    $liked={post.is_liked}
+                    onClick={() => handleLike(post.id || post.post_id)}
+                  >
+                    <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                     </svg>
-                    {post.like_count || post.likes || 0}
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{post.like_count || post.likes || 0}</span>
                   </LikeBtn>
                 </PostFooter>
               </PostCard>
