@@ -5,6 +5,10 @@ This replaces the raw SQL User model in models/user.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy.sql import func
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from models.orm.description import Description
 
 from config.database_orm import Base
 
@@ -31,10 +35,14 @@ class User(Base):
     last_login = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
-    # Relationships (if needed in future)
-    # connections: Mapped[list["Connection"]] = relationship(...)
-    # posts: Mapped[list["Post"]] = relationship(...)
+
+    description_row: Mapped[Optional["Description"]] = relationship(
+        "Description",
+        primaryjoin="User.description_id == Description.desc_id",
+        foreign_keys="User.description_id",
+        uselist=False,
+        viewonly=True,
+    )
     
     def __repr__(self):
         return f"<User(uid={self.uid}, username='{self.username}')>"

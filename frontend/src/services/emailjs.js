@@ -120,17 +120,11 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
  * Send reservation confirmation email using EmailJS
  * @param {string} email - Recipient email address
  * @param {string} promoCode - User's promo code
- * @returns {Promise<boolean>} - True if email sent successfully
+ * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
  */
 export async function sendReservationEmail(email, promoCode) {
-  // Check if EmailJS is configured
   if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-    console.error('EmailJS not configured. Missing environment variables:', {
-      serviceId: !!EMAILJS_SERVICE_ID,
-      templateId: !!EMAILJS_TEMPLATE_ID,
-      publicKey: !!EMAILJS_PUBLIC_KEY
-    })
-    return false
+    return { ok: false, reason: 'emailjs_not_configured' }
   }
 
   // Initialize EmailJS
@@ -164,15 +158,12 @@ export async function sendReservationEmail(email, promoCode) {
     )
 
     if (response.status === 200) {
-      console.log('Email sent successfully via EmailJS:', response)
-      return true
-    } else {
-      console.error('EmailJS returned non-200 status:', response)
-      return false
+      return { ok: true }
     }
+    return { ok: false, reason: `emailjs_status_${response.status}` }
   } catch (error) {
-    console.error('Error sending email via EmailJS:', error)
-    return false
+    const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : 'Error'
+    return { ok: false, reason: `emailjs_exception:${name}` }
   }
 }
 

@@ -51,17 +51,20 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
 
       // Only send email if it's a new reservation (not already reserved)
       if (!data.already_reserved && promoCodeFromBackend) {
-        const emailSent = await sendReservationEmail(email, promoCodeFromBackend)
-        if (!emailSent) {
-          console.warn('Email sending failed, but reservation was created. Promo code:', promoCodeFromBackend)
-          // Don't fail the whole process if email fails - reservation is already created
+        const emailResult = await sendReservationEmail(email, promoCodeFromBackend)
+        if (!emailResult.ok) {
+          const reason = emailResult.reason || 'emailjs_failed'
+          void fetch(`${apiUrl}/api/reserved-seats/email-delivery-failed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ promo_code: promoCodeFromBackend, reason }),
+          }).catch(() => {})
         }
       }
 
       setSubmitted(true)
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
-      console.error('Error reserving seat:', err)
     } finally {
       setLoading(false)
     }

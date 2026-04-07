@@ -1433,7 +1433,6 @@ function Profile() {
       loadCertificates()
       loadProfileFeatures()
       loadSuggestions()
-      trackProfileView()
     } else {
       setError('Invalid profile URL')
       setLoading(false)
@@ -1471,9 +1470,10 @@ function Profile() {
         return 
       }
       
-      // Check for pending requests
-      const pendingResponse = await connectionAPI.getPendingRequests()
-      const sentResponse = await connectionAPI.getSentRequests()
+      const [pendingResponse, sentResponse] = await Promise.all([
+        connectionAPI.getPendingRequests(),
+        connectionAPI.getSentRequests(),
+      ])
       const pending = pendingResponse.data || pendingResponse || []
       const sent = sentResponse.data || sentResponse || []
       const hasPending = [...pending, ...sent].some(
@@ -1572,19 +1572,6 @@ function Profile() {
     } finally {
       setLoadingSuggestions(false)
     }
-  }
-
-  const trackProfileView = async () => {
-    if (!userId || !currentUser || (currentUserIdValid && Number(userId) === currentUserId)) return
-    try {
-      const fire = () => {
-        profileFeaturesAPI.trackProfileView(userId, 'direct').catch(() => { })
-        // Update context for profile view
-        contextAPI.updateContext('view', 'profile', userId).catch(() => { })
-      }
-      if (window.requestIdleCallback) window.requestIdleCallback(fire, { timeout: 2000 })
-      else setTimeout(fire, 100)
-    } catch { }
   }
 
   const loadUserPosts = async () => {

@@ -17,6 +17,15 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _messaging_allowed_between_users(user_id: int, recipient_id: int) -> bool:
+    """Fresh DB check — WebSocket sessions must not cache the connection graph."""
+    db_session = next(get_db())
+    try:
+        return NetworkService(db_session).are_users_connected(user_id, recipient_id)
+    finally:
+        db_session.close()
+
+
 @router.websocket("/messages")
 async def websocket_messages(websocket: WebSocket):
     """
@@ -62,15 +71,6 @@ async def websocket_messages(websocket: WebSocket):
         # Initialize messaging service
         messaging_service = MessagingService()
         
-        # Get connected user IDs for validation (load once at connection start)
-        db_session = next(get_db())
-        try:
-            network_service = NetworkService(db_session)
-            connected_users = network_service.get_user_connections(user_id)
-            connected_user_ids = {user["id"] for user in connected_users}
-        finally:
-            db_session.close()
-        
         # Send welcome message
         await websocket.send_json({
             "type": "connected",
@@ -105,8 +105,7 @@ async def websocket_messages(websocket: WebSocket):
                     
                     recipient_id = int(recipient_id)
                     
-                    # Check if users are connected
-                    if recipient_id not in connected_user_ids:
+                    if not _messaging_allowed_between_users(user_id, recipient_id):
                         await websocket.send_json({
                             "type": "error",
                             "message": "You can only message users you are connected with"
@@ -157,8 +156,7 @@ async def websocket_messages(websocket: WebSocket):
                     
                     recipient_id = int(recipient_id)
                     
-                    # Check if users are connected
-                    if recipient_id not in connected_user_ids:
+                    if not _messaging_allowed_between_users(user_id, recipient_id):
                         await websocket.send_json({
                             "type": "error",
                             "message": "You can only view messages with users you are connected with"

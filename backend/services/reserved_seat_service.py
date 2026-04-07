@@ -51,8 +51,11 @@ class ReservedSeatService:
         ).first()
         
         if existing_reservation:
-            logger.info(f"Email already reserved | Email: {email[:3]}*** | Promo Code: {existing_reservation.promo_code}")
-            logger.info(f"⚠ No email sent - reservation already exists. User should check their previous email.")
+            logger.info(
+                "reserved_seat duplicate email_prefix=%s*** promo=%s",
+                email[:3] if len(email) >= 3 else email,
+                existing_reservation.promo_code,
+            )
             return {
                 "success": True,
                 "message": "You've already reserved your seat! Check your email for your promo code.",
@@ -100,7 +103,10 @@ class ReservedSeatService:
                         ReservedSeat.email == email.lower()
                     ).first()
                     if existing_reservation:
-                        logger.info(f"Email already reserved (race condition detected): {email[:3]}***")
+                        logger.info(
+                            "reserved_seat duplicate_race email_prefix=%s***",
+                            email[:3] if len(email) >= 3 else email,
+                        )
                         return {
                             "success": True,
                             "message": "You've already reserved your seat! Check your email for your promo code.",
@@ -128,7 +134,7 @@ class ReservedSeatService:
         
         # Email is now sent from frontend using EmailJS client-side SDK
         # Backend only stores the reservation and returns the promo code
-        logger.info(f"✓ Reservation completed successfully | ID: {reservation.id} | Promo Code: {promo_code} | Email will be sent from frontend")
+        logger.info("reserved_seat created id=%s promo=%s", reservation.id, promo_code)
         
         return {
             "success": True,
@@ -148,3 +154,22 @@ class ReservedSeatService:
         return self.db.query(ReservedSeat).filter(
             ReservedSeat.promo_code == promo_code
         ).first()
+
+    def report_client_email_failure(self, promo_code: str, reason: str | None) -> None:
+        """Log when browser-side EmailJS fails after DB reservation (no PII beyond email prefix)."""
+        code = (promo_code or "").strip()
+        if not code:
+            logger.warning("reserved_seat client_email_fail missing_promo")
+            return
+        row = self.get_reservation_by_promo_code(code)
+        if not row:
+            logger.warning("reserved_seat client_email_fail promo_not_found")
+            return
+        prefix = (row.email or "")[:3] + "***" if row.email else "?"
+        hint = (reason or "unknown")[:120]
+        logger.warning(
+            "reserved_seat client_email_fail promo=%s email_prefix=%s reason=%s",
+            code,
+            prefix,
+            hint,
+        )

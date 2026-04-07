@@ -1,6 +1,6 @@
 """Profile Service - User profile operations using SQLAlchemy ORM"""
 from typing import Dict, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
 
 from models.orm import User, Description, Connection, ConnectionRequest, UsersContext
@@ -8,6 +8,9 @@ from utils.errors import NotFoundError
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# Cap work when scanning runtime_context for legacy "interests" heuristics
+_MAX_RUNTIME_CONTEXT_TAIL = 64
 
 
 class ProfileService:
@@ -21,6 +24,7 @@ class ProfileService:
         try:
             user = (
                 self.db.query(User)
+                .options(joinedload(User.description_row))
                 .filter(User.uid == user_id)
                 .first()
             )
@@ -57,27 +61,21 @@ class ProfileService:
                 'industry': None
             }
             
-            # Get description if available
-            if user.description_id:
-                description = (
-                    self.db.query(Description)
-                    .filter(Description.desc_id == user.description_id)
-                    .first()
-                )
-                if description:
-                    result.update({
-                        'profile_pic': description.profile_pic,
-                        'cover_pic': description.cover_pic,
-                        'short_desc': description.short_desc,
-                        'about': description.about,
-                        'skills': description.skills,
-                        'certificates': description.certificates,
-                        'current_status': description.current_status,
-                        'role': description.role,
-                        'company': description.company,
-                        'location': description.location,
-                        'industry': description.industry
-                    })
+            description = user.description_row
+            if description:
+                result.update({
+                    'profile_pic': description.profile_pic,
+                    'cover_pic': description.cover_pic,
+                    'short_desc': description.short_desc,
+                    'about': description.about,
+                    'skills': description.skills,
+                    'certificates': description.certificates,
+                    'current_status': description.current_status,
+                    'role': description.role,
+                    'company': description.company,
+                    'location': description.location,
+                    'industry': description.industry
+                })
             
             # Extract interests from runtime_context (latest entry containing "interests")
             result['interests'] = None  # Default to None
@@ -88,9 +86,10 @@ class ProfileService:
                     .first()
                 )
                 if users_context and users_context.runtime_context:
-                    # Look for the most recent entry containing interests
+                    # Look for the most recent entry containing interests (bounded tail only)
                     if isinstance(users_context.runtime_context, list):
-                        for item in reversed(users_context.runtime_context):  # Start from most recent
+                        tail = users_context.runtime_context[-_MAX_RUNTIME_CONTEXT_TAIL:]
+                        for item in reversed(tail):
                             if isinstance(item, dict) and 'content' in item:
                                 content = item['content']
                                 # Check if this content looks like interests (contains common patterns)
@@ -183,18 +182,7 @@ class ProfileService:
                 current_user_id, 
                 target_user_id
             )
-            
-            # Track profile view
-            try:
-                from services.profile_analytics_service import ProfileAnalyticsService
-                analytics_service = ProfileAnalyticsService(self.db)
-                analytics_service.track_profile_view(
-                    user_id=target_user_id,
-                    viewer_id=current_user_id,
-                    source='direct'
-                )
-            except Exception as e:
-                logger.warning(f"Failed to track profile view: {e}")
+            # Profile view analytics + Zed context run in FastAPI BackgroundTasks (see user router)
         else:
             profile['connection_status'] = None
         

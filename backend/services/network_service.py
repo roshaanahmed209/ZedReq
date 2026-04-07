@@ -11,6 +11,20 @@ class NetworkService:
     
     def __init__(self, db: Session):
         self.db = db
+
+    def are_users_connected(self, user_id: int, other_user_id: int) -> bool:
+        """True if a Connection exists between the two users (either direction)."""
+        conn = (
+            self.db.query(Connection)
+            .filter(
+                or_(
+                    and_(Connection.follower_uid == user_id, Connection.followed_uid == other_user_id),
+                    and_(Connection.follower_uid == other_user_id, Connection.followed_uid == user_id),
+                )
+            )
+            .first()
+        )
+        return conn is not None
     
     def get_discover_users(self, current_user_id: int, limit: int = 20) -> List[Dict[str, Any]]:
         """
