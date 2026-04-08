@@ -1,15 +1,20 @@
 """Monitoring endpoints for main ZedReq app"""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from typing import Dict, Any
 import psutil
 import time
 from datetime import datetime
 
+from dependencies.auth import get_current_user
+
 router = APIRouter(prefix="/api/monitoring", tags=["Monitoring"])
 
 
 @router.get("/health")
-async def detailed_health_check(request: Request) -> Dict[str, Any]:
+async def detailed_health_check(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     """Detailed health check endpoint"""
     try:
         # Basic health
@@ -42,7 +47,10 @@ async def detailed_health_check(request: Request) -> Dict[str, Any]:
 
 
 @router.get("/metrics")
-async def current_metrics(request: Request) -> Dict[str, Any]:
+async def current_metrics(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     """Get current system metrics"""
     try:
         cpu_percent = psutil.cpu_percent(interval=1)
@@ -76,7 +84,10 @@ async def current_metrics(request: Request) -> Dict[str, Any]:
 
 
 @router.get("/stats")
-async def request_stats(request: Request) -> Dict[str, Any]:
+async def request_stats(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     """Get request statistics (placeholder - would need to query from backoffice)"""
     return {
         "message": "Request stats available from backoffice API",

@@ -2489,7 +2489,9 @@ function Profile() {
               {connectionStatus === 'connected' && (
                 <Pill>✓ Connected</Pill>
               )}
-              <Pill onClick={() => navigate('/messages')}>Message</Pill>
+              {connectionStatus === 'connected' && (
+                <Pill onClick={() => navigate('/messages')}>Message</Pill>
+              )}
               {profile.email && (
                 <Pill onClick={() => setShowContactModal(true)}>Contact</Pill>
               )}

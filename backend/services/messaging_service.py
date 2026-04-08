@@ -422,3 +422,58 @@ class MessagingService:
         except Exception as e:
             logger.error(f"Error marking conversation as read: {e}")
             return False
+
+    def _conversation_involves_user(self, conv_key: str, conv_data, user_id: int) -> bool:
+        if isinstance(conv_data, dict):
+            participants = conv_data.get("participants") or []
+            try:
+                if user_id in participants:
+                    return True
+            except TypeError:
+                pass
+        if "_" in conv_key:
+            try:
+                a_str, b_str = conv_key.split("_", 1)
+                a, b = int(a_str), int(b_str)
+                if user_id in (a, b):
+                    return True
+            except (ValueError, TypeError):
+                pass
+        return False
+
+    async def purge_conversations_for_user(self, user_id: int) -> bool:
+        """Remove all Realtime DB conversation nodes that involve this user.
+
+        Returns True when all matching nodes were deleted (or none existed),
+        False when an error occurred so the caller can enqueue a retry.
+        """
+        keys_to_delete: List[str] = []
+        try:
+            if self.db_ref:
+                ref = self.db_ref.child("conversations")
+                all_conversations = ref.get()
+                if all_conversations and isinstance(all_conversations, dict):
+                    for conv_key, conv_data in all_conversations.items():
+                        if self._conversation_involves_user(conv_key, conv_data, user_id):
+                            keys_to_delete.append(conv_key)
+                for key in keys_to_delete:
+                    try:
+                        self.db_ref.child(f"conversations/{key}").delete()
+                    except Exception as e:
+                        logger.error("Firebase delete conversation %s: %s", key, e, exc_info=True)
+                        return False
+            else:
+                all_conversations = await self._firebase_rest_request("GET", "conversations")
+                if all_conversations and isinstance(all_conversations, dict):
+                    for conv_key, conv_data in all_conversations.items():
+                        if self._conversation_involves_user(conv_key, conv_data, user_id):
+                            keys_to_delete.append(conv_key)
+                for key in keys_to_delete:
+                    result = await self._firebase_rest_request("DELETE", f"conversations/{key}")
+                    if result is None and key in keys_to_delete:
+                        logger.error("Firebase REST delete failed for conversation %s uid=%s", key, user_id)
+                        return False
+            return True
+        except Exception as e:
+            logger.error("purge_conversations_for_user failed: %s", e, exc_info=True)
+            return False

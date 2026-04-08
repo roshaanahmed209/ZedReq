@@ -11,53 +11,79 @@ from dependencies.auth import get_current_user
 logger = logging.getLogger(__name__)
 
 
+def _redis_sliding_window(key: str, limit: int, window: int) -> tuple[bool, int]:
+    """
+    Attempt a Redis INCR-based sliding window check.
+
+    Returns (allowed: bool, remaining: int) or raises no exception — on any
+    Redis failure returns (None, None) to signal the caller should fall back
+    to the in-memory implementation.
+    """
+    try:
+        from config.cache import _init_redis
+        client, available = _init_redis()
+        if not available or client is None:
+            return None, None
+        pipe = client.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, window, nx=True)
+        count, _ = pipe.execute()
+        count = int(count)
+        allowed = count <= limit
+        remaining = max(0, limit - count)
+        return allowed, remaining
+    except Exception as exc:
+        logger.debug("Redis rate-limit error (falling back to memory): %s", exc)
+        return None, None
+
+
 class RateLimiter:
-    """Simple in-memory rate limiter for API endpoints"""
-    
+    """
+    Per-user rate limiter.
+
+    Uses Redis (INCR + EXPIRE sliding window) when available; gracefully
+    falls back to an in-process TTL list so deploys without Redis still
+    work.  In multi-worker production deployments Redis is required for
+    cross-process enforcement.
+    """
+
     def __init__(self, requests_per_minute: int = 60):
-        """
-        Initialize rate limiter
-        
-        Args:
-            requests_per_minute: Maximum requests allowed per minute per user
-        """
         self.requests_per_minute = requests_per_minute
-        self.requests = defaultdict(list)  # user_id -> list of request timestamps
-        self.lock = Lock()
         self.window_seconds = 60
-    
-    def is_allowed(self, user_id: int) -> bool:
-        """
-        Check if request is allowed for user
-        
-        Args:
-            user_id: User ID making the request
-            
-        Returns:
-            True if allowed, False if rate limit exceeded
-        """
-        with self.lock:
+        # In-memory fallback store
+        self._requests: dict[int, list[float]] = defaultdict(list)
+        self._lock = Lock()
+
+    def _memory_is_allowed(self, user_id: int) -> bool:
+        with self._lock:
             now = time.time()
-            user_requests = self.requests[user_id]
-            
-            # Remove requests outside the time window
-            user_requests[:] = [t for t in user_requests if now - t < self.window_seconds]
-            
-            # Check if limit exceeded
-            if len(user_requests) >= self.requests_per_minute:
+            bucket = self._requests[user_id]
+            bucket[:] = [t for t in bucket if now - t < self.window_seconds]
+            if len(bucket) >= self.requests_per_minute:
                 return False
-            
-            # Record this request
-            user_requests.append(now)
+            bucket.append(now)
             return True
-    
-    def get_remaining(self, user_id: int) -> int:
-        """Get remaining requests for user in current window"""
-        with self.lock:
+
+    def _memory_remaining(self, user_id: int) -> int:
+        with self._lock:
             now = time.time()
-            user_requests = self.requests[user_id]
-            user_requests[:] = [t for t in user_requests if now - t < self.window_seconds]
-            return max(0, self.requests_per_minute - len(user_requests))
+            bucket = self._requests[user_id]
+            bucket[:] = [t for t in bucket if now - t < self.window_seconds]
+            return max(0, self.requests_per_minute - len(bucket))
+
+    def is_allowed(self, user_id: int) -> bool:
+        key = f"rl:user:{user_id}:{self.requests_per_minute}"
+        allowed, _ = _redis_sliding_window(key, self.requests_per_minute, self.window_seconds)
+        if allowed is None:
+            return self._memory_is_allowed(user_id)
+        return allowed
+
+    def get_remaining(self, user_id: int) -> int:
+        key = f"rl:user:{user_id}:{self.requests_per_minute}"
+        _, remaining = _redis_sliding_window(key, self.requests_per_minute, self.window_seconds)
+        if remaining is None:
+            return self._memory_remaining(user_id)
+        return remaining
 
 
 # Global rate limiters for different endpoint types

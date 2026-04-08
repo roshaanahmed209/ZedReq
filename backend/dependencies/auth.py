@@ -37,7 +37,21 @@ def verify_token(token: str) -> dict:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type"
             )
-        
+
+        # Reject revoked tokens
+        jti = payload.get("jti")
+        try:
+            from utils.token_denylist import is_revoked
+            if is_revoked(jti):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked"
+                )
+        except HTTPException:
+            raise
+        except Exception as dl_err:
+            logger.warning("Denylist check failed (allowing token): %s", dl_err)
+
         return payload
         
     except JWTError as e:

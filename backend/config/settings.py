@@ -1,9 +1,13 @@
 """Application settings using Pydantic Settings - All values from .env file"""
 from pydantic_settings import BaseSettings
+from pydantic import validator
 from typing import List, Optional
 from functools import lru_cache
 from pathlib import Path
+import logging
 import random
+
+_settings_logger = logging.getLogger(__name__)
 
 # Get project root directory (parent of backend)
 _project_root = Path(__file__).parent.parent.parent
@@ -79,6 +83,24 @@ class Settings(BaseSettings):
     RECOMMENDATION_CACHE_TTL_HOURS: int = 24  # Optional TTL for cache expiration
     JOB_EMBEDDING_BACKFILL_BATCH_SIZE: int = 100
 
+    # Backoffice → main app user purge (shared secret; must match backoffice BACKOFFICE_USER_PURGE_KEY)
+    BACKOFFICE_USER_PURGE_KEY: str | None = None
+
+    @validator("BACKOFFICE_USER_PURGE_KEY", pre=True, always=True)
+    def validate_purge_key(cls, v, values):  # noqa: N805
+        if not v:
+            return v
+        if len(v) < 32:
+            debug = values.get("DEBUG", True)
+            if not debug:
+                raise ValueError(
+                    "BACKOFFICE_USER_PURGE_KEY must be at least 32 characters in production"
+                )
+            _settings_logger.warning(
+                "BACKOFFICE_USER_PURGE_KEY is shorter than 32 characters — use a longer secret in production"
+            )
+        return v
+
     # Paddle Billing (optional — webhooks + subscription cancel/change APIs)
     PADDLE_API_KEY: str | None = None
     PADDLE_WEBHOOK_SECRET: str | None = None
@@ -87,7 +109,7 @@ class Settings(BaseSettings):
     PADDLE_PRICE_PRO: str | None = None
     PADDLE_PRICE_PREMIUM: str | None = None
     # Max age (seconds) for webhook ts when verifying Paddle-Signature (SDK default 5 is strict)
-    PADDLE_WEBHOOK_MAX_AGE_SECONDS: int = 3600
+    PADDLE_WEBHOOK_MAX_AGE_SECONDS: int = 30
     
     class Config:
         env_file = str(_env_file)

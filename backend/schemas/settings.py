@@ -100,6 +100,24 @@ class SubscriptionInfo(BaseModel):
     paddle_subscription_id: Optional[str] = None
 
 
+class DeleteAccountRequest(BaseModel):
+    """Delete account confirmation — requires current password to prevent accidental or session-hijack deletes."""
+    password: str
+
+
 class EnterpriseInquiryRequest(BaseModel):
     """Enterprise sales inquiry (authenticated user)"""
     email: EmailStr
+
+
+class ProfileDescriptionUpdate(BaseModel):
+    """Explicit allowlist of updatable profile description fields."""
+    short_desc: Optional[str] = Field(None, max_length=300)
+    about: Optional[str] = Field(None, max_length=2000)
+    skills: Optional[str] = Field(None, max_length=1000)
+    certificates: Optional[str] = Field(None, max_length=1000)
+    current_status: Optional[str] = Field(None, max_length=100)
+    role: Optional[str] = Field(None, max_length=150)
+    company: Optional[str] = Field(None, max_length=150)
+    location: Optional[str] = Field(None, max_length=150)
+    industry: Optional[str] = Field(None, max_length=150)

@@ -18,6 +18,7 @@ import cloudinary.uploader
 import cloudinary.utils
 
 from models.orm import User, Description, UsersContext, Payment
+from services.user_deletion_service import UserDeletionService
 from models.orm.subscription_plan import SubscriptionPlan
 from models.orm.user_subscription import UserSubscription
 from services.auth_service import hash_password, verify_password, validate_password_strength, validate_email
@@ -1159,23 +1160,40 @@ class SettingsService:
             logger.error(f"Update subscription error: {e}", exc_info=True)
             raise
 
-    def delete_account(self, user_id: int) -> bool:
-        """Delete user account (cascade deletes handled by DB)"""
+    def delete_account(
+        self,
+        user_id: int,
+        *,
+        password: str,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> bool:
+        """Archive full snapshot, purge operational rows, delete user (CASCADE).
+
+        Requires the user's current password to confirm intent — prevents accidental
+        or session-hijack triggered deletes.
+        """
         try:
             user = self.db.query(User).filter(User.uid == user_id).first()
             if not user:
-                raise NotFoundError('User')
-            
-            # Delete user (cascade will handle related records)
-            self.db.delete(user)
-            self.db.commit()
-            
+                raise NotFoundError("User")
+
+            if not verify_password(password, user.password_hash):
+                logger.warning(f"Failed delete-account password confirmation for user {user_id}")
+                raise ValidationError("Current password is incorrect")
+
+            UserDeletionService(self.db).purge_user(
+                user_id,
+                deletion_source="user_self",
+                admin_id=None,
+                reason=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
             logger.info(f"Account deleted for user {user_id}")
             return True
-            
-        except NotFoundError:
+        except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            self.db.rollback()
             logger.error(f"Delete account error: {e}", exc_info=True)
             raise

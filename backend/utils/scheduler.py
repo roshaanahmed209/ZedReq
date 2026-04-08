@@ -86,6 +86,17 @@ def start_scheduler():
         )
         logger.info(f"Azel cleanup job added (interval: {cleanup_interval_minutes} minutes)")
     
+    # Add Firebase purge retry job (always enabled)
+    _scheduler.add_job(
+        func=run_firebase_purge_retries,
+        trigger=IntervalTrigger(minutes=15),
+        id='firebase_purge_retry_job',
+        name='Firebase Purge Retry',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("Firebase purge retry job added (interval: 15 minutes)")
+
     # Add optional job embedding backfill job
     backfill_enabled = os.environ.get('JOB_EMBEDDING_BACKFILL_ENABLED', 'false').lower() == 'true'
     if backfill_enabled:
@@ -165,6 +176,57 @@ def run_job_embedding_backfill():
         
     except Exception as e:
         logger.error(f"Error in scheduled job embedding backfill: {e}", exc_info=True)
+
+
+def run_firebase_purge_retries():
+    """Retry failed Firebase conversation purges for deleted users.
+
+    Runs every 15 minutes. Processes rows where succeeded_at IS NULL and
+    attempt_count < 5, stops re-trying permanently failed entries after 5 attempts.
+    """
+    import asyncio
+    from config.database import get_connection_params, Database
+    from services.messaging_service import MessagingService
+
+    try:
+        db = Database(get_connection_params())
+        rows = db.fetch_all(
+            """
+            SELECT id, user_id FROM firebase_purge_retries
+            WHERE succeeded_at IS NULL AND attempt_count < 5
+            ORDER BY created_at
+            """,
+        )
+        if not rows:
+            return
+
+        logger.info("firebase_purge_retries: %d pending rows", len(rows))
+        messaging = MessagingService()
+
+        for row in rows:
+            row_id = row["id"]
+            user_id = row["user_id"]
+            try:
+                purged = asyncio.run(messaging.purge_conversations_for_user(user_id))
+            except Exception as e:
+                logger.error("Retry Firebase purge uid=%s: %s", user_id, e, exc_info=True)
+                purged = False
+
+            if purged:
+                db.execute(
+                    "UPDATE firebase_purge_retries SET succeeded_at = NOW(), last_attempt_at = NOW() WHERE id = %s",
+                    (row_id,),
+                )
+                logger.info("Firebase purge retry succeeded for uid=%s", user_id)
+            else:
+                db.execute(
+                    "UPDATE firebase_purge_retries SET attempt_count = attempt_count + 1, last_attempt_at = NOW() WHERE id = %s",
+                    (row_id,),
+                )
+
+        db.close()
+    except Exception as e:
+        logger.error("run_firebase_purge_retries failed: %s", e, exc_info=True)
 
 
 def get_scheduler():

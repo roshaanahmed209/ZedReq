@@ -47,6 +47,7 @@ from routers.reserved_seats import router as reserved_seats_router
 from routers.monitoring import router as monitoring_router
 from routers.prelaunch_public import router as prelaunch_public_router
 from routers.paddle_webhook import router as paddle_billing_router
+from routers.system_purge import router as system_purge_router
 from middleware.monitoring_middleware import MonitoringMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.body_limit import BodySizeLimitMiddleware
@@ -207,6 +208,29 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] Paddle billing migration failed: {e}")
 
+    def _init_user_deletion_tables():
+        try:
+            from config.database import get_connection_params, Database
+            from db.migrations.add_deleted_user_archive_table import (
+                CREATE_DELETED_USER_ARCHIVE,
+                CREATE_DELETED_USER_ARCHIVE_INDEXES,
+            )
+            from db.migrations.alter_deleted_user_archive_add_ip_ua import ALTER_SQL
+            from db.migrations.add_firebase_purge_retry_table import (
+                CREATE_TABLE as CREATE_FIREBASE_RETRY,
+                CREATE_INDEXES as CREATE_FIREBASE_RETRY_INDEXES,
+            )
+            db = Database(get_connection_params())
+            db.execute(CREATE_DELETED_USER_ARCHIVE)
+            db.execute(CREATE_DELETED_USER_ARCHIVE_INDEXES)
+            db.execute(ALTER_SQL)
+            db.execute(CREATE_FIREBASE_RETRY)
+            db.execute(CREATE_FIREBASE_RETRY_INDEXES)
+            db.close()
+            print("[OK] User deletion archive + Firebase retry tables ready")
+        except Exception as e:
+            print(f"[WARN] User deletion tables init failed: {e}")
+
     # Run all blocking startup tasks in threads with a 20s timeout each
     for name, fn in [
         ("db", _init_db),
@@ -214,6 +238,7 @@ async def lifespan(app: FastAPI):
         ("firebase", _init_firebase),
         ("azel_jobs", _init_azel_jobs_table),
         ("paddle_billing", _init_paddle_billing_columns),
+        ("user_deletion_tables", _init_user_deletion_tables),
     ]:
         try:
             await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
@@ -221,6 +246,16 @@ async def lifespan(app: FastAPI):
             print(f"[WARN] {name} init timed out — continuing startup")
         except Exception as e:
             print(f"[WARN] {name} init error: {e}")
+
+    # Warn if user purge key is absent
+    if _settings_loaded and settings is not None:
+        purge_key = getattr(settings, "BACKOFFICE_USER_PURGE_KEY", None)
+        if not purge_key:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "BACKOFFICE_USER_PURGE_KEY is not set — admin-triggered user purge is disabled. "
+                "Set this to a random 32+ character secret shared with the backoffice."
+            )
 
     # Start Vec agent scheduler
     try:
@@ -290,13 +325,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "X-API-Key"],
-    expose_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"],
     max_age=3600,
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 
-server_origins = cors_origins + ["http://localhost:5000", "http://localhost:5173"]
 # Global exception handlers to ensure CORS headers are always included
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -394,6 +428,7 @@ app.include_router(reserved_seats_router)
 app.include_router(monitoring_router)
 app.include_router(prelaunch_public_router, prefix="/api")
 app.include_router(paddle_billing_router, prefix="/api")
+app.include_router(system_purge_router, prefix="/api/system")
 
 
 # Get paths for static files

@@ -147,11 +147,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # strict same-origin COOP breaks cross-origin popups (Firebase signInWithPopup,
         # some payment flows) — parent cannot read window.closed / call window.close.
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        # HSTS: only set in production to avoid forcing HTTPS in local dev
+        debug = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
+        if not debug:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         connect_src = _build_connect_src(request)
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://cdn.paddle.com https://sandbox-cdn.paddle.com https://public.profitwell.com; "
+            # TODO: replace 'unsafe-inline' with nonce-based CSP once the frontend
+            # injects per-request nonces into inline scripts.
+            "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://cdn.paddle.com https://sandbox-cdn.paddle.com https://public.profitwell.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; "
             "img-src 'self' data: https: blob:; "
             "media-src 'self' data: https: blob:; "

@@ -16,6 +16,7 @@ from services.profile_service import ProfileService
 from tasks.profile_context_tasks import run_profile_view_context_update
 from services.lms_service import LMSService
 from services.settings_service import SettingsService
+from services.messaging_service import MessagingService
 from services.subscription_billing_service import SubscriptionBillingService
 from services.two_factor_service import TwoFactorService
 from services.search_service import SearchService
@@ -28,6 +29,8 @@ from schemas.settings import (
     SubscriptionCancelRequest,
     SubscriptionChangePlanRequest,
     EnterpriseInquiryRequest,
+    DeleteAccountRequest,
+    ProfileDescriptionUpdate,
 )
 from schemas.two_factor import (
     TwoFactorSetupResponse,
@@ -628,7 +631,7 @@ async def update_profile(
 
 @router.put("/profile/description")
 async def update_profile_description(
-    description_data: Dict[str, Any],
+    description_data: ProfileDescriptionUpdate,
     current_user: dict = Depends(write_rate_limit),
     profile_service: ProfileService = Depends(get_profile_service)
 ):
@@ -636,7 +639,7 @@ async def update_profile_description(
     try:
         updated_profile = profile_service.update_profile(
             user_id=current_user["id"],
-            update_data=description_data
+            update_data=description_data.model_dump(exclude_none=True)
         )
         return updated_profile
     except NotFoundError:
@@ -856,23 +859,44 @@ async def verify_2fa_setup(
         )
 
 
-@router.get("/2fa/backup-codes", response_model=TwoFactorBackupCodesResponse)
+class _PasswordConfirmBody(BaseModel):
+    """Request body requiring current password confirmation."""
+    current_password: str = Field(..., min_length=1)
+
+
+@router.post("/2fa/backup-codes", response_model=TwoFactorBackupCodesResponse)
 async def get_backup_codes(
-    current_user: dict = Depends(get_current_user),
-    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+    body: _PasswordConfirmBody,
+    current_user: dict = Depends(sensitive_rate_limit),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service),
+    db: Session = Depends(get_db),
 ):
-    """Get backup codes for current user"""
+    """
+    Retrieve 2FA backup codes.
+
+    Requires current password to prevent an attacker with a stolen access
+    token from immediately harvesting backup codes and bypassing 2FA.
+    """
     try:
+        from models.orm import User as OrmUser
+        from services.auth_service import verify_password
+        user_row = db.query(OrmUser).filter(OrmUser.uid == current_user["id"]).first()
+        if not user_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        if not verify_password(body.current_password, user_row.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password"
+            )
         codes = two_factor_service.get_backup_codes(current_user["id"])
         return {
             "backup_codes": codes,
             "message": "Store these codes in a safe place. Each code can only be used once."
         }
+    except HTTPException:
+        raise
     except NotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     except Exception as e:
         logger.error(f"Get backup codes error: {e}", exc_info=True)
         raise HTTPException(
@@ -913,18 +937,34 @@ async def regenerate_backup_codes(
 
 @router.delete("/2fa")
 async def disable_2fa(
+    body: _PasswordConfirmBody,
     current_user: dict = Depends(sensitive_rate_limit),
-    two_factor_service: TwoFactorService = Depends(get_two_factor_service)
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service),
+    db: Session = Depends(get_db),
 ):
-    """Disable 2FA for current user"""
+    """
+    Disable 2FA for current user.
+
+    Requires current password to prevent an attacker with a stolen access
+    token from permanently eliminating the second factor.
+    """
     try:
+        from models.orm import User as OrmUser
+        from services.auth_service import verify_password
+        user_row = db.query(OrmUser).filter(OrmUser.uid == current_user["id"]).first()
+        if not user_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        if not verify_password(body.current_password, user_row.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password"
+            )
         two_factor_service.disable_2fa(current_user["id"])
         return {"message": "2FA disabled successfully"}
+    except HTTPException:
+        raise
     except NotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     except Exception as e:
         logger.error(f"Disable 2FA error: {e}", exc_info=True)
         raise HTTPException(
@@ -970,13 +1010,33 @@ async def submit_enterprise_inquiry(
 
 @router.delete("/account")
 async def delete_account(
+    request: Request,
+    body: DeleteAccountRequest,
     current_user: dict = Depends(sensitive_rate_limit),
-    settings_service: SettingsService = Depends(get_settings_service)
+    settings_service: SettingsService = Depends(get_settings_service),
+    db: Session = Depends(get_db),
 ):
-    """Delete user account"""
+    """Delete user account. Requires current password to confirm intent."""
     try:
-        settings_service.delete_account(current_user["id"])
-        return {"message": "Account deleted successfully"}
+        uid = current_user["id"]
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("User-Agent")
+        settings_service.delete_account(
+            uid,
+            password=body.password,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        messaging = MessagingService()
+        purged = await messaging.purge_conversations_for_user(uid)
+        if not purged:
+            _enqueue_firebase_retry(db, uid)
+        return {"message": "Account deleted successfully", "firebase_purged": purged}
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -988,3 +1048,22 @@ async def delete_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete account"
         )
+
+
+def _enqueue_firebase_retry(db: Session, user_id: int) -> None:
+    """Insert a pending Firebase purge retry row when the realtime DB call fails."""
+    from sqlalchemy import text
+    try:
+        db.execute(
+            text(
+                """
+                INSERT INTO firebase_purge_retries (user_id)
+                VALUES (:uid)
+                ON CONFLICT DO NOTHING
+                """
+            ),
+            {"uid": user_id},
+        )
+        db.commit()
+    except Exception:
+        logger.error("Failed to enqueue Firebase retry for uid=%s", user_id, exc_info=True)

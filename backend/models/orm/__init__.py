@@ -48,6 +48,7 @@ from .subscription_plan import SubscriptionPlan
 from .user_subscription import UserSubscription
 from .usage_tracking import UsageTracking
 from .enterprise_inquiry import EnterpriseInquiry
+from .deleted_user_archive import DeletedUserArchive
 
 __all__ = [
     'User',
@@ -95,4 +96,5 @@ __all__ = [
     'UserSubscription',
     'UsageTracking',
     'EnterpriseInquiry',
+    'DeletedUserArchive',
 ]

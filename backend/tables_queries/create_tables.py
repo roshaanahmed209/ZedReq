@@ -686,6 +686,22 @@ CREATE TABLE IF NOT EXISTS azel_jobs (
 );
 '''
 
+DELETED_USER_ARCHIVE_TABLE = '''
+CREATE TABLE IF NOT EXISTS deleted_user_archive (
+    id BIGSERIAL PRIMARY KEY,
+    original_uid INTEGER NOT NULL,
+    user_email VARCHAR(150),
+    deleted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deletion_source VARCHAR(20) NOT NULL,
+    admin_id INTEGER,
+    reason TEXT,
+    user_snapshot JSONB NOT NULL,
+    description_snapshot JSONB,
+    subscriptions_snapshot JSONB,
+    payments_snapshot JSONB
+);
+'''
+
 # ============================================================================
 # INDEX CREATION SQL
 # ============================================================================
@@ -835,6 +851,11 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_azel_jobs_status ON azel_jobs(status)',
     'CREATE INDEX IF NOT EXISTS idx_azel_jobs_created_at ON azel_jobs(created_at)',
 
+    # Deleted user archive (no FK to users — retention only)
+    'CREATE INDEX IF NOT EXISTS idx_deleted_user_archive_original_uid ON deleted_user_archive(original_uid)',
+    'CREATE INDEX IF NOT EXISTS idx_deleted_user_archive_user_email ON deleted_user_archive(user_email)',
+    'CREATE INDEX IF NOT EXISTS idx_deleted_user_archive_deleted_at ON deleted_user_archive(deleted_at DESC)',
+
     # pgvector IVFFLAT (may fail until extension exists or with empty tables — safe to re-run later)
     'CREATE INDEX IF NOT EXISTS idx_job_embeddings ON job_postings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)',
     'CREATE INDEX IF NOT EXISTS idx_description_embeddings ON description USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)',
@@ -905,6 +926,7 @@ TABLES_IN_ORDER = [
     ("user_job_recommendations_cache", USER_JOB_RECOMMENDATIONS_CACHE_TABLE),
     ("reserved_seats", RESERVED_SEATS_TABLE),
     ("azel_jobs", AZEL_JOBS_TABLE),
+    ("deleted_user_archive", DELETED_USER_ARCHIVE_TABLE),
 ]
 
 

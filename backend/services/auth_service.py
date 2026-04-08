@@ -8,7 +8,6 @@ import secrets
 import re
 import requests
 import json
-import base64
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 
@@ -120,7 +119,8 @@ class AuthService:
             "username": username,
             "type": "access",
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.utcnow(),
+            "jti": secrets.token_urlsafe(16),
         }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
@@ -131,7 +131,8 @@ class AuthService:
             "sub": user_id,
             "type": "refresh",
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.utcnow(),
+            "jti": secrets.token_urlsafe(16),
         }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
@@ -187,7 +188,7 @@ class AuthService:
             .first()
         )
         if existing_user:
-            raise ValueError('Username already exists')
+            raise ValueError('An account with this username or email already exists')
         
         # Check if email already exists using ORM
         existing_email = (
@@ -196,7 +197,7 @@ class AuthService:
             .first()
         )
         if existing_email:
-            raise ValueError('Email already exists')
+            raise ValueError('An account with this username or email already exists')
         
         # Hash password and create user using ORM
         password_hash = hash_password(password)
@@ -441,53 +442,68 @@ class AuthService:
             "created_at": user.get("created_at")
         }
     
+    def _decode_firebase_token_verified(self, id_token: str) -> dict:
+        """
+        Verify a Firebase ID token using the Admin SDK (preferred) or Google's
+        public tokeninfo endpoint (fallback when Admin SDK is not initialised).
+
+        Returns the decoded claims dict with at minimum 'email', 'name', 'picture'.
+        Raises ValueError on any verification failure.
+        """
+        # --- Tier 1: Firebase Admin SDK (cryptographic RS256 verification) ---
+        try:
+            import firebase_admin
+            from firebase_admin import auth as firebase_auth
+            # get_app() raises ValueError if no app is initialised
+            firebase_admin.get_app()
+            token_data = firebase_auth.verify_id_token(id_token)
+            return token_data
+        except ValueError:
+            # Firebase app not initialised — fall through to HTTP fallback
+            logger.debug("Firebase Admin SDK not initialised, using tokeninfo fallback")
+        except Exception as sdk_err:
+            # Token rejected by the SDK (expired, bad signature, wrong project…)
+            logger.warning("Firebase Admin SDK token verification failed: %s", sdk_err)
+            raise ValueError('Invalid or expired Firebase token')
+
+        # --- Tier 2: Google tokeninfo HTTP endpoint (signature verified by Google) ---
+        try:
+            resp = requests.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": id_token},
+                timeout=5,
+            )
+            if resp.status_code != 200:
+                raise ValueError('Firebase token rejected by Google tokeninfo endpoint')
+            token_data = resp.json()
+            if "error" in token_data or "error_description" in token_data:
+                raise ValueError('Firebase token rejected by Google tokeninfo endpoint')
+            # Audience check against configured project
+            if settings.FIREBASE_AUTH_PROJECT_ID:
+                aud = token_data.get("aud", "")
+                if settings.FIREBASE_AUTH_PROJECT_ID not in str(aud):
+                    logger.warning("Token audience mismatch: %s vs %s", aud, settings.FIREBASE_AUTH_PROJECT_ID)
+                    raise ValueError('Firebase token audience does not match this application')
+            return token_data
+        except ValueError:
+            raise
+        except Exception as http_err:
+            logger.error("tokeninfo HTTP fallback failed: %s", http_err)
+            raise ValueError('Could not verify Firebase token')
+
     def verify_google_token(self, id_token: str, intent: str = "signup") -> dict:
         """Verify Firebase ID token. intent 'signup' creates user if missing; 'login' requires existing user."""
         try:
-            # Firebase ID tokens are JWTs - decode without verification for now
-            # In production, you should verify the signature using Firebase's public keys
             try:
-                # Decode the JWT token (without verification for simplicity)
-                # The token contains: email, name, picture, sub (user ID), aud (audience/project ID)
-                token_parts = id_token.split('.')
-                if len(token_parts) != 3:
-                    raise ValueError('Invalid token format')
-                
-                # Decode the payload (second part of JWT)
-                # Add padding if needed
-                payload = token_parts[1]
-                padding = 4 - len(payload) % 4
-                if padding != 4:
-                    payload += '=' * padding
-                
-                decoded_payload = base64.urlsafe_b64decode(payload)
-                token_data = json.loads(decoded_payload)
-                
-                # Check token expiration (exp claim is Unix timestamp)
-                exp = token_data.get('exp')
-                if exp:
-                    current_time = datetime.utcnow().timestamp()
-                    if current_time > exp:
-                        raise ValueError('Firebase token has expired')
-                
-                # Verify the token is for our Firebase project (if configured)
-                if settings.FIREBASE_AUTH_PROJECT_ID:
-                    # Firebase tokens have audience (aud) as the project ID
-                    # But it might be in format: {project_id} or full client ID
-                    token_aud = token_data.get('aud', '')
-                    if settings.FIREBASE_AUTH_PROJECT_ID not in str(token_aud):
-                        logger.warning(f"Token audience mismatch: {token_aud} vs {settings.FIREBASE_AUTH_PROJECT_ID}")
-                        # Don't fail, but log it
-                
-                # Extract user info from token
+                token_data = self._decode_firebase_token_verified(id_token)
+
                 google_email = token_data.get('email')
                 google_name = token_data.get('name', '')
                 google_picture = token_data.get('picture', '')
-                google_sub = token_data.get('sub')  # Firebase user ID
-                
+
                 if not google_email:
                     raise ValueError('Email not found in Firebase token')
-                    
+
             except (ValueError, json.JSONDecodeError, Exception) as decode_error:
                 logger.error(f"Token decode error: {decode_error}")
                 raise ValueError('Invalid Firebase token format')
@@ -577,4 +593,4 @@ class AuthService:
             raise ValueError('Failed to verify Google token')
         except Exception as e:
             logger.error(f"Google auth error: {e}", exc_info=True)
-            raise ValueError(f'Google authentication failed: {str(e)}')
+            raise ValueError('Google authentication failed')
