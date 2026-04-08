@@ -8,6 +8,39 @@ import { generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
 import '../css/pages/Feed.css'
 
+/* Vite resolves at build time. `frontend/static/feed_bg.jpg` + optional `src/assets/` override + SVG fallback. */
+const feedBgModules = {
+  ...import.meta.glob('../assets/feed_bg.{jpg,jpeg,png,svg}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }),
+  ...import.meta.glob('../../static/feed_bg.{jpg,jpeg,png}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }),
+}
+const FEED_BG_KEYS = [
+  '../assets/feed_bg.jpg',
+  '../assets/feed_bg.jpeg',
+  '../../static/feed_bg.jpg',
+  '../../static/feed_bg.jpeg',
+  '../assets/feed_bg.png',
+  '../../static/feed_bg.png',
+  '../assets/feed_bg.svg',
+]
+let FEED_BG_URL = ''
+for (const key of FEED_BG_KEYS) {
+  if (feedBgModules[key]) {
+    FEED_BG_URL = feedBgModules[key]
+    break
+  }
+}
+if (!FEED_BG_URL) {
+  FEED_BG_URL = Object.values(feedBgModules)[0] || ''
+}
+
 const fadeIn = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
@@ -19,19 +52,35 @@ const slideUp = keyframes`
 `
 
 const Container = styled.div`
+  position: relative;
   min-height: 100vh;
-  background: var(--bg-light);
   animation: ${fadeIn} 0.6s ease-in;
+
+  /* Full-viewport image behind all feed content (avoids opaque wrappers hiding it) */
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--bg-light);
+    ${FEED_BG_URL ? `background-image: url(${JSON.stringify(FEED_BG_URL)});` : ''}
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
 `
 
-
 const MainContainer = styled.div`
+  position: relative;
+  z-index: 1;
   max-width: 1880px;
   margin: 0 auto 0 0;
   display: grid;
   grid-template-columns: 268px 248px minmax(0, 1fr);
   gap: 25px;
   padding: 30px 20px;
+  background: transparent;
   
   @media (max-width: 1400px) {
     max-width: 100%;
@@ -87,7 +136,8 @@ const Sidebar = styled.aside`
   position: sticky;
   top: 100px;
   height: fit-content;
-  
+  background: transparent;
+
   @media (max-width: 768px) {
     position: static;
     top: auto;
@@ -203,7 +253,8 @@ const LeftSidebar = styled.aside`
   position: sticky;
   top: 100px;
   height: fit-content;
-  
+  background: transparent;
+
   @media (max-width: 1024px) {
     display: none;
   }
@@ -459,6 +510,7 @@ const PanelDivider = styled.div`
 const FeedContainer = styled.main`
   width: 100%;
   min-width: 0;
+  background: transparent;
 `
 
 const PostCreator = styled.div`
