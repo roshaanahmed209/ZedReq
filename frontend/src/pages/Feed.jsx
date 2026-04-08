@@ -2,14 +2,23 @@ import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
 import Messages from './Messages'
 import { generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
 import '../css/pages/Feed.css'
 
-/* Vite resolves at build time. `frontend/static/feed_bg.jpg` + optional `src/assets/` override + SVG fallback. */
-const feedBgModules = {
+function pickFeedBgUrl(modules, keys) {
+  for (const key of keys) {
+    if (modules[key]) return modules[key]
+  }
+  const first = Object.values(modules)[0]
+  return first || ''
+}
+
+/* Dark theme: `static/feed_bg.*` + optional `src/assets/feed_bg.*` + SVG fallback */
+const feedBgDarkModules = {
   ...import.meta.glob('../assets/feed_bg.{jpg,jpeg,png,svg}', {
     eager: true,
     query: '?url',
@@ -21,7 +30,7 @@ const feedBgModules = {
     import: 'default',
   }),
 }
-const FEED_BG_KEYS = [
+const FEED_BG_DARK_KEYS = [
   '../assets/feed_bg.jpg',
   '../assets/feed_bg.jpeg',
   '../../static/feed_bg.jpg',
@@ -30,16 +39,32 @@ const FEED_BG_KEYS = [
   '../../static/feed_bg.png',
   '../assets/feed_bg.svg',
 ]
-let FEED_BG_URL = ''
-for (const key of FEED_BG_KEYS) {
-  if (feedBgModules[key]) {
-    FEED_BG_URL = feedBgModules[key]
-    break
-  }
+
+/* Light theme: `static/feed_bg_light.*` + optional `src/assets/feed_bg_light.*` */
+const feedBgLightModules = {
+  ...import.meta.glob('../assets/feed_bg_light.{jpg,jpeg,png,svg}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }),
+  ...import.meta.glob('../../static/feed_bg_light.{jpg,jpeg,png}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }),
 }
-if (!FEED_BG_URL) {
-  FEED_BG_URL = Object.values(feedBgModules)[0] || ''
-}
+const FEED_BG_LIGHT_KEYS = [
+  '../assets/feed_bg_light.jpg',
+  '../assets/feed_bg_light.jpeg',
+  '../../static/feed_bg_light.jpg',
+  '../../static/feed_bg_light.jpeg',
+  '../assets/feed_bg_light.png',
+  '../../static/feed_bg_light.png',
+  '../assets/feed_bg_light.svg',
+]
+
+const FEED_BG_DARK_URL = pickFeedBgUrl(feedBgDarkModules, FEED_BG_DARK_KEYS)
+const FEED_BG_LIGHT_URL = pickFeedBgUrl(feedBgLightModules, FEED_BG_LIGHT_KEYS)
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -56,14 +81,15 @@ const Container = styled.div`
   min-height: 100vh;
   animation: ${fadeIn} 0.6s ease-in;
 
-  /* Full-viewport image behind all feed content (avoids opaque wrappers hiding it) */
+  /* Full-viewport image behind all feed content; URL from theme ($feedBgUrl) */
   &::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 0;
     background-color: var(--bg-light);
-    ${FEED_BG_URL ? `background-image: url(${JSON.stringify(FEED_BG_URL)});` : ''}
+    background-image: ${(p) =>
+      p.$feedBgUrl ? `url(${JSON.stringify(p.$feedBgUrl)})` : 'none'};
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1475,8 +1501,12 @@ const Feed = () => {
   const [messagesOpen, setMessagesOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { logout, sessionFeedStats } = useAuth()
+  const { theme } = useTheme()
   const navigate = useNavigate()
   const likingPostIdsRef = useRef(new Set())
+
+  const feedBgUrl =
+    theme === 'light' && FEED_BG_LIGHT_URL ? FEED_BG_LIGHT_URL : FEED_BG_DARK_URL
 
   useEffect(() => {
     loadUser()
@@ -1820,7 +1850,7 @@ const Feed = () => {
 
 
   return (
-    <Container>
+    <Container $feedBgUrl={feedBgUrl}>
       <Navbar />
 
       <MainContainer>
