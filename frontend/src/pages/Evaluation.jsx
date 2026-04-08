@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -257,7 +257,7 @@ const CourseSelector = styled.div`
 
 const CourseOption = styled.div`
   padding: 14px 18px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
   border-radius: 8px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -270,7 +270,7 @@ const CourseOption = styled.div`
   gap: 12px;
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -325,7 +325,7 @@ const EvaluationCard = styled.div`
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.3);
+    border-color: rgba(21, 133, 161, 0.3);
   }
 `
 
@@ -383,9 +383,9 @@ const MetricGrid = styled.div`
 
 const MetricItem = styled.div`
   padding: 20px;
-  background: linear-gradient(135deg, rgba(10, 102, 194, 0.05), rgba(0, 160, 220, 0.05));
+  background: linear-gradient(135deg, rgba(21, 133, 161, 0.05), rgba(21, 133, 161, 0.05));
   border-radius: 12px;
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  border: 1px solid rgba(21, 133, 161, 0.2);
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -402,7 +402,7 @@ const MetricItem = styled.div`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.2);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.2);
     border-color: var(--primary);
   }
 `
@@ -439,8 +439,8 @@ const AnalysisItem = styled.div`
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
-    background: rgba(10, 102, 194, 0.03);
+    border-color: rgba(21, 133, 161, 0.4);
+    background: rgba(21, 133, 161, 0.03);
   }
 `
 
@@ -635,7 +635,7 @@ const ViewToggleButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${props => props.active ? 'var(--primary)' : 'rgba(10, 102, 194, 0.1)'};
+    background: ${props => props.active ? 'var(--primary)' : 'rgba(21, 133, 161, 0.1)'};
     border-color: var(--primary);
     color: ${props => props.active ? 'white' : 'var(--primary)'};
   }
@@ -686,7 +686,7 @@ const AnswerCard = styled.div`
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.3);
+    border-color: rgba(21, 133, 161, 0.3);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 `
@@ -697,7 +697,7 @@ const AnswerCardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: ${props => props.expanded ? 'rgba(10, 102, 194, 0.05)' : 'transparent'};
+  background: ${props => props.expanded ? 'rgba(21, 133, 161, 0.05)' : 'transparent'};
   transition: background 0.2s ease;
 `
 
@@ -807,7 +807,7 @@ const FeedbackText = styled.div`
   color: var(--text);
   line-height: 1.7;
   padding: 12px;
-  background: rgba(10, 102, 194, 0.05);
+  background: rgba(21, 133, 161, 0.05);
   border-radius: 8px;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -822,7 +822,7 @@ const SuggestionsList = styled.ul`
 const SuggestionItem = styled.li`
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: rgba(10, 102, 194, 0.05);
+  background: rgba(21, 133, 161, 0.05);
   border-radius: 6px;
   font-size: 0.9em;
   color: var(--text);

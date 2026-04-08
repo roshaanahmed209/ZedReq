@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import DarkVeil from '../components/DarkVeil'
 import Beams from '../components/Beams'
@@ -592,7 +592,7 @@ const FirstPage = () => {
             noiseIntensity={2.4}
             scale={0.29}
             rotation={45}
-            lightColor="#00b4d8"
+            lightColor="#1585A1"
           />
         </div>
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(13, 13, 13, 0.3)', zIndex: 1, pointerEvents: 'none' }} />

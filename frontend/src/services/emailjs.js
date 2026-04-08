@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EmailJS Service for sending emails from frontend
  * Uses EmailJS client-side SDK with public key
  */
@@ -28,7 +28,7 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; font-size: 16px; background-color: #000000; color: #ffffff; padding: 0; margin: 0;">
   <div style="max-width: 600px; margin: auto; padding: 0;">
     <!-- Header -->
-    <div style="background: linear-gradient(135deg, #00B4D8 0%, #0096b8 100%); padding: 40px 20px; text-align: center;">
+    <div style="background: linear-gradient(135deg, #1585A1 0%, #1585A1 100%); padding: 40px 20px; text-align: center;">
       <h1 style="margin: 0; color: #ffffff; font-size: 36px; font-weight: 300; letter-spacing: -2px;">ZedReq</h1>
     </div>
     
@@ -47,11 +47,11 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
       </p>
       
       <!-- Promo Code Box -->
-      <div style="background: rgba(0, 180, 216, 0.1); border: 2px solid #00B4D8; border-radius: 12px; padding: 24px; margin: 30px 0; text-align: center;">
+      <div style="background: rgba(21, 133, 161, 0.1); border: 2px solid #1585A1; border-radius: 12px; padding: 24px; margin: 30px 0; text-align: center;">
         <p style="margin: 0 0 12px; color: #999; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 400;">
           Your Reference Code
         </p>
-        <p style="margin: 0; color: #00B4D8; font-size: 32px; font-weight: 300; letter-spacing: 3px; font-family: 'Courier New', monospace;">
+        <p style="margin: 0; color: #1585A1; font-size: 32px; font-weight: 300; letter-spacing: 3px; font-family: 'Courier New', monospace;">
           ${promoCode}
         </p>
       </div>
@@ -61,8 +61,8 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
       </p>
       
       <!-- Referral Section -->
-      <div style="background: rgba(0, 180, 216, 0.05); border-left: 4px solid #00B4D8; border-radius: 8px; padding: 24px; margin: 30px 0;">
-        <h3 style="margin: 0 0 12px; color: #00B4D8; font-size: 20px; font-weight: 400;">
+      <div style="background: rgba(21, 133, 161, 0.05); border-left: 4px solid #1585A1; border-radius: 8px; padding: 24px; margin: 30px 0;">
+        <h3 style="margin: 0 0 12px; color: #1585A1; font-size: 20px; font-weight: 400;">
           Share and Save
         </h3>
         <p style="margin: 0; color: #cccccc; font-size: 15px; line-height: 1.7;">
@@ -78,7 +78,7 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
             text-decoration: none;
             outline: none;
             color: #ffffff;
-            background-color: #00B4D8;
+            background-color: #1585A1;
             padding: 14px 32px;
             border-radius: 8px;
             font-weight: 400;
@@ -97,7 +97,7 @@ function getReservationEmailTemplate(promoCode, websiteLink = 'https://zedreq.ai
       
       <p style="margin: 24px 0 0; color: #999; font-size: 14px; line-height: 1.7;">
         If you have any questions or need help, our support team is just an email away at
-        <a href="mailto:${companyEmail}" style="text-decoration: none; outline: none; color: #00B4D8;">${companyEmail}</a>.
+        <a href="mailto:${companyEmail}" style="text-decoration: none; outline: none; color: #1585A1;">${companyEmail}</a>.
         We're here to assist you every step of the way!
       </p>
     </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+﻿import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import './NetworkExpansionGraph.css'
 
@@ -247,7 +247,7 @@ const RotatingGlobe = () => {
           else ctx.lineTo(px, py)
         }
 
-        ctx.strokeStyle = `rgba(0,180,216,${edgeAlpha * 0.42})`
+        ctx.strokeStyle = `rgba(21, 133, 161,${edgeAlpha * 0.42})`
         ctx.lineWidth   = 0.75 * dpr
         ctx.stroke()
       }
@@ -272,8 +272,8 @@ const RotatingGlobe = () => {
 
           /* Glow halo */
           const g = ctx.createRadialGradient(px, py, 0, px, py, 5*dpr)
-          g.addColorStop(0,   `rgba(0,220,255,${edgeAlpha * 0.75})`)
-          g.addColorStop(1,   'rgba(0,180,216,0)')
+          g.addColorStop(0,   `rgba(21, 133, 161,${edgeAlpha * 0.75})`)
+          g.addColorStop(1,   'rgba(21, 133, 161,0)')
           ctx.beginPath()
           ctx.arc(px, py, 5*dpr, 0, PI2)
           ctx.fillStyle = g
@@ -296,8 +296,8 @@ const RotatingGlobe = () => {
         const pulse = 0.5 + 0.5 * Math.sin(elapsed * 2.2 + n.phase)
         const glowR = (4 + pulse * 3) * dpr
         const grd = ctx.createRadialGradient(px, py, 0, px, py, glowR)
-        grd.addColorStop(0, `rgba(0,200,255,${n.alpha * (0.45 + pulse * 0.25)})`)
-        grd.addColorStop(1, 'rgba(0,180,216,0)')
+        grd.addColorStop(0, `rgba(21, 133, 161,${n.alpha * (0.45 + pulse * 0.25)})`)
+        grd.addColorStop(1, 'rgba(21, 133, 161,0)')
         ctx.beginPath()
         ctx.arc(px, py, glowR, 0, PI2)
         ctx.fillStyle = grd
@@ -322,7 +322,7 @@ const RotatingGlobe = () => {
       const rimY = GY - R * 0.38
       const rim  = ctx.createRadialGradient(rimX, rimY, R*0.01, rimX, rimY, R*0.62)
       rim.addColorStop(0,    'rgba(255,255,255,0.20)')
-      rim.addColorStop(0.28, 'rgba(180,230,255,0.08)')
+      rim.addColorStop(0.28, 'rgba(21, 133, 161,0.08)')
       rim.addColorStop(1,    'rgba(0,0,0,0)')
       ctx.fillStyle = rim
       ctx.fillRect(0, 0, W, H)
@@ -409,7 +409,7 @@ const NetworkExpansionGraph = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.15 }}
-                  whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,180,216,0.15)' }}
+                  whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(21, 133, 161,0.15)' }}
                 >
                   <span className="suggested-avatar-circle">
                     <span className="suggested-avatar-initials">

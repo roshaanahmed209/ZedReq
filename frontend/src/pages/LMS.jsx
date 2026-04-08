@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -1014,7 +1014,7 @@ const Bar = styled.div`
   width: 100%;
   max-width: 60px;
   min-width: 35px;
-  background: linear-gradient(180deg, #00d4ff 0%, var(--primary) 50%, #004182 100%);
+  background: linear-gradient(180deg, #1585A1 0%, var(--primary) 50%, #0f6a82 100%);
   border-radius: 8px 8px 0 0;
   height: ${props => props.height}%;
   transition: all 0.5s ease;
@@ -1050,12 +1050,12 @@ const Bar = styled.div`
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  box-shadow: 0 -2px 8px rgba(10, 102, 194, 0.3), inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -2px 8px rgba(21, 133, 161, 0.3), inset 0 -2px 4px rgba(255, 255, 255, 0.1);
   
   &:hover {
     opacity: 0.9;
     transform: translateY(-2px);
-    box-shadow: 0 -4px 12px rgba(10, 102, 194, 0.5), inset 0 -2px 4px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 -4px 12px rgba(21, 133, 161, 0.5), inset 0 -2px 4px rgba(255, 255, 255, 0.2);
   }
 `
 
@@ -1065,7 +1065,7 @@ const BarValue = styled.div`
   font-size: 0.95em;
   font-weight: 500;
   color: #ffffff;
-  background: rgba(10, 102, 194, 0.8);
+  background: rgba(21, 133, 161, 0.8);
   padding: 4px 8px;
   border-radius: 4px;
   white-space: nowrap;
@@ -1376,7 +1376,7 @@ const CourseCard = styled.div`
   }
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
   }
 `
@@ -1588,7 +1588,7 @@ const TabContainer = styled.div`
 
 const Tab = styled.button`
   padding: 14px 18px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
   border-radius: 8px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -1601,7 +1601,7 @@ const Tab = styled.button`
   word-wrap: break-word;
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -1889,7 +1889,7 @@ const SidePanelTitle = styled.h3`
 const SidePanelItem = styled.div`
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'transparent'};
   border-radius: 6px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -1898,7 +1898,7 @@ const SidePanelItem = styled.div`
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -1976,7 +1976,7 @@ const GenerateQuestionsButton = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.3);
   }
 
   &:active:not(:disabled) {
@@ -2068,7 +2068,7 @@ const AnswerInput = styled.textarea`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
 
   &::placeholder {
@@ -2118,7 +2118,7 @@ const SubmitButton = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.3);
   }
 
   &:active:not(:disabled) {
@@ -2157,9 +2157,9 @@ const EvaluateButton = styled.button`
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.2);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.2);
   }
 
   &:active {
@@ -2207,8 +2207,8 @@ const PortalProgressFill = styled.div`
 `
 
 const PortalCourseInfo = styled.div`
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.2);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 28px;

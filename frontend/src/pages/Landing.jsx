@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { useAuth } from '../contexts/AuthContext'
@@ -339,7 +339,7 @@ const VideoOverlay = styled.div`
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(13, 13, 13, 0.75) 0%, rgba(0, 180, 216, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(13, 13, 13, 0.75) 0%, rgba(21, 133, 161, 0.15) 100%);
   z-index: 1;
   pointer-events: none;
 `

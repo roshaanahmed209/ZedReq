@@ -1,4 +1,4 @@
-.prelaunch-notice-overlay {
+﻿.prelaunch-notice-overlay {
   position: fixed;
   inset: 0;
   z-index: 20000;
@@ -51,7 +51,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--primary);
-  background: rgba(10, 102, 194, 0.12);
+  background: rgba(21, 133, 161, 0.12);
   border-radius: 6px;
   padding: 5px 10px;
   margin-bottom: 14px;

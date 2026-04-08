@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════════════
    Job Discovery & Hiring Flow Section
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -89,7 +89,7 @@
 
 .browser-tab.active {
     background: #1e1e1e;
-    border-bottom: 2px solid #00B4D8;
+    border-bottom: 2px solid #1585A1;
     z-index: 1;
 }
 
@@ -104,7 +104,7 @@
 }
 
 .browser-tab.active .tab-favicon {
-    color: #00B4D8;
+    color: #1585A1;
 }
 
 .tab-title {
@@ -345,13 +345,13 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #00B4D8;
-    border: 2px solid #00B4D8;
+    background: #1585A1;
+    border: 2px solid #1585A1;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(0, 180, 216, 0.15);
+    box-shadow: 0 0 0 4px rgba(21, 133, 161, 0.15);
 }
 
 .step-number-circle {
@@ -372,8 +372,8 @@
 
 .progress-step-item.current .step-number-circle {
     background: rgba(0, 212, 255, 0.15);
-    border-color: #00d4ff;
-    color: #00d4ff;
+    border-color: #1585A1;
+    color: #1585A1;
     box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.1), 0 0 16px rgba(0, 212, 255, 0.2);
 }
 
@@ -429,7 +429,7 @@
 }
 
 .step-checkmark {
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 1em;
     font-weight: 600;
     margin-left: 4px;
@@ -445,7 +445,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #00d4ff;
+    background: #1585A1;
     animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
@@ -461,7 +461,7 @@
 }
 
 .step-status-text {
-    color: #00d4ff;
+    color: #1585A1;
     font-size: 0.8em;
     font-weight: 500;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -478,8 +478,8 @@
 }
 
 .step-connector-line.active {
-    background: linear-gradient(180deg, #00B4D8, rgba(0, 180, 216, 0.6));
-    box-shadow: 0 0 4px rgba(0, 180, 216, 0.3);
+    background: linear-gradient(180deg, #1585A1, rgba(21, 133, 161, 0.6));
+    box-shadow: 0 0 4px rgba(21, 133, 161, 0.3);
 }
 
 /* ─── Job Listings ───────────────────────────────────────────────────────── */
@@ -502,7 +502,7 @@
 }
 
 .job-listing-card:hover {
-    border-color: rgba(0, 180, 216, 0.3);
+    border-color: rgba(21, 133, 161, 0.3);
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -528,7 +528,7 @@
 }
 
 .job-company {
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 0.85em;
     font-weight: 400;
 }
@@ -564,7 +564,7 @@
 .job-apply-button {
     margin-top: 4px;
     padding: 10px 20px;
-    background: #00B4D8;
+    background: #1585A1;
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -576,9 +576,9 @@
 }
 
 .job-apply-button:hover {
-    background: #0096b8;
+    background: #1585A1;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
 }
 
 /* ─── Match Score Circle ─────────────────────────────────────────────────── */
@@ -599,7 +599,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #00B4D8;
+    color: #1585A1;
     font-weight: 600;
     line-height: 1;
 }
@@ -618,15 +618,15 @@
     align-items: flex-start;
     gap: 16px;
     padding: 20px;
-    background: rgba(0, 180, 216, 0.08);
-    border: 1px solid rgba(0, 180, 216, 0.2);
+    background: rgba(21, 133, 161, 0.08);
+    border: 1px solid rgba(21, 133, 161, 0.2);
     border-radius: 10px;
-    border-left: 3px solid #00B4D8;
+    border-left: 3px solid #1585A1;
 }
 
 .status-card.large {
     padding: 24px;
-    background: rgba(0, 180, 216, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-left-width: 4px;
 }
 
@@ -634,7 +634,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #00B4D8;
+    background: #1585A1;
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -735,7 +735,7 @@
 }
 
 .sidebar-job-item:hover {
-    border-color: rgba(0, 180, 216, 0.2);
+    border-color: rgba(21, 133, 161, 0.2);
 }
 
 .sidebar-job-content {
@@ -761,7 +761,7 @@
 }
 
 .sidebar-job-company {
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 0.8em;
     font-weight: 400;
     display: block;
@@ -803,8 +803,8 @@
     width: 100%;
     padding: 8px 16px;
     background: transparent;
-    color: #00B4D8;
-    border: 1px solid rgba(0, 180, 216, 0.3);
+    color: #1585A1;
+    border: 1px solid rgba(21, 133, 161, 0.3);
     border-radius: 6px;
     font-size: 0.8em;
     font-weight: 500;
@@ -814,9 +814,9 @@
 }
 
 .sidebar-apply-btn:hover {
-    background: #00B4D8;
+    background: #1585A1;
     color: #ffffff;
-    border-color: #00B4D8;
+    border-color: #1585A1;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

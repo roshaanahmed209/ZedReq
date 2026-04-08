@@ -1,4 +1,4 @@
-/* Footer (landing + public subpages) */
+﻿/* Footer (landing + public subpages) */
 .footer-content .scroll-reveal:nth-child(1) {
   transition-delay: 0.05s;
 }
@@ -54,7 +54,7 @@
 }
 
 .footer-section a:hover {
-  color: #00b4d8;
+  color: #1585A1;
 }
 
 .footer-bottom {

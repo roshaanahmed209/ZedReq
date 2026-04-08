@@ -1,4 +1,4 @@
-/* Full-page layout: large type, centered hero, no box containers */
+﻿/* Full-page layout: large type, centered hero, no box containers */
 
 .enterprise-inquiry-page {
   min-height: 100vh;
@@ -82,7 +82,7 @@
 
 .enterprise-input:focus {
   outline: none;
-  border-bottom-color: #00b4d8;
+  border-bottom-color: #1585A1;
 }
 
 .enterprise-submit {
@@ -91,7 +91,7 @@
   font-size: clamp(1.15rem, 2.3vw, 1.4rem);
   font-weight: 600;
   border: none;
-  background: #00b4d8;
+  background: #1585A1;
   color: #fff;
   cursor: pointer;
   border-radius: 0;
@@ -99,7 +99,7 @@
 }
 
 .enterprise-submit:hover:not(:disabled) {
-  background: #0099c7;
+  background: #1585A1;
 }
 
 .enterprise-submit:active:not(:disabled) {
@@ -121,7 +121,7 @@
 }
 
 .enterprise-back:hover {
-  color: #00b4d8;
+  color: #1585A1;
 }
 
 /* Space so smooth scroll has room to travel below the hero */
@@ -212,7 +212,7 @@
   letter-spacing: -0.03em;
   line-height: 1;
   color: #fff;
-  text-shadow: 0 0 60px rgba(0, 180, 216, 0.25);
+  text-shadow: 0 0 60px rgba(21, 133, 161, 0.25);
 }
 
 .enterprise-thankyou-detail {
@@ -239,16 +239,16 @@
 .enterprise-btn-free {
   padding: clamp(0.95rem, 2vw, 1.2rem) clamp(1.5rem, 3vw, 2.25rem);
   font-size: clamp(1rem, 2vw, 1.2rem);
-  border: 2px solid #00b4d8;
+  border: 2px solid #1585A1;
   background: transparent;
-  color: #00b4d8;
+  color: #1585A1;
   cursor: pointer;
   border-radius: 0;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .enterprise-btn-free:hover:not(:disabled) {
-  background: rgba(0, 180, 216, 0.12);
+  background: rgba(21, 133, 161, 0.12);
   color: #fff;
 }
 
@@ -265,7 +265,7 @@
 }
 
 .enterprise-btn-plans:hover {
-  color: #00b4d8;
+  color: #1585A1;
 }
 
 @media (prefers-reduced-motion: reduce) {

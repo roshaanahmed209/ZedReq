@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes, css } from 'styled-components'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -28,8 +28,8 @@ const shimmer = keyframes`
 `
 
 const pulseGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(10, 102, 194, 0.25); }
-  50% { box-shadow: 0 0 20px 4px rgba(10, 102, 194, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(21, 133, 161, 0.25); }
+  50% { box-shadow: 0 0 20px 4px rgba(21, 133, 161, 0.15); }
 `
 
 const tabSlide = keyframes`
@@ -83,7 +83,7 @@ const CoverWrap = styled.div`
   height: 260px;
   background: ${p => p.$src
     ? `url(${p.$src}) center/cover no-repeat`
-    : 'linear-gradient(135deg, #0a66c2 0%, #004182 50%, #00a0dc 100%)'
+    : 'linear-gradient(135deg, #1585A1 0%, #0f6a82 50%, #1585A1 100%)'
   };
   
   &::after {
@@ -434,8 +434,8 @@ const Pill = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    background: ${p => p.$solid ? 'var(--primary-dark)' : 'rgba(10,102,194,0.12)'};
-    box-shadow: 0 4px 14px rgba(10,102,194,0.25);
+    background: ${p => p.$solid ? 'var(--primary-dark)' : 'rgba(21, 133, 161,0.12)'};
+    box-shadow: 0 4px 14px rgba(21, 133, 161,0.25);
   }
 `
 
@@ -634,14 +634,14 @@ const ChipsWrap = styled.div`
 
 const Chip = styled.span`
   padding: 7px 16px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   color: var(--primary);
   border-radius: 100px;
   font-size: 0.88em;
   font-weight: 500;
   transition: all 0.2s;
   &:hover {
-    background: rgba(10, 102, 194, 0.2);
+    background: rgba(21, 133, 161, 0.2);
     transform: translateY(-1px);
   }
 `
@@ -739,7 +739,7 @@ const ProjectCard = styled.div`
   &:hover {
     border-color: var(--primary);
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(10, 102, 194, 0.12);
+    box-shadow: 0 6px 20px rgba(21, 133, 161, 0.12);
   }
 `
 
@@ -775,7 +775,7 @@ const TechTags = styled.div`
 
 const TechTag = styled.span`
   padding: 3px 10px;
-  background: rgba(10, 102, 194, 0.08);
+  background: rgba(21, 133, 161, 0.08);
   color: var(--primary);
   border-radius: 100px;
   font-size: 0.78em;
@@ -963,7 +963,7 @@ const MutualConnections = styled.div`
   color: var(--primary);
   margin-bottom: 12px;
   padding: 6px 12px;
-  background: rgba(10, 102, 194, 0.08);
+  background: rgba(21, 133, 161, 0.08);
   border-radius: 8px;
 `
 
@@ -1018,7 +1018,7 @@ const PostCard = styled.div`
   border-radius: 14px;
   padding: 22px;
   transition: border-color 0.2s;
-  &:hover { border-color: rgba(10,102,194,0.3); }
+  &:hover { border-color: rgba(21, 133, 161,0.3); }
   @media (max-width: 480px) { padding: 16px; border-radius: 12px; }
 `
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Beams from '../components/Beams'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
@@ -69,7 +69,7 @@ const ChoosePlan = () => {
             noiseIntensity={2.4}
             scale={0.29}
             rotation={45}
-            lightColor="#00b4d8"
+            lightColor="#1585A1"
           />
         </div>
         <div

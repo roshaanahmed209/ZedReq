@@ -1,4 +1,4 @@
-/* Reserve Seat Modal */
+﻿/* Reserve Seat Modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -85,8 +85,8 @@
 }
 
 .reserve-info-box {
-    background: rgba(0, 180, 216, 0.08);
-    border: 1px solid rgba(0, 180, 216, 0.2);
+    background: rgba(21, 133, 161, 0.08);
+    border: 1px solid rgba(21, 133, 161, 0.2);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
@@ -101,7 +101,7 @@
 }
 
 .reserve-info-text strong {
-    color: #00B4D8;
+    color: #1585A1;
     font-weight: 500;
 }
 
@@ -126,7 +126,7 @@
 
 .modal-input:focus {
     outline: none;
-    border-color: #00B4D8;
+    border-color: #1585A1;
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -136,7 +136,7 @@
 
 .modal-submit-btn {
     padding: 14px 24px;
-    background: #00B4D8;
+    background: #1585A1;
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -149,7 +149,7 @@
 }
 
 .modal-submit-btn:hover {
-    background: #0096b8;
+    background: #1585A1;
     transform: translateY(-2px);
 }
 
@@ -171,14 +171,14 @@
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: rgba(0, 180, 216, 0.2);
-    color: #00B4D8;
+    background: rgba(21, 133, 161, 0.2);
+    color: #1585A1;
     font-size: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 24px;
-    border: 2px solid #00B4D8;
+    border: 2px solid #1585A1;
     animation: scaleIn 0.4s ease;
 }
 
@@ -194,8 +194,8 @@
 }
 
 .referral-message {
-    background: rgba(0, 180, 216, 0.1);
-    border: 1px solid rgba(0, 180, 216, 0.3);
+    background: rgba(21, 133, 161, 0.1);
+    border: 1px solid rgba(21, 133, 161, 0.3);
     border-radius: 8px;
     padding: 24px;
     margin: 24px 0;
@@ -205,7 +205,7 @@
 .referral-message h3 {
     font-size: 1.2em;
     font-weight: 600;
-    color: #00B4D8;
+    color: #1585A1;
     margin-bottom: 12px;
 }
 
@@ -252,8 +252,8 @@
 }
 
 .promo-code-display {
-    background: rgba(0, 180, 216, 0.1);
-    border: 2px solid #00B4D8;
+    background: rgba(21, 133, 161, 0.1);
+    border: 2px solid #1585A1;
     border-radius: 8px;
     padding: 20px;
     margin: 24px 0;
@@ -270,7 +270,7 @@
 
 .promo-code {
     margin: 0;
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 28px;
     font-weight: 700;
     letter-spacing: 2px;

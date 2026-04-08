@@ -1,4 +1,4 @@
-/* Notifications Page Styles */
+﻿/* Notifications Page Styles */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -315,7 +315,7 @@
 }
 
 .notification-card.unread {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   border-color: var(--primary);
 }
 

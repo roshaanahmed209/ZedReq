@@ -1,16 +1,16 @@
-* {
+﻿* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 :root {
-  --primary: #0a66c2;
-  --primary-dark: #004182;
-  --secondary: #00a0dc;
+  --primary: #1585A1;
+  --primary-dark: #0f6a82;
+  --secondary: #1585A1;
   --success: #22c55e;
   --warning: #f59e0b;
-  --accent: #0a66c2;
+  --accent: #1585A1;
 }
 
 /* Dark Theme (Default) */
@@ -73,5 +73,5 @@ iframe {
 /* Better button and link accessibility on touch devices */
 button,
 a {
-  -webkit-tap-highlight-color: rgba(10, 102, 194, 0.3);
+  -webkit-tap-highlight-color: rgba(21, 133, 161, 0.3);
 }

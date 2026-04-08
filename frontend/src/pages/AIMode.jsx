@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -298,7 +298,7 @@ const UploadArea = styled.div`
 
   &:hover {
     border-color: var(--primary);
-    background: rgba(10, 102, 194, 0.03);
+    background: rgba(21, 133, 161, 0.03);
     transform: scale(1.02);
   }
   
@@ -388,7 +388,7 @@ const UploadButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 8px 16px rgba(21, 133, 161, 0.4);
   }
 
   &:active {
@@ -428,7 +428,7 @@ const UploadButton = styled.button`
 const JobFilterButton = styled.button`
   width: 100%;
   padding: 12px 16px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
   border-radius: 8px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -440,7 +440,7 @@ const JobFilterButton = styled.button`
   margin-bottom: 8px;
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
     transform: translateX(4px);
@@ -538,8 +538,8 @@ const MessageBubble = styled.div`
   padding: 16px 20px;
   border-radius: 12px;
   max-width: 80%;
-  background: ${props => props.isUser ? 'rgba(10, 102, 194, 0.1)' : 'var(--hover-bg)'};
-  border: 1px solid ${props => props.isUser ? 'rgba(10, 102, 194, 0.3)' : 'var(--border)'};
+  background: ${props => props.isUser ? 'rgba(21, 133, 161, 0.1)' : 'var(--hover-bg)'};
+  border: 1px solid ${props => props.isUser ? 'rgba(21, 133, 161, 0.3)' : 'var(--border)'};
   align-self: ${props => props.isUser ? 'flex-end' : 'flex-start'};
   animation: ${slideUp} 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transition: all 0.2s ease;
@@ -614,7 +614,7 @@ const ChatInput = styled.input`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
     transform: translateY(-1px);
   }
 
@@ -639,7 +639,7 @@ const SendButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.4);
   }
 
   &:active {
@@ -678,14 +678,14 @@ const JobCard = styled.div`
   outline: none;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
-    background: rgba(10, 102, 194, 0.03);
+    border-color: rgba(21, 133, 161, 0.4);
+    background: rgba(21, 133, 161, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
 
   &:focus-visible {
-    box-shadow: 0 0 0 2px var(--bg-white), 0 0 0 4px rgba(10, 102, 194, 0.5);
+    box-shadow: 0 0 0 2px var(--bg-white), 0 0 0 4px rgba(21, 133, 161, 0.5);
   }
 `
 
@@ -724,8 +724,8 @@ const JobMetaItem = styled.div`
 const MatchScore = styled.div`
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 12px;
   font-size: 0.8em;
   color: var(--primary);
@@ -755,8 +755,8 @@ const ProfileCard = styled.a`
   color: inherit;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
-    background: rgba(10, 102, 194, 0.03);
+    border-color: rgba(21, 133, 161, 0.4);
+    background: rgba(21, 133, 161, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
@@ -807,8 +807,8 @@ const PostCardExternal = styled.a`
   color: inherit;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
-    background: rgba(10, 102, 194, 0.03);
+    border-color: rgba(21, 133, 161, 0.4);
+    background: rgba(21, 133, 161, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
@@ -829,8 +829,8 @@ const PostCard = styled(Link)`
   color: inherit;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
-    background: rgba(10, 102, 194, 0.03);
+    border-color: rgba(21, 133, 161, 0.4);
+    background: rgba(21, 133, 161, 0.03);
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
@@ -952,9 +952,9 @@ const PrebuiltTextButton = styled.button`
 
   &:hover {
     border-color: var(--primary);
-    background: rgba(10, 102, 194, 0.05);
+    background: rgba(21, 133, 161, 0.05);
     transform: translateX(4px);
-    box-shadow: 0 2px 8px rgba(10, 102, 194, 0.15);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.15);
   }
 
   &:active {
@@ -984,8 +984,8 @@ const UploadedFileDisplay = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: rgba(10, 102, 194, 0.05);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.05);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 8px;
   margin-top: 12px;
   animation: ${slideUp} 0.3s cubic-bezier(0.4, 0, 0.2, 1);

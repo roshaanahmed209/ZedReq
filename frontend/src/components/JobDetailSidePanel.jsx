@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { jobAPI } from '../services/api'
 
@@ -157,8 +157,8 @@ const JobDetailSkills = styled.div`
 
 const JobDetailSkillTag = styled.span`
   padding: 6px 14px;
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 12px;
   font-size: 0.85em;
   color: var(--primary);
@@ -193,7 +193,7 @@ const ApplyButton = styled.button`
 
   &:hover {
     transform: ${props => (props.$applied ? 'none' : 'translateY(-2px)')};
-    box-shadow: ${props => (props.$applied ? 'none' : '0 6px 16px rgba(10, 102, 194, 0.4)')};
+    box-shadow: ${props => (props.$applied ? 'none' : '0 6px 16px rgba(21, 133, 161, 0.4)')};
   }
 
   &:disabled {
@@ -204,7 +204,7 @@ const ApplyButton = styled.button`
 
 const SaveButton = styled.button`
   padding: 12px;
-  background: ${props => (props.$saved ? 'rgba(10, 102, 194, 0.1)' : 'transparent')};
+  background: ${props => (props.$saved ? 'rgba(21, 133, 161, 0.1)' : 'transparent')};
   color: ${props => (props.$saved ? 'var(--primary)' : 'var(--text-light)')};
   border: 1px solid ${props => (props.$saved ? 'var(--primary)' : 'var(--border)')};
   border-radius: 8px;
@@ -215,7 +215,7 @@ const SaveButton = styled.button`
   justify-content: center;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -232,13 +232,13 @@ const ExternalLinkButton = styled.a`
   padding: 10px 16px;
   font-size: 0.9em;
   color: var(--primary);
-  border: 1px solid rgba(10, 102, 194, 0.35);
+  border: 1px solid rgba(21, 133, 161, 0.35);
   border-radius: 8px;
   text-decoration: none;
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.06);
+    background: rgba(21, 133, 161, 0.06);
   }
 `
 
@@ -259,8 +259,8 @@ const SearchMatchBadge = styled.span`
   display: inline-block;
   margin-left: 8px;
   padding: 4px 10px;
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 8px;
   font-size: 0.65em;
   font-weight: 500;

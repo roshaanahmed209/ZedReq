@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+﻿import React, { useState, useRef, useEffect, useMemo } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -297,7 +297,7 @@ const CallButton = styled.button`
     border-color: var(--primary);
     color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.2);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.2);
   }
 
   &:active {
@@ -564,7 +564,7 @@ const MessageBubble = styled.div`
   line-height: 1.5;
   word-wrap: break-word;
   border: ${props => props.isQuestion ? '1px solid var(--primary)' : 'none'};
-  background: ${props => props.isQuestion ? 'rgba(10, 102, 194, 0.1)' : props.isUser ? 'var(--primary)' : 'var(--hover-bg)'};
+  background: ${props => props.isQuestion ? 'rgba(21, 133, 161, 0.1)' : props.isUser ? 'var(--primary)' : 'var(--hover-bg)'};
   color: ${props => props.isQuestion ? 'var(--primary)' : props.isUser ? 'white' : 'var(--text)'};
 
   @media (max-width: 768px) {
@@ -624,7 +624,7 @@ const ChatInput = styled.input`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
 
   &::placeholder {
@@ -637,7 +637,7 @@ const ChatInput = styled.input`
     min-height: 42px;
     
     &:focus {
-      box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
+      box-shadow: 0 0 0 2px rgba(21, 133, 161, 0.1);
     }
   }
 
@@ -673,7 +673,7 @@ const SendButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
   }
 
   &:active {
@@ -815,7 +815,7 @@ const JobsList = styled.div`
 `
 
 const JobCard = styled.div`
-  background: ${props => props.selected ? 'rgba(10, 102, 194, 0.1)' : 'var(--hover-bg)'};
+  background: ${props => props.selected ? 'rgba(21, 133, 161, 0.1)' : 'var(--hover-bg)'};
   border: 1px solid ${props => props.selected ? 'var(--primary)' : 'var(--border)'};
   border-radius: 12px;
   padding: 18px;
@@ -827,7 +827,7 @@ const JobCard = styled.div`
   &:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.2);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.2);
   }
 
   @media (max-width: 768px) {
@@ -878,7 +878,7 @@ const JobDetails = styled.div`
 const JobTag = styled.span`
   font-size: 0.75em;
   padding: 4px 10px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   color: var(--primary);
   border-radius: 12px;
   font-weight: 400;
@@ -926,18 +926,18 @@ const MatchScore = styled.div`
 const ResultsContainer = styled.div`
   margin-top: 12px;
   padding: 12px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   border-radius: 8px;
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  border: 1px solid rgba(21, 133, 161, 0.2);
   animation: ${slideUp} 0.3s ease-out;
 `
 
 const RizFeedbackContainer = styled.div`
   margin-top: 12px;
   padding: 10px;
-  background: rgba(10, 102, 194, 0.05);
+  background: rgba(21, 133, 161, 0.05);
   border-radius: 6px;
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  border: 1px solid rgba(21, 133, 161, 0.2);
 `
 
 const RefreshButton = styled.button`
@@ -1792,7 +1792,7 @@ const AIInterviews = () => {
                         <JobTag>⏱️ {job.experience_level}</JobTag>
                       )}
                       {job.attempt_count > 0 && (
-                        <JobTag style={{ background: 'rgba(10, 102, 194, 0.1)', color: 'var(--primary)' }}>
+                        <JobTag style={{ background: 'rgba(21, 133, 161, 0.1)', color: 'var(--primary)' }}>
                           🔄 Attempt {job.attempt_count + 1}
                         </JobTag>
                       )}

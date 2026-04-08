@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -108,7 +108,7 @@ const SidePanelSection = styled.div`
   }
 
   &.active {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     color: var(--primary);
     border-left-color: var(--primary);
     font-weight: 500;
@@ -322,7 +322,7 @@ const FileUploadArea = styled.div`
 
   &:hover {
     border-color: var(--primary);
-    background: rgba(10, 102, 194, 0.05);
+    background: rgba(21, 133, 161, 0.05);
   }
 
   input[type="file"] {
@@ -371,7 +371,7 @@ const Button = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px ${props => props.variant === 'danger' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(10, 102, 194, 0.4)'};
+    box-shadow: 0 4px 12px ${props => props.variant === 'danger' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(21, 133, 161, 0.4)'};
   }
 
   &:disabled {
@@ -1645,7 +1645,7 @@ const Settings = () => {
                   disabled={true}
                   style={{ 
                     borderColor: subscriptionPlan === 'free' ? 'var(--primary)' : 'var(--border)',
-                    background: subscriptionPlan === 'free' ? 'rgba(10, 102, 194, 0.1)' : 'transparent',
+                    background: subscriptionPlan === 'free' ? 'rgba(21, 133, 161, 0.1)' : 'transparent',
                     cursor: 'not-allowed',
                     opacity: subscriptionPlan === 'free' ? 1 : 0.5
                   }}
@@ -1656,7 +1656,7 @@ const Settings = () => {
                   disabled={true}
                   style={{ 
                     borderColor: subscriptionPlan === 'pro' ? 'var(--primary)' : 'var(--border)',
-                    background: subscriptionPlan === 'pro' ? 'rgba(10, 102, 194, 0.1)' : 'transparent',
+                    background: subscriptionPlan === 'pro' ? 'rgba(21, 133, 161, 0.1)' : 'transparent',
                     cursor: 'not-allowed',
                     opacity: subscriptionPlan === 'pro' ? 1 : 0.5
                   }}
@@ -1816,8 +1816,8 @@ const Settings = () => {
                 marginTop: '15px', 
                 padding: '12px', 
                 background: theme === 'dark' 
-                  ? 'rgba(10, 102, 194, 0.1)' 
-                  : 'rgba(10, 102, 194, 0.05)', 
+                  ? 'rgba(21, 133, 161, 0.1)' 
+                  : 'rgba(21, 133, 161, 0.05)', 
                 borderRadius: '8px',
                 border: `1px solid ${theme === 'dark' ? 'var(--primary)' : 'var(--border)'}`,
                 color: 'var(--text-light)',

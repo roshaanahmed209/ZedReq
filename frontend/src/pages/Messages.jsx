@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -531,7 +531,7 @@ const ChatInput = styled.input`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
     transform: scale(1.01);
   }
 
@@ -580,7 +580,7 @@ const SendButton = styled.button`
 
   &:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
     opacity: 0.9;
   }
 
@@ -649,7 +649,7 @@ const BackIconButton = styled.button`
 
   &:hover {
     transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.4);
     opacity: 0.9;
   }
 

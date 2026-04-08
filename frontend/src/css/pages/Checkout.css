@@ -1,4 +1,4 @@
-.checkout-page {
+﻿.checkout-page {
   min-height: 100vh;
   background: #0a0a0a;
   color: #fff;
@@ -34,7 +34,7 @@
   padding: 14px 24px;
   border-radius: 8px;
   border: none;
-  background: #00B4D8;
+  background: #1585A1;
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
@@ -52,7 +52,7 @@
 }
 
 .checkout-inner a {
-  color: #00B4D8;
+  color: #1585A1;
   text-decoration: none;
 }
 

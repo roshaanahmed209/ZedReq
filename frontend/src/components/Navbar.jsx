@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react'
+﻿import React, { useState, useEffect, useRef, Suspense, lazy } from 'react'
 import styled from 'styled-components'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -141,7 +141,7 @@ const NavMenuItem = styled.div`
   
   &:hover {
     color: var(--primary);
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     transform: translateY(-4px) scale(1.1);
   }
   
@@ -425,7 +425,7 @@ const PanelLink = styled.div`
     justify-content: center;
     width: 28px;
     height: 28px;
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-radius: 8px;
     transition: all 0.2s ease;
     

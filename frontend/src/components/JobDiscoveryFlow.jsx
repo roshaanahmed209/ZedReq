@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import './JobDiscoveryFlow.css'
 
 // ─── SVG Icons for pipeline stages ──────────────────────────────────────────
 const StageIcons = {
   profile: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" />
       <path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6" />
     </svg>
   ),
   analysis: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2a7 7 0 0 1 7 7c0 2.5-1.5 5-3 6.5L12 22l-4-6.5C6.5 14 5 11.5 5 9a7 7 0 0 1 7-7z" />
       <circle cx="12" cy="9" r="2.5" />
     </svg>
   ),
   match: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
     </svg>
   ),
   application: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" y1="13" x2="8" y2="13" />
@@ -32,7 +32,7 @@ const StageIcons = {
     </svg>
   ),
   interview: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" y1="19" x2="12" y2="23" />
@@ -40,7 +40,7 @@ const StageIcons = {
     </svg>
   ),
   lms: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
       <path d="M8 7h8" />
@@ -49,7 +49,7 @@ const StageIcons = {
     </svg>
   ),
   mock: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -57,7 +57,7 @@ const StageIcons = {
     </svg>
   ),
   offer: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
@@ -67,7 +67,7 @@ const StageIcons = {
 
 // ─── Checkmark SVG icon ─────────────────────────────────────────────────────
 const CheckCircleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1585A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
@@ -424,7 +424,7 @@ const MatchScoreCircle = ({ score, size = 42 }) => {
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="rgba(0,180,216,0.12)"
+          stroke="rgba(21, 133, 161,0.12)"
           strokeWidth="3"
         />
         <motion.circle
@@ -432,14 +432,14 @@ const MatchScoreCircle = ({ score, size = 42 }) => {
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="#00B4D8"
+          stroke="#1585A1"
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: circumference * (1 - score / 100) }}
           transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
-          style={{ transformOrigin: 'center', transform: 'rotate(-90deg)', filter: 'drop-shadow(0 0 4px rgba(0,180,216,0.5))' }}
+          style={{ transformOrigin: 'center', transform: 'rotate(-90deg)', filter: 'drop-shadow(0 0 4px rgba(21, 133, 161,0.5))' }}
         />
       </svg>
       <span className="match-score-text" style={{ fontSize: size * 0.26 }}>

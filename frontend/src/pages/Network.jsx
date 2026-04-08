@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+﻿import React, { useState, useRef, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -494,7 +494,7 @@ const MutualConnections = styled.div`
   text-align: center;
   margin-bottom: 16px;
   padding: 8px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   border-radius: 8px;
 `
 
@@ -509,7 +509,7 @@ const PersonSkills = styled.div`
 const SkillTag = styled.span`
   font-size: 0.75em;
   padding: 4px 10px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   color: var(--primary);
   border-radius: 12px;
   font-weight: 400;
@@ -548,7 +548,7 @@ const MessageButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 6px 16px rgba(21, 133, 161, 0.3);
     background: var(--primary-dark);
   }
   
@@ -647,7 +647,7 @@ const ConnectButton = styled.button`
   &:hover {
     ${props => !props.pending && `
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 6px 16px rgba(21, 133, 161, 0.3);
     `}
   }
 

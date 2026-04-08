@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -75,7 +75,7 @@ const PostJobButton = styled.button`
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.4);
   }
 
   @media (max-width: 600px) {
@@ -216,7 +216,7 @@ const CloseButtonMobile = styled.button`
 const FilterOption = styled.button`
   width: 100%;
   padding: 16px 20px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
   border-radius: 10px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text)'};
@@ -232,7 +232,7 @@ const FilterOption = styled.button`
   min-height: 44px; /* Better touch target */
   
   &:hover {
-    background: ${props => props.active ? 'rgba(10, 102, 194, 0.15)' : 'var(--hover-bg)'};
+    background: ${props => props.active ? 'rgba(21, 133, 161, 0.15)' : 'var(--hover-bg)'};
     border-color: ${props => props.active ? 'var(--primary)' : 'var(--border)'};
     transform: translateX(4px);
   }
@@ -437,7 +437,7 @@ const JobSearchInput = styled.input`
   &:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
+    box-shadow: 0 0 0 2px rgba(21, 133, 161, 0.15);
   }
 
   @media (max-width: 480px) {
@@ -460,7 +460,7 @@ const JobSearchSubmit = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.35);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.35);
   }
 
   &:disabled {
@@ -482,7 +482,7 @@ const JobSearchClear = styled.button`
   &:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(10, 102, 194, 0.04);
+    background: rgba(21, 133, 161, 0.04);
   }
 `
 
@@ -517,7 +517,7 @@ const JobCard = styled.div`
   position: relative;
 
   &:hover {
-    border-color: rgba(10, 102, 194, 0.4);
+    border-color: rgba(21, 133, 161, 0.4);
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   }
@@ -670,8 +670,8 @@ const JobMeta = styled.div`
 
 const JobTag = styled.span`
   padding: 4px 12px;
-  background: ${props => props.primary ? 'rgba(10, 102, 194, 0.1)' : 'var(--hover-bg)'};
-  border: 1px solid ${props => props.primary ? 'rgba(10, 102, 194, 0.3)' : 'var(--border)'};
+  background: ${props => props.primary ? 'rgba(21, 133, 161, 0.1)' : 'var(--hover-bg)'};
+  border: 1px solid ${props => props.primary ? 'rgba(21, 133, 161, 0.3)' : 'var(--border)'};
   border-radius: 12px;
   font-size: 0.8em;
   color: ${props => props.primary ? 'var(--primary)' : 'var(--text-light)'};
@@ -680,8 +680,8 @@ const JobTag = styled.span`
 
 const MatchScore = styled.div`
   padding: 6px 12px;
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 8px;
   font-size: 0.85em;
   color: var(--primary);
@@ -705,7 +705,7 @@ const LocationPriorityBadge = styled.span`
   font-size: 0.75em;
   color: ${props => {
     if (props.priority === 1) return '#22c55e';
-    if (props.priority === 2) return '#3b82f6';
+    if (props.priority === 2) return '#1585A1';
     return '#a855f7';
   }};
   font-weight: 500;
@@ -724,8 +724,8 @@ const RecommendationScores = styled.div`
 
 const ScoreBadge = styled.span`
   padding: 3px 8px;
-  background: rgba(10, 102, 194, 0.08);
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  background: rgba(21, 133, 161, 0.08);
+  border: 1px solid rgba(21, 133, 161, 0.2);
   border-radius: 4px;
   color: var(--text-light);
   font-weight: 400;
@@ -762,7 +762,7 @@ const ApplyButton = styled.button`
 
   &:hover {
     transform: ${props => props.applied ? 'none' : 'translateY(-2px)'};
-    box-shadow: ${props => props.applied ? 'none' : '0 6px 16px rgba(10, 102, 194, 0.4)'};
+    box-shadow: ${props => props.applied ? 'none' : '0 6px 16px rgba(21, 133, 161, 0.4)'};
   }
 
   &:active {
@@ -777,7 +777,7 @@ const ApplyButton = styled.button`
 
 const SaveButton = styled.button`
   padding: 12px;
-  background: ${props => props.saved ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.saved ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   color: ${props => props.saved ? 'var(--primary)' : 'var(--text-light)'};
   border: 1px solid ${props => props.saved ? 'var(--primary)' : 'var(--border)'};
   border-radius: 8px;
@@ -788,7 +788,7 @@ const SaveButton = styled.button`
   justify-content: center;
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -904,7 +904,7 @@ const Input = styled.input`
   &:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
   
   &::placeholder {
@@ -928,7 +928,7 @@ const TextArea = styled.textarea`
   &:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
 `
 
@@ -987,7 +987,7 @@ const SubmitButton = styled.button`
   
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 6px 16px rgba(21, 133, 161, 0.4);
   }
   
   &:disabled {
@@ -1113,7 +1113,7 @@ const ApplicantListItem = styled.div`
   
   &:hover {
     background: var(--bg-white);
-    border-color: ${props => props.selected ? 'var(--primary)' : 'rgba(10, 102, 194, 0.3)'};
+    border-color: ${props => props.selected ? 'var(--primary)' : 'rgba(21, 133, 161, 0.3)'};
     transform: translateX(2px);
   }
 `
@@ -1274,7 +1274,7 @@ const ProfileLinkButton = styled.button`
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.4);
   }
   
   svg {
@@ -1352,7 +1352,7 @@ const StatusBadge = styled.span`
   background: ${props => 
     props.status === 'accepted' ? 'rgba(34, 197, 94, 0.1)' :
     props.status === 'rejected' ? 'rgba(239, 68, 68, 0.1)' :
-    'rgba(10, 102, 194, 0.1)'
+    'rgba(21, 133, 161, 0.1)'
   };
   color: ${props => 
     props.status === 'accepted' ? '#22c55e' :
@@ -1362,7 +1362,7 @@ const StatusBadge = styled.span`
   border: 1px solid ${props => 
     props.status === 'accepted' ? 'rgba(34, 197, 94, 0.3)' :
     props.status === 'rejected' ? 'rgba(239, 68, 68, 0.3)' :
-    'rgba(10, 102, 194, 0.3)'
+    'rgba(21, 133, 161, 0.3)'
   };
 `
 
@@ -1424,7 +1424,7 @@ const ViewApplicantsButton = styled.button`
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 6px 16px rgba(21, 133, 161, 0.4);
   }
   
   &:active {
@@ -1591,8 +1591,8 @@ const JobDetailSkills = styled.div`
 
 const JobDetailSkillTag = styled.span`
   padding: 6px 14px;
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.3);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.3);
   border-radius: 12px;
   font-size: 0.85em;
   color: var(--primary);

@@ -1,4 +1,4 @@
-.banner-description-strong {
+﻿.banner-description-strong {
   color: white;
   font-weight: 500;
 }
@@ -29,17 +29,17 @@
 .interview-results-container {
   margin-top: 12px;
   padding: 12px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(21, 133, 161, 0.1);
   border-radius: 8px;
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  border: 1px solid rgba(21, 133, 161, 0.2);
 }
 
 .riz-feedback-container {
   margin-top: 12px;
   padding: 10px;
-  background: rgba(10, 102, 194, 0.05);
+  background: rgba(21, 133, 161, 0.05);
   border-radius: 6px;
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  border: 1px solid rgba(21, 133, 161, 0.2);
 }
 
 .score-breakdown-item {

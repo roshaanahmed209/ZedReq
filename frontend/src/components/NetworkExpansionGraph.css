@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════════════
    Network Expansion Graph Section — Radial Layout
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -55,7 +55,7 @@
     display: grid;
     grid-template-columns: 1fr 1.4fr;
     background: #040a14;
-    border: 1px solid rgba(0, 180, 216, 0.14);
+    border: 1px solid rgba(21, 133, 161, 0.14);
     border-radius: 22px;
     overflow: hidden;
     box-shadow:
@@ -67,7 +67,7 @@
 /* Left — suggestions */
 .network-unified-left {
     padding: 36px 32px;
-    border-right: 1px solid rgba(0, 180, 216, 0.1);
+    border-right: 1px solid rgba(21, 133, 161, 0.1);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -104,7 +104,7 @@
 .globe-text-eyebrow {
     font-size: 0.72em;
     font-weight: 400;
-    color: #00b4d8;
+    color: #1585A1;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     opacity: 0.85;
@@ -120,7 +120,7 @@
 
 .globe-text-sub {
     font-size: 0.78em;
-    color: rgba(0, 180, 216, 0.6);
+    color: rgba(21, 133, 161, 0.6);
     font-weight: 400;
     margin: 0;
     letter-spacing: 0.02em;
@@ -153,9 +153,9 @@
 .strength-number {
     font-size: 2em;
     font-weight: 600;
-    color: #00B4D8;
+    color: #1585A1;
     line-height: 1;
-    filter: drop-shadow(0 0 8px rgba(0, 180, 216, 0.4));
+    filter: drop-shadow(0 0 8px rgba(21, 133, 161, 0.4));
 }
 
 .strength-label {
@@ -188,18 +188,18 @@
 .industry-bar-track {
     height: 8px;
     border-radius: 4px;
-    background: rgba(0, 180, 216, 0.08);
+    background: rgba(21, 133, 161, 0.08);
     overflow: hidden;
 }
 
 .industry-bar-fill {
     height: 100%;
     border-radius: 4px;
-    box-shadow: 0 0 8px rgba(0, 180, 216, 0.3);
+    box-shadow: 0 0 8px rgba(21, 133, 161, 0.3);
 }
 
 .industry-value {
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 0.78em;
     font-weight: 500;
     text-align: right;
@@ -218,15 +218,15 @@
     gap: 12px;
     padding: 12px;
     border-radius: 12px;
-    border: 1px solid rgba(0, 180, 216, 0.12);
-    background: rgba(0, 180, 216, 0.03);
+    border: 1px solid rgba(21, 133, 161, 0.12);
+    background: rgba(21, 133, 161, 0.03);
     transition: all 0.25s ease;
     cursor: pointer;
 }
 
 .suggested-card:hover {
-    border-color: rgba(0, 180, 216, 0.35);
-    background: rgba(0, 180, 216, 0.06);
+    border-color: rgba(21, 133, 161, 0.35);
+    background: rgba(21, 133, 161, 0.06);
 }
 
 .suggested-avatar-circle {
@@ -236,13 +236,13 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(0, 180, 216, 0.1);
-    border: 1px solid rgba(0, 180, 216, 0.3);
+    background: rgba(21, 133, 161, 0.1);
+    border: 1px solid rgba(21, 133, 161, 0.3);
     flex-shrink: 0;
 }
 
 .suggested-avatar-initials {
-    color: #00B4D8;
+    color: #1585A1;
     font-size: 0.82em;
     font-weight: 600;
     line-height: 1;
@@ -271,15 +271,15 @@
 }
 
 .suggested-mutual {
-    color: rgba(0, 180, 216, 0.7);
+    color: rgba(21, 133, 161, 0.7);
     font-size: 0.72em;
 }
 
 .suggested-connect-btn {
     padding: 5px 14px;
     background: transparent;
-    color: #00B4D8;
-    border: 1px solid rgba(0, 180, 216, 0.4);
+    color: #1585A1;
+    border: 1px solid rgba(21, 133, 161, 0.4);
     border-radius: 6px;
     font-size: 0.75em;
     font-weight: 500;
@@ -290,9 +290,9 @@
 }
 
 .suggested-connect-btn:hover {
-    background: #00B4D8;
+    background: #1585A1;
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -311,7 +311,7 @@
 
     .network-unified-left {
         border-right: none;
-        border-bottom: 1px solid rgba(0, 180, 216, 0.1);
+        border-bottom: 1px solid rgba(21, 133, 161, 0.1);
         padding: 28px 24px;
     }
 

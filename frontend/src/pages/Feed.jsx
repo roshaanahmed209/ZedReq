@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,63 +8,6 @@ import Messages from './Messages'
 import { generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
 import '../css/pages/Feed.css'
-
-function pickFeedBgUrl(modules, keys) {
-  for (const key of keys) {
-    if (modules[key]) return modules[key]
-  }
-  const first = Object.values(modules)[0]
-  return first || ''
-}
-
-/* Dark theme: `static/feed_bg.*` + optional `src/assets/feed_bg.*` + SVG fallback */
-const feedBgDarkModules = {
-  ...import.meta.glob('../assets/feed_bg.{jpg,jpeg,png,svg}', {
-    eager: true,
-    query: '?url',
-    import: 'default',
-  }),
-  ...import.meta.glob('../../static/feed_bg.{jpg,jpeg,png}', {
-    eager: true,
-    query: '?url',
-    import: 'default',
-  }),
-}
-const FEED_BG_DARK_KEYS = [
-  '../assets/feed_bg.jpg',
-  '../assets/feed_bg.jpeg',
-  '../../static/feed_bg.jpg',
-  '../../static/feed_bg.jpeg',
-  '../assets/feed_bg.png',
-  '../../static/feed_bg.png',
-  '../assets/feed_bg.svg',
-]
-
-/* Light theme: `static/feed_bg_light.*` + optional `src/assets/feed_bg_light.*` */
-const feedBgLightModules = {
-  ...import.meta.glob('../assets/feed_bg_light.{jpg,jpeg,png,svg}', {
-    eager: true,
-    query: '?url',
-    import: 'default',
-  }),
-  ...import.meta.glob('../../static/feed_bg_light.{jpg,jpeg,png}', {
-    eager: true,
-    query: '?url',
-    import: 'default',
-  }),
-}
-const FEED_BG_LIGHT_KEYS = [
-  '../assets/feed_bg_light.jpg',
-  '../assets/feed_bg_light.jpeg',
-  '../../static/feed_bg_light.jpg',
-  '../../static/feed_bg_light.jpeg',
-  '../assets/feed_bg_light.png',
-  '../../static/feed_bg_light.png',
-  '../assets/feed_bg_light.svg',
-]
-
-const FEED_BG_DARK_URL = pickFeedBgUrl(feedBgDarkModules, FEED_BG_DARK_KEYS)
-const FEED_BG_LIGHT_URL = pickFeedBgUrl(feedBgLightModules, FEED_BG_LIGHT_KEYS)
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -81,18 +24,23 @@ const Container = styled.div`
   min-height: 100vh;
   animation: ${fadeIn} 0.6s ease-in;
 
-  /* Full-viewport image behind all feed content; URL from theme ($feedBgUrl) */
+  /*
+   * Beam: radial burst originating from the bottom-right corner using #1585A1,
+   * fading to transparent as it travels toward the top-left.
+   */
   &::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 0;
     background-color: var(--bg-light);
-    background-image: ${(p) =>
-      p.$feedBgUrl ? `url(${JSON.stringify(p.$feedBgUrl)})` : 'none'};
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background-image: radial-gradient(
+      ellipse 90% 80% at 105% 110%,
+      rgba(21, 133, 161, 0.85) 0%,
+      rgba(21, 133, 161, 0.45) 25%,
+      rgba(21, 133, 161, 0.15) 50%,
+      transparent 75%
+    );
     pointer-events: none;
   }
 `
@@ -317,7 +265,7 @@ const MobileMenuButton = styled.button`
   }
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     color: var(--primary);
   }
   
@@ -438,7 +386,7 @@ const PanelSection = styled.div`
 
 const PanelHeader = styled.div`
   padding: 24px 20px;
-  background: linear-gradient(135deg, #0a66c2 0%, #004182 100%);
+  background: linear-gradient(135deg, #1585A1 0%, #0f6a82 100%);
   color: white;
   font-weight: 600;
   font-size: 1em;
@@ -497,7 +445,7 @@ const PanelLink = styled.div`
     justify-content: center;
     width: 28px;
     height: 28px;
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-radius: 8px;
     transition: all 0.2s ease;
     
@@ -1415,7 +1363,7 @@ const ChatInput = styled.input`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
     transform: scale(1.01);
   }
 
@@ -1439,7 +1387,7 @@ const SendButton = styled.button`
 
   &:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
     opacity: 0.9;
   }
 
@@ -1470,7 +1418,7 @@ const BackIconButton = styled.button`
 
   &:hover {
     transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.4);
     opacity: 0.9;
   }
 
@@ -1504,9 +1452,6 @@ const Feed = () => {
   const { theme } = useTheme()
   const navigate = useNavigate()
   const likingPostIdsRef = useRef(new Set())
-
-  const feedBgUrl =
-    theme === 'light' && FEED_BG_LIGHT_URL ? FEED_BG_LIGHT_URL : FEED_BG_DARK_URL
 
   useEffect(() => {
     loadUser()
@@ -1850,7 +1795,7 @@ const Feed = () => {
 
 
   return (
-    <Container $feedBgUrl={feedBgUrl}>
+    <Container>
       <Navbar />
 
       <MainContainer>

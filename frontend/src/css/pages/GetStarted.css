@@ -1,4 +1,4 @@
-/* Get Started Page — ZedReq theme (matches FirstPage) */
+﻿/* Get Started Page — ZedReq theme (matches FirstPage) */
 .get-started-page {
   min-height: 100vh;
   width: 100%;
@@ -22,9 +22,9 @@
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 80% 50% at 70% 20%, rgba(0, 180, 216, 0.12), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 70% 20%, rgba(21, 133, 161, 0.12), transparent 50%),
     radial-gradient(ellipse 60% 40% at 20% 80%, rgba(0, 153, 199, 0.08), transparent 45%),
-    radial-gradient(ellipse 50% 60% at 90% 60%, rgba(0, 180, 216, 0.06), transparent 40%),
+    radial-gradient(ellipse 50% 60% at 90% 60%, rgba(21, 133, 161, 0.06), transparent 40%),
     linear-gradient(180deg, #0a0a0c 0%, #000000 40%, #050508 100%);
 }
 
@@ -112,7 +112,7 @@
 
 .get-started-title-accent {
   display: inline-block;
-  color: #00B4D8;
+  color: #1585A1;
   animation: get-started-fade-up 0.8s cubic-bezier(0.2, 0.9, 0.2, 1) 0.15s forwards;
   opacity: 0;
 }
@@ -165,15 +165,15 @@
 }
 
 .get-started-btn-active {
-  background: #00B4D8;
+  background: #1585A1;
   color: #ffffff;
-  box-shadow: 0 8px 25px rgba(0, 180, 216, 0.4);
+  box-shadow: 0 8px 25px rgba(21, 133, 161, 0.4);
 }
 
 .get-started-btn-active:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(0, 180, 216, 0.4);
-  background: #0099C7;
+  box-shadow: 0 8px 25px rgba(21, 133, 161, 0.4);
+  background: #1585A1;
 }
 
 .get-started-btn-active:active {
@@ -196,7 +196,7 @@
 }
 
 .get-started-back:hover {
-  color: #00B4D8;
+  color: #1585A1;
 }
 
 /* Terms and Conditions Modal */
@@ -275,8 +275,8 @@
 }
 
 .get-started-modal-close:hover {
-  background: rgba(0, 180, 216, 0.15);
-  color: #00B4D8;
+  background: rgba(21, 133, 161, 0.15);
+  color: #1585A1;
 }
 
 .get-started-modal-body {
@@ -324,7 +324,7 @@
 }
 
 .get-started-modal-email {
-  color: #00B4D8;
+  color: #1585A1;
   text-decoration: none;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react'
 import './SkillGapHeatmap.css'
 
 /* ── demo data ─────────────────────────────────────────────── */
@@ -244,8 +244,8 @@ const SkillGapHeatmap = ({ skills = DEFAULT_SKILLS }) => {
               <svg viewBox="0 0 400 400" className="sgh-radar-svg" aria-label="Skill radar chart">
                 <defs>
                   <radialGradient id="sghFill" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.45" />
-                    <stop offset="100%" stopColor="#00b4d8" stopOpacity="0.08" />
+                    <stop offset="0%" stopColor="#1585A1" stopOpacity="0.45" />
+                    <stop offset="100%" stopColor="#1585A1" stopOpacity="0.08" />
                   </radialGradient>
                 </defs>
 
