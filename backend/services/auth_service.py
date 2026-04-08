@@ -442,53 +442,83 @@ class AuthService:
             "created_at": user.get("created_at")
         }
     
+    # Firebase public JWK endpoint — keys rotate daily but are cached by CDN.
+    _FIREBASE_JWK_URL = (
+        "https://www.googleapis.com/service_accounts/v1/jwk/"
+        "securetoken@system.gserviceaccount.com"
+    )
+
+    def _verify_firebase_token_with_jwk(self, id_token: str, project_id: str) -> dict:
+        """
+        Cryptographically verify a Firebase ID token using Firebase's public JWK keys.
+
+        This is the same verification the Admin SDK performs internally, so it works
+        for any Firebase project without requiring the SDK to be initialised for that
+        specific project.
+        """
+        jwks_resp = requests.get(self._FIREBASE_JWK_URL, timeout=5)
+        jwks_resp.raise_for_status()
+        jwks = jwks_resp.json()
+
+        token_data = jwt.decode(
+            id_token,
+            jwks,
+            algorithms=["RS256"],
+            audience=project_id,
+            issuer=f"https://securetoken.google.com/{project_id}",
+        )
+        return token_data
+
     def _decode_firebase_token_verified(self, id_token: str) -> dict:
         """
-        Verify a Firebase ID token using the Admin SDK (preferred) or Google's
-        public tokeninfo endpoint (fallback when Admin SDK is not initialised).
+        Verify a Firebase ID token with cryptographic RS256 signature validation.
 
-        Returns the decoded claims dict with at minimum 'email', 'name', 'picture'.
-        Raises ValueError on any verification failure.
+        Strategy:
+          Tier 1 — Firebase Admin SDK: works when the SDK is initialised for the
+                   same project as the auth token.  Skipped on aud/project mismatch.
+          Tier 2 — Direct JWK verification via python-jose: fetches Firebase's
+                   public keys and verifies the RS256 signature locally.  Works for
+                   any Firebase project regardless of how the Admin SDK is configured.
+
+        Returns the decoded claims dict.  Raises ValueError on any failure.
         """
-        # --- Tier 1: Firebase Admin SDK (cryptographic RS256 verification) ---
+        project_id = settings.FIREBASE_AUTH_PROJECT_ID
+
+        # --- Tier 1: Firebase Admin SDK ---
         try:
             import firebase_admin
             from firebase_admin import auth as firebase_auth
-            # get_app() raises ValueError if no app is initialised
             firebase_admin.get_app()
             token_data = firebase_auth.verify_id_token(id_token)
             return token_data
         except ValueError:
-            # Firebase app not initialised — fall through to HTTP fallback
-            logger.debug("Firebase Admin SDK not initialised, using tokeninfo fallback")
+            logger.debug("Firebase Admin SDK not initialised — using JWK fallback")
         except Exception as sdk_err:
-            # Token rejected by the SDK (expired, bad signature, wrong project…)
-            logger.warning("Firebase Admin SDK token verification failed: %s", sdk_err)
-            raise ValueError('Invalid or expired Firebase token')
+            err_msg = str(sdk_err)
+            if "aud" in err_msg or "audience" in err_msg:
+                # Admin SDK is initialised for a different Firebase project (e.g.
+                # the Realtime-DB project vs. the Auth project).  Fall through to
+                # direct JWK verification which is project-agnostic.
+                logger.debug(
+                    "Admin SDK project mismatch — using JWK fallback: %s", sdk_err
+                )
+            else:
+                logger.warning("Firebase Admin SDK rejected token: %s", sdk_err)
+                raise ValueError('Invalid or expired Firebase token')
 
-        # --- Tier 2: Google tokeninfo HTTP endpoint (signature verified by Google) ---
-        try:
-            resp = requests.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": id_token},
-                timeout=5,
+        # --- Tier 2: Direct JWK verification (python-jose) ---
+        if not project_id:
+            raise ValueError(
+                'FIREBASE_AUTH_PROJECT_ID must be set to verify tokens without the Admin SDK'
             )
-            if resp.status_code != 200:
-                raise ValueError('Firebase token rejected by Google tokeninfo endpoint')
-            token_data = resp.json()
-            if "error" in token_data or "error_description" in token_data:
-                raise ValueError('Firebase token rejected by Google tokeninfo endpoint')
-            # Audience check against configured project
-            if settings.FIREBASE_AUTH_PROJECT_ID:
-                aud = token_data.get("aud", "")
-                if settings.FIREBASE_AUTH_PROJECT_ID not in str(aud):
-                    logger.warning("Token audience mismatch: %s vs %s", aud, settings.FIREBASE_AUTH_PROJECT_ID)
-                    raise ValueError('Firebase token audience does not match this application')
+        try:
+            token_data = self._verify_firebase_token_with_jwk(id_token, project_id)
             return token_data
-        except ValueError:
-            raise
-        except Exception as http_err:
-            logger.error("tokeninfo HTTP fallback failed: %s", http_err)
+        except JWTError as je:
+            logger.warning("Firebase JWK token verification failed: %s", je)
+            raise ValueError('Invalid or expired Firebase token')
+        except Exception as jwk_err:
+            logger.error("Firebase JWK fallback failed: %s", jwk_err)
             raise ValueError('Could not verify Firebase token')
 
     def verify_google_token(self, id_token: str, intent: str = "signup") -> dict:
