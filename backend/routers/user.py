@@ -1,5 +1,6 @@
 """User Router - User profile endpoints using ORM"""
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request, BackgroundTasks
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import logging
