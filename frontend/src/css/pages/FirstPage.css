@@ -1374,7 +1374,7 @@ img, video, iframe {
     font-weight: 300;
     line-height: 1.7;
     max-width: 820px;
-    margin: -20px auto 50px auto;
+    margin: 16px auto 50px auto;
 }
 
 .pricing-grid {
