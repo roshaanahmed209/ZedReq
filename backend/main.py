@@ -208,6 +208,14 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] Paddle billing migration failed: {e}")
 
+    def _init_auth_provider_column():
+        try:
+            from db.migrations.add_auth_provider_column import run_migration
+            run_migration()
+            print("[OK] auth_provider column ready")
+        except Exception as e:
+            print(f"[WARN] auth_provider column migration failed: {e}")
+
     def _init_user_deletion_tables():
         try:
             from config.database import get_connection_params, Database
@@ -238,6 +246,7 @@ async def lifespan(app: FastAPI):
         ("firebase", _init_firebase),
         ("azel_jobs", _init_azel_jobs_table),
         ("paddle_billing", _init_paddle_billing_columns),
+        ("auth_provider_column", _init_auth_provider_column),
         ("user_deletion_tables", _init_user_deletion_tables),
     ]:
         try:

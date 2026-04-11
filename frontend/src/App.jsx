@@ -33,6 +33,8 @@ import CookiePolicy from './pages/CookiePolicy'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePlanSelected from './components/RequirePlanSelected'
 import PrelaunchNoticeHost from './components/PrelaunchNoticeHost'
+import ConfirmModal from './components/ConfirmModal'
+import { ConfirmModalProvider } from './contexts/ConfirmModalContext'
 import { initAnalytics, trackPageView } from './utils/analytics'
 
 function WithPlanGate({ children }) {
@@ -63,7 +65,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <ConfirmModalProvider>
         <Router>
+          <ConfirmModal />
           <RouteTracker />
           <PrelaunchNoticeHost />
         <Routes>
@@ -123,6 +127,7 @@ function App() {
           <Route path="/settings" element={<WithPlanGate><Settings /></WithPlanGate>} />
         </Routes>
       </Router>
+        </ConfirmModalProvider>
       </AuthProvider>
     </ThemeProvider>
   )

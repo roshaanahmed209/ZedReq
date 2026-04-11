@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useConfirm } from '../contexts/ConfirmModalContext'
 import api, { userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import { ZEDREQ_EMAIL } from '../config/contact'
@@ -487,6 +488,7 @@ const Settings = () => {
   const navigate = useNavigate()
   const { user, updateUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const showConfirm = useConfirm()
   const [activeSection, setActiveSection] = useState('profile')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -973,18 +975,54 @@ const Settings = () => {
   }
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      return
-    }
+    const isGoogleUser = user?.auth_provider === 'google'
 
-    if (!window.confirm('This will permanently delete all your data. Type DELETE to confirm.')) {
-      return
+    const firstConfirm = await showConfirm({
+      title: 'Delete Account',
+      message: 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.',
+      buttons: [
+        { label: 'Cancel', variant: 'secondary', value: false },
+        { label: 'Continue', variant: 'danger', value: true },
+      ],
+    })
+    if (!firstConfirm) return
+
+    let password = ''
+
+    if (isGoogleUser) {
+      // Google users have no password — just ask for a final confirmation
+      const finalConfirm = await showConfirm({
+        title: 'Final Confirmation',
+        message: 'This will permanently delete your profile, posts, connections, and all associated data. There is no way to recover your account after this.',
+        buttons: [
+          { label: 'Go Back', variant: 'secondary', value: false },
+          { label: 'Yes, Delete My Account', variant: 'danger', value: true },
+        ],
+      })
+      if (!finalConfirm) return
+    } else {
+      // Email/password users must confirm with their current password
+      const enteredPassword = await showConfirm({
+        title: 'Confirm Your Password',
+        message: 'Enter your current password to permanently delete your account. This will remove your profile, posts, connections, and all associated data.',
+        input: {
+          type: 'password',
+          label: 'Current Password',
+          placeholder: 'Enter your password',
+        },
+        buttons: [
+          { label: 'Cancel', variant: 'secondary', value: null },
+          { label: 'Delete My Account', variant: 'danger', submitsInput: true },
+        ],
+      })
+      if (!enteredPassword) return
+      password = enteredPassword
     }
 
     setLoading(true)
     setError('')
     try {
-      await api.delete('/api/user/account')
+      await api.delete('/api/user/account', { data: { password } })
       navigate('/landing')
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to delete account')

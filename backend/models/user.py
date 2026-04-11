@@ -58,9 +58,10 @@ class User(BaseModel):
     def find_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Find user by ID (excludes password_hash for security)"""
         result = self.db.fetch_one(
-            '''SELECT uid, username, name, user_email, email_verified, 
-                      description_id, last_login, created_at, updated_at 
-               FROM users WHERE uid = %s''', 
+            '''SELECT uid, username, name, user_email, email_verified,
+                      description_id, last_login, created_at, updated_at,
+                      COALESCE(auth_provider, 'email') AS auth_provider
+               FROM users WHERE uid = %s''',
             (user_id,)
         )
         return normalize_user(result)

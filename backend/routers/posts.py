@@ -244,7 +244,7 @@ async def delete_post(
     current_user: dict = Depends(write_rate_limit),  # write_rate_limit includes get_current_user
     post_service: PostService = Depends(get_post_service)
 ):
-    """Delete a post (soft delete, only by owner)"""
+    """Delete a post permanently (only by owner)"""
     try:
         post_service.delete_post(post_id, current_user["id"])
         return {"message": "Post deleted successfully"}

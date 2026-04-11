@@ -156,7 +156,8 @@ class AuthService:
                 "bio": user.get("bio"),
                 "job_title": user.get("job_title"),
                 "company": user.get("company"),
-                "created_at": user.get("created_at")
+                "created_at": user.get("created_at"),
+                "auth_provider": user.get("auth_provider", "email"),
             }
         }
     
@@ -550,6 +551,8 @@ class AuthService:
                 user.last_login = datetime.utcnow()
                 if google_picture and not user.profile_url:
                     user.profile_url = google_picture
+                # Backfill auth_provider for existing Google users
+                user.auth_provider = 'google'
                 self.db.commit()
                 self.db.refresh(user)
                 
@@ -563,7 +566,8 @@ class AuthService:
                     "profile_pic": user.profile_url or google_picture,
                     "created_at": user.created_at.isoformat() if user.created_at else None,
                     "two_factor_enabled": user.two_factor_enabled or False,
-                    "two_factor_verified": user.two_factor_verified or False
+                    "two_factor_verified": user.two_factor_verified or False,
+                    "auth_provider": "google",
                 }
                 
                 return self._create_tokens(user_dict)
@@ -594,7 +598,8 @@ class AuthService:
                     password_hash=password_hash,
                     email_verified=True,  # Google emails are verified
                     profile_url=google_picture,
-                    last_login=datetime.utcnow()
+                    last_login=datetime.utcnow(),
+                    auth_provider='google',
                 )
                 
                 self.db.add(new_user)
@@ -611,7 +616,8 @@ class AuthService:
                     "profile_pic": new_user.profile_url,
                     "created_at": new_user.created_at.isoformat() if new_user.created_at else None,
                     "two_factor_enabled": False,
-                    "two_factor_verified": False
+                    "two_factor_verified": False,
+                    "auth_provider": "google",
                 }
                 
                 return self._create_tokens(user_dict)

@@ -2,6 +2,7 @@
 import styled, { keyframes, css } from 'styled-components'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useConfirm } from '../contexts/ConfirmModalContext'
 import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, networkAPI } from '../services/api'
 import api from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
@@ -1378,6 +1379,7 @@ function Profile() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user: currentUser } = useAuth()
+  const showConfirm = useConfirm()
 
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1401,6 +1403,7 @@ function Profile() {
   const [suggestions, setSuggestions] = useState([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const likingPostIdsRef = useRef(new Set())
+  const [deletingPostId, setDeletingPostId] = useState(null)
 
   // Edit modal states
   const [editModal, setEditModal] = useState(null) // 'description', 'about', 'skills', 'experience', 'education', 'projects', 'recommendations'
@@ -1652,6 +1655,31 @@ function Profile() {
     }
   }
 
+  const handleDeletePost = async (postId) => {
+    const confirmed = await showConfirm({
+      title: 'Delete Post',
+      message: 'Are you sure you want to delete this post? This action cannot be undone.',
+      buttons: [
+        { label: 'Cancel', variant: 'secondary', value: false },
+        { label: 'Delete', variant: 'danger', value: true },
+      ],
+    })
+    if (!confirmed) return
+    try {
+      setDeletingPostId(postId)
+      await postAPI.deletePost(postId)
+      setPosts(prev => prev.filter(p => (p.id || p.post_id) !== postId))
+    } catch (error) {
+      await showConfirm({
+        title: 'Error',
+        message: error.response?.data?.detail || error.message || 'Failed to delete post.',
+        buttons: [{ label: 'OK', variant: 'primary', value: true }],
+      })
+    } finally {
+      setDeletingPostId(null)
+    }
+  }
+
   /* ── Edit handlers ─────────────────────────────────────────── */
   const openEditModal = (section, item = null) => {
     setEditingItem(item)
@@ -1807,8 +1835,17 @@ function Profile() {
   }
 
   const handleDelete = async (section, itemId) => {
-    if (!confirm('Are you sure you want to delete this item?')) return
-    
+    const sectionLabel = section.charAt(0).toUpperCase() + section.slice(1)
+    const confirmed = await showConfirm({
+      title: `Delete ${sectionLabel}`,
+      message: `Are you sure you want to delete this ${section} entry? This action cannot be undone.`,
+      buttons: [
+        { label: 'Cancel', variant: 'secondary', value: false },
+        { label: 'Delete', variant: 'danger', value: true },
+      ],
+    })
+    if (!confirmed) return
+
     try {
       if (section === 'experience') {
         await profileFeaturesAPI.deleteExperience(itemId)
@@ -1821,7 +1858,11 @@ function Profile() {
       }
       await loadProfileFeatures()
     } catch (error) {
-      alert(error.response?.data?.detail || error.message || 'Failed to delete item')
+      await showConfirm({
+        title: 'Error',
+        message: error.response?.data?.detail || error.message || 'Failed to delete item.',
+        buttons: [{ label: 'OK', variant: 'primary', value: true }],
+      })
     }
   }
 
@@ -2377,48 +2418,66 @@ function Profile() {
 
       {/* Posts */}
       <Card>
-        <CardTitle>Posts</CardTitle>
+        <CardHeader>
+          <CardTitle>Posts</CardTitle>
+        </CardHeader>
         {loadingPosts ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2, 3].map(i => <SkeletonBox key={i} $h="120px" $r="12px" />)}
           </div>
         ) : posts.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {posts.map(post => (
-              <PostCard key={post.id || post.post_id}>
-                <PostHead>
-                  <PostAv>{post.full_name ? post.full_name.charAt(0).toUpperCase() : 'U'}</PostAv>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, color: 'var(--text)', fontSize: '0.95em', marginBottom: 2 }}>
-                      {post.full_name || post.name || post.username}
+            {posts.map(post => {
+              const pid = post.id || post.post_id
+              return (
+                <PostCard key={pid}>
+                  <PostHead>
+                    <PostAv>{post.full_name ? post.full_name.charAt(0).toUpperCase() : 'U'}</PostAv>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text)', fontSize: '0.95em', marginBottom: 2 }}>
+                        {post.full_name || post.name || post.username}
+                      </div>
+                      <div style={{ fontSize: '0.82em', color: 'var(--text-lighter)' }}>{getTimeAgo(post.created_at)}</div>
                     </div>
-                    <div style={{ fontSize: '0.82em', color: 'var(--text-lighter)' }}>{getTimeAgo(post.created_at)}</div>
-                  </div>
-                </PostHead>
-                <PostBody dangerouslySetInnerHTML={{ __html: escapeHtml(post.content || post.post_desc) }} />
-                {post.media_url && (
-                  <PostMedia>
-                    {post.media_type === 'video'
-                      ? <video src={post.media_url} controls preload="metadata" />
-                      : <img src={post.media_url} alt="Post media" loading="lazy" />
-                    }
-                  </PostMedia>
-                )}
-                <PostFooter>
-                  <LikeBtn
-                    type="button"
-                    aria-label={post.is_liked ? 'Unlike' : 'Like'}
-                    $liked={post.is_liked}
-                    onClick={() => handleLike(post.id || post.post_id)}
-                  >
-                    <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                    </svg>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{post.like_count || post.likes || 0}</span>
-                  </LikeBtn>
-                </PostFooter>
-              </PostCard>
-            ))}
+                    {isOwn && (
+                      <EditButton
+                        onClick={() => handleDeletePost(pid)}
+                        disabled={deletingPostId === pid}
+                        aria-label="Delete post"
+                        style={{ padding: '4px 8px', fontSize: '0.8em', color: '#dc3545', borderColor: '#dc3545', flexShrink: 0 }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </EditButton>
+                    )}
+                  </PostHead>
+                  <PostBody dangerouslySetInnerHTML={{ __html: escapeHtml(post.content || post.post_desc) }} />
+                  {post.media_url && (
+                    <PostMedia>
+                      {post.media_type === 'video'
+                        ? <video src={post.media_url} controls preload="metadata" />
+                        : <img src={post.media_url} alt="Post media" loading="lazy" />
+                      }
+                    </PostMedia>
+                  )}
+                  <PostFooter>
+                    <LikeBtn
+                      type="button"
+                      aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                      $liked={post.is_liked}
+                      onClick={() => handleLike(pid)}
+                    >
+                      <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                      </svg>
+                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{post.like_count || post.likes || 0}</span>
+                    </LikeBtn>
+                  </PostFooter>
+                </PostCard>
+              )
+            })}
           </div>
         ) : (
           <EmptyState>No posts yet</EmptyState>

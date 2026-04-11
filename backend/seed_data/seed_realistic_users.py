@@ -1,17 +1,18 @@
 """
-Batch 1: ten professional personas with full profiles (experience, education, projects, interests),
-LinkedIn-style posts, and connections among seeded users.
+Batch 3: five grounded professionals across different sectors.
+Gender-matched profile photos, post images chosen to match post content.
 
-Prefer the combined runner so batch 1 + 2 connect to each other:
+Batch 3 only:
+    python seed_data/seed_realistic_users_3.py
+
+For full graph with batches 1 + 2 + 3:
     python seed_data/seed_realistic_run_all.py
-
-This file alone (batch 1 only):
-    python seed_data/seed_realistic_users.py
 """
 
 from __future__ import annotations
 
 import argparse
+import random
 import sys
 from pathlib import Path
 
@@ -33,870 +34,892 @@ try:
 except ImportError:
     pass
 
-from seed_data.seed_realistic_common import POST_MEDIA_URLS, edu, get_db_default, intr, proj, run_full_seed, xp
-
+from seed_data.seed_realistic_common import (
+    edu,
+    get_db_default,
+    intr,
+    proj,
+    run_full_seed,
+    xp,
+)
 from utils.auth import hash_password
 
-# Profile pics / covers left blank → stable https URLs assigned in run_full_seed
+# ---------------------------------------------------------------------------
+# Post media URLs — each URL is chosen to thematically match the post it's
+# used in.  All are stable Unsplash photo permalinks (no keyword randomness).
+# ---------------------------------------------------------------------------
 
+# Organized by theme so we can reference them by name below
+MEDIA = {
+    # Healthcare / hospital
+    "hospital_corridor":   "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=900&q=80",
+    "nurse_station":       "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=900&q=80",
+    "medical_chart":       "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&q=80",
+
+    # Construction / job site
+    "construction_site":   "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&q=80",
+    "blueprint_desk":      "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=900&q=80",
+    "concrete_pour":       "https://images.unsplash.com/photo-1565008576549-57569a49371d?w=900&q=80",
+
+    # Finance / accounting / office
+    "spreadsheet_coffee":  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900&q=80",
+    "office_whiteboard":   "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80",
+    "desk_paperwork":      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=80",
+
+    # Warehouse / logistics / cold storage
+    "warehouse_racks":     "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80",
+    "forklift_aisle":      "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=900&q=80",
+    "loading_dock":        "https://images.unsplash.com/photo-1553413077-190dd305871c?w=900&q=80",
+
+    # Engineering / structural
+    "steel_frame":         "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=900&q=80",
+    "blueprint_roll":      "https://images.unsplash.com/photo-1503387837-b154d5074bd2?w=900&q=80",
+    "building_exterior":   "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80",
+
+    # Marketing / trade show / packaging
+    "trade_show_booth":    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900&q=80",
+    "packaging_boxes":     "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=900&q=80",
+    "laptop_analytics":    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
+
+    # Legal / courtroom / law
+    "law_books":           "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=900&q=80",
+    "courthouse":          "https://images.unsplash.com/photo-1555421689-491a97ff2040?w=900&q=80",
+    "contract_signing":    "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=80",
+
+    # Education / classroom
+    "classroom":           "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=80",
+    "library_study":       "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=900&q=80",
+    "whiteboard_lesson":   "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=900&q=80",
+
+    # Community / outdoor / misc
+    "coffee_meeting":      "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=900&q=80",
+    "volunteering":        "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=900&q=80",
+    "city_street":         "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&q=80",
+}
+
+
+# ---------------------------------------------------------------------------
+# Users
+# ---------------------------------------------------------------------------
 
 USERS = [
+    # ------------------------------------------------------------------
+    # 1. FEMALE — Public school teacher turned instructional coach
+    # ------------------------------------------------------------------
     {
-        "username": "sarah_chen_dev",
-        "name": "Sarah Chen",
-        "email": "sarah.chen@zedreq.dev",
-        "password": "Sarah@2024!",
-        "short_desc": "Engineering lead · product infra",
-        "about": (
-            "I lead a small platform team at a mid-size fintech (about 400 engineers company-wide). "
-            "Most days: API design, on-call hygiene, and helping teams ship without painting themselves into corners. "
-            "Before this I spent four years at an agency — learned to estimate, communicate, and say no. "
-            "Bay Area native; I take long walks when specs get fuzzy."
-        ),
-        "skills": "TypeScript, React, Node.js, PostgreSQL, system design, mentoring, technical writing",
-        "certificates": "AWS Solutions Architect – Associate",
-        "current_status": "Not looking — happy where I am",
-        "location": "Oakland, CA",
-        "city": "Oakland",
-        "country": "United States",
-        "company": "Northbridge Payments",
-        "title": "Staff Software Engineer",
-        "industry": "Financial Services",
-        "experience": [
-            xp(
-                "Staff Software Engineer",
-                "Northbridge Payments",
-                "Oakland, CA",
-                "2021-02-01",
-                None,
-                True,
-                "Owns internal tooling for service deployment and feature flags. Reduced incident MTTR by focusing on runbooks and dashboards.",
-            ),
-            xp(
-                "Senior Software Engineer",
-                "Northbridge Payments",
-                "Oakland, CA",
-                "2018-06-01",
-                "2021-01-31",
-                False,
-                "Frontend and API work for merchant onboarding; helped migrate a legacy Angular app to React.",
-            ),
-            xp(
-                "Software Engineer",
-                "Brightline Digital",
-                "San Francisco, CA",
-                "2015-09-01",
-                "2018-05-31",
-                False,
-                "Client projects — React, Rails, content sites. Learned to ship under fixed bids.",
-            ),
-        ],
-        "education": [
-            edu("UC Berkeley", "B.A.", "Computer Science", 2011, 2015),
-            edu("Coursera", "Certificate", "Machine Learning", 2019, 2019, description="Andrew Ng course — baseline for ML discussions with data team"),
-        ],
-        "projects": [
-            proj(
-                "Team RFC templates",
-                "Open-sourced internal templates for lightweight RFCs; ~400 stars on GitHub.",
-                "https://github.com",
-                ["Markdown"],
-            ),
-        ],
-        "interests": [intr("Trail running"), intr("Single-origin coffee"), intr("Public transit", "cause")],
-    },
-    {
-        "username": "marcus_thompson_pm",
-        "name": "Marcus Thompson",
-        "email": "marcus.thompson@zedreq.dev",
-        "password": "Marcus@2024!",
-        "short_desc": "Product manager · B2B SaaS",
-        "about": (
-            "PM for a workforce scheduling product used by hospitals and retail chains in the US and Canada. "
-            "I care about discovery, pricing experiments, and not shipping features nobody asked for. "
-            "Ex-consultant (two years) — left when I realized I wanted to own outcomes, not slides. "
-            "Based in Chicago; two kids under six."
-        ),
-        "skills": "Product discovery, SQL, Amplitude, Figma, stakeholder management, writing",
-        "certificates": "Scrum Product Owner (PSPO I)",
-        "current_status": "Open to advisory conversations only",
-        "location": "Chicago, IL",
-        "city": "Chicago",
-        "country": "United States",
-        "company": "ShiftWell Software",
-        "title": "Principal Product Manager",
-        "industry": "Computer Software",
-        "experience": [
-            xp(
-                "Principal Product Manager",
-                "ShiftWell Software",
-                "Chicago, IL",
-                "2019-04-01",
-                None,
-                True,
-                "0→1 mobile app for shift swaps; now focused on enterprise rollout and integrations.",
-            ),
-            xp(
-                "Product Manager",
-                "ShiftWell Software",
-                "Chicago, IL",
-                "2016-01-01",
-                "2019-03-31",
-                False,
-                "Growth experiments, onboarding funnel, first paid pilots.",
-            ),
-            xp(
-                "Associate",
-                "Helix Strategy Group",
-                "Chicago, IL",
-                "2014-08-01",
-                "2015-12-31",
-                False,
-                "Market sizing and due diligence for PE clients.",
-            ),
-        ],
-        "education": [
-            edu("Northwestern University", "M.B.A.", "Marketing & Strategy", 2012, 2014),
-            edu("University of Illinois", "B.S.", "Industrial Engineering", 2008, 2012),
-        ],
-        "projects": [
-            proj(
-                "Scheduling ROI calculator",
-                "Internal spreadsheet-turned-web-tool for sales; adopted by CS team.",
-                None,
-                ["Sheets", "Retool"],
-            ),
-        ],
-        "interests": [intr("Youth basketball coach", "volunteer"), intr("Jazz"), intr("Deep dish pizza", "personal")],
-    },
-    {
-        "username": "priya_sharma_ml",
-        "name": "Priya Sharma",
-        "email": "priya.sharma@zedreq.dev",
+        "username": "priya_mehta_edtech",
+        "name": "Priya Mehta",
+        "email": "priya.mehta@zedreq.dev",
         "password": "Priya@2024!",
-        "short_desc": "Applied scientist · recommendations",
+        # profile_photo_url is gender-matched (female, South-Asian appearance)
+        "profile_photo_url": "https://randomuser.me/api/portraits/women/44.jpg",
+        "short_desc": "Instructional coach · K-12 literacy & tech integration",
         "about": (
-            "I work on ranking and relevance for a regional e-commerce marketplace (think furniture + home goods). "
-            "Not FAANG — we move slower but I touch the full stack from offline jobs to online serving. "
-            "From Pune; moved to Toronto in 2018. I write short technical notes for my team, not viral threads."
+            "Instructional coach for a mid-size suburban district outside Columbus. "
+            "I work with classroom teachers on literacy strategies and edtech that doesn't "
+            "collect dust after professional development day. Former 4th-grade teacher; "
+            "moved into coaching after watching too many good tools get shelved for lack "
+            "of follow-up support. M.Ed. from Ohio University. I post about what's actually "
+            "working in schools — slowly."
         ),
-        "skills": "Python, PyTorch, SQL, Spark, A/B testing, data pipelines",
-        "certificates": "Deep Learning Specialization (Coursera)",
-        "current_status": "Open to speaking at local meetups",
-        "location": "Toronto, ON",
-        "city": "Toronto",
-        "country": "Canada",
-        "company": "Homestead Marketplaces Inc.",
-        "title": "Senior Applied Scientist",
-        "industry": "Internet",
+        "skills": "Instructional design, reading intervention, Google Workspace for Education, classroom observation, coaching cycles",
+        "certificates": "Reading Endorsement (Ohio), Google Certified Educator Level 2",
+        "current_status": "Open to summer PD consulting",
+        "location": "Westerville, OH",
+        "city": "Westerville",
+        "country": "United States",
+        "company": "Olentangy Local School District",
+        "title": "Instructional Coach",
+        "industry": "Primary/Secondary Education",
         "experience": [
             xp(
-                "Senior Applied Scientist",
-                "Homestead Marketplaces Inc.",
-                "Toronto, ON",
+                "Instructional Coach",
+                "Olentangy Local School District",
+                "Westerville, OH",
+                "2020-08-01",
+                None,
+                True,
+                "Coaching cycles for 18 teachers; literacy data review; edtech rollout support.",
+            ),
+            xp(
+                "4th Grade Teacher",
+                "Olentangy Local School District",
+                "Westerville, OH",
+                "2015-08-01",
+                "2020-06-30",
+                False,
+                "Reading and math; student growth data for IEP collaboration.",
+            ),
+            xp(
+                "Reading Interventionist",
+                "Columbus City Schools",
+                "Columbus, OH",
+                "2012-08-01",
+                "2015-06-30",
+                False,
+                "Small-group Tier 2 and 3 reading interventions, K-3.",
+            ),
+        ],
+        "education": [
+            edu("Ohio University", "M.Ed.", "Curriculum & Instruction", 2013, 2016),
+            edu("Ohio State University", "B.S.", "Early Childhood Education", 2008, 2012),
+        ],
+        "projects": [
+            proj(
+                "Coaching cycle tracker",
+                "Simple shared doc system for observation → debrief → goal → follow-up. "
+                "Replaced the email chaos we had before.",
+                None,
+                ["Google Sheets", "Google Docs"],
+            ),
+        ],
+        "interests": [
+            intr("Children's book author (aspiring — one drawer full of drafts)"),
+            intr("Weekend hiking with terrible trail snacks"),
+            intr("School garden committee", "volunteer"),
+        ],
+    },
+
+    # ------------------------------------------------------------------
+    # 2. MALE — Municipal water utility engineer
+    # ------------------------------------------------------------------
+    {
+        "username": "marcus_bell_utilities",
+        "name": "Marcus Bell",
+        "email": "marcus.bell@zedreq.dev",
+        "password": "Marcus@2024!",
+        # profile_photo_url — male, mid-30s Black professional
+        "profile_photo_url": "https://randomuser.me/api/portraits/men/32.jpg",
+        "short_desc": "Civil/environmental engineer · municipal water systems",
+        "about": (
+            "Project engineer for a mid-sized city water utility in the Midwest. "
+            "Water main rehab, lead service line replacement, SCADA upgrades. "
+            "PE in Indiana; grew up in Gary. I post when something fails — the polite "
+            "infrastructure version of a postmortem. Most days I'm reading soils reports "
+            "and arguing about pipe specifications with contractors who've been at this longer than me."
+        ),
+        "skills": "Water distribution design, EPANET modeling, AutoCAD Civil 3D, SCADA basics, lead service line assessment",
+        "certificates": "PE (Indiana), 40-Hour HAZWOPER",
+        "current_status": "Not looking; too many active projects",
+        "location": "Indianapolis, IN",
+        "city": "Indianapolis",
+        "country": "United States",
+        "company": "Indianapolis Department of Public Utilities",
+        "title": "Project Engineer II",
+        "industry": "Water & Utilities",
+        "experience": [
+            xp(
+                "Project Engineer II",
+                "Indianapolis Department of Public Utilities",
+                "Indianapolis, IN",
                 "2020-03-01",
                 None,
                 True,
-                "Search ranking, cold-start recommendations, monitoring for model drift.",
+                "Lead service line inventory and replacement program; main break response coordination.",
             ),
             xp(
-                "Data Scientist",
-                "Homestead Marketplaces Inc.",
-                "Toronto, ON",
-                "2018-05-01",
-                "2020-02-29",
+                "Project Engineer I",
+                "Indianapolis Department of Public Utilities",
+                "Indianapolis, IN",
+                "2017-06-01",
+                "2020-02-28",
                 False,
-                "Attribution modeling, cohort analysis, first ML prototypes.",
+                "Design of water main extensions, hydrant relocations, meter pit installations.",
             ),
             xp(
-                "Analyst",
-                "Retail Analytics Co.",
-                "Pune, India",
-                "2016-07-01",
-                "2018-03-31",
+                "Engineering Intern",
+                "Arcadis US",
+                "Indianapolis, IN",
+                "2016-05-01",
+                "2016-08-31",
                 False,
-                "SQL reporting for FMCG clients.",
+                "Stormwater modeling and drainage plan review.",
             ),
         ],
         "education": [
-            edu("University of Toronto", "M.Sc.", "Applied Computing", 2016, 2018),
-            edu("University of Pune", "B.E.", "Information Technology", 2012, 2016),
+            edu("Purdue University", "B.S.", "Civil Engineering", 2013, 2017),
         ],
         "projects": [
             proj(
-                "Notebook: practical recsys eval",
-                "Internal wiki series on offline metrics we actually trust.",
+                "Lead service line inventory tool",
+                "Excel + GIS workflow that consolidated four legacy data sources into "
+                "one auditable inventory. Used for EPA reporting.",
                 None,
-                ["Python"],
+                ["AutoCAD Civil 3D", "ArcGIS", "Excel"],
             ),
         ],
-        "interests": [intr("Hiking in Ontario parks"), intr("Malayalam cinema"), intr("Mentoring newcomers", "volunteer")],
+        "interests": [
+            intr("Gary Southshore RailCats fan (obligatory)"),
+            intr("Home brewing — water chemistry obsession is occupational"),
+            intr("Volunteer fire department", "volunteer"),
+        ],
     },
+
+    # ------------------------------------------------------------------
+    # 3. FEMALE — Immigration paralegal at a small firm
+    # ------------------------------------------------------------------
     {
-        "username": "james_rodriguez_devops",
-        "name": "James Rodriguez",
-        "email": "james.rodriguez@zedreq.dev",
-        "password": "James@2024!",
-        "short_desc": "Platform engineer · reliability",
+        "username": "sofia_reyes_legal",
+        "name": "Sofía Reyes",
+        "email": "sofia.reyes@zedreq.dev",
+        "password": "Sofia@2024!",
+        # profile_photo_url — female, Latina, late 20s
+        "profile_photo_url": "https://randomuser.me/api/portraits/women/26.jpg",
+        "short_desc": "Immigration paralegal · family & employment-based petitions",
         "about": (
-            "Kubernetes, Terraform, and the boring parts that keep payments flowing. "
-            "I work for a logistics company you've seen on the side of trucks — internal platforms, not consumer apps. "
-            "Veteran; transitioned through a coding bootcamp and a lot of self-study. I value clear handoffs and honest postmortems."
+            "Paralegal at a 6-attorney immigration boutique in San Antonio. "
+            "I prepare I-130s, I-485s, PERM documentation, and RFE responses. "
+            "First-gen college grad (UTSA). My mom's naturalization case is what got me here. "
+            "I post about practical things: what an RFE actually means, why translation errors "
+            "tank cases, what to expect at a biometrics appointment. Not legal advice. Just clarity "
+            "for people who are scared and Googling at 11 PM."
         ),
-        "skills": "Kubernetes, Terraform, AWS, Go, Bash, Prometheus, Grafana",
-        "certificates": "CKA, AWS SysOps Associate",
-        "current_status": "Currently employed",
-        "location": "Dallas, TX",
-        "city": "Dallas",
+        "skills": "Immigration case management (INSZoom), I-130/I-485 preparation, PERM documentation, RFE drafting support, client communication in Spanish",
+        "certificates": "NALA Paralegal Certificate (in progress), Notary Public (Texas)",
+        "current_status": "Employed — growing caseload",
+        "location": "San Antonio, TX",
+        "city": "San Antonio",
         "country": "United States",
-        "company": "Continental Freight Systems",
-        "title": "Senior Platform Engineer",
-        "industry": "Transportation / Trucking",
+        "company": "Vega & Associates Immigration Law",
+        "title": "Senior Paralegal",
+        "industry": "Law Practice",
         "experience": [
             xp(
-                "Senior Platform Engineer",
-                "Continental Freight Systems",
-                "Dallas, TX",
-                "2021-01-01",
+                "Senior Paralegal",
+                "Vega & Associates Immigration Law",
+                "San Antonio, TX",
+                "2021-02-01",
                 None,
                 True,
-                "EKS clusters, GitOps, cost dashboards for compute.",
+                "Manage active caseload of 90+ family and employment-based petitions; RFE response coordination.",
             ),
             xp(
-                "DevOps Engineer",
-                "MedDevice Cloud",
-                "Austin, TX",
-                "2018-04-01",
-                "2020-12-31",
+                "Paralegal",
+                "Vega & Associates Immigration Law",
+                "San Antonio, TX",
+                "2018-09-01",
+                "2021-01-31",
                 False,
-                "CI/CD for regulated environments; lots of change tickets.",
+                "File prep, client intake, court filing deadlines, USCIS correspondence.",
             ),
             xp(
-                "IT Specialist",
-                "US Army",
-                "Various",
-                "2012-01-01",
+                "Legal Assistant",
+                "Garza Family Law",
+                "San Antonio, TX",
+                "2017-05-01",
+                "2018-08-31",
+                False,
+                "Scheduling, document scanning, basic pleadings support.",
+            ),
+        ],
+        "education": [
+            edu("University of Texas at San Antonio", "B.A.", "Political Science", 2013, 2017),
+        ],
+        "projects": [
+            proj(
+                "RFE response templates",
+                "Internal library of 14 annotated RFE response frameworks — cut attorney "
+                "drafting time by about a third on common issues.",
+                None,
+                ["INSZoom", "Word"],
+            ),
+        ],
+        "interests": [
+            intr("RAICES Texas fundraisers", "volunteer"),
+            intr("True crime en español — podcast recs welcome"),
+            intr("Homemade tamales (family recipe, not negotiable)"),
+        ],
+    },
+
+    # ------------------------------------------------------------------
+    # 4. MALE — Regional bank commercial loan officer
+    # ------------------------------------------------------------------
+    {
+        "username": "brett_holloway_banking",
+        "name": "Brett Holloway",
+        "email": "brett.holloway@zedreq.dev",
+        "password": "Brett@2024!",
+        # profile_photo_url — male, white, 40s
+        "profile_photo_url": "https://randomuser.me/api/portraits/men/51.jpg",
+        "short_desc": "Commercial loan officer · Midwest community bank",
+        "about": (
+            "Commercial lender at a community bank covering eastern Iowa and western Illinois. "
+            "Ag lines, equipment, small business real estate. "
+            "I've been doing this since before smartphones had GPS — which means I've driven "
+            "down a lot of wrong gravel roads to look at collateral. "
+            "Finance degree from Iowa State. Three kids, one tractor I have no business owning."
+        ),
+        "skills": "Commercial credit underwriting, farm operating lines, SBA 7(a) basics, financial statement analysis, relationship management",
+        "certificates": "Graduate School of Banking (Wisconsin), SBA Lender Training",
+        "current_status": "Not looking — happy where I am",
+        "location": "Davenport, IA",
+        "city": "Davenport",
+        "country": "United States",
+        "company": "Heartland Community Bank",
+        "title": "VP, Commercial Lending",
+        "industry": "Banking",
+        "experience": [
+            xp(
+                "VP, Commercial Lending",
+                "Heartland Community Bank",
+                "Davenport, IA",
+                "2016-04-01",
+                None,
+                True,
+                "Portfolio of ~$48M; ag, equipment, small commercial RE. Credit committee presenter.",
+            ),
+            xp(
+                "Commercial Loan Officer",
+                "Heartland Community Bank",
+                "Davenport, IA",
+                "2010-07-01",
+                "2016-03-31",
+                False,
+                "New business development, loan origination, annual reviews.",
+            ),
+            xp(
+                "Credit Analyst",
+                "Quad Cities Bank & Trust",
+                "Rock Island, IL",
+                "2006-06-01",
+                "2010-06-30",
+                False,
+                "Spreading financials, covenant monitoring, participations.",
+            ),
+        ],
+        "education": [
+            edu("Iowa State University", "B.S.", "Finance", 2002, 2006),
+        ],
+        "projects": [
+            proj(
+                "Annual review workflow streamline",
+                "Moved ag annual reviews from paper packets to a shared drive checklist. "
+                "Cut processing time from three weeks to ten days.",
+                None,
+                ["Excel", "SharePoint"],
+            ),
+        ],
+        "interests": [
+            intr("Pheasant hunting — mediocre shot, excellent excuse to be outside"),
+            intr("Iowa State football — years of experience managing disappointment"),
+            intr("4-H volunteer judge, livestock projects", "volunteer"),
+        ],
+    },
+
+    # ------------------------------------------------------------------
+    # 5. FEMALE — Environmental health & safety coordinator, manufacturing
+    # ------------------------------------------------------------------
+    {
+        "username": "amber_novak_ehs",
+        "name": "Amber Novak",
+        "email": "amber.novak@zedreq.dev",
+        "password": "Amber@2024!",
+        # profile_photo_url — female, white, 30s
+        "profile_photo_url": "https://randomuser.me/api/portraits/women/68.jpg",
+        "short_desc": "EHS coordinator · plastics & injection molding",
+        "about": (
+            "Environmental health & safety coordinator at an injection molding plant in the Lehigh Valley. "
+            "OSHA compliance, incident investigations, chemical inventory, annual training calendar. "
+            "Started as a quality tech; got pulled into EHS after a near-miss that nobody wanted to document "
+            "properly. I wanted it documented properly. That's basically the job summary. "
+            "CSP candidate; Penn State B.S. in Safety Science."
+        ),
+        "skills": "OSHA 300 log, incident investigation, SDS management, lock-out/tag-out audits, industrial hygiene sampling, JSA facilitation",
+        "certificates": "OSHA 30-Hour General Industry, ASP (passed; CSP exam pending)",
+        "current_status": "Open to connecting with EHS folks in manufacturing",
+        "location": "Allentown, PA",
+        "city": "Allentown",
+        "country": "United States",
+        "company": "Keystone Precision Molding",
+        "title": "EHS Coordinator",
+        "industry": "Plastics Manufacturing",
+        "experience": [
+            xp(
+                "EHS Coordinator",
+                "Keystone Precision Molding",
+                "Allentown, PA",
+                "2019-05-01",
+                None,
+                True,
+                "Single-site EHS program; zero recordable injuries in 2022. Managed PA DEP air permit renewal.",
+            ),
+            xp(
+                "EHS Assistant",
+                "Keystone Precision Molding",
+                "Allentown, PA",
+                "2017-01-01",
+                "2019-04-30",
+                False,
+                "Training scheduling, SDS library, PPE purchasing.",
+            ),
+            xp(
+                "Quality Technician",
+                "Keystone Precision Molding",
+                "Allentown, PA",
+                "2015-06-01",
                 "2016-12-31",
                 False,
-                "Networking, help desk escalation, security compliance tasks.",
+                "First-article inspections, CMM operation, customer corrective actions.",
             ),
         ],
         "education": [
-            edu("Southern New Hampshire University", "B.S.", "Information Technology", 2017, 2020),
+            edu("Pennsylvania State University", "B.S.", "Safety Sciences", 2011, 2015),
         ],
         "projects": [
             proj(
-                "Homelab GitOps",
-                "Personal cluster for experimenting with Argo CD and sealed secrets.",
-                None,
-                ["Kubernetes", "Terraform"],
-            ),
-        ],
-        "interests": [intr("Barbecue"), intr("Veteran peer mentoring", "volunteer"), intr("Fishing")],
-    },
-    {
-        "username": "aisha_okafor_design",
-        "name": "Aisha Okafor",
-        "email": "aisha.okafor@zedreq.dev",
-        "password": "Aisha@2024!",
-        "short_desc": "Product designer · design systems",
-        "about": (
-            "Designer at a health-tech startup building tools for small clinic workflows — scheduling, billing, patient comms. "
-            "Before that: in-house at a university press (yes, books). I care about typography, accessible forms, and designers who read contracts."
-        ),
-        "skills": "Figma, research, prototyping, WCAG, design systems, workshop facilitation",
-        "certificates": "NN/g UX Certification",
-        "current_status": "Select freelance (referral only)",
-        "location": "Philadelphia, PA",
-        "city": "Philadelphia",
-        "country": "United States",
-        "company": "ClinicFlow Health",
-        "title": "Lead Product Designer",
-        "industry": "Hospital & Health Care",
-        "experience": [
-            xp(
-                "Lead Product Designer",
-                "ClinicFlow Health",
-                "Philadelphia, PA",
-                "2020-09-01",
-                None,
-                True,
-                "Design system, component library with eng, research with office managers.",
-            ),
-            xp(
-                "Product Designer",
-                "ClinicFlow Health",
-                "Philadelphia, PA",
-                "2018-01-01",
-                "2020-08-31",
-                False,
-                "End-to-end flows for billing and reminders.",
-            ),
-            xp(
-                "Designer",
-                "Temple University Press",
-                "Philadelphia, PA",
-                "2015-06-01",
-                "2017-12-31",
-                False,
-                "Book covers, marketing collateral, web maintenance.",
-            ),
-        ],
-        "education": [
-            edu("Tyler School of Art, Temple University", "B.F.A.", "Graphic Design", 2011, 2015),
-        ],
-        "projects": [
-            proj(
-                "Accessible form patterns",
-                "Blog series + Figma kit shared with local UX meetup.",
+                "Near-miss reporting culture rebuild",
+                "After a mold-change incident, redesigned the near-miss form to a "
+                "5-question anonymous card. Submissions went from 2/year to ~30/year.",
                 None,
                 [],
             ),
         ],
-        "interests": [intr("Letterpress printing"), intr("City planning", "cause"), intr("Cooking West African recipes")],
-    },
-    {
-        "username": "liam_walsh_backend",
-        "name": "Liam Walsh",
-        "email": "liam.walsh@zedreq.dev",
-        "password": "Liam@2024!",
-        "short_desc": "Backend engineer · payments-ish",
-        "about": (
-            "Python and Postgres for an Irish subscription-box company (meal kits + add-ons). "
-            "Remote from Cork. I like idempotent webhooks, clear error messages, and PRs that explain the 'why'. "
-            "Previously built internal tools at a bank — slower releases, good lessons in compliance."
-        ),
-        "skills": "Python, Django, PostgreSQL, Redis, Celery, Docker",
-        "certificates": "",
-        "current_status": "Currently employed",
-        "location": "Cork, Ireland",
-        "city": "Cork",
-        "country": "Ireland",
-        "company": "HarborBox Meals",
-        "title": "Senior Backend Engineer",
-        "industry": "Food & Beverages",
-        "experience": [
-            xp(
-                "Senior Backend Engineer",
-                "HarborBox Meals",
-                "Cork, Ireland",
-                "2021-05-01",
-                None,
-                True,
-                "Billing integrations, subscription lifecycle, partner APIs.",
-            ),
-            xp(
-                "Backend Engineer",
-                "HarborBox Meals",
-                "Cork, Ireland",
-                "2019-02-01",
-                "2021-04-30",
-                False,
-                "Inventory sync, warehouse integrations.",
-            ),
-            xp(
-                "Software Developer",
-                "First Provincial Bank",
-                "Dublin, Ireland",
-                "2016-09-01",
-                "2019-01-31",
-                False,
-                "Internal reporting tools and batch jobs.",
-            ),
+        "interests": [
+            intr("Trail running — slowest person in every 5K, happiest finisher"),
+            intr("ASSE student chapter mentor", "volunteer"),
+            intr("Fermenting things (kombucha, sauerkraut, occasional disaster)"),
         ],
-        "education": [
-            edu("University College Cork", "B.Sc.", "Computer Science", 2012, 2016),
-        ],
-        "projects": [
-            proj(
-                "webhook retry library",
-                "Small OSS helper for exponential backoff + dead-letter patterns.",
-                "https://github.com",
-                ["Python"],
-            ),
-        ],
-        "interests": [intr("Rugby club supporter"), intr("Sea swimming"), intr("Guitar")],
-    },
-    {
-        "username": "mei_zhang_ai",
-        "name": "Mei Zhang",
-        "email": "mei.zhang@zedreq.dev",
-        "password": "Mei@2024!",
-        "short_desc": "ML engineer · NLP for support tools",
-        "about": (
-            "I fine-tune and evaluate language models for customer-support assist (suggestions, not auto-send). "
-            "Company: B2B helpdesk SaaS, ~200 people. I collaborate daily with support leads — the model is useless if reps won't trust it. "
-            "Vancouver. I avoid hype posts; I prefer writing internal postmortems when evals regress."
-        ),
-        "skills": "Python, PyTorch, Hugging Face, evaluation design, prompt tooling, SQL",
-        "certificates": "",
-        "current_status": "Not looking",
-        "location": "Vancouver, BC",
-        "city": "Vancouver",
-        "country": "Canada",
-        "company": "Deskline",
-        "title": "Machine Learning Engineer",
-        "industry": "Computer Software",
-        "experience": [
-            xp(
-                "Machine Learning Engineer",
-                "Deskline",
-                "Vancouver, BC",
-                "2022-01-01",
-                None,
-                True,
-                "Assistive drafting for tickets, safety filters, human-in-the-loop review tooling.",
-            ),
-            xp(
-                "Software Engineer",
-                "Deskline",
-                "Vancouver, BC",
-                "2019-06-01",
-                "2021-12-31",
-                False,
-                "Search and routing features for ticket queues.",
-            ),
-        ],
-        "education": [
-            edu("University of British Columbia", "M.Sc.", "Computer Science", 2017, 2019),
-            edu("Simon Fraser University", "B.Sc.", "Computing Science", 2013, 2017),
-        ],
-        "projects": [
-            proj(
-                "Eval notebook templates",
-                "Standardized notebooks for regression testing on support datasets.",
-                None,
-                ["Python", "Jupyter"],
-            ),
-        ],
-        "interests": [intr("Hiking BC"), intr("Speculative fiction"), intr("Women in ML meetups", "volunteer")],
-    },
-    {
-        "username": "daniel_osei_frontend",
-        "name": "Daniel Osei",
-        "email": "daniel.osei@zedreq.dev",
-        "password": "Daniel@2024!",
-        "short_desc": "Frontend engineer · remote from Accra",
-        "about": (
-            "I build admin dashboards for a European travel insurance API company — React, TypeScript, lots of forms and tables. "
-            "Fully remote; overlap hours with CET. Before this, freelanced for local NGOs on WordPress and small React apps. "
-            "I care about performance on slow networks and keyboard accessibility."
-        ),
-        "skills": "React, TypeScript, Vite, TanStack Query, testing-library, Storybook",
-        "certificates": "Meta Front-End Developer Certificate",
-        "current_status": "Open to part-time mentoring",
-        "location": "Accra, Ghana",
-        "city": "Accra",
-        "country": "Ghana",
-        "company": "SafeTrip Europe API",
-        "title": "Senior Frontend Engineer",
-        "industry": "Insurance",
-        "experience": [
-            xp(
-                "Senior Frontend Engineer",
-                "SafeTrip Europe API",
-                "Remote",
-                "2021-03-01",
-                None,
-                True,
-                "Partner portal, claims review UI, design-system adoption.",
-            ),
-            xp(
-                "Frontend Developer",
-                "SafeTrip Europe API",
-                "Remote",
-                "2019-01-01",
-                "2021-02-28",
-                False,
-                "Greenfield React app replacing legacy jQuery screens.",
-            ),
-            xp(
-                "Freelance Web Developer",
-                "Self-employed",
-                "Accra, Ghana",
-                "2017-06-01",
-                "2018-12-31",
-                False,
-                "Sites for NGOs and a local restaurant group.",
-            ),
-        ],
-        "education": [
-            edu("Ashesi University", "B.A.", "Computer Science", 2013, 2017),
-        ],
-        "projects": [
-            proj(
-                "a11y checklist extension",
-                "Browser extension prototype for internal QA (never shipped publicly).",
-                None,
-                ["TypeScript"],
-            ),
-        ],
-        "interests": [intr("Afrobeats production"), intr("Youth coding workshops", "volunteer"), intr("Premier League")],
-    },
-    {
-        "username": "emma_sullivan_sec",
-        "name": "Emma Sullivan",
-        "email": "emma.sullivan@zedreq.dev",
-        "password": "Emma@2024!",
-        "short_desc": "Security engineer · appsec",
-        "about": (
-            "Application security for a national grocery retailer's e-commerce stack. "
-            "Lots of scanning, threat modeling with squads, and helping developers fix things without shame. "
-            "Based in Manchester. OSCP holder; I still get nervous before every engagement."
-        ),
-        "skills": "AppSec, Burp, secure SDLC, Python, cloud IAM basics, threat modeling",
-        "certificates": "OSCP, CompTIA Security+",
-        "current_status": "Currently employed",
-        "location": "Manchester, UK",
-        "city": "Manchester",
-        "country": "United Kingdom",
-        "company": "FreshBasket Retail Group",
-        "title": "Senior Application Security Engineer",
-        "industry": "Retail",
-        "experience": [
-            xp(
-                "Senior Application Security Engineer",
-                "FreshBasket Retail Group",
-                "Manchester, UK",
-                "2020-11-01",
-                None,
-                True,
-                "SSDLC gates, pentest coordination, secure coding training.",
-            ),
-            xp(
-                "Security Engineer",
-                "FreshBasket Retail Group",
-                "Manchester, UK",
-                "2018-04-01",
-                "2020-10-31",
-                False,
-                "Vulnerability management, SIEM tuning with SOC.",
-            ),
-            xp(
-                "IT Security Analyst",
-                "Regional Bank PLC",
-                "Leeds, UK",
-                "2016-09-01",
-                "2018-03-31",
-                False,
-                "Access reviews, phishing simulations, policy updates.",
-            ),
-        ],
-        "education": [
-            edu("University of Manchester", "M.Sc.", "Advanced Computer Science", 2015, 2016),
-            edu("University of Leeds", "B.Sc.", "Computer Science", 2012, 2015),
-        ],
-        "projects": [
-            proj(
-                "Secure coding lunch talks",
-                "Internal series — 30 min, pizza funded, no recording pressure.",
-                None,
-                [],
-            ),
-        ],
-        "interests": [intr("Parkrun"), intr("Board games"), intr("STEM school visits", "volunteer")],
-    },
-    {
-        "username": "arjun_mehta_fullstack",
-        "name": "Arjun Mehta",
-        "email": "arjun.mehta@zedreq.dev",
-        "password": "Arjun@2024!",
-        "short_desc": "Full-stack engineer · streaming infra",
-        "about": (
-            "I work on internal tooling for video encoding pipelines — not the glamorous consumer app, but the jobs that "
-            "transcode and QC content before it hits apps. Company is mid-market streaming tech. "
-            "Bangalore → moved to Austin in 2021. I like boring tech that scales: queues, workers, observability."
-        ),
-        "skills": "Java, Spring Boot, React, Kafka, PostgreSQL, AWS",
-        "certificates": "AWS Developer Associate",
-        "current_status": "Currently employed",
-        "location": "Austin, TX",
-        "city": "Austin",
-        "country": "United States",
-        "company": "StreamFoundry",
-        "title": "Senior Software Engineer",
-        "industry": "Entertainment",
-        "experience": [
-            xp(
-                "Senior Software Engineer",
-                "StreamFoundry",
-                "Austin, TX",
-                "2021-08-01",
-                None,
-                True,
-                "Workflow orchestration for transcoding, admin APIs, on-call for pipeline incidents.",
-            ),
-            xp(
-                "Software Engineer",
-                "StreamFoundry",
-                "Austin, TX",
-                "2019-01-01",
-                "2021-07-31",
-                False,
-                "Microservices for metadata extraction.",
-            ),
-            xp(
-                "Software Engineer",
-                "Bangalore SaaS Studio",
-                "Bangalore, India",
-                "2016-07-01",
-                "2018-12-31",
-                False,
-                "CRUD apps, first exposure to Kafka and Docker.",
-            ),
-        ],
-        "education": [
-            edu("University of Texas at Austin", "M.S.", "Computer Science", 2019, 2021),
-            edu("BITS Pilani", "B.E.", "Computer Science", 2012, 2016),
-        ],
-        "projects": [
-            proj(
-                "encoding cost simulator",
-                "Spreadsheet + small CLI the team uses for rough job cost estimates.",
-                None,
-                ["Python"],
-            ),
-        ],
-        "interests": [intr("Cricket league"), intr("BBQ"), intr("Mentoring international students", "volunteer")],
     },
 ]
 
 
-USER_POSTS = {
-    "sarah_chen_dev": [
+# ---------------------------------------------------------------------------
+# Posts — images are chosen to match the content of the specific post
+# ---------------------------------------------------------------------------
+
+USER_POST_CANDIDATES: dict[str, list[dict]] = {
+    # ----------------------------------------------------------------
+    # Priya Mehta — instructional coach / K-12 education
+    # ----------------------------------------------------------------
+    "priya_mehta_edtech": [
         {
-            "text": """Last Thursday looked ordinary until our latency graph for merchant onboarding started climbing — not a spike, a slow bleed across two regions.
-
-On-call paged me while I was in a school pickup line. I handed the phone to my partner, drove home, and joined a bridge with two engineers I trust to disagree with me politely. The first theory was a bad deploy; git history said otherwise. The second theory was database — replication lag looked fine. The third was a feature flag that increased payload size on a path that had always been 'low risk.'
-
-We split work: one person reproduced with recorded traffic, one traced the flag rollout timeline, I coordinated with risk so we didn't freeze payments longer than necessary. We rolled back the flag for 12% of traffic first, watched error budgets, then the rest.
-
-What I keep thinking about isn't the rollback — it's that the engineer who shipped the flag had followed every checklist we wrote. The checklist didn't include 'measure body size percentiles on this endpoint under peak.' We're adding that now, plus a blameless review invite to the PM who asked for the experiment.
-
-If you lead platform: your next incident might be 'by the book' and still wrong. Update the book.""",
+            "text": (
+                "Three years into coaching and the hardest thing I do is still the debrief after "
+                "a hard observation.\n\n"
+                "Not the feedback itself — I've gotten better at that. The hard part is the "
+                "five minutes before I walk into the room, when I have to decide whether I'm "
+                "going to lead with what I saw or with a question. Nine times out of ten, the "
+                "question surfaces something the data couldn't.\n\n"
+                "Last week a teacher I've worked with for two years told me a lesson I thought "
+                "flopped was intentionally messy — she wanted students to struggle before the "
+                "anchor chart went up. She was right. My script would have missed it.\n\n"
+                "Coaching tip I keep relearning: your observation notes are a hypothesis, not a verdict."
+            ),
+            "image": MEDIA["classroom"],
+        },
+        {
+            "text": (
+                "Every August our district rolls out something new. Every August teachers nod politely "
+                "and wait to see if it'll still exist in February.\n\n"
+                "That's not cynicism — that's pattern recognition. Good teachers are scientists about "
+                "their own time.\n\n"
+                "My job is to be the person who shows up in February still talking about it. "
+                "Not because admin told me to — because I actually followed up, helped troubleshoot "
+                "the parts that broke, and admitted when something wasn't worth the effort.\n\n"
+                "Trust in PD isn't built in August. It's built by March."
+            ),
+            "image": MEDIA["whiteboard_lesson"],
+        },
+        {
+            "text": (
+                "The reading intervention group I visit on Thursdays has six kids. "
+                "Three of them came in reading below grade level in September.\n\n"
+                "One of those three — a kid who flatly refused to read aloud in September — "
+                "read a paragraph to the whole group last week. Unprompted.\n\n"
+                "I don't post outcomes often because they're never as simple as the headline. "
+                "But I'll post this one. Decodable texts, consistent small group, "
+                "one teacher who never once made him feel bad for not knowing. "
+                "That's the whole intervention.\n\n"
+                "Shoutout to every reading specialist doing invisible heroic work on a Thursday morning."
+            ),
+            "image": MEDIA["library_study"],
+        },
+        {
+            "text": (
+                "Hot take: Google Classroom is not an instructional tool. "
+                "It's a folder with a grade book attached.\n\n"
+                "That's fine — folders matter. But I've sat through too many PD sessions "
+                "where turning in a PDF digitally got called 'blended learning.'\n\n"
+                "If students are doing the same low-engagement task on a screen instead of paper, "
+                "you've added a battery charge requirement, not a pedagogy upgrade.\n\n"
+                "Edtech earns its place when it changes what's possible — "
+                "differentiation, immediate feedback, student voice, real audience. "
+                "Otherwise it's just expensive laminating."
+            ),
             "image": None,
         },
         {
-            "text": """A junior engineer pulled me aside after planning and asked a question I've heard a hundred times in shorter form: 'Should I go deep on Kubernetes or double down on SQL this year?'
-
-I used to answer with frameworks and skill matrices. This time I asked what problem their squad will fight in Q3. They talked about slow queries in a reporting service and fear of touching Helm charts. We mapped two milestones: one month on SQL explain plans with a buddy, one spike on reading — not rewriting — our current charts.
-
-Career advice isn't one-size-fits-all. The best learning plan I've seen is tied to a real constraint your team pays for in incidents or velocity. Everything else is procrastination with a LinkedIn certificate.
-
-Happy to compare notes if you're mentoring someone early in platform work — what's worked for your folks?""",
-            "image": POST_MEDIA_URLS[0],
+            "text": (
+                "We're into standardized testing season, which means I am fielding a lot of "
+                "'what does this score actually mean' from parents and, honestly, from teachers too.\n\n"
+                "A percentile score tells you where a student stands relative to a norm group "
+                "on one day. It does not tell you what they know, what they'll learn next, "
+                "or whether their teacher is effective.\n\n"
+                "I spend a chunk of my coaching hours helping teachers use classroom-based data "
+                "that they collected, that reflects what they actually taught. "
+                "That data changes instruction. The April score changes anxiety levels.\n\n"
+                "Both matter. But they answer different questions."
+            ),
+            "image": MEDIA["coffee_meeting"],
         },
     ],
-    "marcus_thompson_pm": [
+
+    # ----------------------------------------------------------------
+    # Marcus Bell — water utility civil engineer
+    # ----------------------------------------------------------------
+    "marcus_bell_utilities": [
         {
-            "text": """We spent six weeks designing a 'manager override' for scheduling rules — the story was that store managers needed flexibility when the algorithm was too strict.
-
-When we finally put paper prototypes in front of eight managers, the mood surprised me. They didn't want more power; they wanted fewer edge cases that made them look unfair to staff. One person said, quietly, 'If I override, someone posts about it on Facebook that night.'
-
-We killed the override concept and reframed the roadmap around transparency: show why a shift was proposed, let staff swap within guardrails, and give managers an audit trail instead of a magic button. Engineering pushed back on scope — fair — so we cut a different feature that had lukewarm research.
-
-The lesson I'm carrying: sometimes 'empowerment' in a PRD is actually liability in real life. Listen for the fear behind the feature request.
-
-If you've ever killed something expensive after research, how did you communicate it upward without sounding like you wasted time?""",
+            "text": (
+                "We had a 12-inch water main break at 2 AM on a Tuesday. "
+                "By 6 AM we had restored service to 340 addresses.\n\n"
+                "Nobody wrote a news story. Nobody should have to — that's what 'it's working' looks like.\n\n"
+                "What I want people to understand about public utilities: "
+                "the quietest days are the days the most people showed up. "
+                "Operators checking chlorine residuals. Maintenance crew on the leak detection van. "
+                "The engineer who pushed for the valve spacing that let us isolate four blocks "
+                "instead of twelve.\n\n"
+                "Infrastructure is invisible until it isn't. "
+                "The goal is to keep it boring."
+            ),
+            "image": MEDIA["city_street"],
+        },
+        {
+            "text": (
+                "Lead service line replacement update: we've completed 1,847 replacements "
+                "since the federal mandate moved the deadline.\n\n"
+                "What I didn't expect: the conversations on doorsteps. "
+                "Half the residents think we're there to check their water bill. "
+                "Half assume we're digging because something is already wrong.\n\n"
+                "We started sending a one-page explanation two weeks before crew arrival. "
+                "Door-answer rate went up; angry calls went down. "
+                "Public works communication is as real as the pipe specification.\n\n"
+                "If you're running an LSL program and skipping the community piece, "
+                "you're skipping half the project."
+            ),
+            "image": MEDIA["concrete_pour"],
+        },
+        {
+            "text": (
+                "Someone asked me last week whether I'd considered going private sector "
+                "for better pay.\n\n"
+                "Probably yes on the pay. But I grew up in Gary, Indiana, "
+                "where water infrastructure is not an abstraction. "
+                "I know exactly who my work serves — I drive through their neighborhoods "
+                "to check on our main replacement crews.\n\n"
+                "Public engineering isn't for everyone. The procurement timelines alone "
+                "will age you. But if you need the outcome to feel concrete, "
+                "try improving a city's lead exposure numbers."
+            ),
+            "image": MEDIA["blueprint_desk"],
+        },
+        {
+            "text": (
+                "Quick thing nobody tells you about EPANET modeling:\n\n"
+                "The model is only as good as the field data, "
+                "and the field data is only as good as whoever last updated the GIS layer, "
+                "and that layer was last touched in 2019 by someone who no longer works here.\n\n"
+                "Every hydraulic model I've inherited has at least one pipe segment "
+                "with a diameter that doesn't match what's in the ground. "
+                "Usually discovered during a main break. Always during a main break.\n\n"
+                "Lesson: budget time to validate your model with actual field checks "
+                "before you trust it for a capital project."
+            ),
             "image": None,
         },
         {
-            "text": """Six months ago Legal flagged copy in our mobile onboarding for a state we were about to launch in. We had already built screens, animations, the whole sprint was 'done.'
-
-The old me would have negotiated wording in Slack threads for weeks. This time I booked Legal, Design, and Compliance for a single working session with the actual strings in Figma comments. We resolved 80% of blockers live, documented the rest as a checklist for the next state rollout, and shipped two weeks later than hoped — but with zero emergency weekend rewrites.
-
-Bring Legal early on words, not only on policy documents. Saves money, saves marriages, saves whatever patience your engineers have left.""",
-            "image": POST_MEDIA_URLS[1],
+            "text": (
+                "Volunteering with the fire department has made me a better utility engineer.\n\n"
+                "Not because of the emergencies — because of the pre-plans. "
+                "Before every shift, the crew walks through hydrant locations, "
+                "flow rates, secondary supply options. They don't assume the system works. "
+                "They verify it and plan for when it doesn't.\n\n"
+                "I brought that habit back to my main rehab scheduling. "
+                "We now map which hydrants are out of service during any repair window "
+                "and notify fire dispatch before the first shovel goes in.\n\n"
+                "Cross-functional communication is unglamorous. It's also how cities don't burn."
+            ),
+            "image": MEDIA["blueprint_roll"],
         },
     ],
-    "priya_sharma_ml": [
+
+    # ----------------------------------------------------------------
+    # Sofía Reyes — immigration paralegal
+    # ----------------------------------------------------------------
+    "sofia_reyes_legal": [
         {
-            "text": """Our offline ranking model looked like a win: NDCG up, calibration pretty, stakeholders smiling in the review deck.
-
-Then we shipped to a slice of live traffic and… almost nothing moved where it mattered — add-to-cart on long-tail categories. Two painful days later we realized we had been optimizing for users who already converted; the model barely touched cold visitors. Merchandising had been saying this in softer language for weeks; I wish I'd listened harder sooner.
-
-We regrouped with a simple rule: every metric has a name and a person who loses sleep if it lies. We rebuilt the training slice with explicit cold-start buckets, added a human spot-check ritual before large experiments, and — this mattered — put a merchandising partner in the weekly model review, not just in the launch meeting.
-
-I'm sharing this because the mistake wasn't math; it was storytelling with the wrong protagonist. If you work in applied ML: whose reality does your metric actually represent?
-
-Drop a comment if you've caught a similar mismatch — I'd love to learn what signals you watch now.""",
+            "text": (
+                "An RFE is not a denial. I say this to at least two clients a week.\n\n"
+                "A Request for Evidence means USCIS wants more information before they decide. "
+                "It's stressful — I know it's stressful — but it is a solvable problem if "
+                "you respond on time with the right documentation.\n\n"
+                "What tanks RFE responses: vague cover letters, missing translations, "
+                "evidence that doesn't directly address the specific issue raised, "
+                "and waiting until day 85 of a 90-day window.\n\n"
+                "If you get an RFE: call your attorney or paralegal immediately. "
+                "Read the request carefully. Make a checklist. "
+                "The government gave you a roadmap. Follow it.\n\n"
+                "(Not legal advice. General information only.)"
+            ),
+            "image": MEDIA["law_books"],
+        },
+        {
+            "text": (
+                "The biometrics appointment scares people more than it should "
+                "and the interview scares people less than it does.\n\n"
+                "Biometrics: you go in, they take your fingerprints and photo, you leave. "
+                "Thirty minutes. Bring your appointment notice and ID. That's it.\n\n"
+                "The interview is where preparation matters. You need to know your petition, "
+                "know your documents, and be consistent with what you submitted. "
+                "Inconsistencies — even innocent ones — create problems.\n\n"
+                "We prep every client the week before. "
+                "Not because the questions are traps; because knowing what to expect "
+                "is how you walk in calmly instead of frozen."
+            ),
+            "image": MEDIA["courthouse"],
+        },
+        {
+            "text": (
+                "I've been doing this for six years. "
+                "The cases that keep me up at night aren't the complicated ones — "
+                "they're the ones where a translation error or a checkbox mistake "
+                "from years before we got involved created a problem we now have to untangle.\n\n"
+                "If you're going to file immigration paperwork on your own: "
+                "use an accredited representative or attorney. "
+                "If the cost is the barrier, legal aid organizations exist. "
+                "I will find you one.\n\n"
+                "A $50 online filing service cannot write you a brief "
+                "if USCIS questions your case. A paralegal can help prepare the response. "
+                "A notario who is not an attorney cannot legally represent you. Please know the difference."
+            ),
             "image": None,
         },
         {
-            "text": """Interviewing candidates for our team last month, I spent almost half of each loop on a single theme: 'Tell me about a time your model looked good offline and disappointed online — what did you check first?'
-
-The best answers weren't textbook. They named specific leaks, delayed labels, inventory quirks, or UX changes that broke assumptions. The weakest answers jumped straight to architecture shopping.
-
-It reminded me to prep candidates the way I'd want to be prepped: fundamentals plus war stories. If you're interviewing for applied roles, consider weighting diagnosis over buzzwords.""",
-            "image": None,
+            "text": (
+                "My mom's naturalization ceremony was in a federal courthouse "
+                "with about 80 other people from 30-something countries.\n\n"
+                "The clerk called each country of origin alphabetically. "
+                "When he called Colombia, she stood up and said 'here' like she was in class.\n\n"
+                "I work on these cases every day and that ceremony still got me. "
+                "Paperwork is how you get there. "
+                "That's why I care about the paperwork."
+            ),
+            "image": MEDIA["contract_signing"],
+        },
+        {
+            "text": (
+                "Hiring a paralegal who speaks the client's language is not a nice-to-have "
+                "in immigration law. It's a risk management decision.\n\n"
+                "Errors in client intake — dates, relationships, entry history — "
+                "often happen not because clients are careless but because "
+                "the intake form is in English and the explanation of what's being asked "
+                "is also in English, which the client speaks partially or under stress.\n\n"
+                "We added Spanish intake forms in 2021. "
+                "Our intake correction rate dropped. "
+                "Our attorney time on clarifications dropped. "
+                "Clients showed up to consultations with the right documents more often.\n\n"
+                "Language access is process improvement. Firms who don't see that are leaving errors on the table."
+            ),
+            "image": MEDIA["office_whiteboard"],
         },
     ],
-    "james_rodriguez_devops": [
+
+    # ----------------------------------------------------------------
+    # Brett Holloway — community bank commercial lender
+    # ----------------------------------------------------------------
+    "brett_holloway_banking": [
         {
-            "text": """We closed a sev-2 last night. The post-incident template asked for 'root cause.' I wrote three bullets and left the root cause field blank on purpose.
-
-We had: a traffic shift from a marketing campaign nobody told ops about, a cache TTL change that was technically correct but untested under that shape of load, and on-call fatigue that slowed the first rollback decision. Any single label would have made someone the villain.
-
-Instead we documented contributing factors, added a lightweight 'campaign calendar' integration for infra, and scheduled a dry-run of rollback steps with the team that owns the cache — not as punishment, as practice.
-
-If your culture still demands one neat root cause: you're optimizing for slides, not learning. Five whys is a tool, not a religion.
-
-Curious how other teams phrase this without sounding like philosophy class.""",
-            "image": POST_MEDIA_URLS[2],
+            "text": (
+                "I drove 40 minutes down a county road to look at collateral last Tuesday. "
+                "Grain bins, a machine shed, and about 600 acres of well-drained corn ground.\n\n"
+                "Finance people ask why community bankers make site visits "
+                "when you can pull an appraisal.\n\n"
+                "Because an appraisal won't tell you the landlord is retiring and might sell, "
+                "or that the pivot in the south field has needed a gear since April, "
+                "or that the guy you're lending to has his neighbor's kids helping at harvest "
+                "because the operation is actually healthy enough to share.\n\n"
+                "Context lives on the ground. "
+                "The spread sheet confirms what the visit already told you."
+            ),
+            "image": MEDIA["spreadsheet_coffee"],
         },
         {
-            "text": """August was the month I finally stopped hand-waving capacity. Finance asked for reserved instances; I brought utilization trends, risk of spot interruption on batch jobs, and a worst-case cost if Black Friday behaved like two years ago.
-
-They approved less than I asked for — and the right amount. We revisited in October with real data instead of pride.
-
-Capacity planning is a relationship between engineering credibility and finance trust. Charts help; honesty helps more.""",
+            "text": (
+                "Community banking is relationship lending, which means "
+                "you sometimes lend to people whose financials you could decline "
+                "and choose not to — and sometimes you decline people you genuinely like.\n\n"
+                "The second one is harder. "
+                "I've had to tell good farmers with bad timing that we can't structure it this year. "
+                "Every time I try to give them something useful from the conversation: "
+                "what the coverage ratio looks like now, what would need to change, "
+                "who else might be a fit.\n\n"
+                "A decline with a roadmap is a better product than a decline with a form letter. "
+                "Most people come back when things change — if you treated them right."
+            ),
+            "image": MEDIA["desk_paperwork"],
+        },
+        {
+            "text": (
+                "The ag operating line renewals are hitting right now. "
+                "Input costs are still elevated. "
+                "Some operations that looked fine two years ago are tighter than they'd like.\n\n"
+                "I'm not panicking because I know these customers and I know their land. "
+                "But I am having a lot of honest conversations about working capital cushions "
+                "and what the rental rate market looks like for next year.\n\n"
+                "If you're a farmer dealing with a lender who went silent on you: "
+                "ask the direct question. 'Where do I stand?' is a reasonable thing to say. "
+                "A lender who can't answer that clearly isn't doing their job."
+            ),
             "image": None,
+        },
+        {
+            "text": (
+                "Attended the Iowa State Bankers Association conference this week. "
+                "Three sessions on AI in underwriting, one session on community reinvestment.\n\n"
+                "I think we've got the ratio slightly backwards.\n\n"
+                "The algorithm is not why a third-generation farmer trusts you with a line of credit. "
+                "The algorithm didn't come to the funeral. "
+                "The algorithm didn't help restructure when the 2012 drought hit.\n\n"
+                "Use the tools. "
+                "Don't outsource the relationship."
+            ),
+            "image": MEDIA["coffee_meeting"],
+        },
+        {
+            "text": (
+                "Judged the livestock showmanship at the county fair on Saturday as a 4-H volunteer.\n\n"
+                "Eleven-year-old walked a market steer twice her size around the ring "
+                "like she'd been doing it for years. Turns out she had — it was her third year.\n\n"
+                "I lend to agricultural operations. "
+                "The best insight into whether an operation has a future is whether "
+                "the next generation is paying attention.\n\n"
+                "She was paying very close attention. Good sign."
+            ),
+            "image": MEDIA["city_street"],
         },
     ],
-    "aisha_okafor_design": [
+
+    # ----------------------------------------------------------------
+    # Amber Novak — EHS coordinator, plastics manufacturing
+    # ----------------------------------------------------------------
+    "amber_novak_ehs": [
         {
-            "text": """We ran an accessibility audit on our clinic intake flow expecting a few color-contrast tweaks. Fourteen issues came back. Half were embarrassingly basic: labels not wired to inputs, error text that only changed color, focus traps in modals that broke on mobile.
-
-I was defensive for about ten minutes — then I called our CS lead and asked for the last twenty tickets that mentioned 'couldn't finish form.' The pattern matched the audit.
-
-We fixed the blockers in two sprints, measured support volume, and saw a real drop — not viral LinkedIn numbers, but enough that nurses stopped apologizing on the phone for 'the computer.'
-
-Design quality isn't only what wins awards; it's what stops someone from feeling stupid while they're trying to care for patients.
-
-If you're building health-adjacent products: fight for time on forms. They're where trust lives or dies.""",
+            "text": (
+                "Near-miss reports are a gift. "
+                "Most companies treat them like an admission of guilt.\n\n"
+                "When I took this role, we had logged 2 near-misses in the previous calendar year. "
+                "Not because the plant was safe — because nobody trusted that reporting "
+                "wouldn't come back on them.\n\n"
+                "We redesigned the form: anonymous, five questions, drop box by the timeclock. "
+                "Year one: 14 reports. Year two: 31. "
+                "Did the plant get more dangerous? No. "
+                "It got more honest.\n\n"
+                "If your near-miss rate is suspiciously low, "
+                "ask whether your reporting culture is safe — not whether your plant is."
+            ),
+            "image": MEDIA["warehouse_racks"],
+        },
+        {
+            "text": (
+                "OSHA 300 log season is not my favorite time of year.\n\n"
+                "Not because of the recording — that I can do in my sleep at this point. "
+                "It's the conversations before posting where a supervisor tries to make the "
+                "case that a recordable is actually first aid if you look at it sideways.\n\n"
+                "I don't look at it sideways. I look at the OSHA definitions.\n\n"
+                "If you're in EHS and feeling pressure to misclassify: "
+                "document the conversation. "
+                "The record you're being asked to minimize will outlast the pressure."
+            ),
+            "image": MEDIA["desk_paperwork"],
+        },
+        {
+            "text": (
+                "Did a LOTO audit this week. Found three energy control procedures "
+                "that hadn't been reviewed since the machine was installed in 2018.\n\n"
+                "The procedures weren't wrong — the equipment hadn't changed much. "
+                "But two of the machines had a secondary hydraulic circuit added in 2021 "
+                "that nobody updated the ECP for.\n\n"
+                "That is the audit finding that doesn't look like much on paper "
+                "and is how people get seriously hurt.\n\n"
+                "If your LOTO procedures haven't been reviewed since 'whenever we bought the machine,' "
+                "that's not a schedule, that's a gap."
+            ),
+            "image": MEDIA["forklift_aisle"],
+        },
+        {
+            "text": (
+                "I passed the ASP exam last fall and I'm sitting for the CSP this spring.\n\n"
+                "I want to say something to anyone in EHS who is earlier in their career and "
+                "looking at the certification path and thinking it seems like a lot:\n\n"
+                "It is a lot. The body of knowledge is wide. "
+                "I studied in 30-minute windows at 5:30 AM because that was the window I had.\n\n"
+                "But the process of studying for the exam made me better at the job "
+                "before I ever sat for the test. "
+                "The industrial hygiene section alone changed how I was doing air sampling.\n\n"
+                "Worth it. Grind is real. Worth it."
+            ),
             "image": None,
         },
         {
-            "text": """Tomorrow I'm running a 45-minute Figma walkthrough for our customer success team — not 'design 101,' but how to find the source of truth for components so they stop screenshotting six-month-old screens in tickets.
-
-I used to think enablement was extra. Now I see it as defect prevention. Every hour we spend aligning language between CS and Design saves three hours of triage.
-
-If you've run similar sessions, what actually landed? I'm stealing good ideas.""",
-            "image": POST_MEDIA_URLS[3],
-        },
-    ],
-    "liam_walsh_backend": [
-        {
-            "text": """Our largest webhook partner changed retry intervals without a changelog entry. Subscriptions started stacking duplicate events at the edges; finance noticed before engineering did — not a great moment.
-
-We hotfixed deduplication keys and backoff, then I did something I should have done a year ago: scheduled a quarterly sync with their integrations team, wrote SLA language into the contract draft for notification of behavioral changes, and built a dashboard that shows 'partner behavior drift' as a first-class alert.
-
-Clever code saved the weekend; boring process might save the next quarter.
-
-If you own integrations: when did you last read your partner's docs like a skeptic, not a believer?""",
-            "image": None,
-        },
-        {
-            "text": """Internal ops asked for a tool to replay failed payouts for review. Part of me wanted a microservice; the adult in the room used Django admin with tight permissions and audit logs.
-
-Two weeks later they're exporting CSVs for compliance without opening tickets to my team. Not glamorous — effective.
-
-Sometimes the right architecture is the one your org can operate when you're on holiday.""",
-            "image": None,
-        },
-    ],
-    "mei_zhang_ai": [
-        {
-            "text": """We shipped an assistive drafting feature for support reps — suggested replies based on ticket context. Offline evals looked strong; pilot NPS was fine.
-
-Then I sat with four reps for two hours. Half of them said the suggestions made them slower because they had to mentally 'undo' confident-sounding wrong text before sending. A/B said they'd trust it more if we showed confidence and sources, even if that meant fewer suggestions.
-
-We turned the feature off for a week — politically scary — and relaunched a simpler version: shorter snippets, explicit 'use / edit / ignore,' and a weekly feedback button that actually routes to me.
-
-The takeaway I want to repeat: the metric isn't clicks; it's whether humans feel respected at work. Models serve people, not dashboards.
-
-If you build copilots: when did you last watch someone use your product with their real queue, not a demo script?""",
-            "image": None,
-        },
-        {
-            "text": """Spent three afternoons this month labeling edge cases for eval sets — duplicate tickets, sarcasm, multilingual fragments. Nobody claps for that work in roadmap reviews.
-
-Then we caught a regression before it hit 10% of traffic because the eval moved. I'll take the boring win.
-
-If your team skips eval maintenance: you're not saving time; you're borrowing incidents.""",
-            "image": POST_MEDIA_URLS[4],
-        },
-    ],
-    "daniel_osei_frontend": [
-        {
-            "text": """We shipped keyboard navigation and visible focus states across our claims review table — work that sounded small until we realized partners had been tabbing into invisible traps for years.
-
-A week later an email arrived from an insurance ops lead I'd never met. It wasn't long; it said thank you, named two people on their team with motor difficulties who could finally do reviews without a mouse.
-
-I printed that email for myself — not for the wall of fame, as a reminder that accessibility tickets are revenue and dignity, not polish.
-
-If you're debating whether to prioritize a11y this quarter: find one high-friction workflow and fix it end-to-end. The feedback might be quieter than a viral post, but it lands harder.""",
-            "image": None,
-        },
-        {
-            "text": """Working from Accra with CET overlap means my mornings are mine if I defend them. I stopped pretending I could do deep work while half of Europe wakes up and pings.
-
-I blocked 8–10 local for implementation, moved standup later once, and told my manager honestly when a school morning blew the plan. The team adjusted — not perfectly, but enough that I stopped lying in Slack statuses.
-
-Remote work isn't about being always on; it's about negotiating reality with humans who also have calendars.""",
-            "image": None,
-        },
-    ],
-    "emma_sullivan_sec": [
-        {
-            "text": """We ran threat modeling for checkout with developers, not at them. I brought a thin STRIDE outline; they brought nightmares — gift card stacking, race conditions on promo application, abuse of partial refunds.
-
-Within an hour the whiteboard had scenarios our slide deck missed entirely. We prioritized two fixes for the next sprint, filed three backlog items with clear owners, and scheduled a retest after deployment.
-
-Security as a gate gets eye rolls. Security as a shared imagination exercise gets fixes.
-
-If you're in AppSec: try pizza, markers, and 'how would you steal your own feature?' before you open Burp.""",
-            "image": POST_MEDIA_URLS[5],
-        },
-        {
-            "text": """When I started, I thought triage speed meant typing fast. Now I know it means breathing once, opening the stack trace, and refusing to panic when the first line looks alien.
-
-Half of findings are configuration ghosts; the other half need a calm human to trace data, not ego.
-
-If you're new: your job isn't to know everything on day one. It's to document what you checked so the next person starts smarter.""",
-            "image": None,
-        },
-    ],
-    "arjun_mehta_fullstack": [
-        {
-            "text": """The encoding queue backed up at midnight — classic story. Marketing dropped a surprise content batch; our autoscaler hesitated; on-call woke up tired.
-
-We could have thrown money at nodes. Instead we followed the runbook someone wrote last year: verify upstream ingest, check stuck jobs by codec, drain poison messages, scale workers only after the queue head looked healthy. By morning the backlog cleared without a second incident.
-
-I don't know who wrote that runbook — if you're reading this, thank you. Documentation is love.
-
-If you own pipelines: when someone saves you with a checklist, add one line to that checklist so the next fire is shorter.""",
-            "image": None,
-        },
-        {
-            "text": """Mentored a bootcamp grad this month who was drowning in 'learn Kafka, learn K8s, learn everything' anxiety.
-
-We drew a coffee shop on the whiteboard — orders, queue, baristas, overflow line — and mapped it to our actual services. Their shoulders dropped. They asked better questions the next day.
-
-Fundamentals wear fancy names in job posts. Teach the boring map first; the buzzwords attach faster afterward.""",
-            "image": None,
+            "text": (
+                "The SDS library used to be a binder on a shelf in the corner of the maintenance room.\n\n"
+                "I am not exaggerating. One binder. "
+                "The plant runs about 60 chemicals at any given time.\n\n"
+                "We migrated to a digital system two years ago. "
+                "Took six weeks to cross-reference every chemical on the floor "
+                "with a current SDS, get them uploaded, and train shift leads on how to pull them.\n\n"
+                "Last month a new material came in without a datasheet. "
+                "The receiving team flagged it immediately and sent the lot back. "
+                "Six weeks of setup paid for itself in one shift.\n\n"
+                "EHS infrastructure is invisible until it works. "
+                "That's what success looks like."
+            ),
+            "image": MEDIA["loading_dock"],
         },
     ],
 }
 
 
+# ---------------------------------------------------------------------------
+# Post selector
+# ---------------------------------------------------------------------------
+
+def pick_posts_for_user(username: str, rng: random.Random) -> list[dict]:
+    pool = USER_POST_CANDIDATES.get(username, [])
+    if not pool:
+        return []
+    n_max = min(len(pool), 4)
+    n_min = min(2, n_max)
+    k = rng.randint(n_min, n_max)
+    shuffled = pool[:]
+    rng.shuffle(shuffled)
+    return shuffled[:k]
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed batch 1 realistic users only")
+    parser = argparse.ArgumentParser(description="Seed batch 3 realistic users only")
     parser.add_argument("--no-download", action="store_true")
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
 
+    master_seed = args.seed if args.seed is not None else random.randrange(2**31)
+    rng = random.Random(master_seed)
+    posts = {u["username"]: pick_posts_for_user(u["username"], rng) for u in USERS}
+
     print("=" * 65)
-    print("  ZedReq — realistic seed (batch 1 only)")
-    print("  Tip: use seed_data/seed_realistic_run_all.py for batch 1 + 2 + full graph")
+    print("  ZedReq — realistic seed (batch 3 only)")
+    print("  Tip: use seed_data/seed_realistic_run_all.py for all batches + full graph")
     print("=" * 65)
 
     run_full_seed(
         USERS,
-        USER_POSTS,
+        posts,
         hash_password_fn=hash_password,
         get_db_fn=get_db_default,
-        seed=args.seed,
+        seed=master_seed,
         download_images=not args.no_download,
         augment_posts=True,
     )

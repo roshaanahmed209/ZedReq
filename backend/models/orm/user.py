@@ -31,6 +31,7 @@ class User(Base):
     two_factor_secret = Column(Text)  # Encrypted TOTP secret
     two_factor_backup_codes = Column(Text)  # Encrypted JSON array of backup codes
     two_factor_verified = Column(Boolean, default=False)  # Whether 2FA setup is complete
+    auth_provider = Column(String(20), nullable=False, default='email', server_default='email')  # 'email' or 'google'
     profile_url = Column(Text)  # Profile URL in format: {API_URL}/profile/{username}-{hashed_user_id}
     last_login = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
@@ -59,6 +60,7 @@ class User(Base):
             'email_verified': self.email_verified,
             'description_id': self.description_id,
             'two_factor_enabled': self.two_factor_enabled,
+            'auth_provider': self.auth_provider or 'email',
             'profile_url': self.profile_url,
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,

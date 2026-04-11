@@ -18,6 +18,7 @@ from models.orm import (
     Payment,
     UserSubscription,
     DeletedUserArchive,
+    UsersContext,
 )
 from utils.errors import NotFoundError
 from utils.logger import setup_logger
@@ -139,6 +140,11 @@ class UserDeletionService:
             )
             self.db.execute(
                 delete(ProfileAnalytics).where(ProfileAnalytics.viewer_id == user_id)
+            )
+            # Delete users_context explicitly — column is NOT NULL so SQLAlchemy's
+            # automatic SET NULL before CASCADE would fail without this.
+            self.db.execute(
+                delete(UsersContext).where(UsersContext.user_id == user_id)
             )
 
             if desc_id:

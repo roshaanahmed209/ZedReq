@@ -93,7 +93,8 @@ async def get_current_user(
         "profile_pic": user.get("profile_pic"),
         "short_desc": user.get("short_desc"),
         "about": user.get("about"),
-        "created_at": user.get("created_at")
+        "created_at": user.get("created_at"),
+        "auth_provider": user.get("auth_provider", "email"),
     }
 
 

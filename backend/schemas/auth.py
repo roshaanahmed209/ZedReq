@@ -45,7 +45,8 @@ class UserResponse(BaseModel):
     short_desc: Optional[str] = None
     about: Optional[str] = None
     created_at: Optional[datetime] = None
-    
+    auth_provider: Optional[str] = 'email'
+
     class Config:
         from_attributes = True
 

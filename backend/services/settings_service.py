@@ -1178,9 +1178,11 @@ class SettingsService:
             if not user:
                 raise NotFoundError("User")
 
-            if not verify_password(password, user.password_hash):
-                logger.warning(f"Failed delete-account password confirmation for user {user_id}")
-                raise ValidationError("Current password is incorrect")
+            # Google-authenticated users have no password — skip the check
+            if (user.auth_provider or 'email') != 'google':
+                if not verify_password(password, user.password_hash):
+                    logger.warning(f"Failed delete-account password confirmation for user {user_id}")
+                    raise ValidationError("Current password is incorrect")
 
             UserDeletionService(self.db).purge_user(
                 user_id,

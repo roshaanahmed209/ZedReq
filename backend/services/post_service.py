@@ -512,10 +512,10 @@ class PostService:
             if post.uid != user_id:
                 raise AuthorizationError('You can only delete your own posts')
             
-            post.is_deleted = True
+            self.db.delete(post)
             self.db.commit()
             
-            logger.info(f"Post {post_id} deleted by user {user_id}")
+            logger.info(f"Post {post_id} hard-deleted by user {user_id}")
             return True
         except (NotFoundError, AuthorizationError):
             raise
