@@ -592,7 +592,8 @@ class PostService:
             "id": c.comment_id,
             "comment_id": c.comment_id,
             "user_id": c.uid,
-            "body": c.body,
+            "body": c.body or "",
+            "media_url": getattr(c, "media_url", None),
             "created_at": c.created_at.isoformat() if c.created_at else None,
             "username": c.user.username if c.user else None,
             "full_name": c.user.name if c.user else None,
@@ -643,7 +644,13 @@ class PostService:
 
         return out, int(total)
 
-    def add_comment(self, post_id: int, user_id: int, body: str) -> Dict[str, Any]:
+    def add_comment(
+        self,
+        post_id: int,
+        user_id: int,
+        body: str,
+        media_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Add a comment; increments post.comments counter."""
         post = (
             self.db.query(Post)
@@ -653,7 +660,13 @@ class PostService:
         if not post:
             raise NotFoundError("Post")
 
-        row = PostComment(post_id=post_id, uid=user_id, body=body)
+        text = (body or "").strip()
+        row = PostComment(
+            post_id=post_id,
+            uid=user_id,
+            body=text if text else "",
+            media_url=media_url or None,
+        )
         self.db.add(row)
         self.db.commit()
         self.db.refresh(row)
@@ -670,7 +683,13 @@ class PostService:
 
         actual_total = self._reconcile_post_comment_count(post_id)
 
-        logger.info(f"Comment {row.comment_id} on post {post_id} by user {user_id}")
+        logger.info(
+            "comment_audit action=create post_id=%s comment_id=%s user_id=%s has_media=%s",
+            post_id,
+            row.comment_id,
+            user_id,
+            bool(media_url),
+        )
         return {
             "comment": self._comment_row_to_dict(row, profile_pic=pic),
             "comment_count": actual_total,
@@ -699,5 +718,10 @@ class PostService:
 
         actual_total = self._reconcile_post_comment_count(post_id) if post else 0
 
-        logger.info(f"Comment {comment_id} deleted on post {post_id} by user {user_id}")
+        logger.info(
+            "comment_audit action=delete post_id=%s comment_id=%s user_id=%s",
+            post_id,
+            comment_id,
+            user_id,
+        )
         return {"comment_count": actual_total}

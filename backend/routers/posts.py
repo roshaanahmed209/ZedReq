@@ -1,17 +1,26 @@
 """Posts Router - Post CRUD operations using ORM"""
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator, validator
 from typing import Optional
 import logging
 
 from dependencies.auth import get_current_user
-from dependencies.rate_limit import profile_rate_limit, write_rate_limit
+from dependencies.rate_limit import (
+    profile_rate_limit,
+    write_rate_limit,
+    comment_write_rate_limit,
+)
 from config.database_orm import get_db
 from services.post_service import PostService
 from tasks.post_context_tasks import run_post_like_context_update
 from utils.errors import NotFoundError, AuthorizationError
-from utils.api_security import sanitize_text_for_storage, validate_url_safe
+from utils.api_security import (
+    sanitize_text_for_storage,
+    validate_url_safe,
+    sanitize_comment_text,
+    validate_comment_image_url,
+)
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -73,13 +82,38 @@ class UpdatePostRequest(BaseModel):
 
 
 class CreateCommentRequest(BaseModel):
-    """Create post comment body"""
+    """
+    Create post comment: plain text and/or one HTTPS image URL.
 
-    content: str = Field(..., min_length=1, max_length=2000)
+    Auth: Bearer JWT (get_current_user). CSRF tokens are not required for
+    header-based JWT APIs (browser JS cannot set third-party Authorization
+    from simple form posts the same way as cookie sessions).
+    """
 
-    @validator("content")
-    def sanitize_content(cls, v):
-        return sanitize_text_for_storage(str(v), max_length=2000)
+    content: str = Field(default="", max_length=2000)
+    media_url: Optional[str] = None
+
+    @field_validator("content")
+    @classmethod
+    def sanitize_content(cls, v: str) -> str:
+        return sanitize_comment_text(str(v or ""), max_length=2000)
+
+    @field_validator("media_url")
+    @classmethod
+    def validate_media_url(cls, v):
+        if v is None or v == "":
+            return None
+        try:
+            return validate_comment_image_url(v)
+        except ValueError as e:
+            raise ValueError(str(e))
+
+    @model_validator(mode="after")
+    def require_text_or_image(self):
+        text_ok = bool((self.content or "").strip())
+        if not text_ok and not self.media_url:
+            raise ValueError("Add a message and/or an image")
+        return self
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -214,13 +248,16 @@ async def list_post_comments(
 async def create_post_comment(
     post_id: int,
     body: CreateCommentRequest,
-    current_user: dict = Depends(write_rate_limit),
+    current_user: dict = Depends(comment_write_rate_limit),
     post_service: PostService = Depends(get_post_service),
 ):
     """Add a comment to a post."""
     try:
         result = post_service.add_comment(
-            post_id, current_user["id"], body.content
+            post_id,
+            current_user["id"],
+            body.content or "",
+            media_url=body.media_url,
         )
         return {
             "comment": result["comment"],
@@ -244,7 +281,7 @@ async def create_post_comment(
 async def delete_post_comment(
     post_id: int,
     comment_id: int,
-    current_user: dict = Depends(write_rate_limit),
+    current_user: dict = Depends(comment_write_rate_limit),
     post_service: PostService = Depends(get_post_service),
 ):
     """Delete own comment on a post."""

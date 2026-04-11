@@ -290,7 +290,10 @@ export const postAPI = {
   getComments: (postId, params = {}) =>
     api.get(`/api/posts/${postId}/comments`, { params }),
   createComment: (postId, data) =>
-    api.post(`/api/posts/${postId}/comments`, { content: data.content }),
+    api.post(`/api/posts/${postId}/comments`, {
+      content: data.content ?? '',
+      ...(data.media_url ? { media_url: data.media_url } : {}),
+    }),
   deleteComment: (postId, commentId) =>
     api.delete(`/api/posts/${postId}/comments/${commentId}`),
 }

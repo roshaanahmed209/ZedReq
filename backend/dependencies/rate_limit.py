@@ -90,6 +90,8 @@ class RateLimiter:
 _profile_limiter = RateLimiter(requests_per_minute=120)  # More lenient for profile reads
 _write_limiter = RateLimiter(requests_per_minute=30)  # Stricter for write operations
 _analytics_limiter = RateLimiter(requests_per_minute=60)  # Moderate for analytics
+# Comments: extra per-user cap (spam / abuse) on top of write_rate_limit
+_comment_action_limiter = RateLimiter(requests_per_minute=20)
 
 
 def rate_limit(limiter: RateLimiter, error_message: str = "Rate limit exceeded"):
@@ -186,6 +188,35 @@ def write_rate_limit(current_user: dict = Depends(get_current_user)):
             }
         )
     
+    return current_user
+
+
+def comment_write_rate_limit(current_user: dict = Depends(write_rate_limit)):
+    """
+    Stricter per-user limit for comment create/delete (abuse prevention).
+    Stacks after write_rate_limit so both apply.
+    """
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    if not _comment_action_limiter.is_allowed(user_id):
+        remaining = _comment_action_limiter.get_remaining(user_id)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "message": "Too many comments. Please wait a minute and try again.",
+                "retry_after": 60,
+                "remaining": remaining,
+            },
+            headers={
+                "X-RateLimit-Limit": str(_comment_action_limiter.requests_per_minute),
+                "X-RateLimit-Remaining": str(remaining),
+                "Retry-After": "60",
+            },
+        )
     return current_user
 
 

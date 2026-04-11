@@ -1,9 +1,27 @@
+/**
+ * Comments: body is rendered as React text (never dangerouslySetInnerHTML) so stored
+ * plain text is XSS-mitigated with server-side sanitization.
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { postAPI } from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
+import { uploadImageToCloudinary } from '../utils/uploadImageToCloudinary'
+
+/** Compact picker — common smileys & gestures (Unicode emoji). */
+const COMMENT_EMOJIS = [
+  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊',
+  '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋',
+  '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫',
+  '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮',
+  '😯', '😦', '😧', '😮‍💨', '😰', '😥', '😢', '😭',
+  '😤', '😠', '😡', '🤬', '😱', '😨', '😰', '🤯',
+  '🤔', '🤨', '🧐', '😴', '🤤', '😪', '😵', '🥳',
+  '🥺', '🤝', '👍', '👎', '👏', '🙏', '💪', '✌️',
+  '🔥', '✨', '💯', '❤️', '💙', '💚', '⭐', '🎉',
+]
 
 const Root = styled.div`
   width: 100%;
@@ -130,6 +148,21 @@ const CText = styled.p`
   word-break: break-word;
 `
 
+const CMedia = styled.div`
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 220px;
+  border: 1px solid var(--border);
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+  }
+`
+
 const DeleteC = styled.button`
   background: none;
   border: none;
@@ -149,6 +182,125 @@ const Composer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+`
+
+const ComposerToolbar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+`
+
+const ToolbarSpacer = styled.div`
+  flex: 1;
+  min-width: 8px;
+`
+
+const ToolbarBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-white);
+  color: var(--text-lighter);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`
+
+const EmojiPopover = styled.div`
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: min(320px, 92vw);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+`
+
+const EmojiCell = styled.button`
+  border: none;
+  background: transparent;
+  font-size: 1.35em;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+`
+
+const ImagePreviewWrap = styled.div`
+  position: relative;
+  display: inline-block;
+  max-width: 200px;
+  margin-top: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 140px;
+    object-fit: cover;
+  }
+`
+
+const RemoveImageBtn = styled.button`
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.75);
+  }
+`
+
+const HiddenFileInput = styled.input`
+  display: none;
 `
 
 const TextArea = styled.textarea`
@@ -167,13 +319,6 @@ const TextArea = styled.textarea`
     outline: none;
     border-color: var(--primary);
   }
-`
-
-const SubmitRow = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  align-items: center;
 `
 
 const SubmitBtn = styled.button`
@@ -267,6 +412,13 @@ export default function PostComments({
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [draft, setDraft] = useState('')
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [commentImageUrl, setCommentImageUrl] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const emojiAnchorRef = useRef(null)
 
   const onCountChangeRef = useRef(onCountChange)
   onCountChangeRef.current = onCountChange
@@ -303,6 +455,63 @@ export default function PostComments({
     }
   }, [expanded, postId])
 
+  useEffect(() => {
+    if (!emojiOpen) return
+    const onDoc = (e) => {
+      const el = emojiAnchorRef.current
+      if (el && !el.contains(e.target)) setEmojiOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [emojiOpen])
+
+  const insertEmoji = (ch) => {
+    const ta = textareaRef.current
+    if (!ta) {
+      setDraft(d => d + ch)
+      return
+    }
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const v = draft
+    const next = v.slice(0, start) + ch + v.slice(end)
+    setDraft(next)
+    requestAnimationFrame(() => {
+      ta.focus()
+      const pos = start + ch.length
+      ta.setSelectionRange(pos, pos)
+    })
+    setEmojiOpen(false)
+  }
+
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const ok = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!ok.includes(file.type)) {
+      window.alert('Please choose a JPEG, PNG, GIF, or WebP image.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      window.alert('Image must be 10MB or smaller.')
+      return
+    }
+    setUploadingImage(true)
+    try {
+      const out = await uploadImageToCloudinary(file)
+      if (!out?.url) {
+        window.alert(
+          'Could not upload image. Check Cloudinary env (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET).'
+        )
+        return
+      }
+      setCommentImageUrl(out.url)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const bumpCount = useCallback(
     (n) => {
       setCount(n)
@@ -313,10 +522,13 @@ export default function PostComments({
 
   const submit = async () => {
     const text = draft.trim()
-    if (!text || !postId || submitting) return
+    if ((!text && !commentImageUrl) || !postId || submitting || uploadingImage) return
     setSubmitting(true)
     try {
-      const r = await postAPI.createComment(postId, { content: text })
+      const r = await postAPI.createComment(postId, {
+        content: draft,
+        media_url: commentImageUrl || undefined,
+      })
       const data = r.data
       const row = data.comment
       if (row) {
@@ -325,8 +537,13 @@ export default function PostComments({
       const next = data.comment_count ?? count + 1
       bumpCount(next)
       setDraft('')
+      setCommentImageUrl(null)
     } catch (e) {
-      window.alert(e.response?.data?.detail || e.message || 'Could not post comment.')
+      const d = e.response?.data?.detail
+      const msg = Array.isArray(d)
+        ? d.map(x => x.msg || x).join(' ')
+        : d || e.message || 'Could not post comment.'
+      window.alert(msg)
     } finally {
       setSubmitting(false)
     }
@@ -411,7 +628,12 @@ export default function PostComments({
                           </DeleteC>
                         )}
                       </CMeta>
-                      <CText>{c.body}</CText>
+                      {c.body ? <CText>{c.body}</CText> : null}
+                      {c.media_url ? (
+                        <CMedia>
+                          <img src={c.media_url} alt="" loading="lazy" />
+                        </CMedia>
+                      ) : null}
                     </CBody>
                   </CommentRow>
                 )
@@ -421,21 +643,92 @@ export default function PostComments({
 
           <Composer>
             <TextArea
+              ref={textareaRef}
               value={draft}
               onChange={e => setDraft(e.target.value)}
               placeholder="Write a comment…"
               maxLength={2000}
               rows={3}
             />
-            <SubmitRow>
+            {commentImageUrl ? (
+              <ImagePreviewWrap>
+                <img src={commentImageUrl} alt="Attachment preview" />
+                <RemoveImageBtn
+                  type="button"
+                  aria-label="Remove image"
+                  onClick={() => setCommentImageUrl(null)}
+                >
+                  ×
+                </RemoveImageBtn>
+              </ImagePreviewWrap>
+            ) : null}
+            <ComposerToolbar ref={emojiAnchorRef}>
+              <ToolbarBtn
+                type="button"
+                aria-label="Add emoji"
+                aria-expanded={emojiOpen}
+                onClick={() => setEmojiOpen(o => !o)}
+              >
+                <span style={{ fontSize: '1.25em', lineHeight: 1 }} aria-hidden>
+                  🙂
+                </span>
+              </ToolbarBtn>
+              <ToolbarBtn
+                type="button"
+                aria-label="Attach image"
+                disabled={uploadingImage}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingImage ? (
+                  <span style={{ fontSize: '0.7em' }}>…</span>
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                )}
+              </ToolbarBtn>
+              <HiddenFileInput
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={onPickImage}
+              />
+              {emojiOpen ? (
+                <EmojiPopover role="listbox" aria-label="Emoji picker">
+                  {COMMENT_EMOJIS.map((em, i) => (
+                    <EmojiCell
+                      key={`${em}-${i}`}
+                      type="button"
+                      onClick={() => insertEmoji(em)}
+                    >
+                      {em}
+                    </EmojiCell>
+                  ))}
+                </EmojiPopover>
+              ) : null}
+              <ToolbarSpacer aria-hidden />
               <SubmitBtn
                 type="button"
-                disabled={submitting || !draft.trim()}
+                disabled={
+                  submitting ||
+                  uploadingImage ||
+                  (!draft.trim() && !commentImageUrl)
+                }
                 onClick={submit}
               >
                 {submitting ? 'Posting…' : 'Comment'}
               </SubmitBtn>
-            </SubmitRow>
+            </ComposerToolbar>
           </Composer>
         </Panel>
       )}

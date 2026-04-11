@@ -129,7 +129,8 @@ CREATE TABLE IF NOT EXISTS post_comment (
     comment_id SERIAL PRIMARY KEY,
     post_id INTEGER NOT NULL REFERENCES post(post_id) ON DELETE CASCADE,
     uid INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
-    body TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    media_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 '''

@@ -6,7 +6,7 @@ import os
 import re
 import logging
 from typing import Optional, Dict, Any, List
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -333,6 +333,43 @@ def sanitize_text_for_storage(text: str, max_length: Optional[int] = None) -> st
         logger.debug(f"Text truncated to {max_length} characters")
     
     return text.strip()
+
+
+def sanitize_comment_text(text: str, max_length: int = 2000) -> str:
+    """
+    Plain-text comment storage: XSS-oriented hardening on top of sanitize_text_for_storage.
+
+    - Reuses control-char / script-stripping / length limits.
+    - Strips ``<`` and ``>`` so no HTML/markup can be stored (output is shown as React text).
+    """
+    s = sanitize_text_for_storage(str(text or ""), max_length=max_length)
+    return s.replace("<", "").replace(">", "").strip()
+
+
+def validate_comment_image_url(url: str) -> str:
+    """
+    Comment attachments: HTTPS only, host must match an allowed suffix (default: Cloudinary).
+
+    Override with env ``COMMENT_MEDIA_URL_HOST_SUFFIXES`` (comma-separated), e.g.
+    ``cloudinary.com,mycdn.example``.
+    """
+    u = validate_url_safe(url, allowed_schemes=["https"])
+    parsed = urlparse(u)
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise ValueError("Invalid image URL")
+
+    raw = os.environ.get("COMMENT_MEDIA_URL_HOST_SUFFIXES", "cloudinary.com")
+    suffixes = [s.strip().lower().lstrip(".") for s in raw.split(",") if s.strip()]
+    if not suffixes:
+        suffixes = ["cloudinary.com"]
+
+    allowed = any(host == suf or host.endswith("." + suf) for suf in suffixes)
+    if not allowed:
+        raise ValueError(
+            "Comment image URL host is not allowed for attachments."
+        )
+    return u
 
 
 def validate_url_safe(url: str, allowed_schemes: List[str] = None) -> str:

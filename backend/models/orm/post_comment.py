@@ -30,7 +30,8 @@ class PostComment(Base):
         nullable=False,
         index=True,
     )
-    body = Column(Text, nullable=False)
+    body = Column(Text, nullable=False, default="")
+    media_url = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     post: Mapped["Post"] = relationship(
