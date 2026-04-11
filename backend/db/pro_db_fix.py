@@ -1,9 +1,9 @@
 """
 Production one-off: align FKs so user deletes cascade from PostgreSQL.
 
-Fixes legacy databases where connection_requests / connections foreign keys
-to users(uid) were created without ON DELETE CASCADE. Safe to re-run: skips
-constraints that already match.
+Fixes legacy databases where connection_requests, connections, or notifications
+foreign keys to users(uid) were created without ON DELETE CASCADE. Safe to re-run:
+skips constraints that already match.
 
 Run on Render (or any host) from the backend root with env loaded, e.g.:
 
@@ -123,7 +123,7 @@ def _recreate_fk_cascade(
 
 def main() -> None:
     print("=" * 60)
-    print("pro_db_fix: connection_requests / connections FK → ON DELETE CASCADE")
+    print("pro_db_fix: connection_requests / connections / notifications.user_id FK → CASCADE")
     print("=" * 60)
 
     conn = _connect()
@@ -172,6 +172,14 @@ def main() -> None:
                     "users",
                     "uid",
                     "connections_followed_uid_fkey",
+                ),
+                _recreate_fk_cascade(
+                    cur,
+                    "notifications",
+                    "user_id",
+                    "users",
+                    "uid",
+                    "notifications_user_id_fkey",
                 ),
             ]
 

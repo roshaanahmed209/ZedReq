@@ -137,8 +137,15 @@ class UserDeletionService:
             )
             self.db.add(archive)
 
+            # user_id is NOT NULL — must remove rows for this user as recipient, not only
+            # rows where they appear as related_user_id (SQLAlchemy otherwise NULLs user_id).
             self.db.execute(
-                delete(Notification).where(Notification.related_user_id == user_id)
+                delete(Notification).where(
+                    or_(
+                        Notification.user_id == user_id,
+                        Notification.related_user_id == user_id,
+                    )
+                )
             )
             self.db.execute(
                 delete(ProfileAnalytics).where(ProfileAnalytics.viewer_id == user_id)
