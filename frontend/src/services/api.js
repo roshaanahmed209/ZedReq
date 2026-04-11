@@ -695,7 +695,6 @@ export class NotificationWebSocket {
   connect() {
     const token = tokenService.getAccessToken()
     if (!token) {
-      console.error('No token available for WebSocket connection')
       return
     }
 
@@ -723,50 +722,27 @@ export class NotificationWebSocket {
           if (data.type === 'notification' && this.onNotification) {
             this.onNotification(data)
           }
-        } catch (e) {
-          // Ignore non-JSON messages (legacy pong, etc.)
-          if (event.data !== 'pong') {
-            console.error('Failed to parse WebSocket message:', e)
-          }
+        } catch {
+          // non-JSON messages ignored (e.g. legacy pong)
         }
       }
       
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
-        console.error('WebSocket URL:', this.ws?.url || fullWsUrl.replace(/\/ws\/notifications.*/, '/ws/notifications'))
-        console.error('WebSocket readyState:', this.ws?.readyState)
-        console.error('WebSocket state:', this.ws ? {
-          CONNECTING: this.ws.CONNECTING,
-          OPEN: this.ws.OPEN,
-          CLOSING: this.ws.CLOSING,
-          CLOSED: this.ws.CLOSED,
-          current: this.ws.readyState
-        } : 'WebSocket is null')
         if (this.onError) this.onError(error)
       }
     } catch (error) {
-      console.error('Failed to create WebSocket:', error)
       if (this.onError) this.onError(error)
     }
     
     this.ws.onclose = (event) => {
-      console.log('WebSocket closed:', {
-        code: event.code,
-        reason: event.reason,
-        wasClean: event.wasClean,
-        url: this.ws?.url
-      })
-      
       // Don't reconnect if it was an authentication error (4001)
       if (event.code === 4001) {
-        console.error('WebSocket authentication failed - not reconnecting')
         return
       }
       
       // Attempt to reconnect if not intentionally closed
       if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++
-        console.log(`Attempting to reconnect WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
         setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts)
       }
     }
@@ -802,7 +778,6 @@ export class MessagingWebSocket {
   connect() {
     const token = tokenService.getAccessToken()
     if (!token) {
-      console.error('No token available for messaging WebSocket connection')
       return
     }
 
@@ -832,7 +807,6 @@ export class MessagingWebSocket {
           
           // Handle connection confirmation
           if (data.type === 'connected') {
-            console.log('Messaging WebSocket connected:', data.message)
             return
           }
           
@@ -853,43 +827,20 @@ export class MessagingWebSocket {
           
           // Handle errors
           if (data.type === 'error') {
-            // Only log detailed errors in development
-            if (import.meta.env.DEV) {
-              console.error('Messaging WebSocket error:', data.message)
-            }
             if (this.onError) {
               this.onError(new Error(data.message))
             }
           }
-        } catch (e) {
-          if (event.data !== 'pong') {
-            console.error('Failed to parse messaging WebSocket message:', e)
-          }
+        } catch {
+          // non-JSON messages ignored (e.g. pong)
         }
       }
       
-      this.ws.onerror = (error) => {
-        // Only log detailed errors in development to reduce console noise
-        if (import.meta.env.DEV) {
-          console.error('Messaging WebSocket error:', error)
-          console.error('WebSocket state:', this.ws?.readyState)
-        }
-        
-        // Don't call onError for connection failures - let onclose handle reconnection
-        // The onclose handler will manage reconnection logic
+      this.ws.onerror = () => {
+        // connection failures handled in onclose
       }
       
       this.ws.onclose = (event) => {
-        // Only log in development to reduce console noise
-        if (import.meta.env.DEV) {
-          console.log('Messaging WebSocket closed:', {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean,
-            url: this.ws?.url
-          })
-        }
-        
         // Clear ping interval
         if (this.pingInterval) {
           clearInterval(this.pingInterval)
@@ -898,9 +849,6 @@ export class MessagingWebSocket {
         
         // Don't reconnect if authentication error
         if (event.code === 4001) {
-          if (import.meta.env.DEV) {
-            console.error('Messaging WebSocket authentication failed - not reconnecting')
-          }
           if (this.onError) {
             this.onError(new Error('Authentication failed. Please log in again.'))
           }
@@ -909,18 +857,11 @@ export class MessagingWebSocket {
         
         // Don't reconnect if manually closed (code 1000)
         if (event.wasClean && event.code === 1000) {
-          if (import.meta.env.DEV) {
-            console.log('Messaging WebSocket closed normally')
-          }
           return
         }
         
         // Handle connection failures (code 1006) - server unreachable
         if (event.code === 1006) {
-          if (import.meta.env.DEV) {
-            console.warn('Messaging WebSocket connection failed. Server may be unreachable.')
-          }
-          // Still attempt reconnection but with longer delay
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++
             this.reconnectDelay = Math.min(this.reconnectDelay * 2, 60000) // Max 60s for server issues
@@ -932,22 +873,15 @@ export class MessagingWebSocket {
         // Attempt to reconnect for other errors
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++
-          if (import.meta.env.DEV) {
-            console.log(`Attempting to reconnect Messaging WebSocket (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
-          }
           setTimeout(() => this.connect(), this.reconnectDelay)
           this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000) // Exponential backoff, max 30s
         } else {
-          if (import.meta.env.DEV) {
-            console.error('Max reconnection attempts reached for Messaging WebSocket')
-          }
           if (this.onError) {
-            this.onError(new Error('Failed to connect to messaging server after multiple attempts. Please check if the backend is running.'))
+            this.onError(new Error('Failed to connect to messaging server after multiple attempts.'))
           }
         }
       }
     } catch (error) {
-      console.error('Failed to create Messaging WebSocket:', error)
       if (this.onError) this.onError(error)
     }
   }
@@ -979,8 +913,6 @@ export class MessagingWebSocket {
         content,
         message_type: messageType
       }))
-    } else {
-      console.error('WebSocket is not open. Cannot send message.')
     }
   }
   
@@ -992,8 +924,6 @@ export class MessagingWebSocket {
         recipient_id: recipientId,
         limit
       }))
-    } else {
-      console.error('WebSocket is not open. Cannot get messages.')
     }
   }
   
@@ -1005,8 +935,6 @@ export class MessagingWebSocket {
         recipient_id: recipientId,
         message_id: messageId
       }))
-    } else {
-      console.error('WebSocket is not open. Cannot mark as read.')
     }
   }
 }

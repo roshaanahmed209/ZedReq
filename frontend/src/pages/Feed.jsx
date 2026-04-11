@@ -1479,8 +1479,8 @@ const Feed = () => {
           id: userData.id || userData.uid
         })
       }
-    } catch (error) {
-      console.error('Error loading user:', error)
+    } catch {
+      // error surfaced on backend
     }
   }
 
@@ -1525,11 +1525,9 @@ const Feed = () => {
         // Direct array response
         setPosts(loadMore ? prev => [...prev, ...feedData] : feedData)
       } else {
-        console.log('Unexpected feed response format:', response.data)
         if (!loadMore) setPosts([])
       }
-    } catch (error) {
-      console.error('Error loading posts:', error)
+    } catch {
       if (!loadMore) setPosts([])
     } finally {
       setLoading(false)
@@ -1598,7 +1596,6 @@ const Feed = () => {
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
     
     if (!cloudName || !uploadPreset) {
-      console.error('Cloudinary config missing')
       return null
     }
     
@@ -1618,8 +1615,7 @@ const Feed = () => {
         url: data.secure_url,
         type: resourceType
       }
-    } catch (error) {
-      console.error('Cloudinary upload error:', error)
+    } catch {
       return null
     }
   }
@@ -1663,8 +1659,7 @@ const Feed = () => {
         setHasMore(true)
         loadPosts()
       }
-    } catch (error) {
-      console.error('Error creating post:', error)
+    } catch {
       alert('Failed to create post')
       setUploadingMedia(false)
     }
@@ -1703,8 +1698,7 @@ const Feed = () => {
           )
         )
       }
-    } catch (error) {
-      console.error('Error toggling like:', error)
+    } catch {
       setPosts(prev =>
         prev.map(post =>
           post.id === postId
@@ -1746,8 +1740,8 @@ const Feed = () => {
         full_name: u.full_name || u.name || u.username
       }))
       setSearchResults(users)
-    } catch (error) {
-      console.error('Error searching users:', error)
+    } catch {
+      // error surfaced on backend
     }
   }
 

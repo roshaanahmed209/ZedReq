@@ -78,14 +78,11 @@ export const AuthProvider = ({ children }) => {
     if (user && tokenService.isAuthenticated()) {
       const ws = new NotificationWebSocket(
         (notification) => {
-          // Handle incoming notification
-          console.log('Received notification:', notification)
           setUnreadNotifications(prev => prev + 1)
-          // You can dispatch a custom event or use a state manager here
           window.dispatchEvent(new CustomEvent('notification:received', { detail: notification }))
         },
-        (error) => {
-          console.error('WebSocket error:', error)
+        () => {
+          // error surfaced on backend
         }
       )
       ws.connect()

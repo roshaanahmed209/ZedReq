@@ -745,8 +745,8 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
           loadConversations()
         }
       },
-      (error) => {
-        console.error('Messaging WebSocket error:', error)
+      () => {
+        // error surfaced on backend
       }
     )
 
@@ -763,11 +763,9 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
     try {
       setLoadingContacts(true)
       const response = await messagingAPI.getConversations()
-      console.log('Conversations response:', response.data)
       
       if (response.data.success) {
         const convs = response.data.conversations || []
-        console.log('Loaded conversations:', convs)
         
         // Convert conversations to contacts format
         const contactsList = convs.map(conv => {
@@ -789,8 +787,8 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
         
         setConversations(contactsList)
       }
-    } catch (error) {
-      console.error('Error loading conversations:', error)
+    } catch {
+      // error surfaced on backend
     } finally {
       setLoading(false)
       setLoadingContacts(false)
@@ -849,8 +847,8 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
                 }))
               }
             })
-            .catch(error => {
-              console.error('Error loading messages:', error)
+            .catch(() => {
+              // error surfaced on backend
               // Set empty array if no messages exist
               setChatMessages(prev => ({
                 ...prev,
@@ -890,8 +888,7 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
             [contact.id]: formattedMessages
           }))
         }
-      } catch (error) {
-        console.error('Error loading messages:', error)
+      } catch {
         setChatMessages(prev => ({
           ...prev,
           [contact.id]: []
@@ -956,8 +953,7 @@ const Messages = ({ overlay = false, onClose = null, initialRecipientId = null, 
 
       // Reload conversations to update last message
       loadConversations()
-    } catch (error) {
-      console.error('Error sending message:', error)
+    } catch {
       // Remove temp message on error
       setChatMessages(prev => ({
         ...prev,

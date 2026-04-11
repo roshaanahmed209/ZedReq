@@ -132,45 +132,51 @@ async def get_current_user_profile(
     profile_service: ProfileService = Depends(get_profile_service)
 ):
     """Get current user's profile - matches /api/user from Flask"""
-    # Get full profile with description using ProfileService
-    profile = profile_service.get_user_profile(current_user["id"])
-    
-    if profile:
-        uid = profile.get("id") or profile.get("uid")
+    try:
+        profile = profile_service.get_user_profile(current_user["id"])
+
+        if profile:
+            uid = profile.get("id") or profile.get("uid")
+            return {
+                "id": uid,
+                "uid": uid,
+                "username": profile.get("username"),
+                "name": profile.get("name"),
+                "email": profile.get("email") or profile.get("user_email"),
+                "profile_pic": profile.get("profile_pic"),
+                "cover_pic": profile.get("cover_pic"),
+                "short_desc": profile.get("short_desc"),
+                "about": profile.get("about"),
+                "skills": profile.get("skills"),
+                "certificates": profile.get("certificates"),
+                "current_status": profile.get("current_status"),
+                "role": profile.get("role"),
+                "company": profile.get("company"),
+                "location": profile.get("location"),
+                "industry": profile.get("industry"),
+                "two_factor_enabled": profile.get("two_factor_enabled", False),
+                "interests": profile.get("interests"),
+                "created_at": profile.get("created_at")
+            }
+
+        # Fallback to basic info from token
         return {
-            "id": uid,
-            "uid": uid,
-            "username": profile.get("username"),
-            "name": profile.get("name"),
-            "email": profile.get("email") or profile.get("user_email"),
-            "profile_pic": profile.get("profile_pic"),
-            "cover_pic": profile.get("cover_pic"),
-            "short_desc": profile.get("short_desc"),
-            "about": profile.get("about"),
-            "skills": profile.get("skills"),
-            "certificates": profile.get("certificates"),
-            "current_status": profile.get("current_status"),
-            "role": profile.get("role"),
-            "company": profile.get("company"),
-            "location": profile.get("location"),
-            "industry": profile.get("industry"),
-            "two_factor_enabled": profile.get("two_factor_enabled", False),
-            "interests": profile.get("interests"),  # Include interests from runtime_context
-            "created_at": profile.get("created_at")
+            "uid": current_user["id"],
+            "username": current_user["username"],
+            "name": current_user["name"],
+            "email": current_user["email"],
+            "profile_pic": current_user.get("profile_pic"),
+            "cover_pic": current_user.get("cover_pic"),
+            "short_desc": current_user.get("short_desc"),
+            "about": current_user.get("about"),
+            "created_at": current_user.get("created_at")
         }
-    
-    # Fallback to basic info from token
-    return {
-        "uid": current_user["id"],
-        "username": current_user["username"],
-        "name": current_user["name"],
-        "email": current_user["email"],
-        "profile_pic": current_user.get("profile_pic"),
-        "cover_pic": current_user.get("cover_pic"),
-        "short_desc": current_user.get("short_desc"),
-        "about": current_user.get("about"),
-        "created_at": current_user.get("created_at")
-    }
+    except Exception as e:
+        logger.error("Error loading user profile for user %s: %s", current_user.get("id"), e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load user profile"
+        )
 
 
 @router.get("/search")
@@ -186,19 +192,26 @@ async def search_all(
     
     Returns results from all types by default, or filter by type parameter.
     """
-    # Determine search types
-    if search_type and search_type.lower() in ['users', 'jobs', 'posts']:
-        search_types = [search_type.lower()]
-    else:
-        search_types = ['users', 'jobs', 'posts']
-    
-    # Perform search
-    results = search_service.search_all(
-        query=q,
-        current_user_id=current_user["id"],
-        limit_per_type=limit,
-        search_types=search_types
-    )
+    try:
+      # Determine search types
+      if search_type and search_type.lower() in ['users', 'jobs', 'posts']:
+          search_types = [search_type.lower()]
+      else:
+          search_types = ['users', 'jobs', 'posts']
+      
+      # Perform search
+      results = search_service.search_all(
+          query=q,
+          current_user_id=current_user["id"],
+          limit_per_type=limit,
+          search_types=search_types
+      )
+    except Exception as e:
+        logger.error("Error searching users for query '%s' by user %s: %s", q, current_user.get("id"), e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Search failed"
+        )
     
     # Format response
     response = {

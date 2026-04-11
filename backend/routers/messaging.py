@@ -278,6 +278,11 @@ async def get_conversations(
             }
             enriched_conversations.append(enriched_conv)
         
+        logger.info(
+            "Loaded %d conversation(s) for user %s",
+            len(enriched_conversations),
+            current_user["id"],
+        )
         return {
             "success": True,
             "conversations": enriched_conversations
