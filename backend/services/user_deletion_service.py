@@ -7,11 +7,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import delete, text
+from sqlalchemy import delete, or_, text
 from sqlalchemy.orm import Session
 
 from models.orm import (
     User,
+    Connection,
+    ConnectionRequest,
     Description,
     Notification,
     ProfileAnalytics,
@@ -145,6 +147,24 @@ class UserDeletionService:
             # automatic SET NULL before CASCADE would fail without this.
             self.db.execute(
                 delete(UsersContext).where(UsersContext.user_id == user_id)
+            )
+            # connection_requests / connections: User backrefs make SQLAlchemy UPDATE
+            # child FKs to NULL before delete, which violates NOT NULL on these columns.
+            self.db.execute(
+                delete(ConnectionRequest).where(
+                    or_(
+                        ConnectionRequest.sender_id == user_id,
+                        ConnectionRequest.receiver_id == user_id,
+                    )
+                )
+            )
+            self.db.execute(
+                delete(Connection).where(
+                    or_(
+                        Connection.follower_uid == user_id,
+                        Connection.followed_uid == user_id,
+                    )
+                )
             )
 
             if desc_id:

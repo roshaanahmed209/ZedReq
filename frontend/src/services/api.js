@@ -287,6 +287,12 @@ export const postAPI = {
   deletePost: (postId) => api.delete(`/api/posts/${postId}`),
   toggleLike: (postId) => api.post(`/api/posts/${postId}/like`),
   getLikes: (postId) => api.get(`/api/posts/${postId}/likes`),
+  getComments: (postId, params = {}) =>
+    api.get(`/api/posts/${postId}/comments`, { params }),
+  createComment: (postId, data) =>
+    api.post(`/api/posts/${postId}/comments`, { content: data.content }),
+  deleteComment: (postId, commentId) =>
+    api.delete(`/api/posts/${postId}/comments/${commentId}`),
 }
 
 // Feed API methods

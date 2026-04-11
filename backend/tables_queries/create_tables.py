@@ -124,6 +124,16 @@ CREATE TABLE IF NOT EXISTS likes (
 );
 '''
 
+POST_COMMENT_TABLE = '''
+CREATE TABLE IF NOT EXISTS post_comment (
+    comment_id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES post(post_id) ON DELETE CASCADE,
+    uid INTEGER NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+'''
+
 CONNECTIONS_TABLE = '''
 CREATE TABLE IF NOT EXISTS connections (
     connection_id SERIAL PRIMARY KEY,
@@ -726,6 +736,10 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id)',
     'CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(uid)',
     'CREATE INDEX IF NOT EXISTS idx_likes_post_user ON likes(post_id, uid)',
+
+    # Post comments
+    'CREATE INDEX IF NOT EXISTS idx_post_comment_post ON post_comment(post_id)',
+    'CREATE INDEX IF NOT EXISTS idx_post_comment_post_created ON post_comment(post_id, created_at DESC)',
     
     # Connections indexes
     'CREATE INDEX IF NOT EXISTS idx_connections_follower ON connections(follower_uid)',
@@ -884,6 +898,7 @@ TABLES_IN_ORDER = [
     ("post", POST_TABLE),
     ("job", JOB_TABLE),
     ("likes", LIKES_TABLE),
+    ("post_comment", POST_COMMENT_TABLE),
     ("connections", CONNECTIONS_TABLE),
     ("network", NETWORK_TABLE),
     ("connection_requests", CONNECTION_REQUESTS_TABLE),

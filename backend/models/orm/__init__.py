@@ -5,6 +5,7 @@ from .connection import Connection
 from .connection_request import ConnectionRequest
 from .notification import Notification
 from .post import Post
+from .post_comment import PostComment
 from .like import Like
 from .description import Description
 from .job_posting import JobPosting
@@ -56,6 +57,7 @@ __all__ = [
     'ConnectionRequest',
     'Notification',
     'Post',
+    'PostComment',
     'Like',
     'Description',
     'JobPosting',

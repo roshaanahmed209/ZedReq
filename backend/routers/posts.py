@@ -72,6 +72,16 @@ class UpdatePostRequest(BaseModel):
         populate_by_name = True
 
 
+class CreateCommentRequest(BaseModel):
+    """Create post comment body"""
+
+    content: str = Field(..., min_length=1, max_length=2000)
+
+    @validator("content")
+    def sanitize_content(cls, v):
+        return sanitize_text_for_storage(str(v), max_length=2000)
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_post(
     post_data: CreatePostRequest,
@@ -165,6 +175,102 @@ async def get_user_featured_posts(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch featured posts"
+        )
+
+
+@router.get("/{post_id}/comments")
+async def list_post_comments(
+    post_id: int,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: dict = Depends(profile_rate_limit),
+    post_service: PostService = Depends(get_post_service),
+):
+    """List comments on a post (newest first)."""
+    try:
+        comments, total = post_service.list_comments(
+            post_id, limit=limit, offset=offset
+        )
+        return {
+            "comments": comments,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found",
+        )
+    except Exception as e:
+        logger.error(f"Error listing comments: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch comments",
+        )
+
+
+@router.post("/{post_id}/comments", status_code=status.HTTP_201_CREATED)
+async def create_post_comment(
+    post_id: int,
+    body: CreateCommentRequest,
+    current_user: dict = Depends(write_rate_limit),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Add a comment to a post."""
+    try:
+        result = post_service.add_comment(
+            post_id, current_user["id"], body.content
+        )
+        return {
+            "comment": result["comment"],
+            "comment_count": result["comment_count"],
+            "message": "Comment added",
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found",
+        )
+    except Exception as e:
+        logger.error(f"Error adding comment: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add comment",
+        )
+
+
+@router.delete("/{post_id}/comments/{comment_id}")
+async def delete_post_comment(
+    post_id: int,
+    comment_id: int,
+    current_user: dict = Depends(write_rate_limit),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Delete own comment on a post."""
+    try:
+        result = post_service.delete_comment(
+            post_id, comment_id, current_user["id"]
+        )
+        return {
+            "comment_count": result["comment_count"],
+            "message": "Comment deleted",
+        }
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found",
+        )
+    except AuthorizationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e) or "Forbidden",
+        )
+    except Exception as e:
+        logger.error(f"Error deleting comment: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete comment",
         )
 
 

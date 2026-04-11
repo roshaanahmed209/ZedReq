@@ -316,6 +316,7 @@ class FeedService:
         # Batch query: Get all like statuses in a single query
         post_ids = [post['post_id'] for post in posts]
         liked_post_ids = self._get_liked_post_ids_batch(post_ids, user_id)
+        comment_counts = self.post_service.get_comment_counts_by_post_ids(post_ids)
         
         enriched = []
         for post in posts:
@@ -339,7 +340,7 @@ class FeedService:
                 'full_name': post.get('name', ''),
                 'profile_pic': post.get('profile_pic'),
                 'like_count': post.get('likes', 0),
-                'comment_count': post.get('comments', 0),
+                'comment_count': comment_counts.get(post['post_id'], 0),
                 'is_liked': is_liked
             })
         

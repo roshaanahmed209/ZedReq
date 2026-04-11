@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import PostComments from '../components/PostComments'
+import SharePostButton from '../components/SharePostButton'
 import { postAPI } from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
 
@@ -151,12 +153,51 @@ const PostMedia = styled.div`
 `
 
 const Actions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px 20px;
+  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+`
+
+const ActionsStart = styled.div`
+  justify-self: start;
+`
+
+const ActionsCenter = styled.div`
+  justify-self: center;
+`
+
+const ActionsEnd = styled.div`
+  justify-self: end;
+`
+
+const CommentStat = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-lighter);
+  font-size: 0.9em;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-variant-numeric: tabular-nums;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 769px) {
+    min-height: 40px;
+    padding: 6px 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 `
 
 const ActionBtn = styled.button`
@@ -198,11 +239,6 @@ const ActionBtn = styled.button`
       height: 20px;
     }
   }
-`
-
-const MetaStat = styled.span`
-  font-size: 0.9em;
-  color: var(--text-lighter);
 `
 
 const LikeCountText = styled.span`
@@ -371,20 +407,41 @@ export default function PostDetail() {
             )}
 
             <Actions>
-              <ActionBtn
-                type="button"
-                aria-label={post.is_liked ? 'Unlike' : 'Like'}
-                $active={post.is_liked}
-                onClick={handleLike}
-                disabled={likeBusy}
-              >
-                <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                </svg>
-                <LikeCountText>{post.like_count ?? 0}</LikeCountText>
-              </ActionBtn>
-              <MetaStat>{post.comment_count ?? 0} comments</MetaStat>
+              <ActionsStart>
+                <ActionBtn
+                  type="button"
+                  aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                  $active={post.is_liked}
+                  onClick={handleLike}
+                  disabled={likeBusy}
+                >
+                  <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                  </svg>
+                  <LikeCountText>{post.like_count ?? 0}</LikeCountText>
+                </ActionBtn>
+              </ActionsStart>
+              <ActionsCenter>
+                <CommentStat role="status" aria-label={`${post.comment_count ?? 0} comments`}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <LikeCountText>{post.comment_count ?? 0}</LikeCountText>
+                </CommentStat>
+              </ActionsCenter>
+              <ActionsEnd>
+                <SharePostButton postId={post.id} />
+              </ActionsEnd>
             </Actions>
+            <PostComments
+              postId={post.id}
+              initialCount={post.comment_count ?? 0}
+              defaultExpanded
+              flush
+              onCountChange={(n) =>
+                setPost(prev => (prev ? { ...prev, comment_count: n } : prev))
+              }
+            />
           </PostCard>
         ) : null}
       </Main>

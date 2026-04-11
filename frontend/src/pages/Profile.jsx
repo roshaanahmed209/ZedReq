@@ -7,6 +7,8 @@ import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, networkAPI } from 
 import api from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
 import Navbar from '../components/Navbar'
+import PostComments from '../components/PostComments'
+import SharePostButton from '../components/SharePostButton'
 import '../css/pages/Profile.css'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1067,10 +1069,30 @@ const PostMedia = styled.div`
 
 const PostFooter = styled.div`
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 0;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+`
+
+const PostActionBar = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+`
+
+const PostBarStart = styled.div`
+  justify-self: start;
+`
+
+const PostBarCenter = styled.div`
+  justify-self: center;
+`
+
+const PostBarEnd = styled.div`
+  justify-self: end;
 `
 
 const LikeBtn = styled.button`
@@ -1404,6 +1426,7 @@ function Profile() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const likingPostIdsRef = useRef(new Set())
   const [deletingPostId, setDeletingPostId] = useState(null)
+  const [commentsOpenByPost, setCommentsOpenByPost] = useState({})
 
   // Edit modal states
   const [editModal, setEditModal] = useState(null) // 'description', 'about', 'skills', 'experience', 'education', 'projects', 'recommendations'
@@ -2463,17 +2486,70 @@ function Profile() {
                     </PostMedia>
                   )}
                   <PostFooter>
-                    <LikeBtn
-                      type="button"
-                      aria-label={post.is_liked ? 'Unlike' : 'Like'}
-                      $liked={post.is_liked}
-                      onClick={() => handleLike(pid)}
-                    >
-                      <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                      </svg>
-                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{post.like_count || post.likes || 0}</span>
-                    </LikeBtn>
+                    <PostActionBar>
+                      <PostBarStart>
+                        <LikeBtn
+                          type="button"
+                          aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                          $liked={post.is_liked}
+                          onClick={() => handleLike(pid)}
+                        >
+                          <svg viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                          </svg>
+                          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{post.like_count || post.likes || 0}</span>
+                        </LikeBtn>
+                      </PostBarStart>
+                      <PostBarCenter>
+                        <LikeBtn
+                          type="button"
+                          aria-label={
+                            commentsOpenByPost[pid]
+                              ? 'Hide comments'
+                              : 'Show comments'
+                          }
+                          aria-expanded={!!commentsOpenByPost[pid]}
+                          $liked={false}
+                          onClick={() =>
+                            setCommentsOpenByPost(prev => ({
+                              ...prev,
+                              [pid]: !prev[pid],
+                            }))
+                          }
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                          </svg>
+                          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {post.comment_count ?? post.comments ?? 0}
+                          </span>
+                        </LikeBtn>
+                      </PostBarCenter>
+                      <PostBarEnd>
+                        <SharePostButton postId={pid} />
+                      </PostBarEnd>
+                    </PostActionBar>
+                    <PostComments
+                      postId={pid}
+                      initialCount={post.comment_count ?? post.comments ?? 0}
+                      defaultExpanded={false}
+                      hideToggle
+                      expanded={!!commentsOpenByPost[pid]}
+                      onExpandedChange={v =>
+                        setCommentsOpenByPost(prev => ({ ...prev, [pid]: v }))
+                      }
+                      flush
+                      onCountChange={n => {
+                        setPosts(prev =>
+                          prev.map(p => {
+                            const id = p.id || p.post_id
+                            return id === pid
+                              ? { ...p, comment_count: n, comments: n }
+                              : p
+                          })
+                        )
+                      }}
+                    />
                   </PostFooter>
                 </PostCard>
               )

@@ -1,9 +1,9 @@
 """Post Service - Using SQLAlchemy ORM"""
-from typing import List, Dict, Any, Optional
-from sqlalchemy import and_, desc
+from typing import List, Dict, Any, Optional, Tuple
+from sqlalchemy import and_, desc, func
 from sqlalchemy.orm import Session, joinedload
 
-from models.orm import Post, Like, User, Description
+from models.orm import Post, PostComment, Like, User, Description
 from utils.errors import NotFoundError, AuthorizationError
 from utils.logger import setup_logger
 
@@ -15,6 +15,34 @@ class PostService:
     
     def __init__(self, db: Session):
         self.db = db
+
+    def get_comment_counts_by_post_ids(self, post_ids: List[int]) -> Dict[int, int]:
+        """Actual comment row counts from post_comment (not the denormalized post.comments column)."""
+        if not post_ids:
+            return {}
+        unique = list(dict.fromkeys(int(x) for x in post_ids))
+        rows = (
+            self.db.query(PostComment.post_id, func.count(PostComment.comment_id))
+            .filter(PostComment.post_id.in_(unique))
+            .group_by(PostComment.post_id)
+            .all()
+        )
+        by_id = {int(r[0]): int(r[1]) for r in rows}
+        return {pid: by_id.get(pid, 0) for pid in unique}
+
+    def _reconcile_post_comment_count(self, post_id: int) -> int:
+        """Set post.comments to match COUNT(post_comment) for this post."""
+        n = (
+            self.db.query(func.count(PostComment.comment_id))
+            .filter(PostComment.post_id == post_id)
+            .scalar()
+        )
+        n = int(n or 0)
+        post = self.db.query(Post).filter(Post.post_id == post_id).first()
+        if post:
+            post.comments = n
+            self.db.commit()
+        return n
     
     def create_post(
         self, 
@@ -85,6 +113,9 @@ class PostService:
         is_liked = False
         if user_id:
             is_liked = self._has_liked(post_id, user_id)
+
+        comment_counts = self.get_comment_counts_by_post_ids([post_id])
+        actual_comments = comment_counts.get(post_id, 0)
         
         return {
             'id': post.post_id,
@@ -96,7 +127,7 @@ class PostService:
             'media_url': post.media_url,
             'media_type': post.media_type,
             'likes': post.likes,
-            'comments': post.comments,
+            'comments': actual_comments,
             'created_at': post.created_at.isoformat() if post.created_at else None,
             'username': post.user.username if post.user else None,
             'name': post.user.name if post.user else None,
@@ -125,6 +156,8 @@ class PostService:
                 .offset(offset)
                 .all()
             )
+
+            cc_map = self.get_comment_counts_by_post_ids([p.post_id for p in posts])
             
             result = []
             for post in posts:
@@ -143,6 +176,8 @@ class PostService:
                     )
                     if user_description:
                         profile_pic = user_description.profile_pic
+
+                cct = cc_map.get(post.post_id, 0)
                 
                 result.append({
                     'id': post.post_id,
@@ -158,8 +193,8 @@ class PostService:
                     'profile_pic': profile_pic,
                     'like_count': post.likes,
                     'likes': post.likes,
-                    'comment_count': post.comments,
-                    'comments': post.comments,
+                    'comment_count': cct,
+                    'comments': cct,
                     'is_liked': is_liked
                 })
             return result
@@ -204,6 +239,8 @@ class PostService:
                 .offset(offset)
                 .all()
             )
+
+            cc_map = self.get_comment_counts_by_post_ids([p.post_id for p in posts])
             
             result = []
             for post in posts:
@@ -212,6 +249,8 @@ class PostService:
                     if not post:
                         logger.warning(f"Empty post object encountered")
                         continue
+
+                    cct = cc_map.get(post.post_id, 0)
                     
                     # Check if current user has liked
                     is_liked = False
@@ -276,8 +315,8 @@ class PostService:
                         'profile_pic': profile_pic,
                         'like_count': getattr(post, 'likes', 0) or 0,
                         'likes': getattr(post, 'likes', 0) or 0,
-                        'comment_count': getattr(post, 'comments', 0) or 0,
-                        'comments': getattr(post, 'comments', 0) or 0,
+                        'comment_count': cct,
+                        'comments': cct,
                         'is_liked': is_liked
                     })
                 except Exception as e:
@@ -326,10 +365,13 @@ class PostService:
                 .offset(offset)
                 .all()
             )
+
+            cc_map = self.get_comment_counts_by_post_ids([p.post_id for p in posts])
             
             result = []
             for post in posts:
                 try:
+                    cct = cc_map.get(post.post_id, 0)
                     # Check if current user has liked
                     is_liked = False
                     if current_user_id:
@@ -368,8 +410,8 @@ class PostService:
                         'profile_pic': profile_pic,
                         'like_count': post.likes or 0,
                         'likes': post.likes or 0,
-                        'comment_count': post.comments or 0,
-                        'comments': post.comments or 0,
+                        'comment_count': cct,
+                        'comments': cct,
                         'is_liked': is_liked
                     })
                 except Exception as e:
@@ -536,3 +578,126 @@ class PostService:
             .first()
         )
         return like is not None
+
+    def _profile_pic_for_desc_id(self, desc_id: Optional[int]) -> Optional[str]:
+        if not desc_id:
+            return None
+        row = self.db.query(Description).filter(Description.desc_id == desc_id).first()
+        return row.profile_pic if row else None
+
+    def _comment_row_to_dict(self, c: PostComment, profile_pic: Optional[str] = None) -> Dict[str, Any]:
+        if profile_pic is None and c.user and c.user.description_id:
+            profile_pic = self._profile_pic_for_desc_id(c.user.description_id)
+        return {
+            "id": c.comment_id,
+            "comment_id": c.comment_id,
+            "user_id": c.uid,
+            "body": c.body,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "username": c.user.username if c.user else None,
+            "full_name": c.user.name if c.user else None,
+            "profile_pic": profile_pic,
+        }
+
+    def list_comments(
+        self, post_id: int, limit: int = 50, offset: int = 0
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """List comments for a post (newest first). Raises NotFoundError if post missing or deleted."""
+        post = (
+            self.db.query(Post)
+            .filter(and_(Post.post_id == post_id, Post.not_deleted()))
+            .first()
+        )
+        if not post:
+            raise NotFoundError("Post")
+
+        total = (
+            self.db.query(func.count(PostComment.comment_id))
+            .filter(PostComment.post_id == post_id)
+            .scalar()
+        ) or 0
+
+        rows = (
+            self.db.query(PostComment)
+            .options(joinedload(PostComment.user))
+            .filter(PostComment.post_id == post_id)
+            .order_by(desc(PostComment.created_at))
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        desc_ids = list(
+            {c.user.description_id for c in rows if c.user and c.user.description_id}
+        )
+        pic_by_desc: Dict[int, Optional[str]] = {}
+        if desc_ids:
+            for d in self.db.query(Description).filter(Description.desc_id.in_(desc_ids)).all():
+                pic_by_desc[d.desc_id] = d.profile_pic
+
+        out: List[Dict[str, Any]] = []
+        for c in rows:
+            did = c.user.description_id if c.user else None
+            pic = pic_by_desc.get(did) if did else None
+            out.append(self._comment_row_to_dict(c, profile_pic=pic))
+
+        return out, int(total)
+
+    def add_comment(self, post_id: int, user_id: int, body: str) -> Dict[str, Any]:
+        """Add a comment; increments post.comments counter."""
+        post = (
+            self.db.query(Post)
+            .filter(and_(Post.post_id == post_id, Post.not_deleted()))
+            .first()
+        )
+        if not post:
+            raise NotFoundError("Post")
+
+        row = PostComment(post_id=post_id, uid=user_id, body=body)
+        self.db.add(row)
+        self.db.commit()
+        self.db.refresh(row)
+
+        row = (
+            self.db.query(PostComment)
+            .options(joinedload(PostComment.user))
+            .filter(PostComment.comment_id == row.comment_id)
+            .first()
+        )
+        pic = None
+        if row and row.user and row.user.description_id:
+            pic = self._profile_pic_for_desc_id(row.user.description_id)
+
+        actual_total = self._reconcile_post_comment_count(post_id)
+
+        logger.info(f"Comment {row.comment_id} on post {post_id} by user {user_id}")
+        return {
+            "comment": self._comment_row_to_dict(row, profile_pic=pic),
+            "comment_count": actual_total,
+        }
+
+    def delete_comment(self, post_id: int, comment_id: int, user_id: int) -> Dict[str, Any]:
+        """Delete own comment; decrements post.comments."""
+        c = (
+            self.db.query(PostComment)
+            .filter(
+                and_(
+                    PostComment.comment_id == comment_id,
+                    PostComment.post_id == post_id,
+                )
+            )
+            .first()
+        )
+        if not c:
+            raise NotFoundError("Comment")
+        if c.uid != user_id:
+            raise AuthorizationError("You can only delete your own comments")
+
+        post = self.db.query(Post).filter(Post.post_id == post_id).first()
+        self.db.delete(c)
+        self.db.commit()
+
+        actual_total = self._reconcile_post_comment_count(post_id) if post else 0
+
+        logger.info(f"Comment {comment_id} deleted on post {post_id} by user {user_id}")
+        return {"comment_count": actual_total}

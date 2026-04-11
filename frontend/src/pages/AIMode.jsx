@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { nemzAPI, vecAPI } from '../services/api'
 import Navbar from '../components/Navbar'
+import SharePostButton from '../components/SharePostButton'
 import JobDetailSidePanel from '../components/JobDetailSidePanel'
 import { AiFormattedChatContent } from '../utils/aiChatFormat'
 import '../css/pages/AIMode.css'
@@ -1706,6 +1707,23 @@ const AIMode = () => {
                                 {post.comments} comments
                               </JobMetaItem>
                             </PostMeta>
+                            {post.post_id != null && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'flex-end',
+                                  marginTop: 10,
+                                }}
+                                onClick={e => e.stopPropagation()}
+                                onKeyDown={e => e.stopPropagation()}
+                                role="presentation"
+                              >
+                                <SharePostButton
+                                  postId={post.post_id}
+                                  variant="iconOnly"
+                                />
+                              </div>
+                            )}
                             <MatchScore>{post.matchScore}% Match</MatchScore>
                           </PostCard>
                         )
