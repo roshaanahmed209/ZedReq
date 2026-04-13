@@ -484,6 +484,113 @@ const LegalDocumentScroll = styled.div`
   color: var(--text);
 `
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+`
+
+const ModalBox = styled.div`
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+`
+
+const ModalTitle = styled.h3`
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px 0;
+`
+
+const ModalSubtitle = styled.p`
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0 0 22px 0;
+`
+
+const ModalLabel = styled.label`
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+`
+
+const ModalInput = styled.input`
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-light);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+  &:focus {
+    border-color: var(--primary);
+  }
+`
+
+const ModalSelect = styled.select`
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-light);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+  &:focus {
+    border-color: var(--primary);
+  }
+`
+
+const ModalTextarea = styled.textarea`
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-light);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+  box-sizing: border-box;
+  &:focus {
+    border-color: var(--primary);
+  }
+`
+
+const ModalFieldGroup = styled.div`
+  margin-bottom: 16px;
+`
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 22px;
+`
+
+const ModalSuccessBox = styled.div`
+  text-align: center;
+  padding: 20px 0 8px;
+`
+
 const Settings = () => {
   const navigate = useNavigate()
   const { user, updateUser } = useAuth()
@@ -493,6 +600,46 @@ const Settings = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Contact modals
+  const [openModal, setOpenModal] = useState(null) // null | 'help' | 'enterprise'
+  const [modalLoading, setModalLoading] = useState(false)
+  const [modalError, setModalError] = useState('')
+  const [modalSuccess, setModalSuccess] = useState(false)
+  const [helpCategory, setHelpCategory] = useState('Technical Issue')
+  const [helpSubject, setHelpSubject] = useState('')
+  const [helpMessage, setHelpMessage] = useState('')
+  const [entCompany, setEntCompany] = useState('')
+  const [entRole, setEntRole] = useState('')
+  const [entSubject, setEntSubject] = useState('')
+  const [entMessage, setEntMessage] = useState('')
+
+  const closeModal = () => {
+    setOpenModal(null)
+    setModalError('')
+    setModalSuccess(false)
+    setHelpCategory('Technical Issue')
+    setHelpSubject('')
+    setHelpMessage('')
+    setEntCompany('')
+    setEntRole('')
+    setEntSubject('')
+    setEntMessage('')
+  }
+
+  const submitContactForm = async (submissionType, subject, message, extra) => {
+    setModalLoading(true)
+    setModalError('')
+    try {
+      await api.post('/api/contact/submit', { submission_type: submissionType, subject, message, extra })
+      setModalSuccess(true)
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || 'Something went wrong. Please try again.'
+      setModalError(typeof msg === 'string' ? msg : 'Something went wrong. Please try again.')
+    } finally {
+      setModalLoading(false)
+    }
+  }
 
   // Profile settings
   const [name, setName] = useState(user?.name || '')
@@ -1887,6 +2034,132 @@ const Settings = () => {
           </>
         )
 
+      case 'contact':
+        return (
+          <>
+            <SectionTitle>Contact Us</SectionTitle>
+            <FormGroup>
+              <div style={{ marginBottom: '24px', color: 'var(--text)', lineHeight: '1.6' }}>
+                Have a question, feedback, or need help with your account? We'd love to hear from you.
+                Our team typically responds within a few business days.
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Email Support — opens Gmail compose */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '14px',
+                  padding: '18px 20px',
+                  background: theme === 'dark' ? 'rgba(21, 133, 161, 0.08)' : 'rgba(21, 133, 161, 0.05)',
+                  border: `1px solid ${theme === 'dark' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: '10px',
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"
+                    style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }}>
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <div>
+                    <div style={{ fontWeight: '600', color: 'var(--text)', marginBottom: '4px' }}>
+                      Email Support
+                    </div>
+                    <div style={{ color: 'var(--text-light)', fontSize: '0.875em', marginBottom: '10px' }}>
+                      For account issues, billing questions, and general inquiries.
+                    </div>
+                    <a
+                      href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(ZEDREQ_EMAIL)}&su=${encodeURIComponent('Support Request')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary)', fontWeight: '500', textDecoration: 'none', fontSize: '0.95em' }}
+                    >
+                      {ZEDREQ_EMAIL}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Help Center — opens submission modal */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '14px',
+                  padding: '18px 20px',
+                  background: theme === 'dark' ? 'rgba(21, 133, 161, 0.08)' : 'rgba(21, 133, 161, 0.05)',
+                  border: `1px solid ${theme === 'dark' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: '10px',
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"
+                    style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }}>
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <div>
+                    <div style={{ fontWeight: '600', color: 'var(--text)', marginBottom: '4px' }}>
+                      Help Center
+                    </div>
+                    <div style={{ color: 'var(--text-light)', fontSize: '0.875em', marginBottom: '10px' }}>
+                      Submit a support ticket and our team will get back to you.
+                    </div>
+                    <button
+                      onClick={() => setOpenModal('help')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: 'var(--primary)',
+                        fontWeight: '500',
+                        fontSize: '0.95em',
+                      }}
+                    >
+                      Submit a request →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Enterprise & Partnerships — opens submission modal */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '14px',
+                  padding: '18px 20px',
+                  background: theme === 'dark' ? 'rgba(21, 133, 161, 0.08)' : 'rgba(21, 133, 161, 0.05)',
+                  border: `1px solid ${theme === 'dark' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: '10px',
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"
+                    style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <div>
+                    <div style={{ fontWeight: '600', color: 'var(--text)', marginBottom: '4px' }}>
+                      Enterprise &amp; Partnerships
+                    </div>
+                    <div style={{ color: 'var(--text-light)', fontSize: '0.875em', marginBottom: '10px' }}>
+                      Interested in a custom plan or partnership opportunity?
+                    </div>
+                    <button
+                      onClick={() => setOpenModal('enterprise')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: 'var(--primary)',
+                        fontWeight: '500',
+                        fontSize: '0.95em',
+                      }}
+                    >
+                      Get in touch →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </FormGroup>
+          </>
+        )
+
       default:
         return null
     }
@@ -1983,6 +2256,17 @@ const Settings = () => {
             </svg>
             Terms of Use
           </SidePanelSection>
+
+          <SidePanelSection
+            className={activeSection === 'contact' ? 'active' : ''}
+            onClick={() => setActiveSection('contact')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            Contact Us
+          </SidePanelSection>
         </SidePanel>
 
         <MainContent>
@@ -1991,6 +2275,181 @@ const Settings = () => {
           {renderContent()}
         </MainContent>
       </SettingsContainer>
+
+      {/* Help Center Modal */}
+      {openModal === 'help' && (
+        <ModalOverlay onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
+          <ModalBox>
+            <ModalTitle>Submit a Support Request</ModalTitle>
+            <ModalSubtitle>Describe your issue and we'll get back to you within a few business days.</ModalSubtitle>
+
+            {modalSuccess ? (
+              <ModalSuccessBox>
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"
+                  style={{ width: '48px', height: '48px', margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '1.05rem', marginBottom: '6px' }}>
+                  Request submitted!
+                </div>
+                <div style={{ color: 'var(--text-light)', fontSize: '0.875rem', marginBottom: '20px' }}>
+                  We've received your message and will respond shortly.
+                </div>
+                <Button type="button" onClick={closeModal}>Close</Button>
+              </ModalSuccessBox>
+            ) : (
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                await submitContactForm('help', helpSubject, helpMessage, { category: helpCategory })
+              }}>
+                <ModalFieldGroup>
+                  <ModalLabel>Category</ModalLabel>
+                  <ModalSelect value={helpCategory} onChange={(e) => setHelpCategory(e.target.value)}>
+                    <option>Technical Issue</option>
+                    <option>Account &amp; Billing</option>
+                    <option>Feature Request</option>
+                    <option>Other</option>
+                  </ModalSelect>
+                </ModalFieldGroup>
+
+                <ModalFieldGroup>
+                  <ModalLabel>Subject</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    placeholder="Brief summary of your issue"
+                    value={helpSubject}
+                    onChange={(e) => setHelpSubject(e.target.value)}
+                    required
+                    maxLength={200}
+                  />
+                </ModalFieldGroup>
+
+                <ModalFieldGroup>
+                  <ModalLabel>Message</ModalLabel>
+                  <ModalTextarea
+                    placeholder="Describe your issue in detail…"
+                    value={helpMessage}
+                    onChange={(e) => setHelpMessage(e.target.value)}
+                    required
+                    maxLength={5000}
+                  />
+                </ModalFieldGroup>
+
+                {modalError && (
+                  <ErrorMessage style={{ marginBottom: '12px' }}>{modalError}</ErrorMessage>
+                )}
+
+                <ModalActions>
+                  <SecondaryButton type="button" onClick={closeModal} disabled={modalLoading}>
+                    Cancel
+                  </SecondaryButton>
+                  <Button type="submit" disabled={modalLoading}>
+                    {modalLoading ? 'Sending…' : 'Send Request'}
+                  </Button>
+                </ModalActions>
+              </form>
+            )}
+          </ModalBox>
+        </ModalOverlay>
+      )}
+
+      {/* Enterprise & Partnerships Modal */}
+      {openModal === 'enterprise' && (
+        <ModalOverlay onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
+          <ModalBox>
+            <ModalTitle>Enterprise &amp; Partnerships</ModalTitle>
+            <ModalSubtitle>Tell us about your organisation and we'll reach out to discuss the right solution.</ModalSubtitle>
+
+            {modalSuccess ? (
+              <ModalSuccessBox>
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"
+                  style={{ width: '48px', height: '48px', margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '1.05rem', marginBottom: '6px' }}>
+                  Message sent!
+                </div>
+                <div style={{ color: 'var(--text-light)', fontSize: '0.875rem', marginBottom: '20px' }}>
+                  Our team will be in touch with you soon.
+                </div>
+                <Button type="button" onClick={closeModal}>Close</Button>
+              </ModalSuccessBox>
+            ) : (
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                await submitContactForm(
+                  'enterprise',
+                  entSubject,
+                  entMessage,
+                  { company: entCompany, role: entRole }
+                )
+              }}>
+                <ModalFieldGroup>
+                  <ModalLabel>Company Name</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    placeholder="Your company or organisation"
+                    value={entCompany}
+                    onChange={(e) => setEntCompany(e.target.value)}
+                    required
+                    maxLength={200}
+                  />
+                </ModalFieldGroup>
+
+                <ModalFieldGroup>
+                  <ModalLabel>Your Role</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    placeholder="e.g. HR Manager, CTO, Founder"
+                    value={entRole}
+                    onChange={(e) => setEntRole(e.target.value)}
+                    required
+                    maxLength={100}
+                  />
+                </ModalFieldGroup>
+
+                <ModalFieldGroup>
+                  <ModalLabel>Subject</ModalLabel>
+                  <ModalInput
+                    type="text"
+                    placeholder="What are you looking for?"
+                    value={entSubject}
+                    onChange={(e) => setEntSubject(e.target.value)}
+                    required
+                    maxLength={200}
+                  />
+                </ModalFieldGroup>
+
+                <ModalFieldGroup>
+                  <ModalLabel>Message</ModalLabel>
+                  <ModalTextarea
+                    placeholder="Tell us more about your needs and goals…"
+                    value={entMessage}
+                    onChange={(e) => setEntMessage(e.target.value)}
+                    required
+                    maxLength={5000}
+                  />
+                </ModalFieldGroup>
+
+                {modalError && (
+                  <ErrorMessage style={{ marginBottom: '12px' }}>{modalError}</ErrorMessage>
+                )}
+
+                <ModalActions>
+                  <SecondaryButton type="button" onClick={closeModal} disabled={modalLoading}>
+                    Cancel
+                  </SecondaryButton>
+                  <Button type="submit" disabled={modalLoading}>
+                    {modalLoading ? 'Sending…' : 'Send Message'}
+                  </Button>
+                </ModalActions>
+              </form>
+            )}
+          </ModalBox>
+        </ModalOverlay>
+      )}
     </Container>
   )
 }

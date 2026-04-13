@@ -48,6 +48,7 @@ from routers.monitoring import router as monitoring_router
 from routers.prelaunch_public import router as prelaunch_public_router
 from routers.paddle_webhook import router as paddle_billing_router
 from routers.system_purge import router as system_purge_router
+from routers.contact_submissions import router as contact_submissions_router
 from middleware.monitoring_middleware import MonitoringMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.body_limit import BodySizeLimitMiddleware
@@ -239,6 +240,48 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] User deletion tables init failed: {e}")
 
+    def _init_description_columns():
+        """Ensure all columns in the description table exist.
+
+        The base CREATE TABLE in init_database.py only has a minimal schema.
+        Columns like profile_version, city, country, role, company, location,
+        and industry were added later and are required by the ORM model.
+        Running ADD COLUMN IF NOT EXISTS is idempotent and safe to repeat.
+        """
+        try:
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            _cols = [
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS role VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS company VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS location VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS industry VARCHAR(100)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS profile_version INTEGER DEFAULT 1",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS city VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS country VARCHAR(150)",
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_profile_version "
+                    "ON description(profile_version) WHERE profile_version IS NOT NULL"
+                ),
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_city "
+                    "ON description(city) WHERE city IS NOT NULL"
+                ),
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_country "
+                    "ON description(country) WHERE country IS NOT NULL"
+                ),
+            ]
+            for sql in _cols:
+                try:
+                    db.execute(sql)
+                except Exception as col_err:
+                    print(f"  [WARN] description column step failed (non-fatal): {col_err}")
+            db.close()
+            print("[OK] description table columns ready")
+        except Exception as e:
+            print(f"[WARN] description columns migration failed: {e}")
+
     # Run all blocking startup tasks in threads with a 20s timeout each
     for name, fn in [
         ("db", _init_db),
@@ -248,6 +291,7 @@ async def lifespan(app: FastAPI):
         ("paddle_billing", _init_paddle_billing_columns),
         ("auth_provider_column", _init_auth_provider_column),
         ("user_deletion_tables", _init_user_deletion_tables),
+        ("description_columns", _init_description_columns),
     ]:
         try:
             await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
@@ -438,6 +482,7 @@ app.include_router(monitoring_router)
 app.include_router(prelaunch_public_router, prefix="/api")
 app.include_router(paddle_billing_router, prefix="/api")
 app.include_router(system_purge_router, prefix="/api/system")
+app.include_router(contact_submissions_router, prefix="/api/contact", tags=["Contact"])
 
 
 # Get paths for static files
