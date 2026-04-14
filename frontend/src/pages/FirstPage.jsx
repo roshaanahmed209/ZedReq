@@ -323,17 +323,14 @@ export default function FirstPage() {
           ))}
         </ul>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a href="#pricing" className="nav__cta btn btn--sm">Reserve Access</a>
-          <button
-            className="nav__burger"
-            aria-label="Open menu"
-            aria-expanded={menuOpen}
-            onClick={openMenu}
-          >
-            <span /><span /><span />
-          </button>
-        </div>
+        <button
+          className="nav__burger"
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+          onClick={openMenu}
+        >
+          <span /><span /><span />
+        </button>
       </nav>
 
       {/* ── Mobile overlay ── */}
@@ -357,9 +354,6 @@ export default function FirstPage() {
             {item}
           </a>
         ))}
-        <button className="btn btn--accent nav-overlay__cta" onClick={() => { closeMenu(); openModal(); }}>
-          Reserve Access
-        </button>
       </div>
 
       {/* ════════════ HERO ════════════ */}
