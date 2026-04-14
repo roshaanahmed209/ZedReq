@@ -57,6 +57,15 @@ def get_connection_params() -> Dict[str, Any]:
     }
 
 
+def _is_conn_open(conn) -> bool:
+    """Return True if *conn* is a live, usable psycopg2/psycopg3 connection."""
+    if conn is None:
+        return False
+    if hasattr(conn, 'closed') and conn.closed:
+        return False
+    return True
+
+
 class Database:
     """Database wrapper for PostgreSQL connections"""
     
@@ -66,10 +75,23 @@ class Database:
         self._connect()
     
     def _connect(self):
-        """Establish database connection"""
+        """Establish database connection with keepalive settings to prevent silent SSL drops."""
+        # TCP keepalive params prevent the OS from silently dropping idle connections
+        # (e.g. Supabase / cloud DBs that close idle sockets after a few minutes)
+        keepalive_kwargs = dict(
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5,
+        )
         if PSYCOPG_VERSION == 3:
             if 'conninfo' in self.params:
-                self._conn = psycopg.connect(self.params['conninfo'], row_factory=dict_row, connect_timeout=15)
+                self._conn = psycopg.connect(
+                    self.params['conninfo'],
+                    row_factory=dict_row,
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
             else:
                 self._conn = psycopg.connect(
                     host=self.params['host'],
@@ -78,31 +100,50 @@ class Database:
                     user=self.params['user'],
                     password=self.params['password'],
                     row_factory=dict_row,
-                    connect_timeout=15
+                    connect_timeout=15,
+                    **keepalive_kwargs,
                 )
         else:
             if 'conninfo' in self.params:
-                self._conn = psycopg2.connect(self.params['conninfo'], connect_timeout=15)
+                self._conn = psycopg2.connect(
+                    self.params['conninfo'],
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
             else:
-                self._conn = psycopg2.connect(**self.params, connect_timeout=15)
-        
+                self._conn = psycopg2.connect(
+                    **self.params,
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
+
         self._conn.autocommit = True
-    
+
     @property
     def conn(self):
-        """Get connection, reconnecting if necessary"""
-        if self._conn is None or (hasattr(self._conn, 'closed') and self._conn.closed):
+        """Get connection, reconnecting if necessary."""
+        if not _is_conn_open(self._conn):
             self._connect()
         return self._conn
-    
+
     def execute(self, query: str, params: tuple = None):
-        """Execute a query and return cursor"""
+        """Execute a query, retrying once after reconnecting on a stale-connection error."""
         if PSYCOPG_VERSION == 3:
-            cursor = self.conn.execute(query, params)
+            try:
+                return self.conn.execute(query, params)
+            except psycopg.OperationalError:
+                self._connect()
+                return self._conn.execute(query, params)
         else:
-            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, params)
-        return cursor
+            try:
+                cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute(query, params)
+                return cursor
+            except psycopg2.OperationalError:
+                self._connect()
+                cursor = self._conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute(query, params)
+                return cursor
     
     def fetch_one(self, query: str, params: tuple = None) -> Optional[Dict[str, Any]]:
         """Execute query and fetch one result"""
