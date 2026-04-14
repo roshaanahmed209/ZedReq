@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="gt2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="glowt">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Pipeline stages -->
+  <!-- Stage 1: Applied -->
+  <rect x="25" y="50" width="40" height="40" rx="10" stroke="url(#gt2)" stroke-width="1.5" opacity="0.5"/>
+  <text x="45" y="74" font-family="Inter,sans-serif" font-size="9" fill="#3b82f6" text-anchor="middle" opacity="0.7">Apply</text>
+  <!-- Arrow -->
+  <path d="M68 70 L78 70" stroke="url(#gt2)" stroke-width="1.5" opacity="0.4" marker-end="none"/>
+  <path d="M76 66 L82 70 L76 74" stroke="url(#gt2)" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <!-- Stage 2: Screening -->
+  <rect x="85" y="50" width="40" height="40" rx="10" stroke="url(#gt2)" stroke-width="1.5" opacity="0.6"/>
+  <text x="105" y="74" font-family="Inter,sans-serif" font-size="9" fill="#3b82f6" text-anchor="middle" opacity="0.8">Screen</text>
+  <!-- Arrow -->
+  <path d="M128 70 L138 70" stroke="url(#gt2)" stroke-width="1.5" opacity="0.4"/>
+  <path d="M136 66 L142 70 L136 74" stroke="url(#gt2)" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <!-- Stage 3: Interview (highlighted) -->
+  <rect x="145" y="50" width="40" height="40" rx="10" stroke="url(#gt2)" stroke-width="2" filter="url(#glowt)" opacity="0.9"/>
+  <text x="165" y="74" font-family="Inter,sans-serif" font-size="8" fill="#6366f1" text-anchor="middle" opacity="0.9">Interview</text>
+  <!-- Pipeline cards below -->
+  <rect x="30" y="110" width="140" height="25" rx="8" stroke="url(#gt2)" stroke-width="1" opacity="0.3"/>
+  <circle cx="48" cy="122" r="5" fill="url(#gt2)" opacity="0.4"/>
+  <line x1="60" y1="120" x2="120" y2="120" stroke="url(#gt2)" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+  <line x1="60" y1="126" x2="100" y2="126" stroke="url(#gt2)" stroke-width="1" stroke-linecap="round" opacity="0.15"/>
+  <rect x="130" y="116" width="30" height="12" rx="6" fill="#10b981" opacity="0.3"/>
+  <text x="145" y="125" font-family="Inter,sans-serif" font-size="7" fill="#10b981" text-anchor="middle" opacity="0.8">Active</text>
+  
+  <rect x="30" y="142" width="140" height="25" rx="8" stroke="url(#gt2)" stroke-width="1" opacity="0.2"/>
+  <circle cx="48" cy="154" r="5" fill="url(#gt2)" opacity="0.3"/>
+  <line x1="60" y1="152" x2="115" y2="152" stroke="url(#gt2)" stroke-width="1.5" stroke-linecap="round" opacity="0.2"/>
+  <line x1="60" y1="158" x2="95" y2="158" stroke="url(#gt2)" stroke-width="1" stroke-linecap="round" opacity="0.1"/>
+  <rect x="130" y="148" width="30" height="12" rx="6" fill="#f59e0b" opacity="0.3"/>
+  <text x="145" y="157" font-family="Inter,sans-serif" font-size="7" fill="#f59e0b" text-anchor="middle" opacity="0.8">Pending</text>
+</svg>

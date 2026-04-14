@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glowl">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Open book -->
+  <path d="M100 60 L100 145" stroke="url(#gl)" stroke-width="2" opacity="0.6"/>
+  <path d="M100 60 C80 55 55 55 40 65 L40 150 C55 140 80 140 100 145" stroke="url(#gl)" stroke-width="2" fill="none" opacity="0.7"/>
+  <path d="M100 60 C120 55 145 55 160 65 L160 150 C145 140 120 140 100 145" stroke="url(#gl)" stroke-width="2" fill="none" opacity="0.7"/>
+  <!-- Left page lines -->
+  <line x1="55" y1="80" x2="90" y2="75" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+  <line x1="55" y1="93" x2="90" y2="88" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+  <line x1="55" y1="106" x2="90" y2="101" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.2"/>
+  <line x1="55" y1="119" x2="85" y2="115" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.15"/>
+  <!-- Right page lines -->
+  <line x1="110" y1="75" x2="145" y2="80" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+  <line x1="110" y1="88" x2="145" y2="93" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+  <line x1="110" y1="101" x2="145" y2="106" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.2"/>
+  <line x1="110" y1="115" x2="140" y2="119" stroke="url(#gl)" stroke-width="1.5" stroke-linecap="round" opacity="0.15"/>
+  <!-- AI sparkle above book -->
+  <path d="M100 35 L103 42 L110 45 L103 48 L100 55 L97 48 L90 45 L97 42 Z" fill="url(#gl)" filter="url(#glowl)" opacity="0.8"/>
+  <!-- Small sparkle -->
+  <path d="M140 40 L141.5 44 L145 45 L141.5 46 L140 50 L138.5 46 L135 45 L138.5 44 Z" fill="#a855f7" opacity="0.4"/>
+  <!-- Progress bar -->
+  <rect x="60" y="160" width="80" height="6" rx="3" stroke="url(#gl)" stroke-width="1" opacity="0.3"/>
+  <rect x="60" y="160" width="56" height="6" rx="3" fill="url(#gl)" opacity="0.5"/>
+</svg>

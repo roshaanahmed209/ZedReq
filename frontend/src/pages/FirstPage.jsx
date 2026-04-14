@@ -1,626 +1,907 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import DarkVeil from '../components/DarkVeil'
-import Beams from '../components/Beams'
-import CardSwap, { Card } from '../components/CardSwap'
-import ReserveSeatModal from '../components/ReserveSeatModal'
-import SiteFooter from '../components/SiteFooter'
-import PricingPlansGrid from '../components/PricingPlansGrid'
-import CombinedSkillGapAndNetwork from '../components/CombinedSkillGapAndNetwork'
-import JobDiscoveryFlow from '../components/JobDiscoveryFlow'
-import { Timeline } from '../components/Timeline'
-import '../css/pages/FirstPage.css'
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../css/pages/FirstPage.css';
+import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
+import { sendReservationEmail } from '../services/emailjs';
+import DarkVeil from '../components/DarkVeil';
+import GlobeAnimation from '../components/GlobeAnimation';
 
-/* ── 3-D tilt card ─────────────────────────────────────────────────────── */
-const Card3D = ({ children, className }) => {
-  const ref = useRef(null)
+/** Resolve a public asset URL (works in both Vite dev and production build). */
+const A = (file) => `${import.meta.env.BASE_URL}assets/${file}`;
 
-  const onMove = (e) => {
-    const el = ref.current
-    if (!el) return
-    const { left, top, width, height } = el.getBoundingClientRect()
-    const x = (e.clientX - left) / width  - 0.5   // -0.5 → 0.5
-    const y = (e.clientY - top)  / height - 0.5
+/* ─── Rotating hero taglines ───────────────────────────── */
+const HERO_ROT = [
+  'Curated to your skills.',
+  'Optimized for hiring managers.',
+  'Practice until you ace it.',
+  'Private, secure, and bias-aware.',
+];
 
-    el.style.transform = `perspective(900px) rotateY(${x * 18}deg) rotateX(${-y * 14}deg) translateZ(6px)`
-    el.style.transition = 'transform 0.08s ease'
+/* ─── Features ─────────────────────────────────────────── */
+const FEATURES = [
+  {
+    label: 'Profile Intelligence',
+    icon: 'icon-matching.svg',
+    title: 'AI-Built Profile',
+    desc: 'Your resume is 30 seconds of a recruiter\'s attention. ZedReq surfaces skills, patterns, and signals that static PDFs can\'t — built by AI trained on 2M+ successful applications.',
+  },
+  {
+    label: 'Opportunity Engine',
+    icon: 'icon-network.svg',
+    title: 'Smart Job Matching',
+    desc: 'Skip the keyword-spray. Our engine ranks roles by genuine fit — salary, team structure, growth trajectory, and culture.',
+  },
+  {
+    label: 'Skill Intelligence',
+    icon: 'icon-learning.svg',
+    title: 'Adaptive Learning',
+    desc: 'ZedReq maps your gap to the role you want, then builds a personalized path to close it — courses, projects, mentors.',
+  },
+  {
+    label: 'Career Network',
+    icon: 'icon-tracking.svg',
+    title: 'Warm Introductions',
+    desc: 'Cold applications convert at 2%. Warm introductions convert at 40%. ZedReq routes you through the right second-degree connection.',
+  },
+  {
+    label: 'AI Interview Coach',
+    icon: 'icon-interview.svg',
+    title: 'Interview Prep',
+    desc: 'Realistic mock interviews for your exact target role. Feedback in real-time on delivery, structure, and technical depth.',
+  },
+  {
+    label: 'Application Tracking',
+    icon: 'icon-analytics.svg',
+    title: 'Pipeline Intelligence',
+    desc: 'See every stage of every application in one board. Know exactly when to follow up — and what to say when you do.',
+  },
+  {
+    label: 'AI Assistant',
+    icon: 'icon-assistant.svg',
+    title: 'Your Career Co-Pilot',
+    desc: 'Ask anything. Cover letter in 90 seconds. Salary benchmark by city. Offer negotiation script. ZedReq AI never leaves your side.',
+  },
+];
 
-    const shine = el.querySelector('.trust-card-shine')
-    if (shine) {
-      shine.style.background = `radial-gradient(circle at ${(x + 0.5) * 100}% ${(y + 0.5) * 100}%, rgba(255,255,255,0.13) 0%, transparent 65%)`
-      shine.style.opacity = '1'
+/* ─── FAQ items ─────────────────────────────────────────── */
+const FAQ = [
+  {
+    q: 'Where is my data stored?',
+    a: 'All data is stored on encrypted servers in GDPR-compliant regions. You can export or delete your data at any time from your Settings panel.',
+  },
+  {
+    q: 'Is my data ever sold?',
+    a: 'Never. Your data powers your personal career experience exclusively. We do not sell, share, or broker user data to any third party — ever.',
+  },
+  {
+    q: 'How does bias detection work?',
+    a: 'Our models are audited monthly for demographic bias across gender, ethnicity, age, and geography. Scoring is based solely on skills and verified experience signals.',
+  },
+  {
+    q: 'Can I delete my account?',
+    a: 'Yes, immediately. Go to Settings → Account → Delete Account. All data is purged from our systems within 30 days per GDPR Article 17.',
+  },
+  {
+    q: 'Who can see my profile?',
+    a: "Only connections you approve and companies you've applied to. Profiles are private by default with granular privacy controls in Settings.",
+  },
+];
+
+/* ─── Testimonials ──────────────────────────────────────── */
+const TESTIMONIALS = [
+  {
+    quote: (
+      <>
+        ZedReq found me a senior engineering role in three weeks. The AI profile builder surfaced
+        skills I didn&apos;t even think to list. The match was <em>exact.</em>
+      </>
+    ),
+    name: 'Ayesha K.',
+    role: 'Senior Software Engineer — Berlin',
+  },
+  {
+    quote: (
+      <>
+        I applied to 200 jobs on LinkedIn. Then I joined ZedReq. Six targeted applications. Two
+        final rounds. One offer — <em>above my ask.</em>
+      </>
+    ),
+    name: 'Marcus T.',
+    role: 'Product Manager — São Paulo',
+  },
+  {
+    quote: (
+      <>
+        The interview simulator felt eerily real. After twelve practice sessions I walked into my
+        panel completely calm. I got the role. ZedReq is the <em>unfair advantage</em> I needed.
+      </>
+    ),
+    name: 'Priya S.',
+    role: 'UX Research Lead — Singapore',
+  },
+];
+
+/* ─── Marquee segments ──────────────────────────────────── */
+const MARQUEE_SEGS = [
+  'AI Profile Builder',
+  'Smart Matching',
+  'Interview Simulator',
+  'Pipeline Tracker',
+  'Bias Detection',
+  'Salary Intelligence',
+  'Warm Intros',
+  'LMS Courses',
+  'Career Co-Pilot',
+  'GDPR Compliant',
+];
+
+/* ─── Pricing tiers ─────────────────────────────────────── */
+const PRICING = [
+  {
+    tier: 'Explorer',
+    price: 'Free',
+    period: 'Forever',
+    features: [
+      { label: 'AI profile builder',    yes: true },
+      { label: '10 job matches / month', yes: true },
+      { label: 'Basic interview prep',   yes: true },
+      { label: 'Pipeline tracker',       yes: false },
+      { label: 'Warm introductions',     yes: false },
+      { label: 'LMS courses',            yes: false },
+    ],
+    cta: 'Start Free',
+    featured: false,
+  },
+  {
+    tier: 'Professional',
+    price: '$29',
+    period: 'per month',
+    badge: 'Most Popular',
+    features: [
+      { label: 'AI profile builder',     yes: true },
+      { label: 'Unlimited job matches',  yes: true },
+      { label: 'Full interview suite',   yes: true },
+      { label: 'Pipeline tracker',       yes: true },
+      { label: 'Warm introductions',     yes: true },
+      { label: 'LMS courses',            yes: false },
+    ],
+    cta: 'Get Started',
+    featured: true,
+  },
+  {
+    tier: 'Elite',
+    price: '$79',
+    period: 'per month',
+    features: [
+      { label: 'Everything in Pro',       yes: true },
+      { label: 'Unlimited LMS courses',   yes: true },
+      { label: 'Priority matching',       yes: true },
+      { label: 'Dedicated career coach',  yes: true },
+      { label: 'Offer negotiation suite', yes: true },
+      { label: 'Early access features',   yes: true },
+    ],
+    cta: 'Go Elite',
+    featured: false,
+  },
+];
+
+/* ─── Trust stats ───────────────────────────────────────── */
+const TRUST_ITEMS = [
+  { num: '01', title: 'Zero Data Brokering', desc: 'We never sell, share, or broker your data. Your career profile stays private until you choose to share it.' },
+  { num: '02', title: 'GDPR Article 17 Compliant', desc: 'Delete your account and all data is purged within 30 days — no backups, no traces, by law.' },
+  { num: '03', title: 'Monthly Bias Audits', desc: 'Our scoring models are audited for demographic bias every 30 days by an independent panel.' },
+  { num: '04', title: 'AES-256 Encryption', desc: 'Every piece of data — at rest and in transit — is encrypted using bank-grade AES-256 protocols.' },
+  { num: '05', title: 'Granular Privacy Controls', desc: 'You decide who sees what: profile sections, contact info, employment history — all individually toggled.' },
+  { num: '06', title: 'Open Source Audit Trail', desc: 'Our scoring algorithms are published and open for independent review. No black boxes.' },
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT
+════════════════════════════════════════════════════════════════ */
+export default function FirstPage() {
+  const navigate = useNavigate();
+  const rootRef = useRef(null);
+  const [menuOpen,       setMenuOpen]       = useState(false);
+  const [modalOpen,      setModalOpen]      = useState(false);
+  const [reserveDone,    setReserveDone]    = useState(false);
+  const [reserveLoading, setReserveLoading] = useState(false);
+  const [reserveError,   setReserveError]   = useState('');
+  const [faqOpen,        setFaqOpen]        = useState(null);
+  const [tIdx,           setTIdx]           = useState(0);
+  const [rotIdx,         setRotIdx]         = useState(0);
+  const [rotFade,        setRotFade]        = useState(false);
+
+  /* Attach imperative DOM effects once */
+  useEffect(() => {
+    const cleanup = attachFirstPageEffects(rootRef.current);
+    return cleanup;
+  }, []);
+
+  /* Rotating hero tagline */
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRotFade(true);
+      setTimeout(() => {
+        setRotIdx((i) => (i + 1) % HERO_ROT.length);
+        setRotFade(false);
+      }, 400);
+    }, 3200);
+    return () => clearInterval(id);
+  }, []);
+
+  /* Auto-advance testimonials */
+  useEffect(() => {
+    const id = setInterval(() => setTIdx((i) => (i + 1) % TESTIMONIALS.length), 5500);
+    return () => clearInterval(id);
+  }, []);
+
+  /* Body overflow lock when modal / menu open */
+  useEffect(() => {
+    document.body.style.overflow = menuOpen || modalOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen, modalOpen]);
+
+  /* Reset reserve form on modal close */
+  useEffect(() => {
+    if (!modalOpen) {
+      setReserveDone(false);
+      setReserveError('');
+      setReserveLoading(false);
     }
-  }
+  }, [modalOpen]);
 
-  const onLeave = () => {
-    const el = ref.current
-    if (!el) return
-    el.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg) translateZ(0px)'
-    el.style.transition = 'transform 0.55s cubic-bezier(0.16,1,0.3,1)'
-    const shine = el.querySelector('.trust-card-shine')
-    if (shine) shine.style.opacity = '0'
-  }
+  /* Escape key */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
+  const openModal  = useCallback(() => setModalOpen(true), []);
+  const closeModal = useCallback(() => setModalOpen(false), []);
+  const openMenu   = useCallback(() => setMenuOpen(true), []);
+  const closeMenu  = useCallback(() => setMenuOpen(false), []);
+  const toggleFaq  = useCallback((i) => setFaqOpen((cur) => (cur === i ? null : i)), []);
+
+  /* Reserve seat — calls real backend + sends EmailJS confirmation */
+  const onReserve = useCallback(async (e) => {
+    e.preventDefault();
+    const emailInput = e.target.querySelector('[type="email"]');
+    const email = emailInput ? emailInput.value : '';
+    if (!email) return;
+
+    setReserveLoading(true);
+    setReserveError('');
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/reserved-seats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Failed to reserve seat');
+      if (!data.success) throw new Error(data.message || 'Failed to reserve seat');
+
+      const promoCode = data.promo_code || '';
+      if (!data.already_reserved && promoCode) {
+        await sendReservationEmail(email, promoCode);
+      }
+      setReserveDone(true);
+    } catch (err) {
+      setReserveError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setReserveLoading(false);
+    }
+  }, []);
+
+  /* ─── Render ─────────────────────────────────────────── */
   return (
-    <article ref={ref} className={className} onMouseMove={onMove} onMouseLeave={onLeave}>
-      <div className="trust-card-shine" aria-hidden="true" />
-      {children}
-    </article>
-  )
-}
+    <div className="zedreq-root" ref={rootRef}>
+      <a href="#main" className="skip-link">Skip to content</a>
 
-const FirstPage = () => {
-  const [activeLoop, setActiveLoop] = useState(0)
-  const [activeTestimonial, setActiveTestimonial] = useState(0)
-  const [showReserveModal, setShowReserveModal] = useState(false)
-  const [activeTrustFaq, setActiveTrustFaq] = useState(0)
-  const [matchPercent, setMatchPercent] = useState(0)
-  const trustSectionRef = useRef(null)
+      {/* ── Scroll progress ── */}
+      <div className="scroll-progress" aria-hidden="true" />
 
-  const loopTexts = [
-    'Curated to your skills.',
-    'Optimized for hiring managers.',
-    'Practice until you ace it.',
-    'Private, secure, and bias-aware.'
-  ]
+      {/* ════════════ NAV ════════════ */}
+      <nav className="nav" aria-label="Primary navigation">
+        <a href="/" aria-label="ZedReq home">
+          <img src={A('logo.svg')} alt="ZedReq" className="nav__logo" />
+        </a>
 
-  const testimonials = [
-    {
-      quote: "ZedReq helped me find the right role in two weeks — perfect fit and smooth process.",
-      author: "— Ayesha K., Data Analyst"
-    },
-    {
-      quote: "The mock interviews made all the difference; the feedback was actionable and specific.",
-      author: "— Bilal R., Software Engineer"
-    },
-    {
-      quote: "AI-powered matching saved me hours of searching — precise recommendations every time.",
-      author: "— Sarah M., Product Manager"
-    }
-  ]
-
-  const trustFaqs = [
-    {
-      question: 'How is my interview data stored?',
-      answer: 'Interview recordings and transcripts are encrypted in transit and at rest. Access is tightly controlled with role-based permissions and audit logs for every critical action.'
-    },
-    {
-      question: 'Does ZedReq sell my data?',
-      answer: 'No. ZedReq does not sell personal data. Your information is used only to deliver platform features like matching, coaching, and analytics that you explicitly use.'
-    },
-    {
-      question: 'How does bias detection work?',
-      answer: 'Our scoring pipelines are continuously monitored with fairness checks across demographic and experience segments. Detected drifts are flagged for review and model adjustments.'
-    },
-    {
-      question: 'Can I permanently delete my data?',
-      answer: 'Yes. You can request permanent deletion of account data. Deletion workflows remove profile, activity, and related artifacts according to platform retention policy.'
-    },
-    {
-      question: 'Who can access my profile?',
-      answer: 'Profile visibility follows your privacy settings and platform permissions. Sensitive data remains protected and is not exposed to unauthorized users or systems.'
-    }
-  ]
-
-  useEffect(() => {
-    const loopInterval = setInterval(() => {
-      setActiveLoop((prev) => (prev + 1) % loopTexts.length)
-    }, 2000)
-
-    return () => clearInterval(loopInterval)
-  }, [])
-
-  useEffect(() => {
-    const testimonialInterval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonials.length)
-    }, 5000)
-
-    return () => clearInterval(testimonialInterval)
-  }, [])
-
-  useEffect(() => {
-    const section = trustSectionRef.current
-    if (!section) return undefined
-
-    let counterInterval
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-
-          let current = 0
-          counterInterval = setInterval(() => {
-            current += 2
-            if (current >= 94) {
-              current = 94
-              clearInterval(counterInterval)
-            }
-            setMatchPercent(current)
-          }, 30)
-
-          observer.unobserve(entry.target)
-        })
-      },
-      { threshold: 0.25 }
-    )
-
-    observer.observe(section)
-
-    return () => {
-      if (counterInterval) clearInterval(counterInterval)
-      observer.disconnect()
-    }
-  }, [])
-
-  // Scroll-triggered fade-in animation
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -40px 0px'
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible')
-          setTimeout(() => { entry.target.style.willChange = 'auto' }, 800)
-          observer.unobserve(entry.target)
-        }
-      })
-    }, observerOptions)
-
-    // Observe all elements with scroll-reveal, scroll-reveal-left, scroll-reveal-right, scroll-reveal-scale classes
-    const elements = document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-right, .scroll-reveal-scale')
-    elements.forEach((el) => observer.observe(el))
-
-    return () => {
-      elements.forEach((el) => observer.unobserve(el))
-    }
-  }, [])
-
-
-
-  return (
-    <div className="first-page-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-background">
-          <DarkVeil 
-            hueShift={399}
-            noiseIntensity={0.0}
-            scanlineIntensity={0.2}
-            speed={0.8}
-            scanlineFrequency={0.0}
-            warpAmount={1.0}
-            resolutionScale={1.0}
-          />
-        </div>
-        <div className="hero-watermark">ZedReq</div>
-        <div className="hero-content">
-          <div className="logo-container">
-            <h1 className="main-logo">
-              <span className="typewriter-text">ZedReq</span>
-            </h1>
-          </div>
-          <h2 className="hero-headline">Find the role that fits you — faster, smarter, with AI.</h2>
-          <p className="hero-subheadline">AI job matching • Intelligent career assistant • Realistic mock interviews</p>
-          <div className="hero-cta">
-            <Link to="/get-started" className="btn-primary">Get Matched — It's Free</Link>
-            <button 
-              onClick={() => setShowReserveModal(true)} 
-              className="btn-secondary"
-            >
-              Reserve A Seat
-            </button>
-          </div>
-          <p className="hero-microcopy">No résumé required — AI builds a smart profile in minutes.</p>
-          
-          {/* Text Loop */}
-          <div className="text-loop">
-            {loopTexts.map((text, index) => (
-              <p key={index} className={`loop-item ${activeLoop === index ? 'active' : ''}`}>
-                {text}
-              </p>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Showcase Sections */}
-      {/* Feature Cards */}
-      <section id="features" className="features-section-cardswap">
-        <div className="features-content-wrapper">
-          <div className="features-text-section scroll-reveal">
-            <h2 className="features-title">Powerful Features to Accelerate Your Career</h2>
-            <p className="features-description">
-              Our AI-powered platform provides comprehensive tools and assistance to help you navigate every step of your career journey—from finding the perfect role to acing your interviews.
-            </p>
-            <div className="features-highlights">
-              <div className="highlight-item scroll-reveal">
-                <span className="highlight-number">01</span>
-                <p>Intelligent matching algorithm connects you with opportunities that truly fit</p>
-              </div>
-              <div className="highlight-item scroll-reveal">
-                <span className="highlight-number">02</span>
-                <p>Personalized coaching adapts to your unique career goals and experience</p>
-              </div>
-              <div className="highlight-item scroll-reveal">
-                <span className="highlight-number">03</span>
-                <p>Practice and prepare with realistic mock interviews and actionable feedback</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="features-cards-section scroll-reveal">
-            <CardSwap
-              width={400}
-              height={500}
-              cardDistance={65}
-              verticalDistance={85}
-              delay={3500}
-              skewAmount={9}
-              pauseOnHover={true}
-            >
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                      <circle cx="7" cy="7" r="1.5"/>
-                    </svg>
-                  </div>
-                  <h3>AI Job Matching</h3>
-                  <p className="feature-one-liner">Precision matches based on skills, goals, and culture fit.</p>
-                  <ul className="feature-bullets">
-                    <li>Smart skill parsing from CVs and profiles</li>
-                    <li>Role-fit score and interview readiness indicator</li>
-                    <li>Curated shortlists — apply faster</li>
-                  </ul>
-                  <a href="#" className="feature-cta">See Matches</a>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      <path d="M13 8H7"/>
-                      <path d="M17 12H7"/>
-                      <circle cx="18" cy="5" r="3"/>
-                      <path d="M16 3v4M20 3v4M18 1v2M18 7v2"/>
-                    </svg>
-                  </div>
-                  <h3>AI Career Assistant</h3>
-                  <p className="feature-one-liner">Personalized coaching for résumés, cover letters, and applications.</p>
-                  <ul className="feature-bullets">
-                    <li>Interactive profile refinement</li>
-                    <li>Custom application templates & ATS-friendly output</li>
-                    <li>Instant answers to career queries</li>
-                  </ul>
-                  <a href="#" className="feature-cta">Talk to Assistant</a>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="feature-card-content">
-                  <div className="feature-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                      <line x1="12" y1="19" x2="12" y2="23"/>
-                      <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
-                  </div>
-                  <h3>AI Mock Interviews</h3>
-                  <p className="feature-one-liner">Practice with dynamic interviews and receive structured feedback.</p>
-                  <ul className="feature-bullets">
-                    <li>Role-specific question sets</li>
-                    <li>Real-time scoring and tips</li>
-                    <li>Playback + transcript for review</li>
-                  </ul>
-                  <a href="#" className="feature-cta">Start a Mock Interview</a>
-                </div>
-              </Card>
-            </CardSwap>
-          </div>
-        </div>
-      </section>
-
-      {/* SHOWCASE TIMELINE — images change as you scroll through features */}
-      <Timeline data={[
-        {
-          title: "AI Career Assistant",
-          content: (
-            <div className="timeline-content">
-              <span className="timeline-label">Career Assistant</span>
-              <h4>Your personal AI career copilot</h4>
-              <p>
-                Search jobs, discover profiles, optimize your resume, and get instant answers
-                to any career question — all through a natural conversation.
-              </p>
-              <ul className="timeline-features">
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Natural language job and profile search
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Interactive profile refinement and ATS-ready output
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Instant, context-aware career guidance
-                </li>
-              </ul>
-              <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/Ai mode Ai assistant.jpg" alt="AI Career Assistant interface showing chat, profile matching, and job search" loading="lazy" decoding="async" />
-              </div>
-            </div>
-          ),
-        },
-        {
-          title: "Mock Interviews",
-          content: (
-            <div className="timeline-content">
-              <span className="timeline-label">Mock Interviews</span>
-              <h4>Practice until you&apos;re unstoppable</h4>
-              <p>
-                Face realistic, AI-powered video interviews tailored to your target roles.
-                Receive detailed scoring, strengths analysis, and coaching feedback.
-              </p>
-              <ul className="timeline-features">
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Role-specific question sets with dynamic difficulty
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Real-time scoring across technical &amp; communication
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  AI coaching feedback with actionable next steps
-                </li>
-              </ul>
-              <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI mock interview.jpg" alt="AI Mock Interview platform with video interface, recommended jobs, and skills analysis" loading="lazy" decoding="async" />
-              </div>
-            </div>
-          ),
-        },
-        {
-          title: "Adaptive Learning",
-          content: (
-            <div className="timeline-content">
-              <span className="timeline-label">Adaptive Learning</span>
-              <h4>Learn exactly what matters for your career</h4>
-              <p>
-                Our intelligent LMS analyzes your interactions — job views, post likes,
-                profile activity — and generates personalized courses to close your skill gaps.
-              </p>
-              <ul className="timeline-features">
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  AI-generated courses from your career context
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Domain and weekly performance tracking
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  Web-sourced knowledge base for up-to-date content
-                </li>
-              </ul>
-              <div className="timeline-image-grid">
-                <img className="timeline-image" src="/static/AI powered LMS.jpg" alt="AI-Powered Learning Management System with courses, performance tracking, and analytics" loading="lazy" decoding="async" />
-              </div>
-            </div>
-          ),
-        },
-      ]} />
-
-      {/* Skill Gap Heatmap & Network Expansion (Combined) */}
-      <CombinedSkillGapAndNetwork />
-
-      {/* Job Discovery & Hiring Flow */}
-      <JobDiscoveryFlow />
-
-      {/* Trust and Privacy */}
-      <section className="trust-section scroll-reveal" ref={trustSectionRef} aria-labelledby="trust-title">
-        <div className="trust-grid-overlay" />
-        <div className="trust-particles" />
-        <div className="trust-container">
-          <header className="trust-header scroll-reveal">
-            <h2 id="trust-title">Your Data. Your Career.<br />Fully Protected.</h2>
-            <p>Built with enterprise-grade security, privacy-first architecture, and bias-aware AI systems.</p>
-            <div className="trust-divider" />
-          </header>
-
-          <div className="trust-cards-grid">
-            <Card3D className="trust-card scroll-reveal-scale">
-              <div className="trust-card-head">
-                <div className="trust-icon-wrap" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" role="img" aria-label="End-to-end encryption icon">
-                    <path d="M12 2l7 3v6c0 5-3.2 8.7-7 10-3.8-1.3-7-5-7-10V5l7-3z" />
-                    <rect x="9" y="11" width="6" height="5" rx="1" />
-                    <path d="M10 11V9a2 2 0 1 1 4 0v2" />
-                  </svg>
-                </div>
-                <h3>End-to-End Encryption</h3>
-              </div>
-              <p>All personal data, conversations, and interview recordings are encrypted in transit and at rest using modern cryptographic standards.</p>
-              <div className="trust-micro trust-micro-encryption" aria-hidden="true">
-                <span className="trust-node">User</span>
-                <span className="trust-link" />
-                <span className="trust-lock-core" />
-                <span className="trust-link" />
-                <span className="trust-node">DB</span>
-              </div>
-            </Card3D>
-
-            <Card3D className="trust-card scroll-reveal-scale">
-              <div className="trust-card-head">
-                <div className="trust-icon-wrap" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" role="img" aria-label="Smart recommendations icon">
-                    <circle cx="12" cy="8" r="3.5" />
-                    <path d="M5 20c1.5-4 4.2-6 7-6s5.5 2 7 6" />
-                    <path d="M17 8l2 2-2 2" />
-                    <path d="M19 10h-4" />
-                  </svg>
-                </div>
-                <h3>Smart Recommendations</h3>
-              </div>
-              <p>AI-driven suggestions tailored to your profile, skills, and activity history — so every match gets more accurate over time.</p>
-              <div className="trust-micro trust-micro-anon" aria-hidden="true">
-                <div className="trust-profile-card trust-profile-faded">
-                  <span className="trust-line short" />
-                  <span className="trust-line" />
-                  <span className="trust-line short" />
-                </div>
-                <div className="trust-profile-link" />
-                <div className="trust-profile-card trust-profile-skill">
-                  <span className="trust-line active" />
-                  <span className="trust-line active short" />
-                  <span className="trust-line active" />
-                </div>
-                <div className="trust-counter">{matchPercent}% match</div>
-              </div>
-            </Card3D>
-
-            <Card3D className="trust-card scroll-reveal-scale">
-              <div className="trust-card-head">
-                <div className="trust-icon-wrap" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" role="img" aria-label="Bias-aware AI systems icon">
-                    <path d="M12 4v16" />
-                    <path d="M5 7h14" />
-                    <path d="M7 7l-2 5h4l-2-5z" />
-                    <path d="M17 7l-2 5h4l-2-5z" />
-                    <circle cx="12" cy="16.5" r="2.2" />
-                  </svg>
-                </div>
-                <h3>Bias-Aware AI Systems</h3>
-              </div>
-              <p>Our AI models are continuously evaluated to ensure balanced scoring and fairness across diverse candidate backgrounds.</p>
-              <div className="trust-micro trust-micro-fairness" aria-hidden="true">
-                <div className="trust-radar">
-                  <span className="ring ring-1" />
-                  <span className="ring ring-2" />
-                  <span className="ring ring-3" />
-                  <span className="radar-fill" />
-                </div>
-                <span className="trust-fairness-badge">Fairness Check</span>
-              </div>
-            </Card3D>
-          </div>
-
-          <div className="trust-badge-row scroll-reveal">
-            <div className="trust-badge-item scroll-reveal">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
-              <span>GDPR-ready architecture</span>
-            </div>
-            <div className="trust-badge-item scroll-reveal">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h12M8 19V9l4-4 4 4v10" /></svg>
-              <span>Secure cloud infrastructure</span>
-            </div>
-            <div className="trust-badge-item scroll-reveal">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M7 14l3-3 2 2 5-5" /></svg>
-              <span>Transparent AI scoring</span>
-            </div>
-            <div className="trust-badge-item scroll-reveal">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12M6 12h8M6 18h10" /></svg>
-              <span>Data minimization policy</span>
-            </div>
-            <div className="trust-badge-item scroll-reveal">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" /><circle cx="16" cy="16" r="3" /><path d="M10.5 10.5l3 3" /></svg>
-              <span>Human-in-the-loop validation</span>
-            </div>
-          </div>
-
-          <div className="trust-faq scroll-reveal">
-            {trustFaqs.map((faq, index) => (
-              <div key={faq.question} className={`trust-faq-item ${activeTrustFaq === index ? 'open' : ''}`}>
-                <button
-                  id={`trust-faq-button-${index}`}
-                  className="trust-faq-trigger"
-                  aria-expanded={activeTrustFaq === index}
-                  aria-controls={`trust-faq-panel-${index}`}
-                  onClick={() => setActiveTrustFaq(index)}
-                >
-                  <span>{faq.question}</span>
-                  <span className="trust-faq-chevron" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </button>
-                <div
-                  id={`trust-faq-panel-${index}`}
-                  role="region"
-                  aria-labelledby={`trust-faq-button-${index}`}
-                  className="trust-faq-panel"
-                >
-                  <p>{faq.answer}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="testimonials-section">
-        <h2 className="section-title scroll-reveal">What Candidates Say</h2>
-        <div className="testimonials-carousel scroll-reveal">
-          {testimonials.map((testimonial, index) => (
-            <div key={index} className={`testimonial-card ${activeTestimonial === index ? 'active' : ''}`}>
-              <p className="testimonial-quote">"{testimonial.quote}"</p>
-              <p className="testimonial-author">{testimonial.author}</p>
-            </div>
+        <ul className="nav__links" role="list">
+          {['Features', 'Product', 'Pricing'].map((item) => (
+            <li key={item}>
+              <a href={`#${item.toLowerCase()}`} className="nav__link">{item}</a>
+            </li>
           ))}
-        </div>
-      </section>
+        </ul>
 
-      {/* Pricing */}
-      <section id="pricing" className="pricing-section" style={{ position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, opacity: 0.6 }}>
-          <Beams
-            beamWidth={1.5}
-            beamHeight={25}
-            beamNumber={22}
-            speed={3.1}
-            noiseIntensity={2.4}
-            scale={0.29}
-            rotation={45}
-            lightColor="#1585A1"
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <a href="#pricing" className="nav__cta btn btn--sm">Reserve Access</a>
+          <button
+            className="nav__burger"
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            onClick={openMenu}
+          >
+            <span /><span /><span />
+          </button>
         </div>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(13, 13, 13, 0.3)', zIndex: 1, pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          <PricingPlansGrid />
-        </div>
-      </section>
+      </nav>
 
-      {/* CTA Band */}
-      <section className="cta-band scroll-reveal">
-        <div className="cta-content">
-          <h2 className="scroll-reveal">Ready to level up your career?</h2>
-          <p className="scroll-reveal">Create your AI profile in minutes — get matched today.</p>
-          <div className="cta-buttons scroll-reveal">
-            <Link to="/get-started" className="btn-primary large">Create Free Profile</Link>
+      {/* ── Mobile overlay ── */}
+      <div
+        className={`nav-overlay${menuOpen ? ' open' : ''}`}
+        aria-hidden={!menuOpen}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site navigation"
+      >
+        <button className="nav-overlay__close btn btn--sm" onClick={closeMenu} aria-label="Close menu">
+          CLOSE ✕
+        </button>
+        {['Features', 'Product', 'Pricing'].map((item) => (
+          <a
+            key={item}
+            href={`#${item.toLowerCase()}`}
+            className="nav-overlay__link"
+            onClick={closeMenu}
+          >
+            {item}
+          </a>
+        ))}
+        <button className="btn btn--accent nav-overlay__cta" onClick={() => { closeMenu(); openModal(); }}>
+          Reserve Access
+        </button>
+      </div>
+
+      {/* ════════════ HERO ════════════ */}
+      <main id="main">
+        <section className="hero" id="hero" aria-label="Hero">
+          {/* Background effects */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0 }} aria-hidden="true">
+            <DarkVeil
+              hueShift={399}
+              noiseIntensity={0.0}
+              scanlineIntensity={0.2}
+              speed={0.8}
+              scanlineFrequency={0.0}
+              warpAmount={1.0}
+              resolutionScale={1.0}
+            />
+          </div>
+          <div className="hero__texture" aria-hidden="true" />
+
+          {/* Orbit ring decorations */}
+          <div className="hero__orbit-ring" style={{ width: 480, height: 480, top: '50%', right: '10%' }} aria-hidden="true" />
+          <div className="hero__orbit-ring" style={{ width: 640, height: 640, top: '50%', right: '10%', opacity: 0.4 }} aria-hidden="true" />
+          <div className="hero__orbit-ring" style={{ width: 760, height: 760, top: '50%', right: '10%', opacity: 0.2 }} aria-hidden="true" />
+
+          {/* Orbiting feature icons */}
+          <div className="hero__orbits" aria-hidden="true">
+            {['icon-matching.svg','icon-interview.svg','icon-analytics.svg','icon-learning.svg','icon-network.svg'].map((icon, i) => (
+              <div key={icon} className="hero__orbit-icon">
+                <img src={A(icon)} alt="" />
+              </div>
+            ))}
+          </div>
+
+          {/* Status badge */}
+          <div className="hero__status">
+            <span className="hero__status-dot" aria-hidden="true" />
+            Now in Early Access — Limited Seats
+          </div>
+
+          {/* Monumental headline */}
+          <div className="hero__head" style={{ textAlign: 'center', alignItems: 'center' }}>
+            <h1 className="hero__hl" aria-label="ZedReq">
+              <span className="hero__hl-line">ZedReq</span>
+            </h1>
+
+            {/* Shifted subtitle — original headline text */}
+            <p className="hero__sub-tagline">
+              Your Career. <em>Engineered</em> by AI.
+            </p>
+
+            {/* Rotating tagline */}
+            <div className="hero__rotating" aria-live="polite" aria-atomic="true">
+              <span className="hero__rot-sep" aria-hidden="true" />
+              <span className={`hero__rot-text${rotFade ? ' fade-out' : ''}`}>
+                {HERO_ROT[rotIdx]}
+              </span>
+            </div>
+
+            {/* Lead */}
+            <p className="hero__lead">
+              ZedReq is the AI career platform that builds your profile, matches you to roles that
+              actually fit, coaches you through interviews, and gets you hired — faster.
+            </p>
+
+            {/* CTAs */}
+            <div className="hero__actions" style={{ justifyContent: 'center' }}>
+              <button className="btn btn--accent" onClick={openModal}>
+                Reserve Early Access ↗
+              </button>
+              <a href="/landing" className="btn btn--primary">
+                Get Started
+              </a>
+            </div>
+          </div>
+
+          {/* Scroll indicator */}
+          <div className="hero__scroll" aria-hidden="true">
+            <span className="hero__scroll-line" />
+            <span className="hero__scroll-label">Scroll</span>
+          </div>
+        </section>
+
+        {/* ════════════ MARQUEE ════════════ */}
+        <div className="marquee" aria-hidden="true">
+          <div className="marquee__inner">
+            {[...MARQUEE_SEGS, ...MARQUEE_SEGS].map((seg, i) => (
+              <span key={`${seg}-${i}`} className="marquee__seg">
+                <span className="marquee__sep" />
+                {seg}
+              </span>
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Reserve Seat Modal */}
-      <ReserveSeatModal 
-        isOpen={showReserveModal}
-        onClose={() => setShowReserveModal(false)}
-      />
+        {/* ════════════ FEATURES ════════════ */}
+        <section className="features" id="features" aria-labelledby="feat-hl">
+          <div className="features__head">
+            <h2 className="features__hl reveal" id="feat-hl">
+              Everything you need to<br /><em>get hired.</em>
+            </h2>
+            <p className="features__sub reveal" style={{ '--d': 1 }}>
+              Seven intelligent modules. One unified platform. Built for professionals
+              who take their careers seriously.
+            </p>
+          </div>
 
-      <SiteFooter />
+          <div className="features__grid" role="list">
+            {FEATURES.map((f) => (
+              <article key={f.label} className="feat-card" role="listitem">
+                <span className="feat-card__label">{f.label}</span>
+                <img src={A(f.icon)} alt="" className="feat-card__icon" />
+                <h3 className="feat-card__title">{f.title}</h3>
+                <p className="feat-card__desc">{f.desc}</p>
+                <span className="feat-card__arrow" aria-hidden="true">Learn more →</span>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ CHAPTERS (product showcase) ════════════ */}
+        <section className="chapters" id="product" aria-label="Product showcase">
+
+          {/* Chapter 1 — AI Profile */}
+          <div className="chapter">
+            <div className="chapter__img-wrap">
+              <img
+                src={A('chapter-ai-profile.jpg')}
+                alt="AI Career Assistant interface"
+                className="chapter__bg-img"
+                loading="lazy"
+                decoding="async"
+              />
+              {/* Score mockup overlaid on image */}
+              <div className="chapter__mockup">
+                <span className="chapter__mock-label">Profile Strength Analysis</span>
+                <div className="chapter__bar-wrap">
+                  {[
+                    { name: 'Technical Skills', pct: '92%' },
+                    { name: 'Soft Skills',      pct: '78%' },
+                    { name: 'Leadership',        pct: '84%' },
+                    { name: 'Domain Expertise', pct: '96%' },
+                  ].map((row) => (
+                    <div key={row.name} className="chapter__bar-row">
+                      <span className="chapter__bar-name">{row.name}</span>
+                      <div className="chapter__bar-track">
+                        <div
+                          className="chapter__bar-fill"
+                          data-target={row.pct}
+                          style={{ width: 0 }}
+                        />
+                      </div>
+                      <span className="chapter__bar-pct">{row.pct}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="chapter__body reveal-right">
+              <span className="chapter__num">01 — AI Profile</span>
+              <h2 className="chapter__title">
+                A resume that<br /><em>speaks for you</em>
+              </h2>
+              <p className="chapter__desc">
+                Our AI reads your entire work history — every role, project, skill, and result —
+                and builds a multi-dimensional profile that surfaces what static PDFs bury. Hiring
+                managers see the whole story, not just the keywords.
+              </p>
+
+              {/* Score widget */}
+              <div className="chapter__score-wrap">
+                {[
+                  { label: 'Match Score',   val: '94/100', pct: '94%',  delay: '0s'   },
+                  { label: 'Visibility',    val: '88/100', pct: '88%',  delay: '0.15s' },
+                  { label: 'Completeness',  val: '97/100', pct: '97%',  delay: '0.3s'  },
+                ].map((row) => (
+                  <div key={row.label} className="chapter__score-row">
+                    <span className="chapter__score-label">{row.label}</span>
+                    <div className="chapter__score-track">
+                      <div
+                        className="chapter__score-fill"
+                        data-target={row.pct}
+                        style={{ '--delay': row.delay, width: 0 }}
+                      />
+                    </div>
+                    <span className="chapter__score-val">{row.val}</span>
+                  </div>
+                ))}
+              </div>
+
+              <a href="/features" className="chapter__link">Explore AI Profile →</a>
+            </div>
+          </div>
+
+          {/* Chapter 2 — Smart Matching (reversed) */}
+          <div className="chapter chapter--rev">
+            <div className="chapter__img-wrap" style={{ position: 'relative', overflow: 'hidden' }}>
+              <GlobeAnimation />
+            </div>
+
+            <div className="chapter__body reveal-left">
+              <span className="chapter__num">02 — Smart Matching</span>
+              <h2 className="chapter__title">
+                Roles that <em>actually fit</em>
+              </h2>
+              <p className="chapter__desc">
+                Stop spray-and-praying. ZedReq&apos;s matching engine weighs 47 dimensions of fit —
+                compensation, team structure, growth trajectory, commute, culture signals — and
+                returns a ranked shortlist of roles where you&apos;re genuinely competitive.
+              </p>
+              <a href="/features" className="chapter__link">See how matching works →</a>
+            </div>
+          </div>
+
+          {/* Chapter 3 — Interview Sim */}
+          <div className="chapter">
+            <div className="chapter__img-wrap">
+              <img
+                src={A('chapter-interview.jpg')}
+                alt="AI Mock Interview platform"
+                className="chapter__bg-img"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="chapter__mockup">
+                <span className="chapter__mock-label">Live Interview Session</span>
+                <div className="chapter__chat">
+                  <div className="chapter__chat-row">
+                    <div className="chapter__chat-bubble">
+                      Walk me through a time you led a cross-functional project under pressure.
+                    </div>
+                  </div>
+                  <div className="chapter__chat-row chapter__chat-row--user">
+                    <div className="chapter__chat-bubble">
+                      In Q3 at my previous role, I led a six-person team to ship a payment integration in 8 days...
+                    </div>
+                  </div>
+                  <div className="chapter__chat-row">
+                    <div className="chapter__chat-bubble">
+                      Good structure. Try adding the specific outcome metric in your close — e.g., "which reduced churn by 12%".
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="chapter__body reveal-right">
+              <span className="chapter__num">03 — Interview Simulator</span>
+              <h2 className="chapter__title">
+                Practice until<br /><em>it&apos;s automatic</em>
+              </h2>
+              <p className="chapter__desc">
+                Realistic mock interviews tailored to your exact target role. Real-time coaching on
+                structure, delivery, and technical depth. Twelve sessions and you won&apos;t feel the
+                anxiety — just the conversation.
+              </p>
+              <a href="/get-started" className="chapter__link">Try a mock interview →</a>
+            </div>
+          </div>
+
+        </section>
+
+        {/* ════════════ STATS ════════════ */}
+        <section className="stats" id="stats" aria-labelledby="stats-hl">
+          <div className="stats__head reveal">
+            <p className="stats__eyebrow">By the numbers</p>
+            <h2 className="stats__hl" id="stats-hl">
+              Results that<br /><em>speak for themselves.</em>
+            </h2>
+          </div>
+
+          <div className="stats__grid">
+            {[
+              { val: '94',   unit: '%', label: 'of users receive an interview within 45 days',     target: '94%' },
+              { val: '3.2',  unit: 'x', label: 'more responses than traditional applications',     target: '3.2x' },
+              { val: '120',  unit: 'K+', label: 'professionals placed since launch',              target: '120K+' },
+              { val: '4.9',  unit: '/5', label: 'average user satisfaction across all platforms', target: '4.9/5' },
+            ].map((s) => (
+              <div key={s.label} className="stat-item reveal">
+                <div className="stat-item__val" data-target={s.target}>
+                  {s.val}<span className="stat-item__unit">{s.unit}</span>
+                </div>
+                <p className="stat-item__label">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ TRUST ════════════ */}
+        <section className="trust" id="about" aria-labelledby="trust-hl">
+          <div className="trust__head">
+            <div>
+              <span className="mono-label mono-label--accent reveal" style={{ marginBottom: '1.5rem', display: 'block' }}>
+                Privacy &amp; Security
+              </span>
+              <h2 className="trust__hl reveal" id="trust-hl">
+                Your data.<br /><em>Your rules.</em>
+              </h2>
+            </div>
+            <p className="trust__sub reveal" style={{ '--d': 1 }}>
+              We built ZedReq on a simple principle: your career data belongs to you, not
+              to advertisers, not to recruiters, and not to us. Every feature, every data
+              store, and every algorithm is designed around that belief.
+            </p>
+          </div>
+
+          <div className="trust__grid">
+            {TRUST_ITEMS.map((item) => (
+              <div key={item.num} className="trust-item">
+                <div className="trust-item__num">{item.num}</div>
+                <div className="trust-item__title">{item.title}</div>
+                <p className="trust-item__desc">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ TESTIMONIALS ════════════ */}
+        <section className="testimonials" aria-labelledby="t-hl">
+          <p className="testimonials__eyebrow reveal" id="t-hl">What our users say</p>
+
+          <div className="t-stage" aria-live="polite" aria-atomic="true">
+            {TESTIMONIALS.map((t, i) => (
+              <div
+                key={i}
+                className={`t-item${i === tIdx ? ' active' : ''}`}
+                aria-hidden={i !== tIdx}
+              >
+                <blockquote className="t-quote">{t.quote}</blockquote>
+                <div className="t-byline">
+                  <span className="t-byline__rule" aria-hidden="true" />
+                  <span className="t-byline__name">{t.name}</span>
+                  <span className="t-byline__role">{t.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="t-dots" role="tablist" aria-label="Testimonials">
+            {TESTIMONIALS.map((_, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === tIdx}
+                aria-label={`Testimonial ${i + 1}`}
+                className={`t-dot${i === tIdx ? ' active' : ''}`}
+                onClick={() => setTIdx(i)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ PRICING ════════════ */}
+        <section className="pricing" id="pricing" aria-labelledby="pricing-hl">
+          <div className="pricing__head">
+            <p className="pricing__eyebrow reveal">Simple Pricing</p>
+            <h2 className="pricing__hl reveal" id="pricing-hl" style={{ '--d': 1 }}>
+              Start free.<br /><em>Scale when you&apos;re ready.</em>
+            </h2>
+          </div>
+
+          <div className="pricing__grid">
+            {PRICING.map((plan) => (
+              <div
+                key={plan.tier}
+                className={`pricing__card${plan.featured ? ' pricing__card--feat' : ''} reveal`}
+              >
+                {plan.badge && <span className="pricing__badge">{plan.badge}</span>}
+                <p className="pricing__tier">{plan.tier}</p>
+                <p className="pricing__price">{plan.price}</p>
+                <p className="pricing__period">{plan.period}</p>
+                <hr className="pricing__rule" />
+                <ul className="pricing__features">
+                  {plan.features.map((f) => (
+                    <li key={f.label} className="pricing__feature">
+                      <i className={f.yes ? 'f-yes' : 'f-no'} aria-label={f.yes ? 'Included' : 'Not included'} />
+                      {f.label}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="/landing"
+                  className={`btn pricing__cta${plan.featured ? '' : ' btn--outline'}`}
+                >
+                  {plan.cta}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ FAQ ════════════ */}
+        <section className="faq" aria-labelledby="faq-hl">
+          <h2 className="faq__aside-hl reveal" id="faq-hl">
+            Questions,<br /><em>answered.</em>
+          </h2>
+
+          <div className="faq__list" role="list">
+            {FAQ.map((item, i) => (
+              <div
+                key={i}
+                className={`faq__item${faqOpen === i ? ' open' : ''}`}
+                role="listitem"
+              >
+                <button
+                  className="faq__q"
+                  aria-expanded={faqOpen === i}
+                  onClick={() => toggleFaq(i)}
+                >
+                  {item.q}
+                  <span className="faq__icon" aria-hidden="true" />
+                </button>
+                <p className="faq__a">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════ CTA BAND ════════════ */}
+        <section className="cta-band" aria-labelledby="cta-hl">
+          <p className="cta-band__eyebrow reveal">Get started today</p>
+          <h2 className="cta-band__hl reveal" id="cta-hl" style={{ '--d': 1 }}>
+            Your next role<br />is <em>already waiting.</em>
+          </h2>
+          <div className="cta-band__actions reveal" style={{ '--d': 2 }}>
+            <button className="btn btn--accent" onClick={openModal}>
+              Reserve Early Access ↗
+            </button>
+            <a href="/landing" className="btn btn--primary">
+              Get Started
+            </a>
+          </div>
+        </section>
+
+        {/* ════════════ FOOTER ════════════ */}
+        <footer className="footer">
+          <div className="footer__inner">
+            <a href="/" aria-label="ZedReq home">
+              <img src={A('logo.svg')} alt="ZedReq" className="footer__logo" />
+            </a>
+
+            <nav className="footer__nav" aria-label="Footer navigation">
+              {[
+                { label: 'Features',  href: '/features' },
+                { label: 'Product',   href: '#product' },
+                { label: 'Pricing',   href: '/pricing' },
+                { label: 'About',     href: '/about' },
+                { label: 'Blog',      href: '/blog' },
+                { label: 'Careers',   href: '/careers' },
+                { label: 'Privacy',   href: '/privacy' },
+                { label: 'Terms',     href: '/terms' },
+              ].map((l) => (
+                <a key={l.label} href={l.href} className="footer__link">{l.label}</a>
+              ))}
+            </nav>
+
+            <div className="footer__legal">
+              <p>© {new Date().getFullYear()} ZedReq Ltd. All rights reserved.</p>
+              <p>
+                <a href="/privacy" className="footer__link">Privacy Policy</a>
+                {' · '}
+                <a href="/terms" className="footer__link">Terms of Service</a>
+              </p>
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      {/* ════════════ MODAL ════════════ */}
+      {modalOpen && (
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <div
+            className="modal__overlay"
+            role="presentation"
+            onClick={closeModal}
+          />
+          <div className="modal__box">
+            <button className="modal__close btn btn--sm" onClick={closeModal} aria-label="Close modal">
+              Close ✕
+            </button>
+
+            {reserveDone ? (
+              <div className="modal__success">
+                <div className="modal__success-icon">✓</div>
+                <h2 className="modal__success-hl">You&apos;re on the list.</h2>
+                <p className="modal__success-sub">
+                  We&apos;ll send your early access invite within 48 hours. Check your inbox.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="modal__eyebrow">Early Access</p>
+                <h2 className="modal__title" id="modal-title">Reserve your seat.</h2>
+                <p className="modal__sub">
+                  Limited spots available. Enter your email and we&apos;ll send you access
+                  within 48 hours — no payment required.
+                </p>
+                <form className="modal__form" onSubmit={onReserve} noValidate>
+                  <input
+                    type="text"
+                    className="modal__input"
+                    placeholder="Full name"
+                    autoComplete="name"
+                    required
+                    disabled={reserveLoading}
+                  />
+                  <input
+                    type="email"
+                    className="modal__input"
+                    placeholder="Work email"
+                    autoComplete="email"
+                    required
+                    disabled={reserveLoading}
+                  />
+                  <input
+                    type="text"
+                    className="modal__input"
+                    placeholder="Current title"
+                    disabled={reserveLoading}
+                  />
+                  {reserveError && (
+                    <p className="modal__error" role="alert">{reserveError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className="btn btn--accent"
+                    style={{ justifyContent: 'center' }}
+                    disabled={reserveLoading}
+                  >
+                    {reserveLoading ? 'Reserving…' : 'Secure My Access ↗'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
-
-export default FirstPage
