@@ -891,7 +891,7 @@ export default function FirstPage() {
                   <PricingFeatureYes key={text} text={text} emph={emph} />
                 ))}
               </ul>
-              <a href="/enterprise-inquiry" className="btn btn--outline pricing__cta">
+              <a href="/login" className="btn btn--outline pricing__cta">
                 Contact us
               </a>
             </div>

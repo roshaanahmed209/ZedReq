@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
 import '../css/pages/FirstPage.css'
 
 /**
@@ -8,9 +7,7 @@ import '../css/pages/FirstPage.css'
  * @param {boolean} instantReveal — add `visible` for pages without FirstPage scroll-reveal observer
  */
 export default function PricingPlansGrid({ instantReveal = false }) {
-  const { user } = useAuth()
   const rev = (cls) => (instantReveal ? `${cls} visible` : cls)
-  const enterpriseContactTo = user ? '/enterprise-inquiry' : '/contact'
 
   return (
     <>
@@ -165,7 +162,7 @@ export default function PricingPlansGrid({ instantReveal = false }) {
             <p className="pricing-card-desc">Unlimited usage for AI messages, courses, and interviews — assigned by agreement.</p>
           </div>
           <div className="price">Custom</div>
-          <Link to={enterpriseContactTo} className="btn-secondary pricing-btn">
+          <Link to="/login" className="btn-secondary pricing-btn">
             Contact us
           </Link>
           <div className="pricing-divider" />
