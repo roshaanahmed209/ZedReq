@@ -59,7 +59,7 @@ const RequirePlanSelected = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/landing" replace />
+    return <Navigate to="/login" replace />
   }
 
   if (pathIsExempt(location.pathname)) {

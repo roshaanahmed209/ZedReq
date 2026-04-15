@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import FirstPage from './pages/FirstPage'
-import GetStarted from './pages/GetStarted'
-import Landing from './pages/Landing'
+import Login from './pages/Login'
 import Feed from './pages/Feed'
 import Network from './pages/Network'
 import Jobs from './pages/Jobs'
@@ -83,8 +82,9 @@ function App() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cookies" element={<CookiePolicy />} />
-          <Route path="/get-started" element={<GetStarted />} />
-          <Route path="/landing" element={<Landing />} />
+          <Route path="/get-started" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/landing" element={<Navigate to="/login" replace />} />
           <Route
             path="/choose-plan"
             element={

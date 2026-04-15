@@ -11,7 +11,7 @@ export default function PublicSubpageLayout({ title, children, mainClassName = '
         <Link to="/" className="public-subpage-logo">ZedReq</Link>
         <nav className="public-subpage-nav">
           <Link to="/">Home</Link>
-          <Link to="/get-started">Get started</Link>
+          <Link to="/login">Log in</Link>
         </nav>
       </header>
       <main className={mainClass}>

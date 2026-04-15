@@ -1,3 +1,4 @@
+/* Login static page — pairs with templates/login.html + static/css/login.css */
 document.addEventListener('DOMContentLoaded', () => {
     // Add page load animation
     document.body.style.opacity = '0';

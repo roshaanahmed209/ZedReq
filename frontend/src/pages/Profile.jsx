@@ -837,7 +837,7 @@ const RecCard = styled.div`
     color: var(--primary);
     opacity: 0.2;
     line-height: 1;
-    font-family: Georgia, serif;
+    font-family: var(--font-sans);
   }
 `
 

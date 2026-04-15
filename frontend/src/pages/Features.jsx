@@ -21,7 +21,7 @@ export default function Features() {
         <p className="public-subpage-inline-links">
           <Link to="/">Back to home</Link>
           {' · '}
-          <Link to="/get-started">Get started</Link>
+          <Link to="/login">Log in</Link>
         </p>
       </div>
     </PublicSubpageLayout>

@@ -5,6 +5,15 @@ import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
 import { sendReservationEmail } from '../services/emailjs';
 import DarkVeil from '../components/DarkVeil';
 import GlobeAnimation from '../components/GlobeAnimation';
+import lmsHeroImg from '../../static/AI powered LMS.jpg';
+import {
+  PLATFORM_ACCESS_LINES,
+  FREE_TEASER_WORDS,
+  FREE_MONTHLY_LIMITS,
+  PRO_MONTHLY_LIMITS,
+  PREMIUM_MONTHLY_LIMITS,
+  ENTERPRISE_USAGE_FEATURES,
+} from '../constants/platformPricing';
 
 /** Resolve a public asset URL (works in both Vite dev and production build). */
 const A = (file) => `${import.meta.env.BASE_URL}assets/${file}`;
@@ -15,6 +24,42 @@ const HERO_ROT = [
   'Optimized for hiring managers.',
   'Practice until you ace it.',
   'Private, secure, and bias-aware.',
+];
+
+/** Second line of the hero headline rotates (two lines total: “Your Career.” + one swap line). */
+const HERO_HL_VARIANTS = [
+  {
+    ariaLabel: 'Your Career. Less guessing. More gravity.',
+    line2: (
+      <>
+        <em>Less</em> guessing. More gravity.
+      </>
+    ),
+  },
+  {
+    ariaLabel: 'Your Career. Orchestrated from profile to signature.',
+    line2: (
+      <>
+        <em>Orchestrated</em> from profile to signature.
+      </>
+    ),
+  },
+  {
+    ariaLabel: 'Your Career. From invisible to undeniable.',
+    line2: (
+      <>
+        From <em>invisible</em> to undeniable.
+      </>
+    ),
+  },
+  {
+    ariaLabel: 'Your Career. Engineered for the next yes.',
+    line2: (
+      <>
+        <em>Engineered</em> for the next yes.
+      </>
+    ),
+  },
 ];
 
 /* ─── Features ─────────────────────────────────────────── */
@@ -135,55 +180,14 @@ const MARQUEE_SEGS = [
   'GDPR Compliant',
 ];
 
-/* ─── Pricing tiers ─────────────────────────────────────── */
-const PRICING = [
-  {
-    tier: 'Explorer',
-    price: 'Free',
-    period: 'Forever',
-    features: [
-      { label: 'AI profile builder',    yes: true },
-      { label: '10 job matches / month', yes: true },
-      { label: 'Basic interview prep',   yes: true },
-      { label: 'Pipeline tracker',       yes: false },
-      { label: 'Warm introductions',     yes: false },
-      { label: 'LMS courses',            yes: false },
-    ],
-    cta: 'Start Free',
-    featured: false,
-  },
-  {
-    tier: 'Professional',
-    price: '$29',
-    period: 'per month',
-    badge: 'Most Popular',
-    features: [
-      { label: 'AI profile builder',     yes: true },
-      { label: 'Unlimited job matches',  yes: true },
-      { label: 'Full interview suite',   yes: true },
-      { label: 'Pipeline tracker',       yes: true },
-      { label: 'Warm introductions',     yes: true },
-      { label: 'LMS courses',            yes: false },
-    ],
-    cta: 'Get Started',
-    featured: true,
-  },
-  {
-    tier: 'Elite',
-    price: '$79',
-    period: 'per month',
-    features: [
-      { label: 'Everything in Pro',       yes: true },
-      { label: 'Unlimited LMS courses',   yes: true },
-      { label: 'Priority matching',       yes: true },
-      { label: 'Dedicated career coach',  yes: true },
-      { label: 'Offer negotiation suite', yes: true },
-      { label: 'Early access features',   yes: true },
-    ],
-    cta: 'Go Elite',
-    featured: false,
-  },
-];
+function PricingFeatureYes({ text, emph = false }) {
+  return (
+    <li className={`pricing__feature${emph ? ' pricing__feature--emph' : ''}`}>
+      <i className="f-yes" aria-label="Included" />
+      {text}
+    </li>
+  );
+}
 
 /* ─── Trust stats ───────────────────────────────────────── */
 const TRUST_ITEMS = [
@@ -191,8 +195,16 @@ const TRUST_ITEMS = [
   { num: '02', title: 'GDPR Article 17 Compliant', desc: 'Delete your account and all data is purged within 30 days — no backups, no traces, by law.' },
   { num: '03', title: 'Monthly Bias Audits', desc: 'Our scoring models are audited for demographic bias every 30 days by an independent panel.' },
   { num: '04', title: 'AES-256 Encryption', desc: 'Every piece of data — at rest and in transit — is encrypted using bank-grade AES-256 protocols.' },
-  { num: '05', title: 'Granular Privacy Controls', desc: 'You decide who sees what: profile sections, contact info, employment history — all individually toggled.' },
-  { num: '06', title: 'Open Source Audit Trail', desc: 'Our scoring algorithms are published and open for independent review. No black boxes.' },
+  {
+    num: '05',
+    title: 'OWASP-informed hardening',
+    desc: 'We design against common OWASP-style risks: TLS everywhere, strict auth on APIs, input validation, rate limits on sensitive routes, and dependency updates—so typical web attacks are mitigated by design, not ad hoc patches.',
+  },
+  {
+    num: '06',
+    title: 'Sign in the way you already trust',
+    desc: 'Sign in with Google—the account you already use every day—so you are not juggling yet another password for ZedReq.',
+  },
 ];
 
 /* ═══════════════════════════════════════════════════════════════
@@ -210,12 +222,17 @@ export default function FirstPage() {
   const [tIdx,           setTIdx]           = useState(0);
   const [rotIdx,         setRotIdx]         = useState(0);
   const [rotFade,        setRotFade]        = useState(false);
+  const [hlIdx,          setHlIdx]          = useState(0);
+  const [hlFade,         setHlFade]         = useState(false);
 
   /* Attach imperative DOM effects once */
   useEffect(() => {
     const cleanup = attachFirstPageEffects(rootRef.current);
     return cleanup;
   }, []);
+
+  const HL_SWAP_MS = 560;
+  const ROT_SWAP_MS = 480;
 
   /* Rotating hero tagline */
   useEffect(() => {
@@ -224,8 +241,20 @@ export default function FirstPage() {
       setTimeout(() => {
         setRotIdx((i) => (i + 1) % HERO_ROT.length);
         setRotFade(false);
-      }, 400);
+      }, ROT_SWAP_MS);
     }, 3200);
+    return () => clearInterval(id);
+  }, []);
+
+  /* Rotating hero headline (lines 2–3 only; “Your Career.” fixed) */
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHlFade(true);
+      setTimeout(() => {
+        setHlIdx((i) => (i + 1) % HERO_HL_VARIANTS.length);
+        setHlFade(false);
+      }, HL_SWAP_MS);
+    }, 4200);
     return () => clearInterval(id);
   }, []);
 
@@ -311,8 +340,9 @@ export default function FirstPage() {
 
       {/* ════════════ NAV ════════════ */}
       <nav className="nav" aria-label="Primary navigation">
-        <a href="/" aria-label="ZedReq home">
-          <img src={A('logo.svg')} alt="ZedReq" className="nav__logo" />
+        <a href="/" className="nav__brand" aria-label="ZedReq home">
+          <img src={A('logo.svg')} alt="" className="nav__logo" width={28} height={28} />
+          <span className="nav__wordmark">ZedReq</span>
         </a>
 
         <ul className="nav__links" role="list">
@@ -395,14 +425,15 @@ export default function FirstPage() {
 
           {/* Monumental headline */}
           <div className="hero__head" style={{ textAlign: 'center', alignItems: 'center' }}>
-            <h1 className="hero__hl" aria-label="ZedReq">
-              <span className="hero__hl-line">ZedReq</span>
+            <h1
+              className="hero__hl"
+              aria-label={HERO_HL_VARIANTS[hlIdx].ariaLabel}
+            >
+              <span className="hero__hl-line">Your Career.</span>
+              <span className={`hero__hl-line hero__hl-line--swap${hlFade ? ' fade-out' : ''}`}>
+                {HERO_HL_VARIANTS[hlIdx].line2}
+              </span>
             </h1>
-
-            {/* Shifted subtitle — original headline text */}
-            <p className="hero__sub-tagline">
-              Your Career. <em>Engineered</em> by AI.
-            </p>
 
             {/* Rotating tagline */}
             <div className="hero__rotating" aria-live="polite" aria-atomic="true">
@@ -414,8 +445,9 @@ export default function FirstPage() {
 
             {/* Lead */}
             <p className="hero__lead">
-              ZedReq is the AI career platform that builds your profile, matches you to roles that
-              actually fit, coaches you through interviews, and gets you hired — faster.
+              ZedReq is a career operating system in one lane: AI that hardens your profile into proof,
+              only surfaces roles that respect your trajectory, and runs interview-grade reps until the room
+              feels smaller than your preparation — then keeps score until the offer lands.
             </p>
 
             {/* CTAs */}
@@ -423,7 +455,7 @@ export default function FirstPage() {
               <button className="btn btn--accent" onClick={openModal}>
                 Reserve Early Access ↗
               </button>
-              <a href="/landing" className="btn btn--primary">
+              <a href="/login" className="btn btn--primary">
                 Get Started
               </a>
             </div>
@@ -549,7 +581,7 @@ export default function FirstPage() {
           </div>
 
           {/* Chapter 2 — Smart Matching (reversed) */}
-          <div className="chapter chapter--rev">
+          <div className="chapter chapter--rev chapter--rev-globe">
             <div className="chapter__img-wrap" style={{ position: 'relative', overflow: 'hidden' }}>
               <GlobeAnimation />
             </div>
@@ -610,7 +642,56 @@ export default function FirstPage() {
                 structure, delivery, and technical depth. Twelve sessions and you won&apos;t feel the
                 anxiety — just the conversation.
               </p>
-              <a href="/get-started" className="chapter__link">Try a mock interview →</a>
+              <a href="/login" className="chapter__link">Try a mock interview →</a>
+            </div>
+          </div>
+
+          {/* Chapter 4 — LMS (reversed) */}
+          <div className="chapter chapter--rev">
+            <div className="chapter__img-wrap">
+              <img
+                src={lmsHeroImg}
+                alt="ZedReq LMS — courses, modules, and progress"
+                className="chapter__bg-img"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="chapter__mockup">
+                <span className="chapter__mock-label">Course progress</span>
+                <div className="chapter__bar-wrap">
+                  {[
+                    { name: 'Leadership', pct: '72%' },
+                    { name: 'System design', pct: '88%' },
+                    { name: 'Negotiation', pct: '54%' },
+                    { name: 'Domain depth', pct: '91%' },
+                  ].map((row) => (
+                    <div key={row.name} className="chapter__bar-row">
+                      <span className="chapter__bar-name">{row.name}</span>
+                      <div className="chapter__bar-track">
+                        <div
+                          className="chapter__bar-fill"
+                          data-target={row.pct}
+                          style={{ width: 0 }}
+                        />
+                      </div>
+                      <span className="chapter__bar-pct">{row.pct}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="chapter__body reveal-left">
+              <span className="chapter__num">04 — LMS</span>
+              <h2 className="chapter__title">
+                Skills that<br /><em>compound</em>
+              </h2>
+              <p className="chapter__desc">
+                Curated learning paths align with your profile gaps and target roles. Complete
+                focused modules, earn shareable credentials, and keep your edge sharp — without
+                leaving the platform.
+              </p>
+              <a href="/lms" className="chapter__link">Open the LMS →</a>
             </div>
           </div>
 
@@ -715,33 +796,105 @@ export default function FirstPage() {
             </h2>
           </div>
 
-          <div className="pricing__grid">
-            {PRICING.map((plan) => (
-              <div
-                key={plan.tier}
-                className={`pricing__card${plan.featured ? ' pricing__card--feat' : ''} reveal`}
-              >
-                {plan.badge && <span className="pricing__badge">{plan.badge}</span>}
-                <p className="pricing__tier">{plan.tier}</p>
-                <p className="pricing__price">{plan.price}</p>
-                <p className="pricing__period">{plan.period}</p>
-                <hr className="pricing__rule" />
-                <ul className="pricing__features">
-                  {plan.features.map((f) => (
-                    <li key={f.label} className="pricing__feature">
-                      <i className={f.yes ? 'f-yes' : 'f-no'} aria-label={f.yes ? 'Included' : 'Not included'} />
-                      {f.label}
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  href="/landing"
-                  className={`btn pricing__cta${plan.featured ? '' : ' btn--outline'}`}
-                >
-                  {plan.cta}
-                </a>
-              </div>
-            ))}
+          <div className="pricing__grid pricing__grid--4">
+            {/* Explorer — matches Choose Plan Free */}
+            <div className="pricing__card reveal">
+              <p className="pricing__tier">Explorer</p>
+              <p className="pricing__price">Free</p>
+              <p className="pricing__period">Forever</p>
+              <hr className="pricing__rule" />
+              <ul className="pricing__features pricing__teaser">
+                {FREE_TEASER_WORDS.map((word) => (
+                  <li key={word} className="pricing__feature pricing__teaser-word">
+                    <i className="f-yes" aria-label="Included" />
+                    {word}
+                  </li>
+                ))}
+              </ul>
+              <hr className="pricing__rule" />
+              <p className="mono-label pricing__block-label">LIMITED USAGE</p>
+              <ul className="pricing__features">
+                {FREE_MONTHLY_LIMITS.map((line) => (
+                  <PricingFeatureYes key={line} text={line} emph />
+                ))}
+              </ul>
+              <a href="/login" className="btn btn--outline pricing__cta">
+                Start Free
+              </a>
+            </div>
+
+            {/* Professional — matches Choose Plan Pro */}
+            <div className="pricing__card pricing__card--feat reveal">
+              <span className="pricing__badge">Most Popular</span>
+              <p className="pricing__tier">Professional</p>
+              <p className="pricing__price">$49.99</p>
+              <p className="pricing__period">per month</p>
+              <hr className="pricing__rule" />
+              <p className="mono-label pricing__block-label">Platform access:</p>
+              <ul className="pricing__features">
+                {PLATFORM_ACCESS_LINES.map((line) => (
+                  <PricingFeatureYes key={line} text={line} />
+                ))}
+              </ul>
+              <p className="mono-label pricing__block-label">Higher monthly limits</p>
+              <ul className="pricing__features">
+                {PRO_MONTHLY_LIMITS.map((line, i) => (
+                  <PricingFeatureYes key={line} text={line} emph={i < 3} />
+                ))}
+              </ul>
+              <a href="/login" className="btn pricing__cta">
+                Get Started
+              </a>
+            </div>
+
+            {/* Elite — matches Choose Plan Premium */}
+            <div className="pricing__card reveal">
+              <p className="pricing__tier">Elite</p>
+              <p className="pricing__price">$89.99</p>
+              <p className="pricing__period">per month</p>
+              <hr className="pricing__rule" />
+              <p className="mono-label pricing__block-label">Platform access:</p>
+              <ul className="pricing__features">
+                {PLATFORM_ACCESS_LINES.map((line) => (
+                  <PricingFeatureYes key={line} text={line} />
+                ))}
+              </ul>
+              <p className="mono-label pricing__block-label">Highest standard monthly limits</p>
+              <ul className="pricing__features">
+                {PREMIUM_MONTHLY_LIMITS.map((line, i) => (
+                  <PricingFeatureYes key={line} text={line} emph={i < 3} />
+                ))}
+              </ul>
+              <a href="/login" className="btn btn--outline pricing__cta">
+                Go Elite
+              </a>
+            </div>
+
+            {/* Enterprise — matches Choose Plan Enterprise */}
+            <div className="pricing__card reveal">
+              <p className="pricing__tier">Enterprise</p>
+              <p className="pricing__card-desc">
+                Unlimited usage for AI messages, courses, and interviews — assigned by agreement.
+              </p>
+              <p className="pricing__price">Custom</p>
+              <p className="pricing__period">by arrangement</p>
+              <hr className="pricing__rule" />
+              <p className="mono-label pricing__block-label">Platform access:</p>
+              <ul className="pricing__features">
+                {PLATFORM_ACCESS_LINES.map((line) => (
+                  <PricingFeatureYes key={line} text={line} />
+                ))}
+              </ul>
+              <p className="mono-label pricing__block-label">Enterprise usage</p>
+              <ul className="pricing__features">
+                {ENTERPRISE_USAGE_FEATURES.map(({ text, emph }) => (
+                  <PricingFeatureYes key={text} text={text} emph={emph} />
+                ))}
+              </ul>
+              <a href="/enterprise-inquiry" className="btn btn--outline pricing__cta">
+                Contact us
+              </a>
+            </div>
           </div>
         </section>
 
@@ -782,7 +935,7 @@ export default function FirstPage() {
             <button className="btn btn--accent" onClick={openModal}>
               Reserve Early Access ↗
             </button>
-            <a href="/landing" className="btn btn--primary">
+            <a href="/login" className="btn btn--primary">
               Get Started
             </a>
           </div>
@@ -843,40 +996,32 @@ export default function FirstPage() {
             {reserveDone ? (
               <div className="modal__success">
                 <div className="modal__success-icon">✓</div>
-                <h2 className="modal__success-hl">You&apos;re on the list.</h2>
+                <h2 className="modal__success-hl">You&apos;re reserved.</h2>
                 <p className="modal__success-sub">
-                  We&apos;ll send your early access invite within 48 hours. Check your inbox.
+                  Check your inbox for your reference code and Pro Plan discount details.
                 </p>
               </div>
             ) : (
               <>
-                <p className="modal__eyebrow">Early Access</p>
-                <h2 className="modal__title" id="modal-title">Reserve your seat.</h2>
-                <p className="modal__sub">
-                  Limited spots available. Enter your email and we&apos;ll send you access
-                  within 48 hours — no payment required.
-                </p>
+                <h2 className="modal__title" id="modal-title">Reserve Your Seat for Pro Plan</h2>
+                <div className="modal__text">
+                  <p>
+                    Enter your email to reserve your spot and get early access to ZedReq Pro Plan.
+                  </p>
+                  <p>
+                    <strong>Important:</strong>{' '}
+                    Please enter your correct email address. A reference code will be generated when
+                    you reserve your seat, offering both you and any person you refer a discount on the
+                    Pro Plan.
+                  </p>
+                </div>
                 <form className="modal__form" onSubmit={onReserve} noValidate>
-                  <input
-                    type="text"
-                    className="modal__input"
-                    placeholder="Full name"
-                    autoComplete="name"
-                    required
-                    disabled={reserveLoading}
-                  />
                   <input
                     type="email"
                     className="modal__input"
-                    placeholder="Work email"
+                    placeholder="Enter your email address"
                     autoComplete="email"
                     required
-                    disabled={reserveLoading}
-                  />
-                  <input
-                    type="text"
-                    className="modal__input"
-                    placeholder="Current title"
                     disabled={reserveLoading}
                   />
                   {reserveError && (
@@ -888,7 +1033,7 @@ export default function FirstPage() {
                     style={{ justifyContent: 'center' }}
                     disabled={reserveLoading}
                   >
-                    {reserveLoading ? 'Reserving…' : 'Secure My Access ↗'}
+                    {reserveLoading ? 'Reserving…' : 'Reserve Seat'}
                   </button>
                 </form>
               </>

@@ -135,7 +135,7 @@
   text-decoration: underline;
 }
 
-/* Legal docs: reuse GetStarted modal typography on full pages */
+/* Legal docs: reuse shared legal modal typography (GetStarted.css) on full pages */
 .public-subpage-main .public-legal-article.get-started-modal-body {
   max-height: none;
   padding: 0;

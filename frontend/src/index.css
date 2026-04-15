@@ -11,6 +11,10 @@
   --success: #22c55e;
   --warning: #f59e0b;
   --accent: #1585A1;
+
+  /* App-wide typography */
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
 
 /* Dark Theme (Default) */
@@ -41,7 +45,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-light);
   color: var(--text);
   line-height: 1.6;

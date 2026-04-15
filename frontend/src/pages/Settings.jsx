@@ -1170,7 +1170,7 @@ const Settings = () => {
     setError('')
     try {
       await api.delete('/api/user/account', { data: { password } })
-      navigate('/landing')
+      navigate('/login')
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to delete account')
       setLoading(false)

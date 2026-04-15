@@ -32,7 +32,7 @@ export default function PricingPublic() {
         <p className="public-subpage-inline-links">
           <a href="#pricing-plans-heading">Jump to plans</a>
           {' · '}
-          <Link to="/get-started">Create free profile</Link>
+          <Link to="/login">Create free profile</Link>
         </p>
       </div>
     </PublicSubpageLayout>

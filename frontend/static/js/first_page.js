@@ -171,7 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Smooth page transitions for navigation
-    const navigationLinks = document.querySelectorAll('a[href="/landing"], a[href="/feed"]');
+    const navigationLinks = document.querySelectorAll(
+        'a[href="/login"], a[href="/get-started"], a[href="/feed"], a[href="/landing"]'
+    );
     navigationLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();

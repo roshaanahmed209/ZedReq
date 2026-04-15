@@ -10,7 +10,7 @@ export default function HelpCenter() {
       <div className="public-subpage-prose">
         <p>Quick links:</p>
         <ul>
-          <li><Link to="/get-started">Create an account</Link></li>
+          <li><Link to="/login">Create an account</Link></li>
           <li><Link to="/contact">Contact support</Link></li>
           <li><a href={sitePath('/privacy')}>Privacy Policy</a></li>
           <li><a href={sitePath('/terms')}>Terms of Use</a></li>

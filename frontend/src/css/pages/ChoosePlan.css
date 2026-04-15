@@ -1,14 +1,34 @@
-﻿/* Choose plan: reuses FirstPage pricing cards + Beams; page-level tweaks only */
+﻿/* Choose Plan — page layout + overrides; pricing visuals from FirstPage.css */
 
 .choose-plan-page {
   min-height: 100vh;
   min-height: 100dvh;
-  background: #0a0a0a;
+  background: var(--black, #0a0a0a);
+  color: var(--white, #e8e8e8);
+}
+
+.choose-plan-page a.btn {
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .choose-plan-pricing {
   padding-top: clamp(4rem, 10vw, 6rem);
-  padding-bottom: clamp(3rem, 8vw, 5rem);
+}
+
+.choose-plan-pricing__inner {
+  position: relative;
+  z-index: 2;
+}
+
+.choose-plan__lead {
+  font-family: var(--font-body);
+  color: var(--gray);
+  font-size: clamp(0.95rem, 1.1vw, 1.05rem);
+  line-height: 1.65;
+  max-width: 52rem;
+  margin: -2rem 0 3rem;
+  text-align: left;
 }
 
 .choose-plan-error {
@@ -16,27 +36,70 @@
   margin: 0 auto 1.5rem;
   padding: 0.85rem 1.1rem;
   text-align: center;
-  color: #ffb4bc;
   font-size: 0.95rem;
   line-height: 1.45;
+  color: #ffb4bc;
+  border: 1px solid rgba(255, 180, 188, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 180, 188, 0.06);
 }
 
-/* Match link-styled primary buttons when using native <button> */
-.choose-plan-page .pricing-btn[type='button'] {
-  display: block;
-  width: 100%;
-  font: inherit;
-  cursor: pointer;
-  border: none;
-  text-align: center;
-  box-sizing: border-box;
+/* Four tiers vs First Page’s three */
+.choose-plan-page .choose-plan__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.choose-plan-page .pricing-btn[type='button']:disabled {
-  opacity: 0.65;
+@media (max-width: 1200px) {
+  .choose-plan-page .choose-plan__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .choose-plan-page .choose-plan__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Short plan blurbs (not on marketing First Page cards) */
+.choose-plan__card-desc {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--gray);
+  margin: 0 0 1.25rem;
+}
+
+.choose-plan__card-desc--on-light {
+  color: #444;
+  font-weight: 500;
+}
+
+.choose-plan-page .pricing__cta:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+.choose-plan__footnote {
+  font-family: var(--font-body);
+  text-align: center;
+  color: var(--gray);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  max-width: 44rem;
+  margin: 3rem auto 0;
+}
+
+.choose-plan__footnote a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.choose-plan__footnote a:hover {
+  text-decoration: underline;
+}
+
+/* Success overlay */
 .choose-plan-success-overlay {
   position: fixed;
   inset: 0;
@@ -64,7 +127,7 @@
   margin: 0 0 0.65rem;
   font-size: 1.2rem;
   font-weight: 600;
-  color: rgba(21, 133, 161, 0.05);
+  color: #7ec8d9;
 }
 
 .choose-plan-success-body {
@@ -76,6 +139,5 @@
 
 .choose-plan-success-cta {
   width: 100%;
-  padding: 0.65rem 1rem;
-  font-size: 0.95rem;
+  justify-content: center;
 }

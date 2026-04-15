@@ -1777,7 +1777,7 @@ const Feed = () => {
 
   const handleLogout = () => {
     logout()
-    navigate('/landing')
+    navigate('/login')
   }
 
   const getTimeAgo = (dateString) => {

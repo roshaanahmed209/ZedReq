@@ -537,7 +537,7 @@ function Navbar() {
 
     const handleLogout = () => {
         logout()
-        navigate('/landing')
+        navigate('/login')
     }
 
     /* ── JSX Render ──────────────────────────────────────────── */

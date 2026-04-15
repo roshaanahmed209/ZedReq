@@ -477,7 +477,7 @@ const TwoFactorSubtitle = styled.p`
 `
 
 const OTPInput = styled(Input)`
-  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: 0.45em;
@@ -485,7 +485,7 @@ const OTPInput = styled(Input)`
   padding-left: calc(16px + 0.2em);
 `
 
-const Landing = () => {
+const Login = () => {
   const [activeTab, setActiveTab] = useState('login')
   const [message, setMessage] = useState('')
   const [errors, setErrors] = useState([])
@@ -922,4 +922,4 @@ const Landing = () => {
   )
 }
 
-export default Landing
+export default Login

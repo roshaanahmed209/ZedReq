@@ -30,11 +30,11 @@ export default function PricingPlansGrid({ instantReveal = false }) {
           <div className="price">
             $0<span className="price-period">/month</span>
           </div>
-          <Link to="/get-started" className="btn-primary pricing-btn">
+          <Link to="/login" className="btn-primary pricing-btn">
             Get started
           </Link>
           <div className="pricing-divider" />
-          <p className="pricing-includes">Platform access (no extra cap):</p>
+          <p className="pricing-includes">Platform access:</p>
           <ul className="pricing-features">
             <li className="pricing-feature-item included">
               <span className="pricing-check">✓</span>
@@ -69,7 +69,7 @@ export default function PricingPlansGrid({ instantReveal = false }) {
               Notifications, alerts &amp; in-app updates
             </li>
           </ul>
-          <p className="pricing-includes">Monthly usage limits (AI, learning &amp; interviews):</p>
+          <p className="pricing-includes">LIMITED USAGE</p>
           <ul className="pricing-features">
             <li className="pricing-feature-item included">
               <span className="pricing-check">✓</span>
@@ -99,7 +99,7 @@ export default function PricingPlansGrid({ instantReveal = false }) {
           <div className="price">
             $49<span className="price-period">.99/month</span>
           </div>
-          <Link to="/get-started" className="btn-primary pricing-btn">
+          <Link to="/login" className="btn-primary pricing-btn">
             Subscribe
           </Link>
           <div className="pricing-divider" />
@@ -133,7 +133,7 @@ export default function PricingPlansGrid({ instantReveal = false }) {
           <div className="price">
             $89<span className="price-period">.99/month</span>
           </div>
-          <Link to="/get-started" className="btn-primary pricing-btn">
+          <Link to="/login" className="btn-primary pricing-btn">
             Subscribe
           </Link>
           <div className="pricing-divider" />

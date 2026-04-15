@@ -160,7 +160,7 @@ export default function About() {
           <Link to="/">Home</Link>
           <Link to="/features">Features</Link>
           <Link to="/pricing">Pricing</Link>
-          <Link to="/get-started" className="ap-nav-cta">Get started</Link>
+          <Link to="/login" className="ap-nav-cta">Log in</Link>
         </nav>
       </header>
 
@@ -348,7 +348,7 @@ export default function About() {
             Build your career<br />on honest ground.
           </h2>
           <div className="ap-cta-actions">
-            <Link to="/get-started" className="ap-cta-btn">
+            <Link to="/login" className="ap-cta-btn">
               Create free account →
             </Link>
             <a href={zedreqMailto('Partnership enquiry')} className="ap-cta-email">

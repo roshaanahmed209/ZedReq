@@ -149,9 +149,10 @@ const GlobeAnimation = () => {
       const cosA = Math.cos(a)
       const sinA = Math.sin(a)
 
-      const R  = Math.min(W, H) * 0.48
-      const GX = W * 0.5
-      const GY = H * 0.62
+      /* Larger sphere, anchored toward lower-right of the canvas */
+      const R  = Math.min(W, H) * 0.78
+      const GX = W * 0.62
+      const GY = H * 0.70
 
       const proj = (vec) => {
         const x =  vec[0] * cosA + vec[2] * sinA
