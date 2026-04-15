@@ -2024,6 +2024,31 @@ button {
   font-size: 0.875rem;
   color: var(--gray);
 }
+.modal__success-sub--warn {
+  color: #c9a227;
+}
+.modal__success-promo {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(21, 133, 161, 0.35);
+  border-radius: 10px;
+  background: rgba(21, 133, 161, 0.08);
+}
+.modal__success-promo-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 0.35rem;
+}
+.modal__success-promo-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
 
 /* ═══════════════════════════════════════════════════════════
    19. RESPONSIVE

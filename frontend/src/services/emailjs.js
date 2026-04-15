@@ -5,10 +5,10 @@
 import emailjs from '@emailjs/browser'
 import { ZEDREQ_EMAIL } from '../config/contact'
 
-// EmailJS configuration - these should be in .env file
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+// EmailJS configuration — loaded from ZedReq/.env (Vite envDir is repo root, see vite.config.js)
+const EMAILJS_SERVICE_ID = String(import.meta.env.VITE_EMAILJS_SERVICE_ID ?? '').trim()
+const EMAILJS_TEMPLATE_ID = String(import.meta.env.VITE_EMAILJS_TEMPLATE_ID ?? '').trim()
+const EMAILJS_PUBLIC_KEY = String(import.meta.env.VITE_EMAILJS_PUBLIC_KEY ?? '').trim()
 
 // Initialize EmailJS with public key (only once)
 let emailjsInitialized = false
@@ -141,6 +141,9 @@ export async function sendReservationEmail(email, promoCode) {
     
     const templateParams = {
       to_email: email,
+      // Aliases so common EmailJS template variable names still resolve
+      email,
+      user_email: email,
       to_name: 'Zedreq',
       promo_code: promoCode,
       website_link: websiteLink,
@@ -150,11 +153,12 @@ export async function sendReservationEmail(email, promoCode) {
       message_html: getReservationEmailTemplate(promoCode, websiteLink, companyEmail),
     }
 
-    // Send email via EmailJS
+    // Pass publicKey on send (v4-safe; avoids relying only on init + module order)
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
-      templateParams
+      templateParams,
+      { publicKey: EMAILJS_PUBLIC_KEY }
     )
 
     if (response.status === 200) {
@@ -162,8 +166,19 @@ export async function sendReservationEmail(email, promoCode) {
     }
     return { ok: false, reason: `emailjs_status_${response.status}` }
   } catch (error) {
-    const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : 'Error'
-    return { ok: false, reason: `emailjs_exception:${name}` }
+    if (error && typeof error === 'object' && 'status' in error) {
+      const text = typeof error.text === 'string' ? error.text.slice(0, 240) : ''
+      return { ok: false, reason: `emailjs_http_${error.status}:${text}` }
+    }
+    const msg =
+      typeof error === 'string'
+        ? error.slice(0, 200)
+        : error && typeof error === 'object' && 'message' in error
+          ? String(error.message).slice(0, 200)
+          : error && typeof error === 'object' && 'name' in error
+            ? String(error.name)
+            : 'Error'
+    return { ok: false, reason: `emailjs_exception:${msg}` }
   }
 }
 

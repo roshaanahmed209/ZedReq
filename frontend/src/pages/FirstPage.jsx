@@ -218,6 +218,9 @@ export default function FirstPage() {
   const [reserveDone,    setReserveDone]    = useState(false);
   const [reserveLoading, setReserveLoading] = useState(false);
   const [reserveError,   setReserveError]   = useState('');
+  const [reservePromoCode, setReservePromoCode] = useState('');
+  const [reserveAlreadyReserved, setReserveAlreadyReserved] = useState(false);
+  const [reserveEmailFailed, setReserveEmailFailed] = useState(false);
   const [faqOpen,        setFaqOpen]        = useState(null);
   const [tIdx,           setTIdx]           = useState(0);
   const [rotIdx,         setRotIdx]         = useState(0);
@@ -276,6 +279,9 @@ export default function FirstPage() {
       setReserveDone(false);
       setReserveError('');
       setReserveLoading(false);
+      setReservePromoCode('');
+      setReserveAlreadyReserved(false);
+      setReserveEmailFailed(false);
     }
   }, [modalOpen]);
 
@@ -306,6 +312,7 @@ export default function FirstPage() {
 
     setReserveLoading(true);
     setReserveError('');
+    setReserveEmailFailed(false);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -319,8 +326,19 @@ export default function FirstPage() {
       if (!data.success) throw new Error(data.message || 'Failed to reserve seat');
 
       const promoCode = data.promo_code || '';
+      setReservePromoCode(promoCode);
+      setReserveAlreadyReserved(!!data.already_reserved);
+
       if (!data.already_reserved && promoCode) {
-        await sendReservationEmail(email, promoCode);
+        const emailResult = await sendReservationEmail(email, promoCode);
+        if (!emailResult.ok) {
+          setReserveEmailFailed(true);
+          void fetch(`${apiUrl}/api/reserved-seats/email-delivery-failed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ promo_code: promoCode, reason: emailResult.reason || 'emailjs_failed' }),
+          }).catch(() => {});
+        }
       }
       setReserveDone(true);
     } catch (err) {
@@ -997,9 +1015,35 @@ export default function FirstPage() {
               <div className="modal__success">
                 <div className="modal__success-icon">✓</div>
                 <h2 className="modal__success-hl">You&apos;re reserved.</h2>
-                <p className="modal__success-sub">
-                  Check your inbox for your reference code and Pro Plan discount details.
-                </p>
+                {reserveAlreadyReserved ? (
+                  <p className="modal__success-sub">
+                    You already had a seat on file. Check your email for your reference code, or contact support if you
+                    need it resent.
+                  </p>
+                ) : reserveEmailFailed ? (
+                  <>
+                    <p className="modal__success-sub modal__success-sub--warn" role="status">
+                      Your seat is saved, but the confirmation email could not be sent automatically. Use your reference
+                      code below and keep it somewhere safe.
+                    </p>
+                    {reservePromoCode && (
+                      <p className="modal__success-promo" aria-label="Your reference code">
+                        <span className="modal__success-promo-label">Reference code</span>
+                        <span className="modal__success-promo-value">{reservePromoCode}</span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="modal__success-sub">
+                    Check your inbox for your reference code and Pro Plan discount details.
+                  </p>
+                )}
+                {!reserveAlreadyReserved && !reserveEmailFailed && reservePromoCode ? (
+                  <p className="modal__success-promo" aria-label="Your reference code">
+                    <span className="modal__success-promo-label">Reference code</span>
+                    <span className="modal__success-promo-value">{reservePromoCode}</span>
+                  </p>
+                ) : null}
               </div>
             ) : (
               <>
