@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { postAPI } from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
+import { shouldSkipMediaLoad } from '../utils/mediaUrl'
 import { uploadImageToCloudinary } from '../utils/uploadImageToCloudinary'
 
 /** Compact picker — common smileys & gestures (Unicode emoji). */
@@ -629,7 +630,7 @@ export default function PostComments({
                         )}
                       </CMeta>
                       {c.body ? <CText>{c.body}</CText> : null}
-                      {c.media_url ? (
+                      {c.media_url && !shouldSkipMediaLoad(c.media_url) ? (
                         <CMedia>
                           <img src={c.media_url} alt="" loading="lazy" />
                         </CMedia>

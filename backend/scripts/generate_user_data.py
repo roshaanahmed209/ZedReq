@@ -445,10 +445,17 @@ def generate_posts(db: Database, user_ids: List[int]) -> None:
             likes = random.randint(0, 50)
             comments = random.randint(0, 20)
             
-            # Random chance of having media
+            # Random chance of having media — use real HTTPS URLs so devtools are not full of 404s
             has_media = random.random() < 0.3
-            media_url = f"https://example.com/media/{random.randint(1000, 9999)}.jpg" if has_media else None
-            media_type = random.choice(["image", "video"]) if has_media else None
+            if not has_media:
+                media_url = None
+                media_type = None
+            else:
+                media_type = random.choice(["image", "video"])
+                if media_type == "image":
+                    media_url = f"https://picsum.photos/id/{random.randint(1, 80)}/800/500"
+                else:
+                    media_url = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
             
             try:
                 # First insert to get post_id

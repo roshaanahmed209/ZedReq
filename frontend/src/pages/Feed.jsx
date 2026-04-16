@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
 import Messages from './Messages'
 import { generateProfileUrl } from '../utils/profileUrl'
+import { shouldSkipMediaLoad } from '../utils/mediaUrl'
 import Navbar from '../components/Navbar'
 import PostComments from '../components/PostComments'
 import SharePostButton from '../components/SharePostButton'
@@ -17,7 +18,7 @@ const fadeIn = keyframes`
 `
 
 const slideUp = keyframes`
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 `
 
@@ -36,13 +37,9 @@ const Container = styled.div`
     inset: 0;
     z-index: 0;
     background-color: var(--bg-light);
-    background-image: radial-gradient(
-      ellipse 90% 80% at 105% 110%,
-      rgba(21, 133, 161, 0.85) 0%,
-      rgba(21, 133, 161, 0.45) 25%,
-      rgba(21, 133, 161, 0.15) 50%,
-      transparent 75%
-    );
+    background-image:
+      radial-gradient(ellipse 100% 80% at 100% 0%, rgba(21, 133, 161, 0.14) 0%, transparent 52%),
+      radial-gradient(ellipse 70% 60% at 0% 100%, rgba(21, 133, 161, 0.08) 0%, transparent 48%);
     pointer-events: none;
   }
 `
@@ -51,11 +48,11 @@ const MainContainer = styled.div`
   position: relative;
   z-index: 1;
   max-width: 1880px;
-  margin: 0 auto 0 0;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 268px 248px minmax(0, 1fr);
-  gap: 25px;
-  padding: 30px 20px;
+  gap: 28px;
+  padding: 28px clamp(16px, 2.5vw, 32px);
   background: transparent;
   
   @media (max-width: 1400px) {
@@ -123,16 +120,16 @@ const Sidebar = styled.aside`
 const ProfileCard = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 30px;
+  padding: 28px 24px;
   border: 1px solid var(--border);
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.06);
   }
   
   @media (max-width: 768px) {
@@ -149,14 +146,15 @@ const ProfileAvatar = styled.div`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--primary);
+  background: linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 2em;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0 auto 20px;
+  box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.12);
   
   @media (max-width: 768px) {
     width: 70px;
@@ -174,7 +172,9 @@ const ProfileAvatar = styled.div`
 `
 
 const ProfileName = styled.h3`
-  font-size: 1.3em;
+  font-size: 1.2em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 10px;
   color: var(--text);
   
@@ -196,7 +196,8 @@ const ProfileName = styled.h3`
 const ProfileHeadline = styled.p`
   color: var(--text-light);
   margin-bottom: 15px;
-  font-size: 0.9em;
+  font-size: 0.875em;
+  line-height: 1.45;
   
   @media (max-width: 768px) {
     font-size: 0.85em;
@@ -238,14 +239,14 @@ const LeftSidebar = styled.aside`
 
 const SidePanel = styled.div`
   background: var(--bg-white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.3s ease;
-  
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease;
+
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 28px rgba(0, 0, 0, 0.06);
   }
 `
 
@@ -353,7 +354,7 @@ const MobileMenuCloseButton = styled.button`
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
-  transition: all 0.3s ease;
+  transition: background 0.2s ease, color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,7 +362,6 @@ const MobileMenuCloseButton = styled.button`
   &:hover {
     background: var(--hover-bg);
     color: var(--text);
-    transform: rotate(90deg);
   }
   
   svg {
@@ -372,8 +372,8 @@ const MobileMenuCloseButton = styled.button`
 
 const PanelSection = styled.div`
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
   
   &:last-child {
     border-bottom: none;
@@ -382,30 +382,18 @@ const PanelSection = styled.div`
   &:hover {
     background: var(--hover-bg);
     cursor: pointer;
-    padding-left: 24px;
   }
 `
 
 const PanelHeader = styled.div`
-  padding: 24px 20px;
-  background: linear-gradient(135deg, #1585A1 0%, #0f6a82 100%);
+  padding: 18px 20px;
+  background: #0f6a82;
   color: white;
   font-weight: 600;
-  font-size: 1em;
-  letter-spacing: 0.3px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border-bottom: 3px solid var(--primary-dark);
-  position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -3px;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: var(--secondary);
-  }
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 `
 
 const PanelItem = styled.div`
@@ -422,13 +410,10 @@ const PanelItem = styled.div`
   }
   
   .value {
-    font-weight: 700;
-    font-size: 1.1em;
+    font-weight: 600;
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
     color: var(--primary);
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 `
 
@@ -439,34 +424,32 @@ const PanelLink = styled.div`
   color: var(--text);
   font-size: 0.9em;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
   
   .icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: rgba(21, 133, 161, 0.1);
+    width: 30px;
+    height: 30px;
+    background: rgba(21, 133, 161, 0.08);
     border-radius: 8px;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease;
     
     svg {
       color: var(--text-light);
-      transition: all 0.2s ease;
+      transition: color 0.15s ease;
     }
   }
   
   &:hover {
     color: var(--primary);
-    transform: translateX(2px);
     
     .icon {
-      background: var(--primary);
-      transform: scale(1.05);
+      background: rgba(21, 133, 161, 0.16);
       
       svg {
-        color: white;
+        color: var(--primary);
       }
     }
   }
@@ -492,9 +475,10 @@ const FeedContainer = styled.main`
 const PostCreator = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 30px;
+  padding: 22px 22px 20px;
+  margin-bottom: 24px;
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
   
   @media (max-width: 768px) {
     padding: 18px;
@@ -514,7 +498,7 @@ const PostCreatorHeader = styled.div`
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
   
   @media (max-width: 768px) {
@@ -573,10 +557,11 @@ const PostCreatorInfo = styled.div`
 `
 
 const PostCreatorTitle = styled.h3`
-  font-size: 1em;
+  font-size: 0.9375rem;
   color: var(--text);
   margin-bottom: 4px;
   font-weight: 600;
+  letter-spacing: -0.02em;
   
   @media (max-width: 768px) {
     font-size: 0.95em;
@@ -618,18 +603,21 @@ const PostInputContainer = styled.div`
 
 const PostTextarea = styled.textarea`
   width: 100%;
-  padding: 15px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-light);
   color: var(--text);
-  font-size: 1em;
+  font-size: 0.9375rem;
+  line-height: 1.5;
   resize: vertical;
-  min-height: 80px;
+  min-height: 88px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   
   &:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.45);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
   
   &::placeholder {
@@ -652,23 +640,30 @@ const PostTextarea = styled.textarea`
 
 const PostButton = styled.button`
   align-self: flex-end;
-  padding: 12px 24px;
+  padding: 10px 22px;
   background: var(--primary);
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   min-height: 44px; /* Better touch target */
   
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
   
-  &:active {
-    transform: translateY(0) scale(0.98);
+  &:active:not(:disabled) {
+    opacity: 0.92;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
   }
   
   @media (max-width: 768px) {
@@ -694,7 +689,7 @@ const PostButton = styled.button`
 const PostsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   
   @media (max-width: 768px) {
     gap: 18px;
@@ -712,9 +707,10 @@ const PostsContainer = styled.div`
 const Post = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 22px;
   border: 1px solid var(--border);
-  animation: ${slideUp} 0.3s ease-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.04);
+  animation: ${slideUp} 0.35s ease-out;
   
   @media (max-width: 768px) {
     padding: 18px;
@@ -748,14 +744,15 @@ const PostAvatar = styled.div`
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--primary);
+  background: linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 500;
-  font-size: 1.2em;
+  font-weight: 600;
+  font-size: 1.05em;
   flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(21, 133, 161, 0.1);
   
   @media (max-width: 768px) {
     width: 45px;
@@ -781,7 +778,9 @@ const PostInfo = styled.div`
 `
 
 const PostName = styled.h4`
-  font-size: 1em;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin-bottom: 2px;
   color: var(--text);
   
@@ -829,7 +828,8 @@ const PostTime = styled.div`
 
 const PostContent = styled.div`
   margin-bottom: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
+  font-size: 0.9375rem;
   color: var(--text);
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -972,17 +972,20 @@ const MediaUploadButton = styled.label`
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: var(--hover-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  color: var(--text-lighter);
-  transition: all 0.2s ease;
+  color: var(--text-light);
+  font-size: 0.875rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   min-height: 44px; /* Better touch target */
   
   &:hover {
-    background: var(--accent);
-    color: white;
+    background: rgba(21, 133, 161, 0.08);
+    border-color: rgba(21, 133, 161, 0.25);
+    color: var(--primary);
   }
   
   input {
@@ -1016,8 +1019,10 @@ const MediaUploadButton = styled.label`
 const LoadMoreSpinner = styled.div`
   display: flex;
   justify-content: center;
-  padding: 20px;
-  color: var(--text-lighter);
+  padding: 22px 20px;
+  color: var(--text-light);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
 `
 
 const PostActions = styled.div`
@@ -1026,7 +1031,8 @@ const PostActions = styled.div`
   align-items: center;
   width: 100%;
   gap: 8px;
-  padding-top: 12px;
+  padding-top: 14px;
+  margin-top: 2px;
   border-top: 1px solid var(--border);
 
   @media (max-width: 480px) {
@@ -1052,14 +1058,14 @@ const PostAction = styled.button`
   gap: 8px;
   background: none;
   border: none;
-  color: var(--text-lighter);
+  color: var(--text-light);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   
   svg {
-    transition: all 0.3s ease;
+    transition: color 0.15s ease;
   }
   
   &:hover {
@@ -1095,15 +1101,23 @@ const PostAction = styled.button`
 `
 
 const LikeCount = styled.span`
-  font-size: 0.9em;
+  font-size: 0.8125rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   min-width: 1ch;
 `
 
 const Loading = styled.div`
   text-align: center;
-  padding: 40px;
+  padding: 44px 28px;
   color: var(--text-light);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 `
 
 const MessagesPanel = styled.aside`
@@ -1114,9 +1128,9 @@ const MessagesPanel = styled.aside`
   height: 500px;
   max-height: calc(100vh - 140px);
   background: var(--bg-white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1152,9 +1166,10 @@ const MessagesPanelHeader = styled.div`
 `
 
 const MessagesPanelTitle = styled.h3`
-  font-size: 1.2em;
+  font-size: 1.05rem;
   color: var(--text);
-  font-weight: 300;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 `
 
 const CloseButton = styled.button`
@@ -1164,16 +1179,15 @@ const CloseButton = styled.button`
   background: transparent;
   color: var(--text-light);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
     background: var(--hover-bg);
     color: var(--text);
-    transform: rotate(90deg);
   }
 
   svg {
@@ -1209,14 +1223,12 @@ const ContactItem = styled.div`
   padding: 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease;
   margin-bottom: 4px;
   opacity: 1;
-  transform: translateX(0);
 
   &:hover {
     background: var(--hover-bg);
-    transform: translateX(4px);
   }
 `
 
@@ -1225,23 +1237,17 @@ const ContactAvatar = styled.div`
   height: 44px;
   min-width: 44px;
   border-radius: 50%;
-  background: ${props => props.isBot ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--primary)'};
+  background: ${props => props.isBot ? 'linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%)' : 'var(--primary)'};
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.9em;
-  transition: all 0.3s ease;
 
   svg {
     width: 24px;
     height: 24px;
-    transition: transform 0.3s ease;
-  }
-
-  &:hover svg {
-    transform: rotate(15deg) scale(1.1);
   }
 `
 
@@ -1341,16 +1347,10 @@ const MessageBubble = styled.div`
   padding: 10px 14px;
   border-radius: ${props => props.isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px'};
   max-width: 75%;
-  font-size: 0.9em;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  line-height: 1.45;
   word-wrap: break-word;
-  transition: all 0.3s ease;
-  opacity: 1;
-
-  &:hover {
-    opacity: 0.95;
-    transform: scale(1.02);
-  }
+  border: ${props => (!props.isUser ? '1px solid var(--border)' : 'none')};
 `
 
 const ChatInputContainer = styled.div`
@@ -1369,16 +1369,15 @@ const ChatInput = styled.input`
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 0.9em;
+  font-size: 0.875rem;
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 
   &:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.45);
     background: var(--bg-white);
     box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
-    transform: scale(1.01);
   }
 
   &::placeholder {
@@ -1388,25 +1387,23 @@ const ChatInput = styled.input`
 
 const SendButton = styled.button`
   padding: 10px 14px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 1;
 
   &:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
-    opacity: 0.9;
+    background: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
 
   &:active {
-    transform: translateY(0) scale(0.98);
+    opacity: 0.92;
   }
 
   svg {
@@ -1427,17 +1424,15 @@ const BackIconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 1;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.4);
-    opacity: 0.9;
+    background: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
 
   &:active {
-    transform: scale(0.95);
+    opacity: 0.9;
   }
 
   svg {
@@ -2016,7 +2011,7 @@ const Feed = () => {
                     </PostInfo>
                   </PostHeader>
                   <PostContent dangerouslySetInnerHTML={{ __html: escapeHtml(post.content) }} />
-                  {post.media_url && (
+                  {post.media_url && !shouldSkipMediaLoad(post.media_url) && (
                     <PostMedia>
                       {post.media_type === 'video' ? (
                         <video 

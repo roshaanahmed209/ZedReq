@@ -6,6 +6,7 @@ import PostComments from '../components/PostComments'
 import SharePostButton from '../components/SharePostButton'
 import { postAPI } from '../services/api'
 import { generateProfileUrl } from '../utils/profileUrl'
+import { shouldSkipMediaLoad } from '../utils/mediaUrl'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -396,7 +397,7 @@ export default function PostDetail() {
 
             <PostBody>{post.content || ''}</PostBody>
 
-            {post.media_url && (
+            {post.media_url && !shouldSkipMediaLoad(post.media_url) && (
               <PostMedia>
                 {post.media_type === 'video' ? (
                   <video src={post.media_url} controls playsInline />

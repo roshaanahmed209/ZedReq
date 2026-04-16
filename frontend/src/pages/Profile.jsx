@@ -6,6 +6,7 @@ import { useConfirm } from '../contexts/ConfirmModalContext'
 import { userAPI, connectionAPI, postAPI, profileFeaturesAPI, networkAPI } from '../services/api'
 import api from '../services/api'
 import { parseProfileUrl, generateProfileUrl } from '../utils/profileUrl'
+import { shouldSkipMediaLoad } from '../utils/mediaUrl'
 import Navbar from '../components/Navbar'
 import PostComments from '../components/PostComments'
 import SharePostButton from '../components/SharePostButton'
@@ -2429,10 +2430,11 @@ function Profile() {
           <FeatGrid>
             {featuredPosts.map(p => (
               <FeatThumb key={p.id || p.post_id} onClick={() => navigate(`/post/${p.id || p.post_id}`)}>
-                {p.media_type === 'video'
-                  ? <video src={p.media_url} preload="metadata" />
-                  : <img src={p.media_url} alt="Featured" loading="lazy" />
-                }
+                {p.media_url && !shouldSkipMediaLoad(p.media_url) ? (
+                  p.media_type === 'video'
+                    ? <video src={p.media_url} preload="metadata" />
+                    : <img src={p.media_url} alt="Featured" loading="lazy" />
+                ) : null}
               </FeatThumb>
             ))}
           </FeatGrid>
@@ -2477,7 +2479,7 @@ function Profile() {
                     )}
                   </PostHead>
                   <PostBody dangerouslySetInnerHTML={{ __html: escapeHtml(post.content || post.post_desc) }} />
-                  {post.media_url && (
+                  {post.media_url && !shouldSkipMediaLoad(post.media_url) && (
                     <PostMedia>
                       {post.media_type === 'video'
                         ? <video src={post.media_url} controls preload="metadata" />
