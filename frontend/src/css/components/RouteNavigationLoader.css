@@ -1,0 +1,50 @@
+/* Brief overlay while the next route renders — uses global theme tokens from index.css */
+.route-nav-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  background: color-mix(in srgb, var(--bg-light) 88%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: route-nav-loader-in 0.12s ease-out;
+}
+
+@keyframes route-nav-loader-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.route-nav-loader__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: route-nav-loader-spin 0.7s linear infinite;
+}
+
+@keyframes route-nav-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.route-nav-loader__label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-light);
+}

@@ -32,6 +32,7 @@ import CookiePolicy from './pages/CookiePolicy'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePlanSelected from './components/RequirePlanSelected'
 import PrelaunchNoticeHost from './components/PrelaunchNoticeHost'
+import RouteNavigationLoader from './components/RouteNavigationLoader'
 import ConfirmModal from './components/ConfirmModal'
 import { ConfirmModalProvider } from './contexts/ConfirmModalContext'
 import { initAnalytics, trackPageView } from './utils/analytics'
@@ -66,6 +67,7 @@ function App() {
       <AuthProvider>
         <ConfirmModalProvider>
         <Router>
+          <RouteNavigationLoader />
           <ConfirmModal />
           <RouteTracker />
           <PrelaunchNoticeHost />
