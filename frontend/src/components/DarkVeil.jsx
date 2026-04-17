@@ -72,15 +72,15 @@ void main(){
     col.rgb*=1.-(scanline_val*scanline_val)*uScan;
     col.rgb+=(rand(gl_FragCoord.xy+uTime)-0.5)*uNoise;
     vec3 rgb=clamp(col.rgb,0.0,1.0);
-    // Light theme: cool lift (B > R) + extra B channel so hue-shifted teal/cyan survives
-    vec3 lightBase=vec3(0.91,0.945,0.985);
-    rgb=mix(rgb,lightBase,uLightVeil);
-    rgb=clamp(rgb+vec3(0.02,0.07,0.1)*uLightVeil,0.0,1.0);
+    // Light theme: invert so shader blacks become lights (same pattern, flipped polarity)
+    if(uLightVeil>0.5){
+      rgb=1.0-rgb;
+    }
     gl_FragColor=vec4(rgb,1.0);
 }
 `;
 
-/** When true, lifts the veil to a cool pale canvas so hue-shifted teal/cyan still reads (ZedReq blue family). */
+/** When true, inverts final RGB so dark-veil blacks read as lights on the light hero. */
 export default function DarkVeil({
   hueShift = 0,
   noiseIntensity = 0,
@@ -115,7 +115,7 @@ export default function DarkVeil({
         uScan: { value: scanlineIntensity },
         uScanFreq: { value: scanlineFrequency },
         uWarp: { value: warpAmount },
-        uLightVeil: { value: forLightBackground ? 0.58 : 0 }
+        uLightVeil: { value: forLightBackground ? 1.0 : 0 }
       }
     });
 
@@ -155,9 +155,9 @@ export default function DarkVeil({
       program.uniforms.uScan.value = scanlineIntensity;
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = warpAmount;
-      program.uniforms.uLightVeil.value = forLightBackground ? 0.58 : 0;
+      program.uniforms.uLightVeil.value = forLightBackground ? 1.0 : 0;
       if (forLightBackground) {
-        gl.clearColor(0.91, 0.945, 0.985, 1);
+        gl.clearColor(0.949, 0.945, 0.933, 1);
       } else {
         gl.clearColor(0, 0, 0, 1);
       }
