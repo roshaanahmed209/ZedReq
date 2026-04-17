@@ -12,7 +12,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   // Get initial theme from localStorage or default to 'dark'
-  const [theme, setTheme] = useState(() => {
+  const [theme, setThemeState] = useState(() => {
     const savedTheme = localStorage.getItem('theme')
     const initialTheme = savedTheme || 'dark'
     // Apply theme immediately on initialization
@@ -28,12 +28,16 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme)
   }, [theme])
 
+  const setTheme = (next) => {
+    if (next === 'light' || next === 'dark') setThemeState(next)
+  }
+
   const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light')
+    setThemeState(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'))
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

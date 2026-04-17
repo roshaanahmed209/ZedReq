@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import '../css/pages/FirstPage.css';
 import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
 import { sendReservationEmail } from '../services/emailjs';
@@ -212,6 +213,7 @@ const TRUST_ITEMS = [
 ════════════════════════════════════════════════════════════════ */
 export default function FirstPage() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const rootRef = useRef(null);
   const [menuOpen,       setMenuOpen]       = useState(false);
   const [modalOpen,      setModalOpen]      = useState(false);
@@ -227,6 +229,10 @@ export default function FirstPage() {
   const [rotFade,        setRotFade]        = useState(false);
   const [hlIdx,          setHlIdx]          = useState(0);
   const [hlFade,         setHlFade]         = useState(false);
+  /** One frame: new line starts blurred + transparent, then transitions in */
+  const [hlSwapEnter,    setHlSwapEnter]    = useState(false);
+  const hlSwapTimersRef = useRef([]);
+  const hlEnterFallbackRef = useRef(null);
 
   /* Attach imperative DOM effects once */
   useEffect(() => {
@@ -234,8 +240,11 @@ export default function FirstPage() {
     return cleanup;
   }, []);
 
-  const HL_SWAP_MS = 560;
+  /** Outgoing headline line 2 — must match CSS transition on `.hero__hl-line--swap.fade-out` */
+  const HL_SWAP_OUT_MS = 900;
   const ROT_SWAP_MS = 480;
+  /** Safety if `animationend` does not fire (e.g. reduced motion quirks) */
+  const HL_ENTER_FALLBACK_MS = 1200;
 
   /* Rotating hero tagline */
   useEffect(() => {
@@ -249,17 +258,51 @@ export default function FirstPage() {
     return () => clearInterval(id);
   }, []);
 
-  /* Rotating hero headline (lines 2–3 only; “Your Career.” fixed) */
+  const finishHlSwapEnter = useCallback(() => {
+    if (hlEnterFallbackRef.current != null) {
+      clearTimeout(hlEnterFallbackRef.current);
+      hlEnterFallbackRef.current = null;
+    }
+    setHlSwapEnter(false);
+    document.documentElement.classList.add('hl-hero-swapped');
+  }, []);
+
+  const handleHlSwapAnimEnd = useCallback(
+    (e) => {
+      const name = e.animationName || '';
+      if (!/hero-hl-swap-in/i.test(name)) return;
+      finishHlSwapEnter();
+    },
+    [finishHlSwapEnter]
+  );
+
+  /* Rotating hero headline (line 2 only; “Your Career.” fixed) — slow ease-out, eased keyframe in */
   useEffect(() => {
+    const clearHlTimers = () => {
+      hlSwapTimersRef.current.forEach(clearTimeout);
+      hlSwapTimersRef.current = [];
+    };
     const id = setInterval(() => {
       setHlFade(true);
-      setTimeout(() => {
+      const t1 = setTimeout(() => {
         setHlIdx((i) => (i + 1) % HERO_HL_VARIANTS.length);
         setHlFade(false);
-      }, HL_SWAP_MS);
-    }, 4200);
-    return () => clearInterval(id);
-  }, []);
+        setHlSwapEnter(true);
+        hlEnterFallbackRef.current = setTimeout(() => {
+          finishHlSwapEnter();
+        }, HL_ENTER_FALLBACK_MS);
+      }, HL_SWAP_OUT_MS);
+      hlSwapTimersRef.current.push(t1);
+    }, 5000);
+    return () => {
+      clearInterval(id);
+      clearHlTimers();
+      if (hlEnterFallbackRef.current != null) {
+        clearTimeout(hlEnterFallbackRef.current);
+        hlEnterFallbackRef.current = null;
+      }
+    };
+  }, [finishHlSwapEnter]);
 
   /* Auto-advance testimonials */
   useEffect(() => {
@@ -371,14 +414,49 @@ export default function FirstPage() {
           ))}
         </ul>
 
-        <button
-          className="nav__burger"
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          onClick={openMenu}
-        >
-          <span /><span /><span />
-        </button>
+        <div className="nav__actions">
+          <button
+            type="button"
+            className={`nav__theme-btn${theme === 'dark' ? ' nav__theme-btn--to-light' : ' nav__theme-btn--to-dark'}`}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-pressed={theme === 'light'}
+          >
+            {theme === 'dark' ? (
+              <>
+                <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                  <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Light
+              </>
+            ) : (
+              <>
+                <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                  />
+                </svg>
+                Dark
+              </>
+            )}
+          </button>
+          <button
+            className="nav__burger"
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            onClick={openMenu}
+          >
+            <span /><span /><span />
+          </button>
+        </div>
       </nav>
 
       {/* ── Mobile overlay ── */}
@@ -417,6 +495,7 @@ export default function FirstPage() {
               scanlineFrequency={0.0}
               warpAmount={1.0}
               resolutionScale={1.0}
+              forLightBackground={theme === 'light'}
             />
           </div>
           <div className="hero__texture" aria-hidden="true" />
@@ -448,7 +527,10 @@ export default function FirstPage() {
               aria-label={HERO_HL_VARIANTS[hlIdx].ariaLabel}
             >
               <span className="hero__hl-line">Your Career.</span>
-              <span className={`hero__hl-line hero__hl-line--swap${hlFade ? ' fade-out' : ''}`}>
+              <span
+                className={`hero__hl-line hero__hl-line--swap${hlFade ? ' fade-out' : ''}${hlSwapEnter ? ' hl-swap-enter' : ''}`}
+                onAnimationEnd={handleHlSwapAnimEnd}
+              >
                 {HERO_HL_VARIANTS[hlIdx].line2}
               </span>
             </h1>

@@ -18,6 +18,7 @@ uniform float uNoise;
 uniform float uScan;
 uniform float uScanFreq;
 uniform float uWarp;
+uniform float uLightVeil;
 #define iTime uTime
 #define iResolution uResolution
 
@@ -70,10 +71,16 @@ void main(){
     float scanline_val=sin(gl_FragCoord.y*uScanFreq)*0.5+0.5;
     col.rgb*=1.-(scanline_val*scanline_val)*uScan;
     col.rgb+=(rand(gl_FragCoord.xy+uTime)-0.5)*uNoise;
-    gl_FragColor=vec4(clamp(col.rgb,0.0,1.0),1.0);
+    vec3 rgb=clamp(col.rgb,0.0,1.0);
+    // Light theme: cool lift (B > R) + extra B channel so hue-shifted teal/cyan survives
+    vec3 lightBase=vec3(0.91,0.945,0.985);
+    rgb=mix(rgb,lightBase,uLightVeil);
+    rgb=clamp(rgb+vec3(0.02,0.07,0.1)*uLightVeil,0.0,1.0);
+    gl_FragColor=vec4(rgb,1.0);
 }
 `;
 
+/** When true, lifts the veil to a cool pale canvas so hue-shifted teal/cyan still reads (ZedReq blue family). */
 export default function DarkVeil({
   hueShift = 0,
   noiseIntensity = 0,
@@ -81,7 +88,8 @@ export default function DarkVeil({
   speed = 1,
   scanlineFrequency = 0,
   warpAmount = 3.0,
-  resolutionScale = 1
+  resolutionScale = 1,
+  forLightBackground = false
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -106,7 +114,8 @@ export default function DarkVeil({
         uNoise: { value: noiseIntensity },
         uScan: { value: scanlineIntensity },
         uScanFreq: { value: scanlineFrequency },
-        uWarp: { value: warpAmount }
+        uWarp: { value: warpAmount },
+        uLightVeil: { value: forLightBackground ? 0.58 : 0 }
       }
     });
 
@@ -146,6 +155,12 @@ export default function DarkVeil({
       program.uniforms.uScan.value = scanlineIntensity;
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = warpAmount;
+      program.uniforms.uLightVeil.value = forLightBackground ? 0.58 : 0;
+      if (forLightBackground) {
+        gl.clearColor(0.91, 0.945, 0.985, 1);
+      } else {
+        gl.clearColor(0, 0, 0, 1);
+      }
       renderer.render({ scene: mesh });
     };
 
@@ -156,7 +171,16 @@ export default function DarkVeil({
       window.removeEventListener('resize', resize);
       visibilityObserver.disconnect();
     };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
+  }, [
+    hueShift,
+    noiseIntensity,
+    scanlineIntensity,
+    speed,
+    scanlineFrequency,
+    warpAmount,
+    resolutionScale,
+    forLightBackground
+  ]);
   return <canvas ref={ref} className="darkveil-canvas" />;
 }
 
