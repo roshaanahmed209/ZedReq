@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import '../css/pages/FirstPage.css'
+import '../css/components/PricingPlansGrid.css'
 
 /**
  * Shared pricing cards + copy (matches home #pricing).
