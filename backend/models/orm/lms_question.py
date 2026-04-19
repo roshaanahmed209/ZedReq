@@ -72,8 +72,12 @@ class LMSQuestion(Base):
     def __repr__(self):
         return f"<LMSQuestion(id={self.id}, course_id={self.course_id}, type='{self.question_type}')>"
     
-    def to_dict(self, include_relations=False):
-        """Convert model to dictionary"""
+    def to_dict(self, include_relations=False, for_learner=False):
+        """Convert model to dictionary.
+
+        When for_learner is True, omit correct_answer so assessment endpoints
+        do not leak solution keys to enrolled students.
+        """
         data = {
             'id': self.id,
             'course_id': self.course_id,
@@ -81,13 +85,14 @@ class LMSQuestion(Base):
             'question_text': self.question_text,
             'question_type': self.question_type,
             'options': self.options,
-            'correct_answer': self.correct_answer,
             'points': self.points,
             'order_index': self.order_index,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
-        
+        if not for_learner:
+            data['correct_answer'] = self.correct_answer
+
         if include_relations:
             data['answers_count'] = self.user_answers.count() if hasattr(self.user_answers, 'count') else len(self.user_answers)
-        
+
         return data

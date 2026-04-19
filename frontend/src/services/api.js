@@ -517,8 +517,10 @@ export const lmsAPI = {
     api.get('/api/lms/dashboard/domains', { timeout: 250000 }),
   
   // Question/Answer endpoints
-  getCourseQuestions: (courseId, sectionId = null) => {
-    const params = sectionId ? { section_id: sectionId } : {}
+  getCourseQuestions: (courseId, sectionId = null, options = {}) => {
+    const params = {}
+    if (sectionId != null) params.section_id = sectionId
+    if (options.includeResume) params.include_resume = true
     return api.get(`/api/lms/courses/${courseId}/questions`, { params })
   },
   

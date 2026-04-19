@@ -329,10 +329,18 @@ class QuestionResponse(BaseModel):
         from_attributes = True
 
 
+class QuizResumeResponse(BaseModel):
+    """Server-derived quiz resume for a course section (authenticated learner only)."""
+    latest_answers: Dict[int, str] = Field(default_factory=dict)
+    first_unanswered_index: Optional[int] = None
+    all_answered: bool = False
+
+
 class QuestionListResponse(BaseModel):
     """Schema for questions list"""
     questions: List[QuestionResponse]
     total: int
+    resume: Optional[QuizResumeResponse] = None
 
 
 class AnswerSubmit(BaseModel):

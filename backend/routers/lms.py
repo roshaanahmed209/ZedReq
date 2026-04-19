@@ -26,6 +26,7 @@ _MAX_REC_REFRESHES = 3
 _MAX_QUESTION_GENERATIONS = 3
 _MAX_EVALUATIONS = 3
 from models.orm import LMSCourse, LMSUserCourse, LMSUserAnswer, LMSRecommendation
+from models.orm.lms_course_section import LMSCourseSection
 from agents.Azel_agent import get_azel_agent
 from services.azel_async_jobs import (
     create_job,
@@ -44,7 +45,7 @@ from schemas.lms import (
     SectionPerformanceResponse,
     CourseAnalysisResponse,
     ActivityResponse, ActivityListResponse,
-    QuestionCreate, QuestionResponse, QuestionListResponse,
+    QuestionCreate, QuestionResponse, QuestionListResponse, QuizResumeResponse,
     AnswerSubmit, AnswerResponse, AnswerListResponse, AnswerEvaluate,
     RecommendationResponse, RecommendationListResponse,
     DeadlineCreate, DeadlineResponse, DeadlineListResponse,
@@ -467,15 +468,63 @@ async def get_course_analysis(
 async def get_course_questions(
     course_id: int,
     section_id: Optional[int] = Query(None, description="Filter by section"),
+    include_resume: bool = Query(
+        False,
+        description="When true, require section_id and return quiz resume for the current user",
+    ),
     current_user: dict = Depends(get_current_user),
-    service: LMSService = Depends(get_lms_service)
+    service: LMSService = Depends(get_lms_service),
 ):
-    """Get questions for a course"""
-    questions = service.get_course_questions(course_id, section_id)
-    
+    """
+    Get questions for a course (learner-safe: correct_answer is omitted).
+
+    Requires enrollment. When section_id is provided, it must belong to course_id.
+    When include_resume is true, section_id is required and resume state is included.
+    """
+    user_id = current_user.get("id") or current_user.get("uid")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user context",
+        )
+    if not service.is_user_enrolled(user_id, course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be enrolled in this course to view questions.",
+        )
+
+    if section_id is not None:
+        section = (
+            service.db.query(LMSCourseSection)
+            .filter(
+                LMSCourseSection.id == section_id,
+                LMSCourseSection.course_id == course_id,
+            )
+            .first()
+        )
+        if not section:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Section {section_id} does not belong to course {course_id}",
+            )
+
+    if include_resume and not section_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="section_id is required when include_resume is true",
+        )
+
+    questions = service.get_course_questions(course_id, section_id, for_learner=True)
+
+    resume_payload: Optional[QuizResumeResponse] = None
+    if include_resume and section_id is not None:
+        raw = service.get_quiz_resume_state(user_id, course_id, section_id)
+        resume_payload = QuizResumeResponse(**raw)
+
     return {
         "questions": questions,
-        "total": len(questions)
+        "total": len(questions),
+        "resume": resume_payload,
     }
 
 

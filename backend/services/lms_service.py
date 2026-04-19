@@ -941,17 +941,77 @@ class LMSService:
     def get_course_questions(
         self,
         course_id: int,
-        section_id: Optional[int] = None
+        section_id: Optional[int] = None,
+        for_learner: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Get questions for a course or section"""
+        """Get questions for a course or section."""
         query = self.db.query(LMSQuestion).filter(LMSQuestion.course_id == course_id)
-        
+
         if section_id:
             query = query.filter(LMSQuestion.section_id == section_id)
-        
+
         questions = query.order_by(LMSQuestion.order_index).all()
-        
-        return [q.to_dict() for q in questions]
+
+        return [q.to_dict(for_learner=for_learner) for q in questions]
+
+    def get_quiz_resume_state(
+        self,
+        user_id: int,
+        course_id: int,
+        section_id: int,
+    ) -> Dict[str, Any]:
+        """
+        Latest submitted (non-empty) answer per question and resume index for a section.
+
+        Caller must enforce enrollment and that section_id belongs to course_id.
+        """
+        questions = (
+            self.db.query(LMSQuestion)
+            .filter(
+                LMSQuestion.course_id == course_id,
+                LMSQuestion.section_id == section_id,
+            )
+            .order_by(LMSQuestion.order_index)
+            .all()
+        )
+        if not questions:
+            return {
+                "latest_answers": {},
+                "first_unanswered_index": None,
+                "all_answered": True,
+            }
+
+        q_ids = [q.id for q in questions]
+        rows = (
+            self.db.query(LMSUserAnswer)
+            .filter(
+                LMSUserAnswer.user_id == user_id,
+                LMSUserAnswer.question_id.in_(q_ids),
+            )
+            .order_by(desc(LMSUserAnswer.submitted_at), desc(LMSUserAnswer.id))
+            .all()
+        )
+
+        latest_answers: Dict[int, str] = {}
+        for row in rows:
+            if row.question_id in latest_answers:
+                continue
+            text = (row.answer_text or "").strip()
+            if text:
+                latest_answers[row.question_id] = row.answer_text.strip() if row.answer_text else ""
+
+        first_unanswered_index: Optional[int] = None
+        for idx, q in enumerate(questions):
+            if q.id not in latest_answers:
+                first_unanswered_index = idx
+                break
+
+        all_answered = first_unanswered_index is None
+        return {
+            "latest_answers": latest_answers,
+            "first_unanswered_index": first_unanswered_index,
+            "all_answered": all_answered,
+        }
     
     def get_question(self, question_id: int) -> Optional[Dict[str, Any]]:
         """Get a specific question"""

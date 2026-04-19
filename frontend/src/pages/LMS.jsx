@@ -2370,20 +2370,56 @@ const LMS = () => {
 
   /**
    * Shared helper — fetches questions for a given course+section and updates state.
+   * With section_id, requests server quiz resume (latest answers + suggested page).
    * Reused by fetchCourseDetails and handleSectionSelect to avoid duplicating logic.
    */
+  const QUIZ_PAGE_SIZE = 5
+
   const fetchSectionQuestions = async (courseId, sectionId) => {
     try {
-      const questionsRes = await lmsAPI.getCourseQuestions(courseId, sectionId)
-      if (questionsRes.data && questionsRes.data.questions) {
-        setCourseQuestions(questionsRes.data.questions)
-        return questionsRes.data.questions.length
+      const opts = sectionId != null ? { includeResume: true } : {}
+      const questionsRes = await lmsAPI.getCourseQuestions(courseId, sectionId, opts)
+      const data = questionsRes.data
+      if (data && Array.isArray(data.questions)) {
+        const qs = data.questions
+        setCourseQuestions(qs)
+        const resume = data.resume
+        if (sectionId != null && resume && qs.length > 0) {
+          const latest = {}
+          for (const [k, v] of Object.entries(resume.latest_answers || {})) {
+            const qid = Number(k)
+            if (Number.isFinite(qid) && v != null && String(v).trim() !== '') {
+              latest[qid] = String(v).trim()
+            }
+          }
+          const totalPages = Math.max(1, Math.ceil(qs.length / QUIZ_PAGE_SIZE))
+          let page = 0
+          if (resume.all_answered) {
+            page = totalPages - 1
+          } else if (typeof resume.first_unanswered_index === 'number' && resume.first_unanswered_index >= 0) {
+            page = Math.floor(resume.first_unanswered_index / QUIZ_PAGE_SIZE)
+            page = Math.min(Math.max(0, page), totalPages - 1)
+          }
+          setCurrentPage(page)
+          setAnswers(latest)
+        } else {
+          setCurrentPage(0)
+          setAnswers({})
+        }
+        return qs.length
       }
       setCourseQuestions([])
+      setCurrentPage(0)
+      setAnswers({})
       return 0
     } catch (err) {
       console.error(`[LMS] fetchSectionQuestions: Error for course=${courseId}, section=${sectionId}:`, err)
       setCourseQuestions([])
+      setCurrentPage(0)
+      setAnswers({})
+      if (err.response?.status === 403) {
+        console.warn('[LMS] fetchSectionQuestions: Not enrolled or forbidden to view questions for this course.')
+      }
       return 0
     }
   }
@@ -2851,8 +2887,7 @@ const LMS = () => {
       return
     }
 
-    const PAGE_SIZE = 5
-    const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+    const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
     const isLastPage = currentPage >= totalPages - 1
 
     try {
@@ -3705,19 +3740,18 @@ const LMS = () => {
                 {questionsLoading ? (
                   <div style={{ textAlign: 'center', padding: '40px' }}>Loading questions...</div>
                 ) : courseQuestions.length > 0 ? (() => {
-                  const PAGE_SIZE = 5
-                  const pageQuestions = courseQuestions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                  const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+                  const pageQuestions = courseQuestions.slice(currentPage * QUIZ_PAGE_SIZE, (currentPage + 1) * QUIZ_PAGE_SIZE)
+                  const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
                   return (
                     <>
                       {/* Page indicator */}
                       <div style={{ fontSize: '0.85em', color: 'var(--text-light)', marginBottom: '12px' }}>
-                        Page {currentPage + 1} of {totalPages} &nbsp;·&nbsp; Questions {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, courseQuestions.length)} of {courseQuestions.length}
+                        Page {currentPage + 1} of {totalPages} &nbsp;·&nbsp; Questions {currentPage * QUIZ_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * QUIZ_PAGE_SIZE, courseQuestions.length)} of {courseQuestions.length}
                       </div>
                       {pageQuestions.map((q, idx) => (
                         <QuestionSection key={q.id}>
                           <QuestionLabel>
-                            <QuestionNumber>Question {currentPage * PAGE_SIZE + idx + 1}:</QuestionNumber>
+                            <QuestionNumber>Question {currentPage * QUIZ_PAGE_SIZE + idx + 1}:</QuestionNumber>
                             {q.question_text || q.question || 'No question text available'}
                           </QuestionLabel>
                           {q.question_type === 'multiple_choice' && q.options ? (
@@ -3728,7 +3762,8 @@ const LMS = () => {
                                     type="radio"
                                     name={`question-${q.id}`}
                                     value={key}
-                                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                                    checked={(answers[q.id] || '') === key}
+                                    onChange={() => handleAnswerChange(q.id, key)}
                                   />
                                   <span>{key}: {value}</span>
                                 </label>
@@ -3754,9 +3789,8 @@ const LMS = () => {
 
                 <ButtonContainer>
                   {(() => {
-                    const PAGE_SIZE = 5
-                    const pageQuestions = courseQuestions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                    const totalPages = Math.ceil(courseQuestions.length / PAGE_SIZE)
+                    const pageQuestions = courseQuestions.slice(currentPage * QUIZ_PAGE_SIZE, (currentPage + 1) * QUIZ_PAGE_SIZE)
+                    const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
                     const isLastPage = currentPage >= totalPages - 1
                     const allAnswered = pageQuestions.length > 0 && pageQuestions.every(q => answers[q.id] && answers[q.id].trim())
                     return (
