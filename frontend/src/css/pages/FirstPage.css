@@ -1236,6 +1236,52 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
   background: var(--fp-chapter-img-bg);
 }
 
+/* AI Profile chapter: interactive mock (soft canvas matches component) */
+.chapter__img-wrap--career-ui {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  background: transparent;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.chapter__img-wrap.chapter__img-wrap--career-ui {
+  background: transparent !important;
+}
+.chapter__img-wrap--career-ui::after {
+  display: none;
+}
+
+/* Interview Simulator chapter: custom dashboard mock */
+.chapter__img-wrap--interview-ui {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  background: transparent;
+  overflow: hidden;
+}
+.chapter__img-wrap.chapter__img-wrap--interview-ui {
+  background: transparent !important;
+}
+.chapter__img-wrap--interview-ui::after {
+  display: none;
+}
+
+/* LMS chapter: custom dashboard mock */
+.chapter__img-wrap--lms-ui {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  background: transparent;
+  overflow: hidden;
+}
+.chapter__img-wrap.chapter__img-wrap--lms-ui {
+  background: transparent !important;
+}
+.chapter__img-wrap--lms-ui::after {
+  display: none;
+}
+
 /* Background image — contained, never upscaled past natural size */
 .chapter__bg-img {
   position: absolute;
@@ -2337,6 +2383,18 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
   .chapter { grid-template-columns: 1fr; min-height: auto; }
   .chapter--rev { direction: ltr; }
   .chapter__img-wrap { height: 400px; }
+  .chapter__img-wrap--career-ui {
+    height: auto;
+    min-height: min(560px, 88vh);
+  }
+  .chapter__img-wrap--interview-ui {
+    height: auto;
+    min-height: min(560px, 88vh);
+  }
+  .chapter__img-wrap--lms-ui {
+    height: auto;
+    min-height: min(560px, 88vh);
+  }
   .chapter__body { border-left: none !important; border-right: none !important; border-top: 1px solid var(--fp-line-hair); }
 
   .stats__grid { grid-template-columns: repeat(2, 1fr); }

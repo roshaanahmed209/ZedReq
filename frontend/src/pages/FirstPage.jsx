@@ -6,7 +6,9 @@ import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
 import { sendReservationEmail } from '../services/emailjs';
 import DarkVeil from '../components/DarkVeil';
 import GlobeAnimation from '../components/GlobeAnimation';
-import lmsHeroImg from '../../static/AI powered LMS.jpg';
+import CareerAssistant from '../components/CareerAssistant';
+import InterviewSimulatorDashboard from '../components/InterviewSimulatorDashboard';
+import LMSDashboard from '../components/LMSDashboard';
 import {
   PLATFORM_ACCESS_LINES,
   FREE_TEASER_WORDS,
@@ -610,38 +612,8 @@ export default function FirstPage() {
 
           {/* Chapter 1 — AI Profile */}
           <div className="chapter">
-            <div className="chapter__img-wrap">
-              <img
-                src={A('chapter-ai-profile.jpg')}
-                alt="AI Career Assistant interface"
-                className="chapter__bg-img"
-                loading="lazy"
-                decoding="async"
-              />
-              {/* Score mockup overlaid on image */}
-              <div className="chapter__mockup">
-                <span className="chapter__mock-label">Profile Strength Analysis</span>
-                <div className="chapter__bar-wrap">
-                  {[
-                    { name: 'Technical Skills', pct: '92%' },
-                    { name: 'Soft Skills',      pct: '78%' },
-                    { name: 'Leadership',        pct: '84%' },
-                    { name: 'Domain Expertise', pct: '96%' },
-                  ].map((row) => (
-                    <div key={row.name} className="chapter__bar-row">
-                      <span className="chapter__bar-name">{row.name}</span>
-                      <div className="chapter__bar-track">
-                        <div
-                          className="chapter__bar-fill"
-                          data-target={row.pct}
-                          style={{ width: 0 }}
-                        />
-                      </div>
-                      <span className="chapter__bar-pct">{row.pct}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="chapter__img-wrap chapter__img-wrap--career-ui">
+              <CareerAssistant />
             </div>
 
             <div className="chapter__body reveal-right">
@@ -702,34 +674,8 @@ export default function FirstPage() {
 
           {/* Chapter 3 — Interview Sim */}
           <div className="chapter">
-            <div className="chapter__img-wrap">
-              <img
-                src={A('chapter-interview.jpg')}
-                alt="AI Mock Interview platform"
-                className="chapter__bg-img"
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="chapter__mockup">
-                <span className="chapter__mock-label">Live Interview Session</span>
-                <div className="chapter__chat">
-                  <div className="chapter__chat-row">
-                    <div className="chapter__chat-bubble">
-                      Walk me through a time you led a cross-functional project under pressure.
-                    </div>
-                  </div>
-                  <div className="chapter__chat-row chapter__chat-row--user">
-                    <div className="chapter__chat-bubble">
-                      In Q3 at my previous role, I led a six-person team to ship a payment integration in 8 days...
-                    </div>
-                  </div>
-                  <div className="chapter__chat-row">
-                    <div className="chapter__chat-bubble">
-                      Good structure. Try adding the specific outcome metric in your close — e.g., "which reduced churn by 12%".
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="chapter__img-wrap chapter__img-wrap--interview-ui">
+              <InterviewSimulatorDashboard />
             </div>
 
             <div className="chapter__body reveal-right">
@@ -748,37 +694,8 @@ export default function FirstPage() {
 
           {/* Chapter 4 — LMS (reversed) */}
           <div className="chapter chapter--rev">
-            <div className="chapter__img-wrap">
-              <img
-                src={lmsHeroImg}
-                alt="ZedReq LMS — courses, modules, and progress"
-                className="chapter__bg-img"
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="chapter__mockup">
-                <span className="chapter__mock-label">Course progress</span>
-                <div className="chapter__bar-wrap">
-                  {[
-                    { name: 'Leadership', pct: '72%' },
-                    { name: 'System design', pct: '88%' },
-                    { name: 'Negotiation', pct: '54%' },
-                    { name: 'Domain depth', pct: '91%' },
-                  ].map((row) => (
-                    <div key={row.name} className="chapter__bar-row">
-                      <span className="chapter__bar-name">{row.name}</span>
-                      <div className="chapter__bar-track">
-                        <div
-                          className="chapter__bar-fill"
-                          data-target={row.pct}
-                          style={{ width: 0 }}
-                        />
-                      </div>
-                      <span className="chapter__bar-pct">{row.pct}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="chapter__img-wrap chapter__img-wrap--lms-ui">
+              <LMSDashboard />
             </div>
 
             <div className="chapter__body reveal-left">
