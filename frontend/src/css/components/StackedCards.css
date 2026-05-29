@@ -34,7 +34,7 @@
   box-sizing: border-box;
   transform-origin: center top;
   will-change: transform;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--fp-stacked-card-shadow, 0 12px 36px rgba(0, 0, 0, 0.12));
   pointer-events: auto;
 }
 
