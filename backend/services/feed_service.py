@@ -1,15 +1,15 @@
 """Feed Service - Production-grade feed with Redis caching and cursor pagination using ORM"""
 import json
-import redis
+import os
 from typing import Optional, Dict, Any, List, Tuple, Literal
 from datetime import datetime
 from sqlalchemy import and_, or_, desc
 from sqlalchemy.orm import Session
 
+from config.cache import get_redis_client, is_redis_available
 from models.orm import Post, Like, Connection, User, Description
 from services.post_service import PostService
 from utils.logger import setup_logger
-import os
 
 logger = setup_logger(__name__)
 
@@ -27,34 +27,12 @@ class FeedService:
     def __init__(self, db: Session):
         self.db = db
         self.post_service = PostService(db)
-        self._redis = None
-    
+
     @property
     def redis(self):
-        """Lazy Redis connection with fallback for development"""
-        # Skip Redis entirely if disabled in config
-        redis_enabled = os.environ.get('REDIS_ENABLED', 'false').lower() == 'true'
-        if not redis_enabled:
-            return None
-        
-        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-            
-        if self._redis is None:
-            try:
-                self._redis = redis.from_url(
-                    redis_url,
-                    decode_responses=True,
-                    socket_connect_timeout=1,
-                    socket_timeout=1
-                )
-                # Test connection
-                self._redis.ping()
-                logger.info("Redis connected successfully")
-            except (redis.ConnectionError, redis.TimeoutError) as e:
-                logger.warning(f"Redis not available, caching disabled: {e}")
-                self._redis = None
-        return self._redis
-    
+        """Shared Redis client from config.cache (None when unavailable)."""
+        return get_redis_client()
+
     def get_user_feed(
         self,
         user_id: int,
@@ -76,7 +54,7 @@ class FeedService:
         limit = min(limit, 50)
         
         # Try cache first (only for first page without cursor; discovery-only first pages are not cached)
-        if cursor is None and self.redis:
+        if cursor is None and is_redis_available():
             cached = self._get_cached_feed(user_id)
             if cached:
                 logger.debug(f"Cache hit for user {user_id} feed")
@@ -142,7 +120,7 @@ class FeedService:
         
         if (
             cursor is None
-            and self.redis
+            and is_redis_available()
             and feed_segment == 'connections'
             and (not enriched_posts or all(p['user_id'] in circle_uids for p in enriched_posts))
         ):

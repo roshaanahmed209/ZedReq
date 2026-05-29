@@ -78,6 +78,15 @@ class Settings(BaseSettings):
     FIREBASE_AUTH_PROJECT_ID: str | None = None  # Firebase project ID for Google Auth
     FIREBASE_AUTH_API_KEY: str | None = None  # Firebase API key for Google Auth
     
+    # Redis (optional — Render injects REDIS_URL; see config/cache.py)
+    REDIS_URL: str | None = None
+    REDIS_HOST: str | None = None
+    REDIS_PORT: int | None = None
+    REDIS_DB: int = 0
+    REDIS_ENABLED: bool | None = None
+    REDIS_CACHE_TTL: int = 300
+    REDIS_REQUIRED: bool = False
+
     # Recommendation Cache Configuration
     RECOMMENDATION_CACHE_ENABLED: bool = True
     RECOMMENDATION_CACHE_TTL_HOURS: int = 24  # Optional TTL for cache expiration

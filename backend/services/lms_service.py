@@ -472,6 +472,7 @@ class LMSService:
         user_course.last_accessed_at = datetime.now()
         
         # Set completed_at if progress is 100%
+        cache_invalidated_by_activity = False
         if progress >= 100 and not user_course.completed_at:
             user_course.completed_at = datetime.now()
             
@@ -480,7 +481,7 @@ class LMSService:
             if course:
                 self.issue_certificate(user_id, course_id, f"Certificate of Completion: {course.title}")
                 
-                # Log activity
+                # Log activity (also invalidates dashboard cache)
                 self.log_activity(
                     user_id=user_id,
                     activity_type='course_complete',
@@ -488,9 +489,12 @@ class LMSService:
                     course_id=course_id,
                     icon=course.icon
                 )
-        
+                cache_invalidated_by_activity = True
+
         self.db.commit()
         self.db.refresh(user_course)
+        if not cache_invalidated_by_activity:
+            invalidate_dashboard_cache(user_id)
         return user_course
     
     # ========================================================================
@@ -1145,6 +1149,7 @@ class LMSService:
             # 5. Single atomic commit
             self.db.commit()
             self.db.refresh(answer)
+            invalidate_dashboard_cache(answer.user_id)
         except Exception:
             self.db.rollback()
             raise

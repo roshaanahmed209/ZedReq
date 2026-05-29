@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 
 from dependencies.auth import get_current_user
+from config.cache import ping_redis
 
 router = APIRouter(prefix="/api/monitoring", tags=["Monitoring"])
 
@@ -34,8 +35,12 @@ async def detailed_health_check(
                 "memory_percent": memory.percent,
                 "memory_available_mb": memory.available / (1024 * 1024)
             }
-        except:
+        except Exception:
             pass
+
+        health_status["redis"] = ping_redis()
+        if not health_status["redis"].get("available"):
+            health_status["status"] = "degraded"
         
         return health_status
     except Exception as e:

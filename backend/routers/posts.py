@@ -13,6 +13,7 @@ from dependencies.rate_limit import (
 )
 from config.database_orm import get_db
 from services.post_service import PostService
+from services.feed_cache import invalidate_feed_for_author, invalidate_feed_for_users
 from tasks.post_context_tasks import run_post_like_context_update
 from utils.errors import NotFoundError, AuthorizationError
 from utils.api_security import (
@@ -120,7 +121,8 @@ class CreateCommentRequest(BaseModel):
 async def create_post(
     post_data: CreatePostRequest,
     current_user: dict = Depends(write_rate_limit),  # write_rate_limit includes get_current_user
-    post_service: PostService = Depends(get_post_service)
+    post_service: PostService = Depends(get_post_service),
+    db: Session = Depends(get_db),
 ):
     """Create a new post"""
     try:
@@ -130,7 +132,8 @@ async def create_post(
             media_url=post_data.media_url,
             media_type=post_data.media_type
         )
-        
+        invalidate_feed_for_author(db, current_user["id"])
+
         return {
             "id": post["id"],
             "user_id": post["user_id"],
@@ -385,11 +388,13 @@ async def update_post(
 async def delete_post(
     post_id: int,
     current_user: dict = Depends(write_rate_limit),  # write_rate_limit includes get_current_user
-    post_service: PostService = Depends(get_post_service)
+    post_service: PostService = Depends(get_post_service),
+    db: Session = Depends(get_db),
 ):
     """Delete a post permanently (only by owner)"""
     try:
         post_service.delete_post(post_id, current_user["id"])
+        invalidate_feed_for_author(db, current_user["id"])
         return {"message": "Post deleted successfully"}
     except NotFoundError:
         raise HTTPException(
@@ -415,10 +420,12 @@ async def toggle_like(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(write_rate_limit),  # write_rate_limit includes get_current_user
     post_service: PostService = Depends(get_post_service),
+    db: Session = Depends(get_db),
 ):
     """Toggle like on a post (Zed context / LLM runs in BackgroundTasks after response)."""
     try:
         result = post_service.toggle_like(post_id, current_user["id"])
+        invalidate_feed_for_users(db, current_user["id"])
 
         if result["is_liked"]:
             background_tasks.add_task(

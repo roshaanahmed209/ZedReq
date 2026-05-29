@@ -1397,6 +1397,28 @@ const ErrorBox = styled.div`
 
 const TABS = ['About', 'Experience', 'Education', 'Projects', 'Recommendations', 'Posts']
 
+const PREFETCH_IDLE_GAP_MS = 150
+
+function mapProfileConnectionStatus(status) {
+  if (status === 'connected' || status === 'pending') return status
+  return 'none'
+}
+
+function scheduleIdleWork(fn) {
+  return new Promise((resolve) => {
+    const run = () => Promise.resolve(fn()).then(resolve)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => run(), { timeout: 2000 })
+    } else {
+      setTimeout(run, PREFETCH_IDLE_GAP_MS)
+    }
+  })
+}
+
+function prefetchDelay() {
+  return new Promise((r) => setTimeout(r, PREFETCH_IDLE_GAP_MS))
+}
+
 function Profile() {
   const params = useParams()
   const location = useLocation()
@@ -1421,13 +1443,30 @@ function Profile() {
   const [projects, setProjects] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [interests, setInterests] = useState([])
-  const [loadingFeatures, setLoadingFeatures] = useState(false)
+  const [loadingExperiences, setLoadingExperiences] = useState(false)
+  const [loadingEducations, setLoadingEducations] = useState(false)
+  const [loadingProjects, setLoadingProjects] = useState(false)
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false)
+  const [loadingInterests, setLoadingInterests] = useState(false)
   const [activeTab, setActiveTab] = useState('About')
   const [suggestions, setSuggestions] = useState([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const likingPostIdsRef = useRef(new Set())
   const [deletingPostId, setDeletingPostId] = useState(null)
   const [commentsOpenByPost, setCommentsOpenByPost] = useState({})
+
+  const prefetchedRef = useRef({
+    interests: false,
+    experience: false,
+    education: false,
+    projects: false,
+    recommendations: false,
+    posts: false,
+    featured: false,
+    suggestions: false,
+    certificates: false,
+  })
+  const prefetchGenRef = useRef(0)
 
   // Edit modal states
   const [editModal, setEditModal] = useState(null) // 'description', 'about', 'skills', 'experience', 'education', 'projects', 'recommendations'
@@ -1454,6 +1493,22 @@ function Profile() {
   const currentUserId =
     currentUser != null ? Number(currentUser.id ?? currentUser.uid) : null
   const currentUserIdValid = currentUserId != null && !Number.isNaN(currentUserId)
+  const isOwnProfile =
+    currentUserIdValid && userId != null && currentUserId === Number(userId)
+
+  const resetPrefetchFlags = () => {
+    prefetchedRef.current = {
+      interests: false,
+      experience: false,
+      education: false,
+      projects: false,
+      recommendations: false,
+      posts: false,
+      featured: false,
+      suggestions: false,
+      certificates: false,
+    }
+  }
 
   /* ── Refetch profile when settings (or elsewhere) updates photos for this user ── */
   useEffect(() => {
@@ -1467,29 +1522,16 @@ function Profile() {
     return () => window.removeEventListener('zedreq:profile-updated', onUpdated)
   }, [userId])
 
-  /* ── Data loading ────────────────────────────────────────── */
-  useEffect(() => {
-    if (userId) {
-      loadProfile()
-      checkConnectionStatus()
-      loadUserPosts()
-      loadFeaturedPosts()
-      loadConnectionCounts()
-      loadCertificates()
-      loadProfileFeatures()
-      loadSuggestions()
-    } else {
-      setError('Invalid profile URL')
-      setLoading(false)
-    }
-  }, [userId, location.pathname, location.key])
-
+  /* ── Data loading (staged: critical path → About extras → idle prefetch) ── */
   const loadProfile = async () => {
     if (!userId) { setError('Invalid user ID'); setLoading(false); return }
     try {
-      setLoading(true); setError(null)
+      setError(null)
       const response = await userAPI.getUserProfile(userId)
       setProfile(response.data)
+      if (!isOwnProfile && response.data?.connection_status != null) {
+        setConnectionStatus(mapProfileConnectionStatus(response.data.connection_status))
+      }
       if (response.data && response.data.username && params.userId && !params.hashedId) {
         const newUrl = generateProfileUrl(userId, response.data.username)
         if (newUrl !== location.pathname) navigate(newUrl, { replace: true })
@@ -1501,20 +1543,50 @@ function Profile() {
     }
   }
 
-  const checkConnectionStatus = async () => {
-    if (!currentUser || !userId || (currentUserIdValid && Number(userId) === currentUserId)) return
+  const loadProfileCritical = async () => {
+    if (!userId) {
+      setError('Invalid user ID')
+      setLoading(false)
+      return
+    }
     try {
-      // Check if already connected - API returns list of connected users with id/uid fields
+      setLoading(true)
+      setError(null)
+      const [profileRes, countsRes] = await Promise.all([
+        userAPI.getUserProfile(userId),
+        userAPI.getConnectionCounts(userId),
+      ])
+      const profileData = profileRes.data
+      setProfile(profileData)
+      setConnectionCounts(countsRes.data || { followers: 0, following: 0, connections: 0 })
+      if (isOwnProfile) {
+        setConnectionStatus(null)
+      } else {
+        setConnectionStatus(mapProfileConnectionStatus(profileData?.connection_status))
+      }
+      if (profileData?.username && params.userId && !params.hashedId) {
+        const newUrl = generateProfileUrl(userId, profileData.username)
+        if (newUrl !== location.pathname) navigate(newUrl, { replace: true })
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || 'Failed to load profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkConnectionStatus = async () => {
+    if (!currentUser || !userId || isOwnProfile) return
+    try {
       const connectionsResponse = await networkAPI.getConnections()
       const connections = connectionsResponse.data || connectionsResponse || []
       const isConnected = Array.isArray(connections) && connections.some(
         c => (c.id === userId || c.uid === userId || c.user_id === userId || c.connected_user_id === userId)
       )
-      if (isConnected) { 
+      if (isConnected) {
         setConnectionStatus('connected')
-        return 
+        return
       }
-      
       const [pendingResponse, sentResponse] = await Promise.all([
         connectionAPI.getPendingRequests(),
         connectionAPI.getSentRequests(),
@@ -1566,48 +1638,106 @@ function Profile() {
   }
 
   const loadCertificates = async () => {
-    if (!userId) return
+    if (!userId || prefetchedRef.current.certificates) return
+    prefetchedRef.current.certificates = true
     try {
       setLoadingCertificates(true)
       const r = await userAPI.getUserCertificates(userId)
       setCertificates(r.data.certificates || [])
-    } catch { setCertificates([]) }
-    finally { setLoadingCertificates(false) }
+    } catch {
+      setCertificates([])
+    } finally {
+      setLoadingCertificates(false)
+    }
+  }
+
+  const loadInterests = async () => {
+    if (!userId || prefetchedRef.current.interests) return
+    prefetchedRef.current.interests = true
+    try {
+      setLoadingInterests(true)
+      const r = await profileFeaturesAPI.getInterests(userId, null, 50, 0)
+      setInterests(r.data?.interests || [])
+    } catch {
+      setInterests([])
+    } finally {
+      setLoadingInterests(false)
+    }
+  }
+
+  const loadExperiences = async () => {
+    if (!userId || prefetchedRef.current.experience) return
+    prefetchedRef.current.experience = true
+    try {
+      setLoadingExperiences(true)
+      const r = await profileFeaturesAPI.getExperiences(userId, 50, 0)
+      setExperiences(r.data?.experiences || [])
+    } catch {
+      setExperiences([])
+    } finally {
+      setLoadingExperiences(false)
+    }
+  }
+
+  const loadEducations = async () => {
+    if (!userId || prefetchedRef.current.education) return
+    prefetchedRef.current.education = true
+    try {
+      setLoadingEducations(true)
+      const r = await profileFeaturesAPI.getEducations(userId, 50, 0)
+      setEducations(r.data?.educations || [])
+    } catch {
+      setEducations([])
+    } finally {
+      setLoadingEducations(false)
+    }
+  }
+
+  const loadProjects = async () => {
+    if (!userId || prefetchedRef.current.projects) return
+    prefetchedRef.current.projects = true
+    try {
+      setLoadingProjects(true)
+      const r = await profileFeaturesAPI.getProjects(userId, 50, 0)
+      setProjects(r.data?.projects || [])
+    } catch {
+      setProjects([])
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
+
+  const loadRecommendations = async () => {
+    if (!userId || isOwnProfile || prefetchedRef.current.recommendations) return
+    prefetchedRef.current.recommendations = true
+    try {
+      setLoadingRecommendations(true)
+      const r = await profileFeaturesAPI.getRecommendations(userId, 50, 0)
+      setRecommendations(r.data?.recommendations || [])
+    } catch {
+      setRecommendations([])
+    } finally {
+      setLoadingRecommendations(false)
+    }
   }
 
   const loadFeaturedPosts = async () => {
-    if (!userId) return
+    if (!userId || prefetchedRef.current.featured) return
+    prefetchedRef.current.featured = true
     try {
       setLoadingFeatured(true)
       const r = await postAPI.getUserFeaturedPosts(userId, { limit: 6, offset: 0 })
       setFeaturedPosts(r.data?.posts || [])
-    } catch { setFeaturedPosts([]) }
-    finally { setLoadingFeatured(false) }
-  }
-
-  const loadProfileFeatures = async () => {
-    if (!userId) return
-    try {
-      setLoadingFeatures(true)
-      const [expRes, eduRes, projRes, recRes, intRes] = await Promise.allSettled([
-        profileFeaturesAPI.getExperiences(userId, 50, 0),
-        profileFeaturesAPI.getEducations(userId, 50, 0),
-        profileFeaturesAPI.getProjects(userId, 50, 0),
-        profileFeaturesAPI.getRecommendations(userId, 50, 0),
-        profileFeaturesAPI.getInterests(userId, null, 50, 0)
-      ])
-      setExperiences(expRes.status === 'fulfilled' ? expRes.value.data?.experiences || [] : [])
-      setEducations(eduRes.status === 'fulfilled' ? eduRes.value.data?.educations || [] : [])
-      setProjects(projRes.status === 'fulfilled' ? projRes.value.data?.projects || [] : [])
-      setRecommendations(recRes.status === 'fulfilled' ? recRes.value.data?.recommendations || [] : [])
-      setInterests(intRes.status === 'fulfilled' ? intRes.value.data?.interests || [] : [])
     } catch {
-      setExperiences([]); setEducations([]); setProjects([]); setRecommendations([]); setInterests([])
-    } finally { setLoadingFeatures(false) }
+      setFeaturedPosts([])
+    } finally {
+      setLoadingFeatured(false)
+    }
   }
 
   const loadSuggestions = async () => {
-    if (!currentUser || !isOwn) return
+    if (!currentUser || !isOwnProfile || prefetchedRef.current.suggestions) return
+    prefetchedRef.current.suggestions = true
     try {
       setLoadingSuggestions(true)
       const response = await networkAPI.getSuggestions(20)
@@ -1620,14 +1750,105 @@ function Profile() {
   }
 
   const loadUserPosts = async () => {
-    if (!userId) return
+    if (!userId || prefetchedRef.current.posts) return
+    prefetchedRef.current.posts = true
     try {
       setLoadingPosts(true)
       const r = await postAPI.getUserPosts(userId, { limit: 20, offset: 0 })
       setPosts(r.data?.posts || [])
-    } catch { setPosts([]) }
-    finally { setLoadingPosts(false) }
+    } catch {
+      setPosts([])
+    } finally {
+      setLoadingPosts(false)
+    }
   }
+
+  const loadPostsTab = async () => {
+    await loadUserPosts()
+    await loadFeaturedPosts()
+  }
+
+  const loadTabData = (tab) => {
+    switch (tab) {
+      case 'About':
+        loadCertificates()
+        loadInterests()
+        break
+      case 'Experience':
+        loadExperiences()
+        break
+      case 'Education':
+        loadEducations()
+        break
+      case 'Projects':
+        loadProjects()
+        break
+      case 'Recommendations':
+        if (isOwnProfile) loadSuggestions()
+        else loadRecommendations()
+        break
+      case 'Posts':
+        loadPostsTab()
+        break
+      default:
+        break
+    }
+  }
+
+  const runPrefetchQueue = async (gen) => {
+    const steps = [
+      () => loadInterests(),
+      () => loadExperiences(),
+      () => loadEducations(),
+      () => loadProjects(),
+      () => (isOwnProfile ? loadSuggestions() : loadRecommendations()),
+      () => loadUserPosts(),
+      () => loadFeaturedPosts(),
+    ]
+    for (const step of steps) {
+      if (gen !== prefetchGenRef.current) return
+      await scheduleIdleWork(step)
+      await prefetchDelay()
+    }
+  }
+
+  useEffect(() => {
+    if (!userId) {
+      setError('Invalid profile URL')
+      setLoading(false)
+      return
+    }
+
+    const gen = ++prefetchGenRef.current
+    resetPrefetchFlags()
+    setActiveTab('About')
+    setPosts([])
+    setFeaturedPosts([])
+    setExperiences([])
+    setEducations([])
+    setProjects([])
+    setRecommendations([])
+    setInterests([])
+    setSuggestions([])
+    setCertificates([])
+
+    ;(async () => {
+      await loadProfileCritical()
+      if (gen !== prefetchGenRef.current) return
+      loadCertificates()
+      loadInterests()
+      runPrefetchQueue(gen)
+    })()
+
+    return () => {
+      prefetchGenRef.current += 1
+    }
+  }, [userId, location.pathname, location.key])
+
+  useEffect(() => {
+    if (!userId || loading || !profile) return
+    loadTabData(activeTab)
+  }, [activeTab, userId, loading, profile, isOwnProfile])
 
   const handleLike = async (postId) => {
     const pid = postId
@@ -1809,14 +2030,16 @@ function Profile() {
         } else {
           await profileFeaturesAPI.createExperience({ ...formData, user_id: userId })
         }
-        await loadProfileFeatures()
+        prefetchedRef.current.experience = false
+        await loadExperiences()
       } else if (editModal === 'education') {
         if (editingItem) {
           await profileFeaturesAPI.updateEducation(editingItem.id, formData)
         } else {
           await profileFeaturesAPI.createEducation({ ...formData, user_id: userId })
         }
-        await loadProfileFeatures()
+        prefetchedRef.current.education = false
+        await loadEducations()
       } else if (editModal === 'projects') {
         if (editingItem) {
           await profileFeaturesAPI.updateProject(editingItem.id, {
@@ -1830,14 +2053,16 @@ function Profile() {
             technologies: formData.technologies ? formData.technologies.split(',').map(t => t.trim()).filter(Boolean) : []
           })
         }
-        await loadProfileFeatures()
+        prefetchedRef.current.projects = false
+        await loadProjects()
       } else if (editModal === 'recommendations') {
         if (editingItem) {
           await profileFeaturesAPI.updateRecommendation(editingItem.id, formData)
         } else {
           await profileFeaturesAPI.createRecommendation({ ...formData, user_id: userId })
         }
-        await loadProfileFeatures()
+        prefetchedRef.current.recommendations = false
+        await loadRecommendations()
       } else if (editModal === 'certificates') {
         // Update legacy certificates field
         const certsArray = formData.certificates.split('\n').map(c => c.trim()).filter(Boolean)
@@ -1880,7 +2105,19 @@ function Profile() {
       } else if (section === 'recommendations') {
         await profileFeaturesAPI.deleteRecommendation(itemId)
       }
-      await loadProfileFeatures()
+      if (section === 'experience') {
+        prefetchedRef.current.experience = false
+        await loadExperiences()
+      } else if (section === 'education') {
+        prefetchedRef.current.education = false
+        await loadEducations()
+      } else if (section === 'projects') {
+        prefetchedRef.current.projects = false
+        await loadProjects()
+      } else if (section === 'recommendations') {
+        prefetchedRef.current.recommendations = false
+        await loadRecommendations()
+      }
     } catch (error) {
       await showConfirm({
         title: 'Error',
@@ -2100,9 +2337,15 @@ function Profile() {
       </Card>
 
       {/* Interests */}
-      {interests.length > 0 && (
+      {(loadingInterests || interests.length > 0) && (
         <Card>
           <CardTitle>Interests</CardTitle>
+          {loadingInterests ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <SkeletonBox $h="32px" />
+              <SkeletonBox $h="32px" />
+            </div>
+          ) : (
           <ChipsWrap>
             {interests.map(int => (
               <InterestBadge key={int.id}>
@@ -2115,6 +2358,7 @@ function Profile() {
               </InterestBadge>
             ))}
           </ChipsWrap>
+          )}
         </Card>
       )}
 
@@ -2150,7 +2394,7 @@ function Profile() {
             </EditButton>
           )}
         </CardHeader>
-        {loadingFeatures ? (
+        {loadingExperiences ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2, 3].map(i => <SkeletonBox key={i} $h="80px" />)}
           </div>
@@ -2266,7 +2510,7 @@ function Profile() {
           <CardHeader>
             <CardTitle>Recommendations</CardTitle>
           </CardHeader>
-          {loadingFeatures ? (
+          {loadingRecommendations ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[1, 2, 3].map(i => <SkeletonBox key={i} $h="80px" />)}
             </div>
@@ -2307,7 +2551,7 @@ function Profile() {
             </EditButton>
           )}
         </CardHeader>
-        {loadingFeatures ? (
+        {loadingEducations ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2].map(i => <SkeletonBox key={i} $h="80px" />)}
           </div>
@@ -2370,7 +2614,7 @@ function Profile() {
             </EditButton>
           )}
         </CardHeader>
-        {loadingFeatures ? (
+        {loadingProjects ? (
           <ProjectsGrid>
             {[1, 2, 3].map(i => <SkeletonBox key={i} $h="140px" $r="14px" />)}
           </ProjectsGrid>

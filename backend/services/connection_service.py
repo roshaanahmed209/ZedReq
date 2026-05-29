@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from models.orm import User, Connection, ConnectionRequest
 from services.notification_service import NotificationService
+from services.feed_cache import invalidate_feed_for_users
 from websocket.manager import connection_manager
 
 
@@ -115,7 +116,8 @@ class ConnectionService:
         # Create bidirectional connection
         sender_id = request.sender_id
         self._create_bidirectional_connection(sender_id, receiver_id)
-        
+        invalidate_feed_for_users(self.db, sender_id, receiver_id)
+
         # Get user info
         sender = self.db.query(User).filter(User.uid == sender_id).first()
         receiver = self.db.query(User).filter(User.uid == receiver_id).first()
@@ -205,7 +207,8 @@ class ConnectionService:
         # Remove bidirectional connection
         other_user_id = connection.followed_uid
         self._remove_bidirectional_connection(user_id, other_user_id)
-    
+        invalidate_feed_for_users(self.db, user_id, other_user_id)
+
     def get_pending_requests(self, user_id: int) -> List[Dict[str, Any]]:
         """Get pending requests received by user"""
         requests = (

@@ -240,6 +240,19 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] User deletion tables init failed: {e}")
 
+    def _init_redis():
+        try:
+            from config.cache import ping_redis
+
+            status = ping_redis()
+            if status.get("available"):
+                print(f"[OK] Redis connected (latency_ms={status.get('latency_ms')})")
+            else:
+                print(f"[WARN] Redis unavailable: {status.get('error')}")
+        except RuntimeError as e:
+            print(f"[FATAL] {e}")
+            raise
+
     def _init_description_columns():
         """Ensure all columns in the description table exist.
 
@@ -284,6 +297,7 @@ async def lifespan(app: FastAPI):
 
     # Run all blocking startup tasks in threads with a 20s timeout each
     for name, fn in [
+        ("redis", _init_redis),
         ("db", _init_db),
         ("orm", _init_orm),
         ("firebase", _init_firebase),
