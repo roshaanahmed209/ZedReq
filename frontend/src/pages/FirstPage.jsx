@@ -9,6 +9,7 @@ import GlobeAnimation from '../components/GlobeAnimation';
 import CareerAssistant from '../components/CareerAssistant';
 import InterviewSimulatorDashboard from '../components/InterviewSimulatorDashboard';
 import LMSDashboard from '../components/LMSDashboard';
+import StackedCards from '../components/StackedCards';
 import {
   PLATFORM_ACCESS_LINES,
   FREE_TEASER_WORDS,
@@ -243,10 +244,19 @@ export default function FirstPage() {
   }, []);
 
   /** Outgoing headline line 2 — must match CSS transition on `.hero__hl-line--swap.fade-out` */
-  const HL_SWAP_OUT_MS = 900;
+  const HL_SWAP_OUT_MS = 520;
+  const HL_SWAP_FALLBACK_MS = HL_SWAP_OUT_MS + 80;
   const ROT_SWAP_MS = 480;
   /** Safety if `animationend` does not fire (e.g. reduced motion quirks) */
-  const HL_ENTER_FALLBACK_MS = 1200;
+  const HL_ENTER_FALLBACK_MS = 720;
+
+  const hlFadeRef = useRef(false);
+  const hlSwapArmedRef = useRef(false);
+  const hlSwapOutFallbackRef = useRef(null);
+
+  useEffect(() => {
+    hlFadeRef.current = hlFade;
+  }, [hlFade]);
 
   /* Rotating hero tagline */
   useEffect(() => {
@@ -269,6 +279,31 @@ export default function FirstPage() {
     document.documentElement.classList.add('hl-hero-swapped');
   }, []);
 
+  const performHlSwap = useCallback(() => {
+    if (!hlSwapArmedRef.current) return;
+    hlSwapArmedRef.current = false;
+    if (hlSwapOutFallbackRef.current != null) {
+      clearTimeout(hlSwapOutFallbackRef.current);
+      hlSwapOutFallbackRef.current = null;
+    }
+    setHlIdx((i) => (i + 1) % HERO_HL_VARIANTS.length);
+    setHlFade(false);
+    setHlSwapEnter(true);
+    hlEnterFallbackRef.current = setTimeout(() => {
+      finishHlSwapEnter();
+    }, HL_ENTER_FALLBACK_MS);
+  }, [finishHlSwapEnter]);
+
+  const handleHlSwapTransitionEnd = useCallback(
+    (e) => {
+      if (e.target !== e.currentTarget) return;
+      if (e.propertyName !== 'opacity') return;
+      if (!hlSwapArmedRef.current) return;
+      performHlSwap();
+    },
+    [performHlSwap]
+  );
+
   const handleHlSwapAnimEnd = useCallback(
     (e) => {
       const name = e.animationName || '';
@@ -278,33 +313,34 @@ export default function FirstPage() {
     [finishHlSwapEnter]
   );
 
-  /* Rotating hero headline (line 2 only; “Your Career.” fixed) — slow ease-out, eased keyframe in */
+  /* Rotating hero headline (line 2 only; “Your Career.” fixed) */
   useEffect(() => {
     const clearHlTimers = () => {
       hlSwapTimersRef.current.forEach(clearTimeout);
       hlSwapTimersRef.current = [];
+      if (hlSwapOutFallbackRef.current != null) {
+        clearTimeout(hlSwapOutFallbackRef.current);
+        hlSwapOutFallbackRef.current = null;
+      }
     };
     const id = setInterval(() => {
+      hlSwapArmedRef.current = true;
       setHlFade(true);
-      const t1 = setTimeout(() => {
-        setHlIdx((i) => (i + 1) % HERO_HL_VARIANTS.length);
-        setHlFade(false);
-        setHlSwapEnter(true);
-        hlEnterFallbackRef.current = setTimeout(() => {
-          finishHlSwapEnter();
-        }, HL_ENTER_FALLBACK_MS);
-      }, HL_SWAP_OUT_MS);
-      hlSwapTimersRef.current.push(t1);
+      hlSwapOutFallbackRef.current = setTimeout(() => {
+        performHlSwap();
+      }, HL_SWAP_FALLBACK_MS);
+      hlSwapTimersRef.current.push(hlSwapOutFallbackRef.current);
     }, 5000);
     return () => {
       clearInterval(id);
       clearHlTimers();
+      hlSwapArmedRef.current = false;
       if (hlEnterFallbackRef.current != null) {
         clearTimeout(hlEnterFallbackRef.current);
         hlEnterFallbackRef.current = null;
       }
     };
-  }, [finishHlSwapEnter]);
+  }, [performHlSwap]);
 
   /* Auto-advance testimonials */
   useEffect(() => {
@@ -419,35 +455,29 @@ export default function FirstPage() {
         <div className="nav__actions">
           <button
             type="button"
-            className={`nav__theme-btn${theme === 'dark' ? ' nav__theme-btn--to-light' : ' nav__theme-btn--to-dark'}`}
+            className={`nav__theme-btn nav__theme-btn--square${theme === 'dark' ? ' nav__theme-btn--to-light' : ' nav__theme-btn--to-dark'}`}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
             aria-pressed={theme === 'light'}
           >
             {theme === 'dark' ? (
-              <>
-                <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                  <path
-                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Light
-              </>
+              <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
             ) : (
-              <>
-                <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path
-                    fill="currentColor"
-                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                  />
-                </svg>
-                Dark
-              </>
+              <svg className="nav__theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                />
+              </svg>
             )}
           </button>
           <button
@@ -458,6 +488,12 @@ export default function FirstPage() {
           >
             <span /><span /><span />
           </button>
+          <a
+            href="/login"
+            className={`nav__theme-btn nav__get-started${theme === 'dark' ? ' nav__theme-btn--to-light' : ' nav__theme-btn--to-dark'}`}
+          >
+            Get Started
+          </a>
         </div>
       </nav>
 
@@ -532,6 +568,7 @@ export default function FirstPage() {
               <span
                 className={`hero__hl-line hero__hl-line--swap${hlFade ? ' fade-out' : ''}${hlSwapEnter ? ' hl-swap-enter' : ''}`}
                 onAnimationEnd={handleHlSwapAnimEnd}
+                onTransitionEnd={handleHlSwapTransitionEnd}
               >
                 {HERO_HL_VARIANTS[hlIdx].line2}
               </span>
@@ -566,7 +603,6 @@ export default function FirstPage() {
           {/* Scroll indicator */}
           <div className="hero__scroll" aria-hidden="true">
             <span className="hero__scroll-line" />
-            <span className="hero__scroll-label">Scroll</span>
           </div>
         </section>
 
@@ -742,30 +778,24 @@ export default function FirstPage() {
 
         {/* ════════════ TRUST ════════════ */}
         <section className="trust" id="about" aria-labelledby="trust-hl">
-          <div className="trust__head">
-            <div>
-              <span className="mono-label mono-label--accent reveal" style={{ marginBottom: '1.5rem', display: 'block' }}>
-                Privacy &amp; Security
-              </span>
-              <h2 className="trust__hl reveal" id="trust-hl">
-                Your data.<br /><em>Your rules.</em>
-              </h2>
-            </div>
-            <p className="trust__sub reveal" style={{ '--d': 1 }}>
-              We built ZedReq on a simple principle: your career data belongs to you, not
-              to advertisers, not to recruiters, and not to us. Every feature, every data
-              store, and every algorithm is designed around that belief.
-            </p>
-          </div>
-
-          <div className="trust__grid">
-            {TRUST_ITEMS.map((item) => (
-              <div key={item.num} className="trust-item">
-                <div className="trust-item__num">{item.num}</div>
-                <div className="trust-item__title">{item.title}</div>
-                <p className="trust-item__desc">{item.desc}</p>
+          <div className="trust__layout">
+            <div className="trust__head trust__head--sticky">
+              <div>
+                <span className="mono-label mono-label--accent" style={{ marginBottom: '1.5rem', display: 'block' }}>
+                  Privacy &amp; Security
+                </span>
+                <h2 className="trust__hl" id="trust-hl">
+                  Your data.<br /><em>Your rules.</em>
+                </h2>
               </div>
-            ))}
+              <p className="trust__sub">
+                We built ZedReq on a simple principle: your career data belongs to you, not
+                to advertisers, not to recruiters, and not to us. Every feature, every data
+                store, and every algorithm is designed around that belief.
+              </p>
+            </div>
+
+            <StackedCards items={TRUST_ITEMS} />
           </div>
         </section>
 

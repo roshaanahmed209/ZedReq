@@ -46,12 +46,11 @@ const InterviewSimulatorDashboard = () => {
   ]);
 
   return (
-    <div className="w-full min-h-[560px] bg-[#000000] p-4 sm:p-5 font-sans text-slate-200 relative overflow-hidden">
-      <div className="relative z-10 flex justify-between items-center mb-4 sm:mb-5">
+    <div className="w-full min-h-[560px] bg-[var(--fp-canvas)] p-4 sm:p-5 font-sans text-slate-200 relative overflow-hidden">
+      <div className="relative z-10 mb-4 sm:mb-5">
         <span className="uppercase text-[0.66rem] sm:text-[0.74rem] font-bold tracking-widest text-slate-500">
-          Interview Analytics
+          Real questions · instant coaching
         </span>
-        <h3 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">ZedReq</h3>
       </div>
 
       <div className="relative z-10 flex flex-col gap-5 items-stretch">

@@ -704,6 +704,18 @@ const PostsContainer = styled.div`
   }
 `
 
+const DiscoveryBanner = styled.div`
+  text-align: center;
+  padding: 12px 16px;
+  margin: 8px 0 16px;
+  font-size: 0.85rem;
+  color: var(--text-lighter);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-light);
+  border-radius: 8px;
+`
+
 const Post = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
@@ -831,6 +843,7 @@ const PostContent = styled.div`
   line-height: 1.65;
   font-size: 0.9375rem;
   color: var(--text);
+  white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
   
@@ -1452,6 +1465,7 @@ const Feed = () => {
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [cursor, setCursor] = useState(null)
   const [hasMore, setHasMore] = useState(true)
+  const [discoveryStartIndex, setDiscoveryStartIndex] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchTimeout, setSearchTimeout] = useState(null)
@@ -1519,13 +1533,22 @@ const Feed = () => {
       
       if (feedData && feedData.posts) {
         const newPosts = feedData.posts || []
-        
+        const segment = feedData.meta?.feed_segment
+
         if (loadMore) {
-          setPosts(prev => [...prev, ...newPosts])
+          if (segment === 'discovery' && discoveryStartIndex === null) {
+            setPosts((prev) => {
+              setDiscoveryStartIndex(prev.length)
+              return [...prev, ...newPosts]
+            })
+          } else {
+            setPosts((prev) => [...prev, ...newPosts])
+          }
         } else {
           setPosts(newPosts)
+          setDiscoveryStartIndex(segment === 'discovery' ? 0 : null)
         }
-        
+
         // Update pagination state
         if (feedData.pagination) {
           setCursor(feedData.pagination.next_cursor)
@@ -1667,6 +1690,7 @@ const Feed = () => {
         // Reset pagination and reload feed
         setCursor(null)
         setHasMore(true)
+        setDiscoveryStartIndex(null)
         loadPosts()
       }
     } catch {
@@ -1787,9 +1811,10 @@ const Feed = () => {
   }
 
   const escapeHtml = (text) => {
+    if (text == null) return ''
     const div = document.createElement('div')
-    div.textContent = text
-    return div.innerHTML
+    div.textContent = String(text)
+    return div.innerHTML.replace(/\n/g, '<br />')
   }
 
   const handleMessagesClick = () => {
@@ -1998,8 +2023,14 @@ const Feed = () => {
             ) : posts.length === 0 ? (
               <Loading>No posts yet. Be the first to share!</Loading>
             ) : (
-              posts.map(post => (
-                <Post key={post.id}>
+              posts.map((post, index) => (
+                <React.Fragment key={post.id}>
+                  {discoveryStartIndex !== null && index === discoveryStartIndex && (
+                    <DiscoveryBanner>
+                      You&apos;ve seen posts from your network — here are more from across the platform
+                    </DiscoveryBanner>
+                  )}
+                <Post>
                   <PostHeader>
                     <PostAvatar>
                       {post.full_name ? post.full_name.charAt(0).toUpperCase() : 'U'}
@@ -2104,6 +2135,7 @@ const Feed = () => {
                     }}
                   />
                 </Post>
+                </React.Fragment>
               ))
             )}
             {loadingMore && (

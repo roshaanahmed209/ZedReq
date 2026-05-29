@@ -72,9 +72,21 @@ void main(){
     col.rgb*=1.-(scanline_val*scanline_val)*uScan;
     col.rgb+=(rand(gl_FragCoord.xy+uTime)-0.5)*uNoise;
     vec3 rgb=clamp(col.rgb,0.0,1.0);
-    // Light theme: invert so shader blacks become lights (same pattern, flipped polarity)
+    // Light theme: lift dark areas toward white; then selectively deepen blue veil (never touch near-white)
     if(uLightVeil>0.5){
-      rgb=1.0-rgb;
+      float luma=dot(rgb,vec3(0.299,0.587,0.114));
+      float preSat=max(rgb.r,max(rgb.g,rgb.b))-min(rgb.r,min(rgb.g,rgb.b));
+      float blueHue=smoothstep(0.02,0.14,rgb.b-max(rgb.r,rgb.g));
+      float blueMask=smoothstep(0.04,0.22,preSat)*blueHue;
+      float liftAmt=(1.0-luma)*(1.0-blueMask*0.5);
+      vec3 lifted=mix(rgb,vec3(1.0),liftAmt);
+      float whiteDist=length(lifted-vec3(1.0));
+      float enhanceMask=blueMask*(1.0-smoothstep(0.0,0.04,whiteDist));
+      vec3 enhanced=lifted;
+      enhanced.b=min(lifted.b+0.24*enhanceMask,1.0);
+      enhanced.r=max(lifted.r-0.14*enhanceMask,0.0);
+      enhanced.g=max(lifted.g-0.07*enhanceMask,0.0);
+      rgb=mix(lifted,enhanced,enhanceMask);
     }
     gl_FragColor=vec4(rgb,1.0);
 }

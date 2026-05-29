@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTheme } from '../contexts/ThemeContext'
 import './GlobeAnimation.css'
 
 const toVec = (lat, lon) => {
@@ -15,6 +16,31 @@ const slerp = (a, b, t) => {
   const wa = Math.sin((1 - t) * θ) / s
   const wb = Math.sin(t * θ) / s
   return [wa*a[0]+wb*b[0], wa*a[1]+wb*b[1], wa*a[2]+wb*b[2]]
+}
+
+function readRgbVar(style, name, fallback) {
+  const raw = style.getPropertyValue(name).trim()
+  if (!raw) return fallback
+  const parts = raw.split(',').map((v) => Number(v.trim()))
+  return parts.length === 3 && parts.every(Number.isFinite) ? parts : fallback
+}
+
+function readGlobePalette(fromEl) {
+  const source = fromEl?.closest('.zedreq-root') || document.documentElement
+  const style = getComputedStyle(source)
+  return {
+    dotLit: readRgbVar(style, '--fp-globe-dot-lit', [255, 255, 255]),
+    dotMid: readRgbVar(style, '--fp-globe-dot-mid', [90, 130, 175]),
+    dotDimAlpha: parseFloat(style.getPropertyValue('--fp-globe-dot-dim-alpha')) || 0.1,
+    dotLitAlpha: parseFloat(style.getPropertyValue('--fp-globe-dot-lit-alpha')) || 0.55,
+    nodeCore: readRgbVar(style, '--fp-globe-node-core', [255, 255, 255]),
+    pulseCore: readRgbVar(style, '--fp-globe-pulse-core', [255, 255, 255]),
+    nodeRing: readRgbVar(style, '--fp-globe-node-ring', [0, 210, 255]),
+    rim: readRgbVar(style, '--fp-globe-rim', [255, 255, 255]),
+    rimAlpha: parseFloat(style.getPropertyValue('--fp-globe-rim-alpha')) || 0.2,
+    accent: readRgbVar(style, '--fp-globe-accent', [21, 133, 161]),
+    edgeAlpha: parseFloat(style.getPropertyValue('--fp-globe-edge-alpha')) || 0.42,
+  }
 }
 
 const NODE_COORDS = [
@@ -75,6 +101,7 @@ const GlobeAnimation = () => {
   const canvasRef = useRef(null)
   const rafRef    = useRef(null)
   const angleRef  = useRef(0)
+  const { theme } = useTheme()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -82,6 +109,7 @@ const GlobeAnimation = () => {
 
     const dpr = window.devicePixelRatio || 1
     const PI2 = Math.PI * 2
+    let palette = readGlobePalette(canvas.parentElement)
 
     const resize = () => {
       const { offsetWidth: w, offsetHeight: h } = canvas.parentElement
@@ -131,7 +159,7 @@ const GlobeAnimation = () => {
 
     const startTime = Date.now()
     let lastFrame = 0
-    const FRAME_MS = 1000 / 40  // cap at 40 fps
+    const FRAME_MS = 1000 / 40
 
     const draw = (now) => {
       if (now - lastFrame < FRAME_MS) {
@@ -139,9 +167,19 @@ const GlobeAnimation = () => {
         return
       }
       lastFrame = now
+      palette = readGlobePalette(canvas.parentElement)
+
       const W = canvas.width
       const H = canvas.height
       ctx.clearRect(0, 0, W, H)
+
+      const [litR, litG, litB] = palette.dotLit
+      const [midR, midG, midB] = palette.dotMid
+      const [coreR, coreG, coreB] = palette.nodeCore
+      const [pulseR, pulseG, pulseB] = palette.pulseCore
+      const [ringR, ringG, ringB] = palette.nodeRing
+      const [rimR, rimG, rimB] = palette.rim
+      const [accR, accG, accB] = palette.accent
 
       const elapsed = (Date.now() - startTime) / 1000
       angleRef.current += 0.0016
@@ -149,8 +187,7 @@ const GlobeAnimation = () => {
       const cosA = Math.cos(a)
       const sinA = Math.sin(a)
 
-      /* Larger sphere, anchored toward lower-right of the canvas */
-      const R  = Math.min(W, H) * 0.78
+      const R  = Math.min(W, H) * 0.66
       const GX = W * 0.62
       const GY = H * 0.70
 
@@ -173,10 +210,10 @@ const GlobeAnimation = () => {
 
         const light = Math.max(0, (x*lx + y*ly + z*lz) / lLen)
         const wh    = Math.pow(light, 2.2) * 0.9
-        const rr    = Math.round(wh * 255)
-        const gg    = Math.round(((1-wh)*180 + wh*255) * (0.08 + light*0.92))
-        const bb    = Math.round(((1-wh)*216 + wh*255) * (0.08 + light*0.92))
-        const aa    = Math.min(1, 0.10 + light*0.55)
+        const rr    = Math.round(midR + (litR - midR) * wh)
+        const gg    = Math.round(midG + (litG - midG) * wh)
+        const bb    = Math.round(midB + (litB - midB) * wh)
+        const aa    = Math.min(1, palette.dotDimAlpha + light * palette.dotLitAlpha)
 
         const dotR = Math.max(0.35*dpr, (0.45 + z*0.7)*dpr)
         ctx.beginPath()
@@ -216,7 +253,7 @@ const GlobeAnimation = () => {
           if (!started) { ctx.moveTo(px, py); started = true }
           else ctx.lineTo(px, py)
         }
-        ctx.strokeStyle = `rgba(21,133,161,${edgeAlpha * 0.42})`
+        ctx.strokeStyle = `rgba(${accR},${accG},${accB},${edgeAlpha * palette.edgeAlpha})`
         ctx.lineWidth   = 0.75 * dpr
         ctx.stroke()
       }
@@ -238,8 +275,8 @@ const GlobeAnimation = () => {
           const px = GX + x*R, py = GY - y*R
 
           const g = ctx.createRadialGradient(px, py, 0, px, py, 5*dpr)
-          g.addColorStop(0, `rgba(21,133,161,${edgeAlpha * 0.75})`)
-          g.addColorStop(1,  'rgba(21,133,161,0)')
+          g.addColorStop(0, `rgba(${accR},${accG},${accB},${edgeAlpha * 0.75})`)
+          g.addColorStop(1,  `rgba(${accR},${accG},${accB},0)`)
           ctx.beginPath()
           ctx.arc(px, py, 5*dpr, 0, PI2)
           ctx.fillStyle = g
@@ -247,7 +284,7 @@ const GlobeAnimation = () => {
 
           ctx.beginPath()
           ctx.arc(px, py, 1.3*dpr, 0, PI2)
-          ctx.fillStyle = `rgba(255,255,255,${edgeAlpha * 0.92})`
+          ctx.fillStyle = `rgba(${pulseR},${pulseG},${pulseB},${edgeAlpha * 0.92})`
           ctx.fill()
         }
       }
@@ -260,8 +297,8 @@ const GlobeAnimation = () => {
         const pulse = 0.5 + 0.5 * Math.sin(elapsed * 2.2 + n.phase)
         const glowR = (4 + pulse * 3) * dpr
         const grd = ctx.createRadialGradient(px, py, 0, px, py, glowR)
-        grd.addColorStop(0, `rgba(21,133,161,${n.alpha * (0.45 + pulse * 0.25)})`)
-        grd.addColorStop(1,  'rgba(21,133,161,0)')
+        grd.addColorStop(0, `rgba(${accR},${accG},${accB},${n.alpha * (0.45 + pulse * 0.25)})`)
+        grd.addColorStop(1,  `rgba(${accR},${accG},${accB},0)`)
         ctx.beginPath()
         ctx.arc(px, py, glowR, 0, PI2)
         ctx.fillStyle = grd
@@ -269,13 +306,13 @@ const GlobeAnimation = () => {
 
         ctx.beginPath()
         ctx.arc(px, py, 3.2*dpr, 0, PI2)
-        ctx.strokeStyle = `rgba(0,210,255,${n.alpha * 0.55})`
+        ctx.strokeStyle = `rgba(${ringR},${ringG},${ringB},${n.alpha * 0.55})`
         ctx.lineWidth   = 0.7 * dpr
         ctx.stroke()
 
         ctx.beginPath()
         ctx.arc(px, py, 1.8*dpr, 0, PI2)
-        ctx.fillStyle = `rgba(255,255,255,${n.alpha * 0.95})`
+        ctx.fillStyle = `rgba(${coreR},${coreG},${coreB},${n.alpha * 0.95})`
         ctx.fill()
       }
 
@@ -283,8 +320,8 @@ const GlobeAnimation = () => {
       const rimX = GX - R * 0.40
       const rimY = GY - R * 0.38
       const rim  = ctx.createRadialGradient(rimX, rimY, R*0.01, rimX, rimY, R*0.62)
-      rim.addColorStop(0,    'rgba(255,255,255,0.20)')
-      rim.addColorStop(0.28, 'rgba(21,133,161,0.08)')
+      rim.addColorStop(0,    `rgba(${rimR},${rimG},${rimB},${palette.rimAlpha})`)
+      rim.addColorStop(0.28, `rgba(${accR},${accG},${accB},0.08)`)
       rim.addColorStop(1,    'rgba(0,0,0,0)')
       ctx.fillStyle = rim
       ctx.fillRect(0, 0, W, H)
@@ -297,7 +334,7 @@ const GlobeAnimation = () => {
       cancelAnimationFrame(rafRef.current)
       window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [theme])
 
   return (
     <div className="globe-animation">

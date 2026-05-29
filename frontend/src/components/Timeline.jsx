@@ -8,9 +8,12 @@ import React, { useEffect, useRef, useState } from "react";
 import "./Timeline.css";
 
 /**
- * @param {{ data: { title: string, content: React.ReactNode }[] }} props
+ * @param {{
+ *   data: { title: string, content: React.ReactNode, stickyLabel?: string }[],
+ *   className?: string,
+ * }} props
  */
-export const Timeline = ({ data }) => {
+export const Timeline = ({ data, className = '' }) => {
   const ref = useRef(null);
   const containerRef = useRef(null);
   const [height, setHeight] = useState(0);
@@ -18,11 +21,16 @@ export const Timeline = ({ data }) => {
   const entryRefs = useRef([]);
 
   useEffect(() => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setHeight(rect.height);
-    }
-  }, [ref]);
+    const el = ref.current;
+    if (!el) return undefined;
+
+    const measure = () => setHeight(el.getBoundingClientRect().height);
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [data.length]);
 
   useEffect(() => {
     const observers = [];
@@ -53,12 +61,15 @@ export const Timeline = ({ data }) => {
   const heightTransform = useTransform(scrollYProgress, [0, 1], [0, height]);
   const opacityTransform = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
 
+  const stickyClass = (index, base) =>
+    `${base}${activeIndex === index ? ` ${base}--active` : ''}`;
+
   return (
-    <div className="timeline-wrapper" ref={containerRef}>
+    <div className={`timeline-wrapper${className ? ` ${className}` : ''}`} ref={containerRef}>
       <div ref={ref} className="timeline-entries">
         {data.map((item, index) => (
           <div
-            key={index}
+            key={item.stickyLabel ?? item.title ?? index}
             className="timeline-entry"
             ref={(el) => { entryRefs.current[index] = el; }}
           >
@@ -66,15 +77,27 @@ export const Timeline = ({ data }) => {
               <div className="timeline-dot-wrapper">
                 <div className="timeline-dot" />
               </div>
-              <h3 className={`timeline-entry-title timeline-entry-title-desktop${activeIndex === index ? ' timeline-entry-title--active' : ''}`}>
-                {item.title}
-              </h3>
+              {item.stickyLabel != null ? (
+                <span className={stickyClass(index, 'timeline-entry-num timeline-entry-num-desktop')}>
+                  {item.stickyLabel}
+                </span>
+              ) : (
+                <h3 className={stickyClass(index, 'timeline-entry-title timeline-entry-title-desktop')}>
+                  {item.title}
+                </h3>
+              )}
             </div>
 
             <div className="timeline-entry-right">
-              <h3 className={`timeline-entry-title timeline-entry-title-mobile${activeIndex === index ? ' timeline-entry-title--active' : ''}`}>
-                {item.title}
-              </h3>
+              {item.stickyLabel != null ? (
+                <span className={stickyClass(index, 'timeline-entry-num timeline-entry-num-mobile')}>
+                  {item.stickyLabel}
+                </span>
+              ) : (
+                <h3 className={stickyClass(index, 'timeline-entry-title timeline-entry-title-mobile')}>
+                  {item.title}
+                </h3>
+              )}
               {item.content}
             </div>
           </div>

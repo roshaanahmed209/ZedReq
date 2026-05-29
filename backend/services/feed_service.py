@@ -1,9 +1,11 @@
 """Feed Service - Production-grade feed with Redis caching and cursor pagination using ORM"""
 import json
 import os
+import re
+import secrets
 from typing import Optional, Dict, Any, List, Tuple, Literal
 from datetime import datetime
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, desc, func, cast, String
 from sqlalchemy.orm import Session
 
 from config.cache import get_redis_client, is_redis_available
@@ -60,7 +62,7 @@ class FeedService:
                 logger.debug(f"Cache hit for user {user_id} feed")
                 return cached
         
-        phase, phase_cursor = self._parse_feed_cursor(cursor)
+        phase, phase_cursor, disc_state = self._parse_feed_cursor(cursor)
         
         following_uids = self._get_following_uids(user_id)
         circle_uids = list(set(following_uids + [user_id]))
@@ -91,14 +93,14 @@ class FeedService:
                 feed_segment = 'discovery'
                 posts, has_more, next_cursor = self._paginate_discovery(
                     exclude_uids=circle_uids,
-                    cursor_tuple=None,
+                    disc_state=disc_state,
                     limit=limit,
                 )
         else:
             feed_segment = 'discovery'
             posts, has_more, next_cursor = self._paginate_discovery(
                 exclude_uids=circle_uids,
-                cursor_tuple=phase_cursor,
+                disc_state=disc_state,
                 limit=limit,
             )
         
@@ -215,13 +217,21 @@ class FeedService:
         )
         return self._format_post_rows(posts)
     
+    def _make_discovery_seed(self) -> str:
+        return secrets.token_hex(8)
+
+    def _discovery_shuffle_key(self, seed: str):
+        """Stable pseudo-random order per feed session (seed in cursor)."""
+        return func.md5(func.concat(cast(Post.post_id, String), seed))
+
     def _get_discovery_feed_posts(
         self,
         exclude_uids: List[int],
-        cursor: Optional[Tuple[Any, int]],
+        seed: str,
+        offset: int,
         limit: int,
     ) -> List[Dict[str, Any]]:
-        """Posts from users outside the viewer's circle (not following / not self)."""
+        """Posts from users outside the viewer's circle, shuffled by seed."""
         query = (
             self.db.query(Post)
             .join(User, Post.uid == User.uid)
@@ -230,10 +240,10 @@ class FeedService:
         )
         if exclude_uids:
             query = query.filter(~Post.uid.in_(exclude_uids))
-        query = self._apply_feed_time_cursor(query, cursor)
         posts = (
             query
-            .order_by(desc(Post.created_at), desc(Post.post_id))
+            .order_by(self._discovery_shuffle_key(seed))
+            .offset(offset)
             .limit(limit)
             .all()
         )
@@ -245,46 +255,31 @@ class FeedService:
             q = q.filter(~Post.uid.in_(exclude_uids))
         return q.first() is not None
     
-    def _discovery_has_more_after(
-        self,
-        exclude_uids: List[int],
-        last_created_at,
-        last_post_id: int,
-    ) -> bool:
-        nxt = self._get_discovery_feed_posts(
-            exclude_uids=exclude_uids,
-            cursor=(last_created_at, last_post_id),
-            limit=1,
-        )
-        return len(nxt) > 0
-    
     def _paginate_discovery(
         self,
         exclude_uids: List[int],
-        cursor_tuple: Optional[Tuple[Any, int]],
+        disc_state: Optional[Tuple[str, Any, int]],
         limit: int,
     ) -> Tuple[List[Dict[str, Any]], bool, Optional[str]]:
+        if disc_state is None or disc_state[0] == 'new':
+            seed = self._make_discovery_seed()
+            offset = int(disc_state[2]) if disc_state else 0
+        else:
+            seed = str(disc_state[1])
+            offset = int(disc_state[2])
+
         raw = self._get_discovery_feed_posts(
             exclude_uids=exclude_uids,
-            cursor=cursor_tuple,
+            seed=seed,
+            offset=offset,
             limit=limit + 1,
         )
         if len(raw) > limit:
             page = raw[:limit]
-            return page, True, self._build_disc_cursor(page[-1]['created_at'], page[-1]['post_id'])
+            return page, True, self._build_disc_cursor(seed, offset + limit)
         if not raw:
             return [], False, None
-        has_more = self._discovery_has_more_after(
-            exclude_uids,
-            raw[-1]['created_at'],
-            raw[-1]['post_id'],
-        )
-        next_c = (
-            self._build_disc_cursor(raw[-1]['created_at'], raw[-1]['post_id'])
-            if has_more
-            else None
-        )
-        return raw, has_more, next_c
+        return raw, False, None
     
     def _enrich_posts(self, posts: List[Dict], user_id: int) -> List[Dict[str, Any]]:
         """Enrich posts with like status and format for API response (optimized with batch query)"""
@@ -379,36 +374,40 @@ class FeedService:
     
     def _parse_feed_cursor(
         self, cursor: Optional[str]
-    ) -> Tuple[Literal['conn', 'disc'], Optional[Tuple[Any, int]]]:
+    ) -> Tuple[
+        Literal['conn', 'disc'],
+        Optional[Tuple[Any, int]],
+        Optional[Tuple[str, Any, int]],
+    ]:
+        """Returns phase, connection time cursor, and discovery (kind, seed, offset)."""
         if not cursor:
-            return 'conn', None
+            return 'conn', None, None
         if cursor == self.DISC_START_CURSOR:
-            return 'disc', None
+            return 'disc', None, ('new', None, 0)
         if cursor.startswith('conn:'):
             payload = cursor[5:]
             ts, sep, pid = payload.rpartition('|')
             if not sep:
-                return 'conn', None
+                return 'conn', None, None
             try:
-                return 'conn', (ts, int(pid))
+                return 'conn', (ts, int(pid)), None
             except ValueError:
                 logger.warning(f"Invalid conn cursor: {cursor}")
-                return 'conn', None
-        if cursor.startswith('disc:'):
-            payload = cursor[5:]
-            if payload == 'start':
-                return 'disc', None
-            ts, sep, pid = payload.rpartition('|')
-            if not sep:
-                logger.warning(f"Invalid disc cursor: {cursor}")
-                return 'disc', None
+                return 'conn', None, None
+        disc_seed_offset = re.match(r'^disc:s([0-9a-f]+):o(\d+)$', cursor)
+        if disc_seed_offset:
+            seed, offset_str = disc_seed_offset.groups()
             try:
-                return 'disc', (ts, int(pid))
+                return 'disc', None, ('seed', seed, int(offset_str))
             except ValueError:
-                logger.warning(f"Invalid disc cursor: {cursor}")
-                return 'disc', None
+                logger.warning(f"Invalid disc offset in cursor: {cursor}")
+                return 'disc', None, ('new', None, 0)
+        if cursor.startswith('disc:'):
+            # Legacy time-based discovery cursors: start a fresh shuffled page
+            logger.debug(f"Legacy discovery cursor, reshuffling: {cursor}")
+            return 'disc', None, ('new', None, 0)
         legacy = self._parse_legacy_conn_cursor(cursor)
-        return 'conn', legacy
+        return 'conn', legacy, None
     
     def _ts_for_cursor(self, created_at) -> str:
         if hasattr(created_at, 'isoformat'):
@@ -418,8 +417,8 @@ class FeedService:
     def _build_conn_cursor(self, created_at, post_id: int) -> str:
         return f"conn:{self._ts_for_cursor(created_at)}|{post_id}"
     
-    def _build_disc_cursor(self, created_at, post_id: int) -> str:
-        return f"disc:{self._ts_for_cursor(created_at)}|{post_id}"
+    def _build_disc_cursor(self, seed: str, offset: int) -> str:
+        return f"disc:s{seed}:o{offset}"
     
     def _get_cache_key(self, user_id: int) -> str:
         """Get Redis cache key for user's feed"""

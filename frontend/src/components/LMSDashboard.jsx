@@ -55,7 +55,7 @@ const LMSDashboard = () => {
   const EASE = [0.22, 1, 0.36, 1];
 
   return (
-    <div className="w-full min-h-[560px] bg-[#000000] p-3 sm:p-4 font-sans text-slate-200 overflow-hidden">
+    <div className="w-full min-h-[560px] bg-[var(--fp-canvas)] p-3 sm:p-4 font-sans text-slate-200 overflow-hidden">
       <motion.div
         ref={rootRef}
         className="w-full bg-[#0f1113] rounded-[22px] border border-white/10 overflow-hidden"
@@ -74,16 +74,16 @@ const LMSDashboard = () => {
               }
         }
         transition={{
-          opacity: { duration: 1.0, delay: 0.12, ease: EASE },
-          y: { duration: 1.0, delay: 0.12, ease: EASE },
-          boxShadow: { duration: 1.1, delay: 3.4, ease: EASE },
+          opacity: { duration: 0.55, delay: 0.05, ease: EASE },
+          y: { duration: 0.55, delay: 0.05, ease: EASE },
+          boxShadow: { duration: 0.55, delay: 0.5, ease: EASE },
         }}
       >
         <motion.header
           className="px-4 py-3 sm:px-5 flex items-center justify-between border-b border-white/5 bg-[#0f1113]"
           initial={{ opacity: 0, y: 18 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-          transition={{ duration: 0.9, delay: 0.95, ease: EASE }}
+          transition={{ duration: 0.45, delay: 0.12, ease: EASE }}
         >
           <div className="flex items-center gap-3">
             <span className="text-[#1585A1] font-bold text-base sm:text-lg tracking-tight">ZedReq</span>
@@ -118,13 +118,13 @@ const LMSDashboard = () => {
           className="flex flex-col lg:flex-row"
           initial={{ opacity: 0, y: 18 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-          transition={{ duration: 0.9, delay: 1.65, ease: EASE }}
+          transition={{ duration: 0.45, delay: 0.22, ease: EASE }}
         >
           <motion.aside
             className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 p-4 flex flex-col gap-4"
             initial={{ opacity: 0, y: 14 }}
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-            transition={{ duration: 0.85, delay: 2.2, ease: EASE }}
+            transition={{ duration: 0.42, delay: 0.32, ease: EASE }}
           >
             <div>
               <h2 className="text-slate-200 font-semibold text-sm mb-1">Learning Management</h2>
@@ -169,7 +169,7 @@ const LMSDashboard = () => {
             className="flex-1 p-4 sm:p-5 bg-[#0f1113]"
             initial={{ opacity: 0, y: 14 }}
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-            transition={{ duration: 0.9, delay: 2.65, ease: EASE }}
+            transition={{ duration: 0.45, delay: 0.42, ease: EASE }}
           >
             <div className="flex items-center gap-2 mb-2">
               <h3 className="text-base sm:text-lg font-bold text-slate-100">AI-Powered Learning Platform</h3>

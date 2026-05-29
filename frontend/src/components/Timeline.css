@@ -88,6 +88,44 @@
   color: #ffffff;
 }
 
+/* Sticky step number (e.g. trust timeline 01–06) */
+.timeline-entry-num {
+  font-weight: 200;
+  line-height: 1;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.28);
+  transition: color 0.35s ease;
+  letter-spacing: -0.02em;
+}
+
+.timeline-entry-num--active {
+  color: #ffffff;
+}
+
+.timeline-entry-num-desktop {
+  display: none;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  padding-left: 80px;
+}
+
+@media (min-width: 768px) {
+  .timeline-entry-num-desktop {
+    display: block;
+  }
+}
+
+.timeline-entry-num-mobile {
+  display: block;
+  font-size: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .timeline-entry-num-mobile {
+    display: none;
+  }
+}
+
 .timeline-entry-title-desktop {
   display: none;
   font-size: clamp(1.6rem, 3vw, 3rem);
