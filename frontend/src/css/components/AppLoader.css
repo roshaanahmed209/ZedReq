@@ -1,5 +1,5 @@
-/* Brief overlay while the next route renders — uses global theme tokens from index.css */
-.route-nav-loader {
+/* Shared loader — uses global theme tokens from index.css. Adapted from Uiverse.io by gogo_3618 */
+.app-loader {
   --loader-shell: #c9d5e0;
   --loader-ring: #acbaca;
   --loader-ring-inner: #acbaca;
@@ -12,24 +12,16 @@
   --loader-ring-shadow: #152b4a66;
   --loader-ring-highlight: rgba(255, 255, 255, 0.55);
 
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1.25rem;
   font-family: var(--font-sans, system-ui, sans-serif);
-  background: color-mix(in srgb, var(--bg-light) 88%, transparent);
   color: var(--text);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: route-nav-loader-in 0.12s ease-out;
 }
 
-[data-theme='dark'] .route-nav-loader {
+[data-theme='dark'] .app-loader {
   --loader-shell: #1a1f26;
   --loader-ring: #2a323d;
   --loader-ring-inner: #2a323d;
@@ -41,7 +33,25 @@
   --loader-ring-highlight: rgba(255, 255, 255, 0.08);
 }
 
-@keyframes route-nav-loader-in {
+.app-loader--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--bg-light) 88%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: app-loader-in 0.12s ease-out;
+}
+
+.app-loader--fullscreen {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bg-light);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@keyframes app-loader-in {
   from {
     opacity: 0;
   }
@@ -50,8 +60,7 @@
   }
 }
 
-/* Adapted from Uiverse.io by gogo_3618 */
-.route-nav-loader__loader {
+.app-loader__loader {
   position: relative;
   width: 200px;
   overflow: hidden;
@@ -67,7 +76,7 @@
     inset -1px -1px 10px var(--loader-shadow-inset-dark);
 }
 
-.route-nav-loader__circle {
+.app-loader__circle {
   position: absolute;
   inset: 35px;
   background: var(--loader-ring);
@@ -79,24 +88,24 @@
     -6px -6px 10px rgba(255, 255, 255, 1);
 }
 
-[data-theme='dark'] .route-nav-loader__circle {
+[data-theme='dark'] .app-loader__circle {
   box-shadow:
     5px 5px 15px 0 var(--loader-ring-shadow),
     inset 5px 5px 5px var(--loader-ring-highlight),
     -6px -6px 10px rgba(255, 255, 255, 0.06);
 }
 
-.route-nav-loader__circle::before {
+.app-loader__circle::before {
   content: '';
   position: absolute;
   inset: 4px;
   background: linear-gradient(var(--loader-gradient-start), var(--loader-gradient-end));
   mix-blend-mode: color-burn;
   border-radius: 50%;
-  animation: route-nav-loader-anim 2s linear infinite;
+  animation: app-loader-spin 2s linear infinite;
 }
 
-.route-nav-loader__circle::after {
+.app-loader__circle::after {
   content: '';
   position: absolute;
   inset: 25px;
@@ -106,7 +115,7 @@
   z-index: 1000;
 }
 
-@keyframes route-nav-loader-anim {
+@keyframes app-loader-spin {
   0% {
     transform: rotate(0deg);
   }
@@ -115,7 +124,7 @@
   }
 }
 
-.route-nav-loader__label {
+.app-loader__label {
   font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.04em;

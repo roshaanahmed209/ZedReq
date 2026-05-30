@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import '../css/components/RouteNavigationLoader.css'
+import AppLoader from './AppLoader'
 
 const DISPLAY_MS = 360
 
@@ -29,12 +29,5 @@ export default function RouteNavigationLoader() {
 
   if (!visible) return null
 
-  return (
-    <div className="route-nav-loader" role="status" aria-live="polite" aria-busy="true">
-      <div className="route-nav-loader__loader" aria-hidden>
-        <div className="route-nav-loader__circle" />
-      </div>
-      <span className="route-nav-loader__label">Loading</span>
-    </div>
-  )
+  return <AppLoader variant="overlay" label="Loading" />
 }

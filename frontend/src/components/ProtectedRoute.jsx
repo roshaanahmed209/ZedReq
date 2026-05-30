@@ -1,17 +1,13 @@
 import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import '../css/components/ProtectedRoute.css'
+import AppLoader from './AppLoader'
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="protected-route-loading">
-        Loading...
-      </div>
-    )
+    return <AppLoader variant="fullscreen" label="Loading" />
   }
 
   if (!user) {

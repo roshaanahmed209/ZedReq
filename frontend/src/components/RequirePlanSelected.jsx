@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
-import '../css/components/ProtectedRoute.css'
+import AppLoader from './AppLoader'
 
 const EXEMPT_PATHS = ['/choose-plan', '/checkout', '/enterprise-inquiry']
 
@@ -51,11 +51,7 @@ const RequirePlanSelected = ({ children }) => {
   }, [user, authLoading, location.pathname])
 
   if (authLoading || (user && checking)) {
-    return (
-      <div className="protected-route-loading">
-        Loading...
-      </div>
-    )
+    return <AppLoader variant="fullscreen" label="Loading" />
   }
 
   if (!user) {
