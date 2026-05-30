@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import '../css/pages/FirstPage.css';
 import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
+import { isStartupMode } from '../utils/startupMode';
 import { sendReservationEmail } from '../services/emailjs';
 import DarkVeil from '../components/DarkVeil';
 import GlobeAnimation from '../components/GlobeAnimation';
@@ -216,6 +217,7 @@ const TRUST_ITEMS = [
 ════════════════════════════════════════════════════════════════ */
 export default function FirstPage() {
   const navigate = useNavigate();
+  const startupMode = isStartupMode();
   const { theme, setTheme } = useTheme();
   const rootRef = useRef(null);
   const [menuOpen,       setMenuOpen]       = useState(false);
@@ -839,11 +841,15 @@ export default function FirstPage() {
           <div className="pricing__head">
             <p className="pricing__eyebrow reveal">Simple Pricing</p>
             <h2 className="pricing__hl reveal" id="pricing-hl" style={{ '--d': 1 }}>
-              Start free.<br /><em>Scale when you&apos;re ready.</em>
+              {startupMode ? (
+                <>Start free.</>
+              ) : (
+                <>Start free.<br /><em>Scale when you&apos;re ready.</em></>
+              )}
             </h2>
           </div>
 
-          <div className="pricing__grid pricing__grid--4">
+          <div className={`pricing__grid ${startupMode ? 'pricing__grid--1' : 'pricing__grid--4'}`}>
             {/* Explorer — matches Choose Plan Free */}
             <div className="pricing__card reveal">
               <p className="pricing__tier">Explorer</p>
@@ -870,6 +876,8 @@ export default function FirstPage() {
               </a>
             </div>
 
+            {!startupMode && (
+              <>
             {/* Professional — matches Choose Plan Pro */}
             <div className="pricing__card pricing__card--feat reveal">
               <span className="pricing__badge">Most Popular</span>
@@ -942,6 +950,8 @@ export default function FirstPage() {
                 Contact us
               </a>
             </div>
+              </>
+            )}
           </div>
         </section>
 

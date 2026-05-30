@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
+import { isStartupMode } from '../utils/startupMode'
 import '../css/pages/Checkout.css'
 
 const PADDLE_SCRIPT = 'https://cdn.paddle.com/paddle/v2/paddle.js'
@@ -129,6 +130,10 @@ const Checkout = () => {
     } finally {
       setOpening(false)
     }
+  }
+
+  if (isStartupMode()) {
+    return <Navigate to="/choose-plan" replace />
   }
 
   if (!validPlan) {

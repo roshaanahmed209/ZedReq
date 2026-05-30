@@ -10,6 +10,7 @@ import { shouldSkipMediaLoad } from '../utils/mediaUrl'
 import Navbar from '../components/Navbar'
 import PostComments from '../components/PostComments'
 import SharePostButton from '../components/SharePostButton'
+import UserProfileLink from '../components/UserProfileLink'
 import '../css/pages/Feed.css'
 
 const fadeIn = keyframes`
@@ -789,7 +790,7 @@ const PostInfo = styled.div`
   flex: 1;
 `
 
-const PostName = styled.h4`
+const PostName = styled.div`
   font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -2036,8 +2037,26 @@ const Feed = () => {
                       {post.full_name ? post.full_name.charAt(0).toUpperCase() : 'U'}
                     </PostAvatar>
                     <PostInfo>
-                      <PostName>{post.full_name || post.username}</PostName>
-                      <PostUsername>@{post.username}</PostUsername>
+                      <PostName>
+                        <UserProfileLink
+                          userId={post.user_id}
+                          username={post.username}
+                          variant="name"
+                        >
+                          {post.full_name || post.username}
+                        </UserProfileLink>
+                      </PostName>
+                      {post.username && (
+                        <PostUsername>
+                          <UserProfileLink
+                            userId={post.user_id}
+                            username={post.username}
+                            variant="username"
+                          >
+                            @{post.username}
+                          </UserProfileLink>
+                        </PostUsername>
+                      )}
                       <PostTime>{getTimeAgo(post.created_at)}</PostTime>
                     </PostInfo>
                   </PostHeader>

@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { jobAPI } from '../services/api'
+import { JobCompanyOrPoster } from './UserProfileLink'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -429,7 +430,7 @@ export default function JobDetailSidePanel({
                     </svg>
                     <JobDetailInfoLabel>Company:</JobDetailInfoLabel>
                     <JobDetailInfoValue>
-                      {job.company_name || job.poster_name || 'Unknown Company'}
+                      <JobCompanyOrPoster job={job} />
                     </JobDetailInfoValue>
                   </JobDetailInfoRow>
 

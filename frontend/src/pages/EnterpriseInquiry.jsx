@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
+import { isStartupMode } from '../utils/startupMode'
 import '../css/pages/EnterpriseInquiry.css'
 
 const EnterpriseInquiry = () => {
@@ -77,6 +78,10 @@ const EnterpriseInquiry = () => {
       setFreeLoading(false)
     }
   }, [navigate, email, user?.email])
+
+  if (isStartupMode()) {
+    return <Navigate to="/choose-plan" replace />
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()

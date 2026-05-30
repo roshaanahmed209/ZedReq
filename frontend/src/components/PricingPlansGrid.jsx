@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { isStartupMode } from '../utils/startupMode'
 import '../css/components/PricingPlansGrid.css'
 
 /**
@@ -8,6 +9,7 @@ import '../css/components/PricingPlansGrid.css'
  */
 export default function PricingPlansGrid({ instantReveal = false }) {
   const rev = (cls) => (instantReveal ? `${cls} visible` : cls)
+  const startupMode = isStartupMode()
 
   return (
     <>
@@ -15,10 +17,19 @@ export default function PricingPlansGrid({ instantReveal = false }) {
         Simple, Transparent Pricing
       </h2>
       <p className={rev('pricing-subtitle scroll-reveal')}>
-        Plans match subscription tiers in ZedReq. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
-        enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+        {startupMode ? (
+          <>
+            ZedReq is free to start. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
+            enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+          </>
+        ) : (
+          <>
+            Plans match subscription tiers in ZedReq. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
+            enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+          </>
+        )}
       </p>
-      <div className="pricing-grid">
+      <div className={`pricing-grid${startupMode ? ' pricing-grid--single' : ''}`}>
         <div className={rev('pricing-card scroll-reveal-scale')}>
           <div className="pricing-card-header">
             <h3>Free</h3>
@@ -87,6 +98,8 @@ export default function PricingPlansGrid({ instantReveal = false }) {
           </ul>
         </div>
 
+        {!startupMode && (
+          <>
         <div className={rev('pricing-card featured scroll-reveal-scale')}>
           <span className="badge">Most popular</span>
           <div className="pricing-card-header">
@@ -195,9 +208,13 @@ export default function PricingPlansGrid({ instantReveal = false }) {
             </li>
           </ul>
         </div>
+          </>
+        )}
       </div>
       <p className={rev('pricing-note scroll-reveal')}>
-        Limits are enforced server-side per plan. Enterprise is available by arrangement. Security and privacy practices are described in our{' '}
+        Limits are enforced server-side per plan.
+        {!startupMode && ' Enterprise is available by arrangement.'}
+        {' '}Security and privacy practices are described in our{' '}
         <Link to="/privacy">Privacy Policy</Link> and <Link to="/terms">Terms of Use</Link>.
       </p>
     </>

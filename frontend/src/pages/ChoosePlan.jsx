@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import Beams from '../components/Beams'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
 import api from '../services/api'
+import { isStartupMode } from '../utils/startupMode'
 import {
   PLATFORM_ACCESS_LINES,
   FREE_TEASER_WORDS,
@@ -16,6 +17,7 @@ import '../css/pages/ChoosePlan.css'
 
 const ChoosePlan = () => {
   const navigate = useNavigate()
+  const startupMode = isStartupMode()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showFreePlanActive, setShowFreePlanActive] = useState(false)
@@ -55,7 +57,9 @@ const ChoosePlan = () => {
           <div className="choose-plan-success-card">
             <p className="choose-plan-success-title">You&apos;re on the Free plan</p>
             <p className="choose-plan-success-body">
-              Your plan is active. You can upgrade anytime from Settings. Taking you to your feed…
+              Your plan is active.
+              {!startupMode && ' You can upgrade anytime from Settings.'}
+              {' '}Taking you to your feed…
             </p>
             <button type="button" className="btn btn--accent choose-plan-success-cta" onClick={goToFeed}>
               Go to feed now
@@ -103,16 +107,29 @@ const ChoosePlan = () => {
           <div className="pricing__head">
             <p className="pricing__eyebrow">Billing</p>
             <h1 className="pricing__hl" id="choose-plan-hl">
-              Choose your<br /><em>plan</em>
+              {startupMode ? (
+                <>Confirm your<br /><em>Free plan</em></>
+              ) : (
+                <>Choose your<br /><em>plan</em></>
+              )}
             </h1>
           </div>
           <p className="choose-plan__lead">
-            Pick a plan to continue using ZedReq. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
-            enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+            {startupMode ? (
+              <>
+                Continue with the Free plan to use ZedReq. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
+                enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+              </>
+            ) : (
+              <>
+                Pick a plan to continue using ZedReq. Networking, jobs, feed &amp; messaging are unlimited; AI Mode, LMS
+                enrollments &amp; mock interviews follow monthly quotas (reset 1st of month, UTC).
+              </>
+            )}
           </p>
           {error && <div className="choose-plan-error">{error}</div>}
 
-          <div className="pricing__grid choose-plan__grid">
+          <div className={`pricing__grid choose-plan__grid${startupMode ? ' pricing__grid--1' : ''}`}>
             {/* Free */}
             <div className="pricing__card">
               <p className="pricing__tier">Free</p>
@@ -145,6 +162,8 @@ const ChoosePlan = () => {
               </button>
             </div>
 
+            {!startupMode && (
+              <>
             {/* Pro */}
             <div className="pricing__card pricing__card--feat">
               <span className="pricing__badge">Most popular</span>
@@ -211,10 +230,14 @@ const ChoosePlan = () => {
                 Contact us
               </Link>
             </div>
+              </>
+            )}
           </div>
 
           <p className="choose-plan__footnote">
-            Limits are enforced server-side per plan. Enterprise is available by arrangement. Security and privacy practices
+            Limits are enforced server-side per plan.
+            {!startupMode && ' Enterprise is available by arrangement.'}
+            {' '}Security and privacy practices
             are described in our <Link to="/privacy">Privacy Policy</Link> and <Link to="/terms">Terms of Use</Link>.
           </p>
         </div>

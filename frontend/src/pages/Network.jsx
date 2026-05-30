@@ -6,6 +6,7 @@ import { motion, useInView } from 'framer-motion'
 import { networkAPI, connectionAPI, notificationAPI } from '../services/api'
 import Messages from './Messages'
 import Navbar from '../components/Navbar'
+import UserProfileLink from '../components/UserProfileLink'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -419,7 +420,7 @@ const PersonAvatar = styled.div`
   }
 `
 
-const PersonName = styled.h3`
+const PersonName = styled.div`
   font-size: 1.2em;
   color: var(--text);
   margin-bottom: 4px;
@@ -672,6 +673,29 @@ const RejectButton = styled(ConnectButton)`
   }
 `
 
+const renderPersonIdentity = (user) => {
+  const userId = user?.id ?? user?.uid
+  const username = user?.username
+  const displayName = user?.name || username || 'Member'
+
+  return (
+    <>
+      <PersonName>
+        <UserProfileLink userId={userId} username={username} variant="name">
+          {displayName}
+        </UserProfileLink>
+      </PersonName>
+      {username && (
+        <PersonTitle>
+          <UserProfileLink userId={userId} username={username} variant="username">
+            @{username}
+          </UserProfileLink>
+        </PersonTitle>
+      )}
+    </>
+  )
+}
+
 // Request Card Component
 const RequestCard = ({ request, onAccept, onReject, loading }) => {
   const user = request.sender || request.receiver
@@ -684,8 +708,7 @@ const RequestCard = ({ request, onAccept, onReject, loading }) => {
         <PersonAvatar src={user?.profile_pic}>
           {!user?.profile_pic && user?.name?.charAt(0).toUpperCase()}
         </PersonAvatar>
-        <PersonName>{user?.name}</PersonName>
-        <PersonTitle>@{user?.username}</PersonTitle>
+        {renderPersonIdentity(user)}
         {request.message && (
           <PersonBio>"{request.message}"</PersonBio>
         )}
@@ -732,8 +755,7 @@ const UserCard = ({ user, onConnect, isPending, isConnected, loading, onMessage 
           <PersonAvatar src={user.profile_pic}>
             {!user.profile_pic && user.name?.charAt(0).toUpperCase()}
           </PersonAvatar>
-          <PersonName>{user.name}</PersonName>
-          <PersonTitle>@{user.username}</PersonTitle>
+          {renderPersonIdentity(user)}
           {user.job_title && user.company && (
           <PersonCompany>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

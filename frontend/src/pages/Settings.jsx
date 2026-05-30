@@ -7,6 +7,7 @@ import { useConfirm } from '../contexts/ConfirmModalContext'
 import api, { userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import { ZEDREQ_EMAIL } from '../config/contact'
+import { isStartupMode } from '../utils/startupMode'
 import { LegalPrivacyBody } from '../content/LegalPrivacyBody'
 import { LegalTermsBody } from '../content/LegalTermsBody'
 import '../css/pages/GetStarted.css'
@@ -1813,6 +1814,7 @@ const Settings = () => {
 
             <FormGroup>
               <Label>Plan Options</Label>
+              {!isStartupMode() && (
               <div style={{ 
                 padding: '15px', 
                 background: 'rgba(108, 117, 125, 0.1)', 
@@ -1825,6 +1827,7 @@ const Settings = () => {
                   Paid self-serve plans use Paddle; use Manage subscription below when linked.
                 </p>
               </div>
+              )}
               <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>
                 <SecondaryButton 
                   disabled={true}
@@ -1837,6 +1840,8 @@ const Settings = () => {
                 >
                   Free Plan {subscriptionPlan === 'free' ? '(Current)' : ''}
                 </SecondaryButton>
+                {!isStartupMode() && (
+                  <>
                 <SecondaryButton 
                   disabled={true}
                   style={{ 
@@ -1870,13 +1875,15 @@ const Settings = () => {
                 >
                   Enterprise {subscriptionPlan === 'enterprise' ? '(Current)' : '- Contact Us'}
                 </SecondaryButton>
+                  </>
+                )}
               </div>
             </FormGroup>
 
-            {(subscriptionPlan === 'free' || subscriptionPlan === 'pro' || subscriptionPlan === 'premium') && (
+            {((!isStartupMode() && subscriptionPlan === 'free') || subscriptionPlan === 'pro' || subscriptionPlan === 'premium') && (
               <FormGroup>
                 <Label>Manage subscription</Label>
-                {subscriptionPlan === 'free' && (
+                {subscriptionPlan === 'free' && !isStartupMode() && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
                     <span style={{ color: 'var(--text-light)', fontSize: '0.9em' }}>Upgrade to a paid plan:</span>
                     <Link to="/choose-plan" style={{ color: 'var(--primary)', fontWeight: 600 }}>Choose a plan</Link>

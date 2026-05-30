@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { jobAPI, contextAPI } from '../services/api'
 import Navbar from '../components/Navbar'
+import UserProfileLink, { JobCompanyOrPoster } from '../components/UserProfileLink'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -2045,7 +2046,7 @@ const Jobs = () => {
         <JobHeader>
           <JobInfo>
             <JobTitle>{job.title}</JobTitle>
-            <JobCompany>{job.company_name || job.poster_name || 'Unknown Company'}</JobCompany>
+            <JobCompany><JobCompanyOrPoster job={job} /></JobCompany>
             <JobLocation>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -2336,7 +2337,14 @@ const Jobs = () => {
                           <ApplicantListAvatar>{initials}</ApplicantListAvatar>
                           <ApplicantListInfo>
                             <ApplicantListName selected={isSelected}>
-                              {applicant.applicant_name || applicant.applicant_username || 'Unknown User'}
+                              <UserProfileLink
+                                userId={applicant.applicant_id}
+                                username={applicant.applicant_username}
+                                variant="inline"
+                                stopPropagation
+                              >
+                                {applicant.applicant_name || applicant.applicant_username || 'Unknown User'}
+                              </UserProfileLink>
                             </ApplicantListName>
                             <ApplicantListMeta>
                               <span>{formatDate(applicant.applied_at || applicant.created_at || applicant.application_date)}</span>
@@ -2367,7 +2375,13 @@ const Jobs = () => {
                           </svg>
                           <ApplicantDetailLabel>Name:</ApplicantDetailLabel>
                           <ApplicantDetailValue>
-                            {selectedApplicant.applicant_name || selectedApplicant.applicant_username || 'Unknown User'}
+                            <UserProfileLink
+                              userId={selectedApplicant.applicant_id}
+                              username={selectedApplicant.applicant_username}
+                              variant="inline"
+                            >
+                              {selectedApplicant.applicant_name || selectedApplicant.applicant_username || 'Unknown User'}
+                            </UserProfileLink>
                           </ApplicantDetailValue>
                         </ApplicantDetailRow>
                         
@@ -2776,7 +2790,7 @@ const Jobs = () => {
                     </svg>
                     <JobDetailInfoLabel>Company:</JobDetailInfoLabel>
                     <JobDetailInfoValue>
-                      {selectedJobDetail.company_name || selectedJobDetail.poster_name || 'Unknown Company'}
+                      <JobCompanyOrPoster job={selectedJobDetail} />
                     </JobDetailInfoValue>
                   </JobDetailInfoRow>
                   

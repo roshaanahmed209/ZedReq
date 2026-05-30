@@ -16,6 +16,10 @@ export default defineConfig(({ mode }) => {
     (env.ZEDREQ_EMAIL || env.VITE_ZEDREQ_EMAIL || env.VITE_COMPANY_EMAIL || '').trim() ||
     'zed.req@yahoo.com'
 
+  const STARTUP_TRUTHY = new Set(['true', '1', 'yes'])
+  const startupRaw = (env.STARTUP_STATUS || env.VITE_STARTUP_STATUS || '').trim().toLowerCase()
+  const startupStatus = STARTUP_TRUTHY.has(startupRaw)
+
   const repoPackageRoot = path.resolve(__dirname, '..')
 
   return {
@@ -30,6 +34,7 @@ export default defineConfig(({ mode }) => {
     define: {
       'import.meta.env.VITE_ZEDREQ_URL': JSON.stringify(zedreqUrl),
       'import.meta.env.VITE_ZEDREQ_EMAIL': JSON.stringify(zedreqEmail),
+      'import.meta.env.VITE_STARTUP_STATUS': JSON.stringify(startupStatus),
     },
     server: {
       port: 3000,
