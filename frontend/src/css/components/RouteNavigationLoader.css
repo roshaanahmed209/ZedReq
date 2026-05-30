@@ -1,5 +1,17 @@
 /* Brief overlay while the next route renders — uses global theme tokens from index.css */
 .route-nav-loader {
+  --loader-shell: #c9d5e0;
+  --loader-ring: #acbaca;
+  --loader-ring-inner: #acbaca;
+  --loader-gradient-start: var(--primary, #1585A1);
+  --loader-gradient-end: var(--primary-dark, #0f6a82);
+  --loader-shadow-outer: rgba(0, 0, 0, 0.15);
+  --loader-shadow-inset-light: rgba(255, 255, 255, 0.75);
+  --loader-shadow-outer-light: rgba(255, 255, 255, 0.55);
+  --loader-shadow-inset-dark: rgba(0, 0, 0, 0.2);
+  --loader-ring-shadow: #152b4a66;
+  --loader-ring-highlight: rgba(255, 255, 255, 0.55);
+
   position: fixed;
   inset: 0;
   z-index: 9998;
@@ -8,13 +20,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.25rem;
   font-family: var(--font-sans, system-ui, sans-serif);
   background: color-mix(in srgb, var(--bg-light) 88%, transparent);
   color: var(--text);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   animation: route-nav-loader-in 0.12s ease-out;
+}
+
+[data-theme='dark'] .route-nav-loader {
+  --loader-shell: #1a1f26;
+  --loader-ring: #2a323d;
+  --loader-ring-inner: #2a323d;
+  --loader-shadow-outer: rgba(0, 0, 0, 0.45);
+  --loader-shadow-inset-light: rgba(255, 255, 255, 0.06);
+  --loader-shadow-outer-light: rgba(255, 255, 255, 0.04);
+  --loader-shadow-inset-dark: rgba(0, 0, 0, 0.55);
+  --loader-ring-shadow: rgba(0, 0, 0, 0.55);
+  --loader-ring-highlight: rgba(255, 255, 255, 0.08);
 }
 
 @keyframes route-nav-loader-in {
@@ -26,17 +50,67 @@
   }
 }
 
-.route-nav-loader__spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: route-nav-loader-spin 0.7s linear infinite;
+/* Adapted from Uiverse.io by gogo_3618 */
+.route-nav-loader__loader {
+  position: relative;
+  width: 200px;
+  overflow: hidden;
+  height: 200px;
+  background: var(--loader-shell);
+  border-radius: 50px;
+  transform-style: preserve-3d;
+  mix-blend-mode: hard-light;
+  box-shadow:
+    25px 25px 25px -5px var(--loader-shadow-outer),
+    inset 15px 15px 10px var(--loader-shadow-inset-light),
+    -15px -15px 30px var(--loader-shadow-outer-light),
+    inset -1px -1px 10px var(--loader-shadow-inset-dark);
 }
 
-@keyframes route-nav-loader-spin {
-  to {
+.route-nav-loader__circle {
+  position: absolute;
+  inset: 35px;
+  background: var(--loader-ring);
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  box-shadow:
+    5px 5px 15px 0 var(--loader-ring-shadow),
+    inset 5px 5px 5px var(--loader-ring-highlight),
+    -6px -6px 10px rgba(255, 255, 255, 1);
+}
+
+[data-theme='dark'] .route-nav-loader__circle {
+  box-shadow:
+    5px 5px 15px 0 var(--loader-ring-shadow),
+    inset 5px 5px 5px var(--loader-ring-highlight),
+    -6px -6px 10px rgba(255, 255, 255, 0.06);
+}
+
+.route-nav-loader__circle::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background: linear-gradient(var(--loader-gradient-start), var(--loader-gradient-end));
+  mix-blend-mode: color-burn;
+  border-radius: 50%;
+  animation: route-nav-loader-anim 2s linear infinite;
+}
+
+.route-nav-loader__circle::after {
+  content: '';
+  position: absolute;
+  inset: 25px;
+  filter: blur(0.9px);
+  background: var(--loader-ring-inner);
+  border-radius: 50%;
+  z-index: 1000;
+}
+
+@keyframes route-nav-loader-anim {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
     transform: rotate(360deg);
   }
 }

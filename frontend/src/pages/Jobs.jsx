@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -1611,6 +1611,23 @@ const JobDetailActions = styled.div`
   z-index: 10;
 `
 
+const PREFETCH_IDLE_GAP_MS = 150
+
+function scheduleIdleWork(fn) {
+  return new Promise((resolve) => {
+    const run = () => Promise.resolve(fn()).then(resolve)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => run(), { timeout: 2000 })
+    } else {
+      setTimeout(run, PREFETCH_IDLE_GAP_MS)
+    }
+  })
+}
+
+function prefetchDelay() {
+  return new Promise((r) => setTimeout(r, PREFETCH_IDLE_GAP_MS))
+}
+
 const Jobs = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -1620,7 +1637,16 @@ const Jobs = () => {
   const [savedJobs, setSavedJobs] = useState([])
   const [postedJobs, setPostedJobs] = useState([])
   const [recommendedJobs, setRecommendedJobs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loadingAll, setLoadingAll] = useState(true)
+  const [loadingSaved, setLoadingSaved] = useState(false)
+  const [loadingRemote, setLoadingRemote] = useState(false)
+  const [loadingPosted, setLoadingPosted] = useState(false)
+  const [sliceReady, setSliceReady] = useState({
+    saved: false,
+    remote: false,
+    posted: false,
+    recommended: false,
+  })
   const [error, setError] = useState(null)
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [applyingTo, setApplyingTo] = useState(null)
@@ -1665,44 +1691,112 @@ const Jobs = () => {
     navigate('/feed')
   }
 
-  // Fetch jobs
-  const fetchJobs = async () => {
-    setLoading(true)
+  const prefetchedRef = useRef({
+    saved: false,
+    remote: false,
+    posted: false,
+    recommended: false,
+  })
+  const prefetchGenRef = useRef(0)
+
+  const fetchAllJobs = useCallback(async () => {
+    setLoadingAll(true)
     setError(null)
-    
     try {
-      const [allJobsRes, remoteJobsRes, savedJobsRes, postedJobsRes] = await Promise.all([
-        jobAPI.getJobs({ limit: 50 }),
-        jobAPI.getRemoteJobs(50),
-        jobAPI.getSavedJobs(50),
-        jobAPI.getMyPostedJobs(50)
-      ])
-      
-      setAllJobs(allJobsRes.data.jobs || [])
-      setRemoteJobs(remoteJobsRes.data.jobs || [])
-      setSavedJobs(savedJobsRes.data.jobs || [])
-      setPostedJobs(postedJobsRes.data.jobs || [])
+      const res = await jobAPI.getJobs({ limit: 50 })
+      setAllJobs(res.data.jobs || [])
     } catch (err) {
       console.error('Failed to fetch jobs:', err)
       setError('Failed to load jobs. Please try again.')
     } finally {
-      setLoading(false)
+      setLoadingAll(false)
     }
-  }
+  }, [])
 
-  // Fetch job recommendations
-  const fetchRecommendations = async () => {
+  const fetchSavedJobs = useCallback(async (force = false) => {
+    if (!force && prefetchedRef.current.saved) return
+    if (force) prefetchedRef.current.saved = false
+    setLoadingSaved(true)
+    try {
+      const res = await jobAPI.getSavedJobs(50)
+      setSavedJobs(res.data.jobs || [])
+      prefetchedRef.current.saved = true
+      setSliceReady((s) => ({ ...s, saved: true }))
+    } catch (err) {
+      console.error('Failed to fetch saved jobs:', err)
+    } finally {
+      setLoadingSaved(false)
+    }
+  }, [])
+
+  const fetchRemoteJobs = useCallback(async (force = false) => {
+    if (!force && prefetchedRef.current.remote) return
+    if (force) prefetchedRef.current.remote = false
+    setLoadingRemote(true)
+    try {
+      const res = await jobAPI.getRemoteJobs(50)
+      setRemoteJobs(res.data.jobs || [])
+      prefetchedRef.current.remote = true
+      setSliceReady((s) => ({ ...s, remote: true }))
+    } catch (err) {
+      console.error('Failed to fetch remote jobs:', err)
+    } finally {
+      setLoadingRemote(false)
+    }
+  }, [])
+
+  const fetchPostedJobs = useCallback(async (force = false) => {
+    if (!force && prefetchedRef.current.posted) return
+    if (force) prefetchedRef.current.posted = false
+    setLoadingPosted(true)
+    try {
+      const res = await jobAPI.getMyPostedJobs(50)
+      setPostedJobs(res.data.jobs || [])
+      prefetchedRef.current.posted = true
+      setSliceReady((s) => ({ ...s, posted: true }))
+    } catch (err) {
+      console.error('Failed to fetch posted jobs:', err)
+    } finally {
+      setLoadingPosted(false)
+    }
+  }, [])
+
+  const fetchRecommendations = useCallback(async (force = false) => {
     if (!user?.id) return
-    
+    if (!force && prefetchedRef.current.recommended) return
+
     setLoadingRecommendations(true)
     try {
       const res = await jobAPI.getJobRecommendations(user.id, 20)
       setRecommendedJobs(res.data?.recommendations || [])
+      prefetchedRef.current.recommended = true
+      setSliceReady((s) => ({ ...s, recommended: true }))
     } catch (err) {
       console.error('Failed to fetch recommendations:', err)
       setRecommendedJobs([])
     } finally {
       setLoadingRecommendations(false)
+    }
+  }, [user?.id])
+
+  const filterCountDisplay = (count, ready, loading) => {
+    if (!ready && loading) return '...'
+    return count
+  }
+
+  const isActiveTabLoading = () => {
+    if (appliedJobSearch) return searchJobsLoading
+    switch (activeFilter) {
+      case 'saved':
+        return loadingSaved
+      case 'remote':
+        return loadingRemote
+      case 'posted':
+        return loadingPosted
+      case 'recommended':
+        return loadingRecommendations
+      default:
+        return loadingAll
     }
   }
 
@@ -1740,15 +1834,35 @@ const Jobs = () => {
   }
 
   useEffect(() => {
-    fetchJobs()
-  }, [])
+    fetchAllJobs()
+  }, [fetchAllJobs])
 
-  // Fetch recommendations when user is available and recommended filter is active
+  useEffect(() => {
+    if (loadingAll) return
+
+    const gen = ++prefetchGenRef.current
+    const run = async () => {
+      await scheduleIdleWork(() => fetchSavedJobs())
+      if (prefetchGenRef.current !== gen) return
+      await prefetchDelay()
+      await scheduleIdleWork(() => fetchRemoteJobs())
+      if (prefetchGenRef.current !== gen) return
+      await prefetchDelay()
+      await scheduleIdleWork(() => fetchPostedJobs())
+      if (prefetchGenRef.current !== gen) return
+      await prefetchDelay()
+      if (user?.id) {
+        await scheduleIdleWork(() => fetchRecommendations(false))
+      }
+    }
+    run()
+  }, [loadingAll, fetchSavedJobs, fetchRemoteJobs, fetchPostedJobs, fetchRecommendations, user?.id])
+
   useEffect(() => {
     if (user?.id && activeFilter === 'recommended') {
-      fetchRecommendations()
+      fetchRecommendations(false)
     }
-  }, [user?.id, activeFilter])
+  }, [user?.id, activeFilter, fetchRecommendations])
 
   // Handle apply to job
   const handleApply = async (jobId, e) => {
@@ -1808,6 +1922,10 @@ const Jobs = () => {
       } else {
         setSavedJobs(prev => prev.filter(j => j.job_id !== jobId))
       }
+
+      prefetchedRef.current.saved = false
+      setSliceReady((s) => ({ ...s, saved: false }))
+      fetchSavedJobs(true)
     } catch (err) {
       console.error('Failed to save job:', err)
     } finally {
@@ -1822,6 +1940,7 @@ const Jobs = () => {
     setPostError(null)
     
     try {
+      const wasRemote = jobForm.is_remote
       const jobData = {
         ...jobForm,
         salary_min: jobForm.salary_min ? parseInt(jobForm.salary_min) : null,
@@ -1843,7 +1962,15 @@ const Jobs = () => {
         salary_min: '',
         salary_max: ''
       })
-      fetchJobs() // Refresh jobs
+      prefetchedRef.current.posted = false
+      setSliceReady((s) => ({ ...s, posted: false }))
+      await fetchAllJobs()
+      await fetchPostedJobs(true)
+      if (wasRemote) {
+        prefetchedRef.current.remote = false
+        setSliceReady((s) => ({ ...s, remote: false }))
+        await fetchRemoteJobs(true)
+      }
     } catch (err) {
       console.error('Failed to post job:', err)
       setPostError(err.response?.data?.detail || 'Failed to post job')
@@ -1940,7 +2067,13 @@ const Jobs = () => {
 
   const handleFilterChange = (filter) => {
     setActiveFilter(filter)
-    setSidePanelOpen(false) // Close side panel on mobile when filter is selected
+    setSidePanelOpen(false)
+    if (filter === 'saved' && !prefetchedRef.current.saved) fetchSavedJobs()
+    if (filter === 'remote' && !prefetchedRef.current.remote) fetchRemoteJobs()
+    if (filter === 'posted' && !prefetchedRef.current.posted) fetchPostedJobs()
+    if (filter === 'recommended' && user?.id && !prefetchedRef.current.recommended) {
+      fetchRecommendations(false)
+    }
   }
 
   // Handle view applicants
@@ -2177,7 +2310,9 @@ const Jobs = () => {
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
             Saved Jobs
-            <FilterCount active={activeFilter === 'saved'}>{savedJobs.length}</FilterCount>
+            <FilterCount active={activeFilter === 'saved'}>
+              {filterCountDisplay(savedJobs.length, sliceReady.saved, loadingSaved)}
+            </FilterCount>
           </FilterOption>
 
           <FilterOption
@@ -2190,7 +2325,9 @@ const Jobs = () => {
               <line x1="12" y1="22.08" x2="12" y2="12"></line>
             </svg>
             Remote Jobs
-            <FilterCount active={activeFilter === 'remote'}>{remoteJobs.length}</FilterCount>
+            <FilterCount active={activeFilter === 'remote'}>
+              {filterCountDisplay(remoteJobs.length, sliceReady.remote, loadingRemote)}
+            </FilterCount>
           </FilterOption>
 
           <FilterOption
@@ -2205,7 +2342,9 @@ const Jobs = () => {
               <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
             Posted Jobs
-            <FilterCount active={activeFilter === 'posted'}>{postedJobs.length}</FilterCount>
+            <FilterCount active={activeFilter === 'posted'}>
+              {filterCountDisplay(postedJobs.length, sliceReady.posted, loadingPosted)}
+            </FilterCount>
           </FilterOption>
 
           <FilterOption
@@ -2217,7 +2356,11 @@ const Jobs = () => {
             </svg>
             Recommended
             <FilterCount active={activeFilter === 'recommended'}>
-              {loadingRecommendations ? '...' : recommendedJobs.length}
+              {filterCountDisplay(
+                recommendedJobs.length,
+                sliceReady.recommended,
+                loadingRecommendations
+              )}
             </FilterCount>
           </FilterOption>
         </SidePanel>
@@ -2262,7 +2405,7 @@ const Jobs = () => {
                     </EmptyState>
                   )
                   : searchJobsList.map((job, index) => renderJobCard(job, index))
-              : loading || (activeFilter === 'recommended' && loadingRecommendations) ? (
+              : isActiveTabLoading() ? (
               <LoadingSpinner />
             ) : getCurrentJobs().length === 0 ? (
               <EmptyState>

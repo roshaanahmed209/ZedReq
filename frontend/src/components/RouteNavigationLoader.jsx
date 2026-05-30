@@ -31,7 +31,9 @@ export default function RouteNavigationLoader() {
 
   return (
     <div className="route-nav-loader" role="status" aria-live="polite" aria-busy="true">
-      <div className="route-nav-loader__spinner" aria-hidden />
+      <div className="route-nav-loader__loader" aria-hidden>
+        <div className="route-nav-loader__circle" />
+      </div>
       <span className="route-nav-loader__label">Loading</span>
     </div>
   )

@@ -60,6 +60,13 @@ class JobService:
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to generate embedding for job {job.job_id}: {e}")
             # Don't fail job creation if embedding fails
+
+        try:
+            from services.job_cache import invalidate_job_lists_for_user, invalidate_job_lists_global
+            invalidate_job_lists_for_user(poster_id)
+            invalidate_job_lists_global()
+        except Exception:
+            pass
         
         return job
     
@@ -147,6 +154,13 @@ class JobService:
         user_id: int = None
     ) -> List[Dict[str, Any]]:
         """Get all active job postings"""
+        from services.job_cache import get_cached_job_list, cache_job_list
+
+        if offset == 0 and user_id:
+            cached = get_cached_job_list("all", user_id)
+            if cached is not None:
+                return cached[:limit]
+
         jobs = (
             self.db.query(JobPosting)
             .filter(JobPosting.status == 'active')
@@ -155,8 +169,11 @@ class JobService:
             .offset(offset)
             .all()
         )
-        
-        return self._enrich_jobs(jobs, user_id)
+
+        results = self._enrich_jobs(jobs, user_id)
+        if offset == 0 and user_id:
+            cache_job_list("all", user_id, results)
+        return results
     
     def get_my_posted_jobs(
         self, 
@@ -175,8 +192,18 @@ class JobService:
             .all()
         )
         
-        # Use the same enrichment method as other endpoints for consistency
-        return self._enrich_jobs(jobs, user_id)
+        from services.job_cache import get_cached_job_list, cache_job_list
+
+        uid = user_id or poster_id
+        if offset == 0 and uid:
+            cached = get_cached_job_list("posted", uid)
+            if cached is not None:
+                return cached[:limit]
+
+        results = self._enrich_jobs(jobs, user_id)
+        if offset == 0 and uid:
+            cache_job_list("posted", uid, results)
+        return results
     
     def search_jobs(
         self,
@@ -226,6 +253,13 @@ class JobService:
         user_id: int = None
     ) -> List[Dict[str, Any]]:
         """Get remote job postings"""
+        from services.job_cache import get_cached_job_list, cache_job_list
+
+        if offset == 0 and user_id:
+            cached = get_cached_job_list("remote", user_id)
+            if cached is not None:
+                return cached[:limit]
+
         jobs = (
             self.db.query(JobPosting)
             .filter(
@@ -239,8 +273,11 @@ class JobService:
             .offset(offset)
             .all()
         )
-        
-        return self._enrich_jobs(jobs, user_id)
+
+        results = self._enrich_jobs(jobs, user_id)
+        if offset == 0 and user_id:
+            cache_job_list("remote", user_id, results)
+        return results
     
     def update_job(
         self, 
@@ -400,6 +437,13 @@ class JobService:
         self.db.add(application)
         self.db.commit()
         self.db.refresh(application)
+
+        try:
+            from services.job_cache import invalidate_job_lists_for_user
+            invalidate_job_lists_for_user(applicant_id)
+        except Exception:
+            pass
+
         return application
     
     def get_job_applicants(
@@ -574,13 +618,21 @@ class JobService:
             # Unsave
             self.db.delete(existing)
             self.db.commit()
-            return {'is_saved': False, 'message': 'Job unsaved'}
+            result = {'is_saved': False, 'message': 'Job unsaved'}
         else:
             # Save
             saved = JobSaved(job_id=job_id, user_id=user_id)
             self.db.add(saved)
             self.db.commit()
-            return {'is_saved': True, 'message': 'Job saved'}
+            result = {'is_saved': True, 'message': 'Job saved'}
+
+        try:
+            from services.job_cache import invalidate_job_lists_for_user
+            invalidate_job_lists_for_user(user_id)
+        except Exception:
+            pass
+
+        return result
     
     def get_saved_jobs(
         self, 
@@ -588,8 +640,15 @@ class JobService:
         limit: int = 50, 
         offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """Get user's saved jobs"""
-        saved_jobs = (
+        """Get user's saved jobs (batched enrichment, no per-row poster queries)."""
+        from services.job_cache import get_cached_job_list, cache_job_list
+
+        if offset == 0:
+            cached = get_cached_job_list("saved", user_id)
+            if cached is not None:
+                return cached[:limit]
+
+        saved_rows = (
             self.db.query(JobSaved)
             .join(JobPosting)
             .filter(JobSaved.user_id == user_id)
@@ -598,27 +657,25 @@ class JobService:
             .offset(offset)
             .all()
         )
-        
-        results = []
-        for saved in saved_jobs:
-            job = saved.job
-            data = job.to_dict()
-            data['saved_at'] = saved.saved_at.isoformat() if saved.saved_at else None
-            data['is_saved'] = True
-            data['has_applied'] = self._has_applied(job.job_id, user_id)
-            
-            # Get poster info
-            from config.database import get_database
-            db_raw = get_database()
-            poster = db_raw.fetch_one(
-                'SELECT username, name FROM users WHERE uid = %s',
-                (job.poster_id,)
-            )
-            data['poster_username'] = poster['username'] if poster else None
-            data['poster_name'] = poster['name'] if poster else None
-            
-            results.append(data)
-        
+
+        jobs = [row.job for row in saved_rows]
+        saved_at_by_job_id = {
+            row.job.job_id: row.saved_at for row in saved_rows
+        }
+
+        results = self._enrich_jobs(jobs, user_id)
+        for data in results:
+            data["is_saved"] = True
+            job_id = data.get("job_id")
+            saved_at = saved_at_by_job_id.get(job_id)
+            if saved_at is not None:
+                data["saved_at"] = (
+                    saved_at.isoformat() if hasattr(saved_at, "isoformat") else str(saved_at)
+                )
+
+        if offset == 0:
+            cache_job_list("saved", user_id, results)
+
         return results
     
     # ========================================================================
