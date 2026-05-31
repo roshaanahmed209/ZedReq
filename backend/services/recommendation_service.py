@@ -585,17 +585,18 @@ class RecommendationService:
             where_clause = " AND ".join(where_conditions)
             
             # Build query using pgvector cosine distance operator (<=>)
+            # Cast column to vector: ORM/migrations may store embedding as text; param is cast explicitly.
             # 1 - (embedding <=> user_embedding) gives similarity (0 to 1)
             # NOTE: %s placeholders are positional, so params order must match
             # SQL order: embedding (SELECT), ...where_params... (WHERE), embedding (ORDER BY), limit
             query = f"""
             SELECT 
                 job_id,
-                1 - (embedding <=> %s::vector) as similarity
+                1 - (embedding::vector <=> %s::vector) as similarity
             FROM job_postings
             WHERE {where_clause}
                 AND embedding IS NOT NULL
-            ORDER BY embedding <=> %s::vector
+            ORDER BY embedding::vector <=> %s::vector
             LIMIT %s
             """
             
