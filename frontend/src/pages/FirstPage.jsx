@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import '../css/pages/FirstPage.css';
@@ -10,6 +10,8 @@ import GlobeAnimation from '../components/GlobeAnimation';
 import CareerAssistant from '../components/CareerAssistant';
 import InterviewSimulatorDashboard from '../components/InterviewSimulatorDashboard';
 import LMSDashboard from '../components/LMSDashboard';
+import FirstPageGlowButton from '../components/FirstPageGlowButton';
+import FirstPagePricingCard from '../components/FirstPagePricingCard';
 import StackedCards from '../components/StackedCards';
 import {
   PLATFORM_ACCESS_LINES,
@@ -184,15 +186,6 @@ const MARQUEE_SEGS = [
   'Career Co-Pilot',
   'GDPR Compliant',
 ];
-
-function PricingFeatureYes({ text, emph = false }) {
-  return (
-    <li className={`pricing__feature${emph ? ' pricing__feature--emph' : ''}`}>
-      <i className="f-yes" aria-label="Included" />
-      {text}
-    </li>
-  );
-}
 
 /* ─── Trust stats ───────────────────────────────────────── */
 const TRUST_ITEMS = [
@@ -490,12 +483,9 @@ export default function FirstPage() {
           >
             <span /><span /><span />
           </button>
-          <a
-            href="/login"
-            className={`nav__theme-btn nav__get-started${theme === 'dark' ? ' nav__theme-btn--to-light' : ' nav__theme-btn--to-dark'}`}
-          >
+          <FirstPageGlowButton href="/login" className="fp-glow-btn--nav">
             Get Started
-          </a>
+          </FirstPageGlowButton>
         </div>
       </nav>
 
@@ -593,12 +583,10 @@ export default function FirstPage() {
 
             {/* CTAs */}
             <div className="hero__actions" style={{ justifyContent: 'center' }}>
-              <button className="btn btn--accent" onClick={openModal}>
+              <FirstPageGlowButton showIcon onClick={openModal}>
                 Reserve Early Access ↗
-              </button>
-              <a href="/login" className="btn btn--primary">
-                Get Started
-              </a>
+              </FirstPageGlowButton>
+              <FirstPageGlowButton href="/login">Get Started</FirstPageGlowButton>
             </div>
           </div>
 
@@ -686,7 +674,7 @@ export default function FirstPage() {
                 ))}
               </div>
 
-              <a href="/features" className="chapter__link">Explore AI Profile →</a>
+              <FirstPageGlowButton href="/features">Explore AI Profile →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -706,7 +694,7 @@ export default function FirstPage() {
                 compensation, team structure, growth trajectory, commute, culture signals — and
                 returns a ranked shortlist of roles where you&apos;re genuinely competitive.
               </p>
-              <a href="/features" className="chapter__link">See how matching works →</a>
+              <FirstPageGlowButton href="/features">See how matching works →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -726,7 +714,7 @@ export default function FirstPage() {
                 structure, delivery, and technical depth. Twelve sessions and you won&apos;t feel the
                 anxiety — just the conversation.
               </p>
-              <a href="/login" className="chapter__link">Try a mock interview →</a>
+              <FirstPageGlowButton href="/login">Try a mock interview →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -746,7 +734,7 @@ export default function FirstPage() {
                 focused modules, earn shareable credentials, and keep your edge sharp — without
                 leaving the platform.
               </p>
-              <a href="/lms" className="chapter__link">Open the LMS →</a>
+              <FirstPageGlowButton href="/lms">Open the LMS →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -850,105 +838,62 @@ export default function FirstPage() {
           </div>
 
           <div className={`pricing__grid ${startupMode ? 'pricing__grid--1' : 'pricing__grid--4'}`}>
-            {/* Explorer — matches Choose Plan Free */}
-            <div className="pricing__card reveal">
-              <p className="pricing__tier">Explorer</p>
-              <p className="pricing__price">Free</p>
-              <p className="pricing__period">Forever</p>
-              <hr className="pricing__rule" />
-              <ul className="pricing__features pricing__teaser">
-                {FREE_TEASER_WORDS.map((word) => (
-                  <li key={word} className="pricing__feature pricing__teaser-word">
-                    <i className="f-yes" aria-label="Included" />
-                    {word}
-                  </li>
-                ))}
-              </ul>
-              <hr className="pricing__rule" />
-              <p className="mono-label pricing__block-label">LIMITED USAGE</p>
-              <ul className="pricing__features">
-                {FREE_MONTHLY_LIMITS.map((line) => (
-                  <PricingFeatureYes key={line} text={line} emph />
-                ))}
-              </ul>
-              <a href="/login" className="btn btn--outline pricing__cta">
-                Start Free
-              </a>
+            <div className="reveal">
+              <FirstPagePricingCard
+                tier="Explorer"
+                price="Free"
+                period="Forever"
+                description="Full platform access with starter monthly limits on AI coaching, LMS courses, and mock interviews."
+                tags={FREE_TEASER_WORDS}
+                sections={[{ label: 'Limited usage', items: FREE_MONTHLY_LIMITS }]}
+                ctaLabel="Start Free"
+              />
             </div>
 
             {!startupMode && (
               <>
-            {/* Professional — matches Choose Plan Pro */}
-            <div className="pricing__card pricing__card--feat reveal">
-              <span className="pricing__badge">Most Popular</span>
-              <p className="pricing__tier">Professional</p>
-              <p className="pricing__price">$49.99</p>
-              <p className="pricing__period">per month</p>
-              <hr className="pricing__rule" />
-              <p className="mono-label pricing__block-label">Platform access:</p>
-              <ul className="pricing__features">
-                {PLATFORM_ACCESS_LINES.map((line) => (
-                  <PricingFeatureYes key={line} text={line} />
-                ))}
-              </ul>
-              <p className="mono-label pricing__block-label">Higher monthly limits</p>
-              <ul className="pricing__features">
-                {PRO_MONTHLY_LIMITS.map((line, i) => (
-                  <PricingFeatureYes key={line} text={line} emph={i < 3} />
-                ))}
-              </ul>
-              <a href="/login" className="btn pricing__cta">
-                Get Started
-              </a>
+            <div className="reveal">
+              <FirstPagePricingCard
+                tier="Professional"
+                price="$49.99"
+                period="per month"
+                badge="Most Popular"
+                featured
+                description="Higher monthly limits for professionals actively interviewing and upskilling."
+                sections={[
+                  { label: 'Platform access', items: PLATFORM_ACCESS_LINES },
+                  { label: 'Monthly limits', items: PRO_MONTHLY_LIMITS.map((line, i) => ({ text: line, emph: i < 3 })) },
+                ]}
+                ctaLabel="Get Started"
+              />
             </div>
 
-            {/* Elite — matches Choose Plan Premium */}
-            <div className="pricing__card reveal">
-              <p className="pricing__tier">Elite</p>
-              <p className="pricing__price">$89.99</p>
-              <p className="pricing__period">per month</p>
-              <hr className="pricing__rule" />
-              <p className="mono-label pricing__block-label">Platform access:</p>
-              <ul className="pricing__features">
-                {PLATFORM_ACCESS_LINES.map((line) => (
-                  <PricingFeatureYes key={line} text={line} />
-                ))}
-              </ul>
-              <p className="mono-label pricing__block-label">Highest standard monthly limits</p>
-              <ul className="pricing__features">
-                {PREMIUM_MONTHLY_LIMITS.map((line, i) => (
-                  <PricingFeatureYes key={line} text={line} emph={i < 3} />
-                ))}
-              </ul>
-              <a href="/login" className="btn btn--outline pricing__cta">
-                Go Elite
-              </a>
+            <div className="reveal">
+              <FirstPagePricingCard
+                tier="Elite"
+                price="$89.99"
+                period="per month"
+                description="Maximum standard limits for power users who want every edge in their search."
+                sections={[
+                  { label: 'Platform access', items: PLATFORM_ACCESS_LINES },
+                  { label: 'Monthly limits', items: PREMIUM_MONTHLY_LIMITS.map((line, i) => ({ text: line, emph: i < 3 })) },
+                ]}
+                ctaLabel="Go Elite"
+              />
             </div>
 
-            {/* Enterprise — matches Choose Plan Enterprise */}
-            <div className="pricing__card reveal">
-              <p className="pricing__tier">Enterprise</p>
-              <p className="pricing__card-desc">
-                Unlimited usage for AI messages, courses, and interviews — assigned by agreement.
-              </p>
-              <p className="pricing__price">Custom</p>
-              <p className="pricing__period">by arrangement</p>
-              <hr className="pricing__rule" />
-              <p className="mono-label pricing__block-label">Platform access:</p>
-              <ul className="pricing__features">
-                {PLATFORM_ACCESS_LINES.map((line) => (
-                  <PricingFeatureYes key={line} text={line} />
-                ))}
-              </ul>
-              <p className="mono-label pricing__block-label">Enterprise usage</p>
-              <ul className="pricing__features">
-                {ENTERPRISE_USAGE_FEATURES.map(({ text, emph }) => (
-                  <PricingFeatureYes key={text} text={text} emph={emph} />
-                ))}
-              </ul>
-              <a href="/login" className="btn btn--outline pricing__cta">
-                Contact us
-              </a>
+            <div className="reveal">
+              <FirstPagePricingCard
+                tier="Enterprise"
+                price="Custom"
+                period="by arrangement"
+                description="Unlimited usage for AI messages, courses, and interviews — assigned by agreement."
+                sections={[
+                  { label: 'Platform access', items: PLATFORM_ACCESS_LINES },
+                  { label: 'Enterprise usage', items: ENTERPRISE_USAGE_FEATURES },
+                ]}
+                ctaLabel="Contact us"
+              />
             </div>
               </>
             )}
@@ -989,12 +934,10 @@ export default function FirstPage() {
             Your next role<br />is <em>already waiting.</em>
           </h2>
           <div className="cta-band__actions reveal" style={{ '--d': 2 }}>
-            <button className="btn btn--accent" onClick={openModal}>
+            <FirstPageGlowButton showIcon onClick={openModal}>
               Reserve Early Access ↗
-            </button>
-            <a href="/login" className="btn btn--primary">
-              Get Started
-            </a>
+            </FirstPageGlowButton>
+            <FirstPageGlowButton href="/login">Get Started</FirstPageGlowButton>
           </div>
         </section>
 
@@ -1110,14 +1053,14 @@ export default function FirstPage() {
                   {reserveError && (
                     <p className="modal__error" role="alert">{reserveError}</p>
                   )}
-                  <button
+                  <FirstPageGlowButton
                     type="submit"
-                    className="btn btn--accent"
-                    style={{ justifyContent: 'center' }}
+                    showIcon
+                    className="fp-glow-btn--full"
                     disabled={reserveLoading}
                   >
                     {reserveLoading ? 'Reserving…' : 'Reserve Seat'}
-                  </button>
+                  </FirstPageGlowButton>
                 </form>
               </>
             )}

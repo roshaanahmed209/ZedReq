@@ -1,16 +1,19 @@
-/* Shared loader — uses global theme tokens from index.css. Adapted from Uiverse.io by gogo_3618 */
+/* Shared loader — Uiverse.io by gogo_3618. Theme-aware shell + blue spin gradient. */
 .app-loader {
   --loader-shell: #c9d5e0;
   --loader-ring: #acbaca;
   --loader-ring-inner: #acbaca;
-  --loader-gradient-start: var(--primary, #1585A1);
-  --loader-gradient-end: var(--primary-dark, #0f6a82);
+  --loader-gradient-start: #2196f3;
+  --loader-gradient-end: #0a5270;
   --loader-shadow-outer: rgba(0, 0, 0, 0.15);
   --loader-shadow-inset-light: rgba(255, 255, 255, 0.75);
   --loader-shadow-outer-light: rgba(255, 255, 255, 0.55);
   --loader-shadow-inset-dark: rgba(0, 0, 0, 0.2);
   --loader-ring-shadow: #152b4a66;
   --loader-ring-highlight: rgba(255, 255, 255, 0.55);
+  --loader-ring-glow: rgba(255, 255, 255, 1);
+  --loader-blend: hard-light;
+  --loader-spin-blend: color-burn;
 
   display: flex;
   flex-direction: column;
@@ -21,16 +24,39 @@
   color: var(--text);
 }
 
+:root,
 [data-theme='dark'] .app-loader {
-  --loader-shell: #1a1f26;
-  --loader-ring: #2a323d;
-  --loader-ring-inner: #2a323d;
-  --loader-shadow-outer: rgba(0, 0, 0, 0.45);
-  --loader-shadow-inset-light: rgba(255, 255, 255, 0.06);
-  --loader-shadow-outer-light: rgba(255, 255, 255, 0.04);
-  --loader-shadow-inset-dark: rgba(0, 0, 0, 0.55);
-  --loader-ring-shadow: rgba(0, 0, 0, 0.55);
-  --loader-ring-highlight: rgba(255, 255, 255, 0.08);
+  --loader-shell: #1a1a1a;
+  --loader-ring: #2a2a2a;
+  --loader-ring-inner: #2a2a2a;
+  --loader-gradient-start: #38bdf8;
+  --loader-gradient-end: #1585A1;
+  --loader-shadow-outer: rgba(0, 0, 0, 0.55);
+  --loader-shadow-inset-light: rgba(255, 255, 255, 0.05);
+  --loader-shadow-outer-light: rgba(255, 255, 255, 0.03);
+  --loader-shadow-inset-dark: rgba(0, 0, 0, 0.65);
+  --loader-ring-shadow: rgba(0, 0, 0, 0.6);
+  --loader-ring-highlight: rgba(255, 255, 255, 0.07);
+  --loader-ring-glow: rgba(255, 255, 255, 0.06);
+  --loader-blend: normal;
+  --loader-spin-blend: normal;
+}
+
+[data-theme='light'] .app-loader {
+  --loader-shell: #c9d5e0;
+  --loader-ring: #acbaca;
+  --loader-ring-inner: #acbaca;
+  --loader-gradient-start: #2196f3;
+  --loader-gradient-end: #0a5270;
+  --loader-shadow-outer: rgba(0, 0, 0, 0.15);
+  --loader-shadow-inset-light: rgba(255, 255, 255, 0.75);
+  --loader-shadow-outer-light: rgba(255, 255, 255, 0.55);
+  --loader-shadow-inset-dark: rgba(0, 0, 0, 0.2);
+  --loader-ring-shadow: #152b4a66;
+  --loader-ring-highlight: rgba(255, 255, 255, 0.55);
+  --loader-ring-glow: rgba(255, 255, 255, 1);
+  --loader-blend: hard-light;
+  --loader-spin-blend: color-burn;
 }
 
 .app-loader--overlay {
@@ -62,60 +88,66 @@
 
 .app-loader__loader {
   position: relative;
-  width: 200px;
+  width: 160px;
   overflow: hidden;
-  height: 200px;
+  height: 160px;
   background: var(--loader-shell);
-  border-radius: 50px;
+  border-radius: 40px;
   transform-style: preserve-3d;
-  mix-blend-mode: hard-light;
+  mix-blend-mode: var(--loader-blend);
+  border: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
   box-shadow:
-    25px 25px 25px -5px var(--loader-shadow-outer),
-    inset 15px 15px 10px var(--loader-shadow-inset-light),
-    -15px -15px 30px var(--loader-shadow-outer-light),
-    inset -1px -1px 10px var(--loader-shadow-inset-dark);
+    20px 20px 20px -4px var(--loader-shadow-outer),
+    inset 12px 12px 8px var(--loader-shadow-inset-light),
+    -12px -12px 24px var(--loader-shadow-outer-light),
+    inset -1px -1px 8px var(--loader-shadow-inset-dark);
 }
 
 .app-loader__circle {
   position: absolute;
-  inset: 35px;
+  inset: 28px;
   background: var(--loader-ring);
   border-radius: 50%;
   transform-style: preserve-3d;
+  overflow: hidden;
   box-shadow:
     5px 5px 15px 0 var(--loader-ring-shadow),
     inset 5px 5px 5px var(--loader-ring-highlight),
-    -6px -6px 10px rgba(255, 255, 255, 1);
+    -6px -6px 10px var(--loader-ring-glow);
 }
 
-[data-theme='dark'] .app-loader__circle {
-  box-shadow:
-    5px 5px 15px 0 var(--loader-ring-shadow),
-    inset 5px 5px 5px var(--loader-ring-highlight),
-    -6px -6px 10px rgba(255, 255, 255, 0.06);
-}
-
+/* Rotating shade in the ring — conic sweep + spin (Uiverse-style) */
 .app-loader__circle::before {
   content: '';
   position: absolute;
-  inset: 4px;
-  background: linear-gradient(var(--loader-gradient-start), var(--loader-gradient-end));
-  mix-blend-mode: color-burn;
+  inset: 3px;
   border-radius: 50%;
-  animation: app-loader-spin 2s linear infinite;
+  transform-origin: center center;
+  background: conic-gradient(
+    from 0deg,
+    var(--loader-gradient-end) 0deg,
+    var(--loader-gradient-start) 55deg,
+    var(--loader-gradient-end) 115deg,
+    transparent 200deg,
+    transparent 360deg
+  );
+  mix-blend-mode: var(--loader-spin-blend);
+  animation: app-loader-anim 2s linear infinite;
+  will-change: transform;
 }
 
 .app-loader__circle::after {
   content: '';
   position: absolute;
-  inset: 25px;
+  inset: 20px;
   filter: blur(0.9px);
   background: var(--loader-ring-inner);
   border-radius: 50%;
-  z-index: 1000;
+  z-index: 1;
+  pointer-events: none;
 }
 
-@keyframes app-loader-spin {
+@keyframes app-loader-anim {
   0% {
     transform: rotate(0deg);
   }

@@ -1,0 +1,254 @@
+/* From Uiverse.io by Smit-Prajapati — blue theme, static (no hover 3D), First Page only */
+.zedreq-root .pricing__grid {
+  gap: 1.25rem;
+  background: transparent;
+}
+
+.zedreq-root .pricing__grid--1 {
+  max-width: 320px;
+}
+
+.zedreq-root .fp-pricing-card {
+  width: 100%;
+  height: 100%;
+  min-height: 680px;
+}
+
+.zedreq-root .fp-pricing-card__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 680px;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #38bdf8 0%, #1585a1 100%);
+  box-shadow:
+    rgba(8, 47, 73, 0.15) 0 25px 25px -5px,
+    rgba(8, 47, 73, 0.12) 0 12px 20px -8px;
+  overflow: visible;
+}
+
+.zedreq-root .fp-pricing-card--featured .fp-pricing-card__card {
+  background: linear-gradient(135deg, #2196f3 0%, #0a5270 100%);
+  box-shadow:
+    rgba(8, 47, 73, 0.28) 0 28px 32px -6px,
+    rgba(21, 133, 161, 0.35) 0 0 0 2px;
+}
+
+.zedreq-root .fp-pricing-card__glass {
+  position: absolute;
+  inset: 8px;
+  border-radius: 55px;
+  border-top-right-radius: 100%;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.78) 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.zedreq-root .fp-pricing-card__content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  padding: 5.5rem 1.35rem 1rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow-y: auto;
+}
+
+.zedreq-root .fp-pricing-card__badge {
+  align-self: flex-start;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(10, 82, 112, 0.55);
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+}
+
+.zedreq-root .fp-pricing-card__title {
+  display: block;
+  color: #053d4f;
+  font-weight: 900;
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.zedreq-root .fp-pricing-card__price {
+  display: block;
+  color: #053d4f;
+  font-weight: 800;
+  font-size: clamp(1.75rem, 4vw, 2.125rem);
+  line-height: 1;
+  margin-top: 0.15rem;
+}
+
+.zedreq-root .fp-pricing-card__period {
+  display: block;
+  color: rgba(5, 61, 79, 0.72);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.zedreq-root .fp-pricing-card__desc {
+  color: rgba(5, 61, 79, 0.82);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  margin-top: 0.35rem;
+}
+
+.zedreq-root .fp-pricing-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.zedreq-root .fp-pricing-card__tag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #053d4f;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+}
+
+.zedreq-root .fp-pricing-card__section {
+  margin-top: 0.5rem;
+}
+
+.zedreq-root .fp-pricing-card__section-label {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(5, 61, 79, 0.65);
+  margin-bottom: 0.35rem;
+}
+
+.zedreq-root .fp-pricing-card__features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+}
+
+.zedreq-root .fp-pricing-card__feature {
+  position: relative;
+  padding-left: 0.85rem;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: rgba(5, 61, 79, 0.88);
+}
+
+.zedreq-root .fp-pricing-card__feature::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #1585a1;
+  font-weight: 800;
+}
+
+.zedreq-root .fp-pricing-card__feature--emph {
+  font-weight: 700;
+  color: #053d4f;
+}
+
+.zedreq-root .fp-pricing-card__logo {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.zedreq-root .fp-pricing-card__circle {
+  display: block;
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  top: 0;
+  right: 0;
+  box-shadow: rgba(8, 47, 73, 0.18) -10px 10px 20px 0;
+  backdrop-filter: blur(5px);
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.zedreq-root .fp-pricing-card__circle--1 {
+  width: 170px;
+  top: 8px;
+  right: 8px;
+}
+
+.zedreq-root .fp-pricing-card__circle--2 {
+  width: 140px;
+  top: 10px;
+  right: 10px;
+  backdrop-filter: blur(1px);
+}
+
+.zedreq-root .fp-pricing-card__circle--3 {
+  width: 110px;
+  top: 17px;
+  right: 17px;
+}
+
+.zedreq-root .fp-pricing-card__circle--4 {
+  width: 80px;
+  top: 23px;
+  right: 23px;
+}
+
+.zedreq-root .fp-pricing-card__circle--5 {
+  width: 50px;
+  top: 30px;
+  right: 30px;
+  display: grid;
+  place-content: center;
+  background: rgba(21, 133, 161, 0.45);
+}
+
+.zedreq-root .fp-pricing-card__logo-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.zedreq-root .fp-pricing-card__bottom {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem 1.75rem;
+  overflow: visible;
+}
+
+.zedreq-root .fp-glow-btn--pricing {
+  width: auto;
+  min-width: 9.5rem;
+  max-width: 13.5rem;
+  margin: 0;
+  font-size: 0.75rem;
+  padding: 0.65rem 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .zedreq-root .fp-pricing-card,
+  .zedreq-root .fp-pricing-card__card {
+    min-height: 620px;
+  }
+}
