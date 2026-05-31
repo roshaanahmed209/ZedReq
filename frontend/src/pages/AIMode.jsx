@@ -2,6 +2,7 @@
 import styled, { keyframes } from 'styled-components'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
 import { nemzAPI, vecAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import SharePostButton from '../components/SharePostButton'
@@ -1056,6 +1057,7 @@ const RemoveFileButton = styled.button`
 `
 
 const AIMode = () => {
+  const { showAccessDeniedModal } = useAccessDeniedModal()
   const [activeSection, setActiveSection] = useState('chat')
   const [message, setMessage] = useState('')
   const [jobFilter, setJobFilter] = useState('all')
@@ -1382,18 +1384,8 @@ const AIMode = () => {
         
         // Handle quota exceeded (403)
         if (err.response?.status === 403) {
-          // Use userMessage from interceptor if available, otherwise extract from response
-          errorText = err.userMessage || (() => {
-            const detail = err.response.data?.detail
-            // Handle quota exceeded errors (AI messages, course enrollments, etc.)
-            if (detail && typeof detail === 'object' && detail.feature) {
-              // Use the message from backend, which includes upgrade suggestion
-              return detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
-            } else {
-              // Handle other 403 errors
-              return typeof detail === 'string' ? detail : (detail?.message || 'Access denied')
-            }
-          })()
+          showAccessDeniedModal(err)
+          return
         } else if (err.response?.status === 429) {
           errorText = "You're sending messages too quickly. Please wait a moment before trying again."
         }

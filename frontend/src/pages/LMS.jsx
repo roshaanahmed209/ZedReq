@@ -2,6 +2,7 @@
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
 import { motion, useInView } from 'framer-motion'
 import { lmsAPI } from '../services/api'
 import Navbar from '../components/Navbar'
@@ -2321,6 +2322,7 @@ function usePersistentCounter(key, max) {
 }
 
 const LMS = () => {
+  const { showAccessDeniedModal } = useAccessDeniedModal()
   const [activeTab, setActiveTab] = useState('all')
   const [topGradientOpacity, setTopGradientOpacity] = useState(0)
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1)
@@ -2810,31 +2812,7 @@ const LMS = () => {
       console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
 
       if (err.response?.status === 403) {
-        // Use userMessage from interceptor if available, otherwise extract from response
-        let message = err.userMessage || err.message
-        // If message is the generic axios error, extract from response instead
-        if (message && message.includes('Request failed with status code')) {
-          message = null // Reset to extract from response
-        }
-        
-        if (!message) {
-          const detail = err.response.data?.detail
-          // Handle quota exceeded errors (course enrollments, AI messages, etc.)
-          if (detail && typeof detail === 'object' && detail.feature) {
-            // Use the message from backend, which includes upgrade suggestion
-            message = detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
-          } else if (detail) {
-            // Handle other 403 errors - check if it's a string or object
-            message = typeof detail === 'string' ? detail : detail?.message
-          }
-        }
-        
-        // Final fallback
-        if (!message) {
-          message = 'Your enrollment limit has been reached. Upgrade your plan to increase your limit.'
-        }
-        
-        alert(message)
+        showAccessDeniedModal(err)
       } else {
         // Handle non-403 errors
         const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'

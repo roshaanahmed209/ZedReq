@@ -2,6 +2,7 @@
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
 import { interviewAPI, jobAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/AIInterviews.css'
@@ -961,6 +962,7 @@ const RefreshButton = styled.button`
 `
 
 const AIInterviews = () => {
+  const { showAccessDeniedModal } = useAccessDeniedModal()
   const [selectedJob, setSelectedJob] = useState(null)
   const [interviews, setInterviews] = useState([])
   const [selectedInterview, setSelectedInterview] = useState(null)
@@ -1175,19 +1177,7 @@ const AIInterviews = () => {
       
       // Handle quota exceeded (403) from server-side subscription check
       if (err.response?.status === 403) {
-        // Use userMessage from interceptor if available, otherwise extract from response
-        const message = err.userMessage || (() => {
-          const detail = err.response.data?.detail
-          // Handle quota exceeded errors (interview sessions, AI messages, course enrollments, etc.)
-          if (detail && typeof detail === 'object' && detail.feature) {
-            // Use the message from backend, which includes upgrade suggestion
-            return detail.message || `Your ${detail.feature.replace('_', ' ')} limit has been reached (${detail.used}/${detail.limit} on ${detail.plan} plan). Upgrade your plan to increase your limit.`
-          } else {
-            // Handle other 403 errors
-            return typeof detail === 'string' ? detail : (detail?.message || 'Access denied')
-          }
-        })()
-        alert(message)
+        showAccessDeniedModal(err)
       } else if (err.response?.status === 429) {
         // Handle rate limiting
         const retryAfter = err.response?.headers?.['retry-after'] || 60

@@ -34,7 +34,9 @@ import RequirePlanSelected from './components/RequirePlanSelected'
 import PrelaunchNoticeHost from './components/PrelaunchNoticeHost'
 import RouteNavigationLoader from './components/RouteNavigationLoader'
 import ConfirmModal from './components/ConfirmModal'
+import AccessDeniedModal from './components/AccessDeniedModal'
 import { ConfirmModalProvider } from './contexts/ConfirmModalContext'
+import { AccessDeniedModalProvider } from './contexts/AccessDeniedModalContext'
 import { initAnalytics, trackPageView } from './utils/analytics'
 
 function WithPlanGate({ children }) {
@@ -66,9 +68,11 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <ConfirmModalProvider>
+        <AccessDeniedModalProvider>
         <Router>
           <RouteNavigationLoader />
           <ConfirmModal />
+          <AccessDeniedModal />
           <RouteTracker />
           <PrelaunchNoticeHost />
         <Routes>
@@ -129,6 +133,7 @@ function App() {
           <Route path="/settings" element={<WithPlanGate><Settings /></WithPlanGate>} />
         </Routes>
       </Router>
+        </AccessDeniedModalProvider>
         </ConfirmModalProvider>
       </AuthProvider>
     </ThemeProvider>
