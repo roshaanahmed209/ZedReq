@@ -39,11 +39,12 @@ USING (
 );
 """
 
+# IVFFlat/HNSW on `vector` type cap at 2000 dimensions; OpenAI text-embedding-3-large uses 3072.
+# Use HNSW on halfvec cast (pgvector 0.7+) for index acceleration.
 RECREATE_JOB_INDEX = """
-CREATE INDEX IF NOT EXISTS idx_job_embeddings
+CREATE INDEX IF NOT EXISTS idx_job_embeddings_hnsw
 ON job_postings
-USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
+USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops);
 """
 
 
