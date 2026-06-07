@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     TAVUS_API_URL: str = "https://tavusapi.com/v2"
     # Seconds with no participant before Tavus tears down the Daily room (Tavus default is 300).
     TAVUS_PARTICIPANT_ABSENT_TIMEOUT: int = 1800
+
+    # Mock interview Tavus max_call_duration — single source of truth (seconds, max 3600).
+    # Set INTERVIEW_MAX_DURATION_SECONDS in .env to change for all plans/sessions.
+    INTERVIEW_MAX_DURATION_SECONDS: int = 60
     
     # Firebase Google Auth Configuration (separate from messaging Firebase)
     FIREBASE_AUTH_PROJECT_ID: str | None = None  # Firebase project ID for Google Auth
@@ -159,6 +163,10 @@ class Settings(BaseSettings):
         if not replica_ids:
             return None
         return random.choice(replica_ids)
+
+    def get_interview_max_duration_seconds(self) -> int:
+        """Tavus max_call_duration for mock interviews (env: INTERVIEW_MAX_DURATION_SECONDS)."""
+        return min(max(self.INTERVIEW_MAX_DURATION_SECONDS, 1), 3600)
 
 
 @lru_cache()

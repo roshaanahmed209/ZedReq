@@ -225,6 +225,8 @@ class InterviewTranscriptResponse(BaseModel):
     status: str = Field(..., max_length=20)
     items: List[TranscriptItemSchema] = Field(default_factory=list)
     source: str = Field(..., max_length=20, description="database, tavus, or none")
+    user_turn_count: int = Field(0, ge=0)
+    hint: Optional[str] = None
 
 
 class InterviewListResponse(BaseModel):

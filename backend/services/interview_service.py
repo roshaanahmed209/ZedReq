@@ -3,6 +3,7 @@ Interview Service
 Orchestrates the interview process: starting interviews, completing them, and managing history
 """
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -86,7 +87,10 @@ class InterviewService:
         
         try:
             # Log security event
-            logger.info(f"Interview start requested: user_id={user_id}, job_id={job_id}")
+            logger.info(
+                f"Interview start requested: user_id={user_id}, job_id={job_id}, "
+                f"max_call_duration={max_call_duration}s"
+            )
             
             # Get job details
             job = self.db.query(JobPosting).filter(JobPosting.job_id == job_id).first()
@@ -251,16 +255,14 @@ class InterviewService:
             
             logger.debug(f"Fetching Tavus transcript: conversation_id={interview.tavus_conversation_id}")
             try:
-                transcript = self.tavus_service.get_conversation_transcript(
-                    interview.tavus_conversation_id
+                user_responses = self._fetch_tavus_user_responses(
+                    interview.tavus_conversation_id,
+                    retry_delays=(0, 2, 5, 8),
                 )
             except Exception as e:
                 logger.error(f"Tavus service error: {e}", exc_info=True)
                 raise TavusServiceError(f"Failed to get Tavus transcript: {str(e)}")
             
-            # Extract user responses from transcript
-            logger.debug("Extracting user responses from transcript...")
-            user_responses = self._extract_user_responses(transcript)
             logger.info(f"Extracted {len(user_responses)} user responses")
             
             # Get job context
@@ -417,10 +419,10 @@ class InterviewService:
             source = "database"
         elif interview.tavus_conversation_id:
             try:
-                transcript = self.tavus_service.get_conversation_transcript(
-                    interview.tavus_conversation_id
+                user_responses = self._fetch_tavus_user_responses(
+                    interview.tavus_conversation_id,
+                    retry_delays=(0,) if interview.status == "in_progress" else (0, 2, 5),
                 )
-                user_responses = self._extract_user_responses(transcript)
                 source = "tavus" if user_responses else "none"
             except Exception as e:
                 logger.warning(
@@ -431,12 +433,22 @@ class InterviewService:
                     source = "database"
 
         items = self._build_transcript_items(questions, user_responses)
+        user_turn_count = len(user_responses)
 
         return {
             "interview_id": interview.interview_id,
             "status": interview.status,
             "items": items,
             "source": source,
+            "user_turn_count": user_turn_count,
+            "hint": (
+                None
+                if user_turn_count
+                else (
+                    "Tavus usually publishes the full transcript after the call ends. "
+                    "Finish in the Tavus room, then click Complete Interview or Refresh transcript."
+                )
+            ),
         }
 
     @staticmethod
@@ -500,6 +512,55 @@ class InterviewService:
             })
 
         return items
+
+    def _fetch_tavus_user_responses(
+        self,
+        conversation_id: str,
+        *,
+        retry_delays: tuple = (0, 2, 5, 8),
+    ) -> List[Dict[str, Any]]:
+        """
+        Pull user turns from Tavus transcript + verbose conversation events.
+
+        Tavus usually publishes the full transcript after the call ends
+        (application.transcription_ready). Retries help when completion
+        races the transcription webhook.
+        """
+        last_error: Optional[Exception] = None
+
+        for delay in retry_delays:
+            if delay:
+                time.sleep(delay)
+
+            try:
+                transcript = self.tavus_service.get_conversation_transcript(conversation_id)
+                responses = self._extract_user_responses(transcript)
+                if responses:
+                    return responses
+
+                conversation = self.tavus_service.get_conversation(
+                    conversation_id,
+                    verbose=True,
+                )
+                responses = self._extract_user_responses(conversation)
+                if responses:
+                    return responses
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Tavus transcript fetch attempt failed for %s: %s",
+                    conversation_id,
+                    exc,
+                )
+
+        if last_error:
+            logger.warning(
+                "No Tavus user responses after %s attempt(s) for %s: %s",
+                len(retry_delays),
+                conversation_id,
+                last_error,
+            )
+        return []
     
     def get_user_interview_history(
         self,
@@ -559,109 +620,197 @@ class InterviewService:
         ).scalar()
         
         return count or 0
+
+    _ASSISTANT_ROLES = frozenset({
+        'assistant', 'replica', 'agent', 'ai', 'persona', 'system', 'bot', 'model',
+    })
+    _USER_ROLES = frozenset({
+        'user', 'candidate', 'interviewee', 'human', 'local', 'guest', 'participant',
+    })
+
+    @classmethod
+    def _clean_tavus_user_content(cls, content: str) -> str:
+        """Strip Tavus multimodal prefixes and keep spoken user text only."""
+        text = str(content or '').strip()
+        if not text:
+            return ''
+
+        upper = text.upper()
+        if 'USER_SPEECH:' in upper or 'USER SPEECH:' in upper:
+            for marker in ('USER_SPEECH:', 'USER SPEECH:'):
+                idx = upper.find(marker)
+                if idx >= 0:
+                    text = text[idx + len(marker):]
+                    break
+            vis_idx = text.upper().find('VISUAL_SCENE:')
+            if vis_idx >= 0:
+                text = text[:vis_idx]
+            elif 'VISUAL SCENE:' in text.upper():
+                text = text.split('VISUAL SCENE:', 1)[0]
+
+        return text.strip()
+
+    @classmethod
+    def _is_user_turn(cls, role: str) -> bool:
+        normalized = (role or '').lower().strip()
+        if not normalized:
+            return False
+        if normalized in cls._ASSISTANT_ROLES:
+            return False
+        if normalized in cls._USER_ROLES:
+            return True
+        return normalized not in cls._ASSISTANT_ROLES
+
+    @classmethod
+    def _normalize_transcript_messages(cls, payload: Any) -> List[Dict[str, Any]]:
+        """Collect transcript turns from Tavus transcript or conversation payloads."""
+        if not payload:
+            return []
+
+        if isinstance(payload, list):
+            return [m for m in payload if isinstance(m, dict)]
+
+        if not isinstance(payload, dict):
+            return []
+
+        direct = payload.get('transcript')
+        if isinstance(direct, list):
+            return [m for m in direct if isinstance(m, dict)]
+
+        props = payload.get('properties')
+        if isinstance(props, dict):
+            nested = props.get('transcript')
+            if isinstance(nested, list):
+                return [m for m in nested if isinstance(m, dict)]
+
+        events = payload.get('events')
+        if isinstance(events, list):
+            for event in reversed(events):
+                if not isinstance(event, dict):
+                    continue
+                event_type = str(
+                    event.get('event_type') or event.get('type') or ''
+                ).lower()
+                if 'transcription_ready' not in event_type:
+                    continue
+                event_props = event.get('properties') or {}
+                event_transcript = event_props.get('transcript')
+                if isinstance(event_transcript, list) and event_transcript:
+                    return [m for m in event_transcript if isinstance(m, dict)]
+
+            utterances: List[Dict[str, Any]] = []
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                event_type = str(
+                    event.get('event_type') or event.get('type') or ''
+                ).lower()
+                if 'utterance' not in event_type:
+                    continue
+                props = event.get('properties') or {}
+                role = props.get('role') or props.get('speaker') or event.get('role')
+                content = (
+                    props.get('content')
+                    or props.get('text')
+                    or props.get('message')
+                    or props.get('transcript')
+                    or event.get('content')
+                    or ''
+                )
+                if role and content:
+                    utterances.append({
+                        'role': role,
+                        'content': content,
+                        'timestamp': props.get('timestamp') or event.get('timestamp'),
+                    })
+            if utterances:
+                return utterances
+
+        for key in ('messages', 'data', 'utterances', 'turns'):
+            candidate = payload.get(key)
+            if isinstance(candidate, list) and candidate:
+                return [m for m in candidate if isinstance(m, dict)]
+
+        return []
     
     def _extract_user_responses(self, transcript: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Extract user responses from Tavus transcript
-        
-        Supports multiple transcript formats and provides fallback parsing strategies.
-        
-        Args:
-            transcript: Tavus conversation transcript (dict or list)
-            
-        Returns:
-            List of user response dictionaries with sanitized content
+        Extract user responses from Tavus transcript / conversation payloads.
         """
-        responses = []
-        
+        responses: List[Dict[str, Any]] = []
+
         if not transcript:
             logger.warning("Empty transcript provided")
             return responses
-        
-        # Strategy 1: Try 'messages' array (most common format)
-        if isinstance(transcript, dict):
-            messages = transcript.get('messages', transcript.get('transcript', transcript.get('data', [])))
-        elif isinstance(transcript, list):
-            messages = transcript
-        else:
-            logger.warning(f"Unexpected transcript type: {type(transcript)}")
+
+        messages = self._normalize_transcript_messages(transcript)
+        if not messages:
+            logger.warning(
+                "No transcript messages found. Keys: %s",
+                list(transcript.keys()) if isinstance(transcript, dict) else type(transcript),
+            )
             return responses
-        
-        if not isinstance(messages, list):
-            logger.warning(f"Messages is not a list: {type(messages)}")
-            return responses
-        
-        logger.debug(f"Processing {len(messages)} messages from transcript")
-        
-        # Extract user responses
+
+        logger.debug(f"Processing {len(messages)} transcript turns")
+
         for idx, msg in enumerate(messages):
-            if not isinstance(msg, dict):
-                logger.debug(f"Skipping non-dict message at index {idx}")
-                continue
-            
-            # Try different role field names
             role = (
-                msg.get('role', '') or 
-                msg.get('speaker', '') or 
-                msg.get('type', '')
-            ).lower()
-            
-            # Check if this is a user/candidate message
-            if role in ['user', 'candidate', 'interviewee', 'participant']:
-                # Try different content field names
-                content = (
-                    msg.get('content') or 
-                    msg.get('text') or 
-                    msg.get('message') or 
-                    msg.get('transcript') or 
-                    msg.get('value') or 
-                    ''
-                )
-                
-                # Sanitize content
-                if content:
-                    content = sanitize_text_for_storage(str(content), max_length=5000)
-                    
-                    response_dict = {
-                        'response': content,
-                        'timestamp': msg.get('timestamp') or msg.get('time') or msg.get('created_at')
-                    }
-                    
-                    # Add question index if available
-                    if 'question_index' in msg:
-                        response_dict['question_index'] = msg.get('question_index')
-                    
-                    responses.append(response_dict)
-                    logger.debug(f"Extracted response {len(responses)}: {len(content)} chars")
-        
-        # Strategy 2: If no responses found, try alternative structure
+                msg.get('role')
+                or msg.get('speaker')
+                or msg.get('type')
+                or ''
+            )
+            if not self._is_user_turn(str(role)):
+                continue
+
+            content = (
+                msg.get('content')
+                or msg.get('text')
+                or msg.get('message')
+                or msg.get('transcript')
+                or msg.get('value')
+                or ''
+            )
+            content = self._clean_tavus_user_content(str(content))
+            if not content:
+                continue
+
+            content = sanitize_text_for_storage(content, max_length=5000)
+            response_dict: Dict[str, Any] = {
+                'response': content,
+                'timestamp': msg.get('timestamp') or msg.get('time') or msg.get('created_at'),
+            }
+            if 'question_index' in msg:
+                response_dict['question_index'] = msg.get('question_index')
+            responses.append(response_dict)
+            logger.debug(f"Extracted user turn {len(responses)}: {len(content)} chars")
+
         if not responses and isinstance(transcript, dict):
-            # Try 'responses' array
             alt_responses = transcript.get('responses', transcript.get('user_responses', []))
             if isinstance(alt_responses, list):
                 logger.debug("Trying alternative response structure")
-                for idx, resp in enumerate(alt_responses):
+                for resp in alt_responses:
                     if isinstance(resp, dict):
-                        content = resp.get('text') or resp.get('content') or resp.get('response') or ''
+                        content = self._clean_tavus_user_content(
+                            resp.get('text') or resp.get('content') or resp.get('response') or ''
+                        )
                         if content:
-                            content = sanitize_text_for_storage(str(content), max_length=5000)
+                            content = sanitize_text_for_storage(content, max_length=5000)
                             responses.append({
                                 'response': content,
-                                'timestamp': resp.get('timestamp')
+                                'timestamp': resp.get('timestamp'),
                             })
                     elif isinstance(resp, str):
-                        content = sanitize_text_for_storage(resp, max_length=5000)
-                        responses.append({
-                            'response': content,
-                            'timestamp': None
-                        })
-        
+                        content = self._clean_tavus_user_content(resp)
+                        if content:
+                            content = sanitize_text_for_storage(content, max_length=5000)
+                            responses.append({'response': content, 'timestamp': None})
+
         logger.info(f"Extracted {len(responses)} user responses from transcript")
-        
+
         if not responses:
-            logger.warning("No user responses found in transcript. Transcript structure may be unexpected.")
-            logger.debug(f"Transcript keys: {list(transcript.keys()) if isinstance(transcript, dict) else 'N/A'}")
-        
+            logger.warning("No user responses found in transcript after parsing all strategies.")
+
         return responses
     
     def _format_complete_response(self, interview: LiveInterview) -> Dict[str, Any]:

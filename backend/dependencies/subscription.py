@@ -103,7 +103,7 @@ async def require_interview_quota(
     """
     Dependency that checks and increments interview session quota atomically.
     Raises 403 if monthly interview limit is exceeded.
-    Also stores max_call_duration on request.state for the endpoint to use.
+    Sets max_interview_duration from INTERVIEW_MAX_DURATION_SECONDS (env).
     """
     user_id = current_user["id"]
     result = svc.check_and_increment(user_id, FEATURE_INTERVIEW_SESSIONS)

@@ -7,6 +7,7 @@ from dependencies.auth import get_current_user
 from dependencies.rate_limit import RateLimiter
 from dependencies.subscription import require_interview_quota
 from config.database_orm import get_db
+from config.settings import settings
 from services.interview_service import InterviewService
 from services.recommendation_service import RecommendationService
 from schemas.interview import (
@@ -141,12 +142,15 @@ async def start_interview(
     Security:
     - Rate limit: 10 requests/minute (burst protection)
     - Quota: Monthly interview session limit per subscription plan (atomic server-side check)
-    - max_call_duration is read from request.state (set by require_interview_quota),
-      NOT from any client-provided value. The server controls duration.
+    - max_call_duration is read from INTERVIEW_MAX_DURATION_SECONDS (env), via require_interview_quota
     """
     try:
-        # Get max duration from server-side subscription check (not from client)
-        max_duration = getattr(http_request.state, 'max_interview_duration', 60)
+        # Single source: INTERVIEW_MAX_DURATION_SECONDS in .env (via settings)
+        max_duration = getattr(
+            http_request.state,
+            'max_interview_duration',
+            settings.get_interview_max_duration_seconds(),
+        )
         
         result = service.start_interview(
             user_id=current_user["id"],

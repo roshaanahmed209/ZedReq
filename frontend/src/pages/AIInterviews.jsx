@@ -52,49 +52,54 @@ const BackButton = styled.button`
   }
 `
 
+const SIDE_PANEL_WIDTH_KEY = 'aiInterviewsSidePanelWidth'
+const MIN_SIDE_PANEL_WIDTH = 300
+const MAX_SIDE_PANEL_WIDTH = 640
+const DEFAULT_SIDE_PANEL_WIDTH = 450
+
 const MainContainer = styled.div`
   width: 100%;
   max-width: 100%;
   min-height: calc(100vh - 80px);
   margin: 0;
-  display: grid;
-  grid-template-columns: 1fr 450px;
-  gap: 0;
+  display: flex;
+  align-items: stretch;
   background: var(--bg-light);
-  
-  @media (max-width: 1400px) {
-    grid-template-columns: 1fr 420px;
-  }
-  
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr 400px;
-  }
-  
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr 350px;
-  }
-  
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr 320px;
-  }
-  
+
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     height: auto;
     min-height: calc(100vh - 80px);
   }
-  
-  @media (max-width: 600px) {
+`
+
+const MainContent = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+`
+
+const SidePanelsColumn = styled.aside`
+  width: ${props => props.$width}px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-light);
+  border-left: 1px solid var(--border);
+  height: calc(100vh - 80px);
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 100%;
     height: auto;
-    min-height: calc(100vh - 70px);
-  }
-  
-  @media (max-width: 480px) {
-    min-height: calc(100vh - 65px);
-  }
-  
-  @media (max-width: 360px) {
-    min-height: calc(100vh - 60px);
+    max-height: none;
+    border-left: none;
+    padding: 16px;
+    gap: 20px;
   }
 `
 
@@ -518,7 +523,6 @@ const TranscriptPanel = styled.div`
   border-radius: 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  animation: ${slideUp} 0.4s ease-out;
   display: flex;
   flex-direction: column;
   height: 420px;
@@ -647,78 +651,6 @@ const TranscriptBody = styled.div`
   }
 `
 
-const TranscriptItemCard = styled.div`
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--bg-white);
-  animation: ${slideUp} 0.3s ease-out;
-`
-
-const TranscriptQuestionBlock = styled.div`
-  padding: 14px 16px;
-  background: rgba(21, 133, 161, 0.08);
-  border-bottom: 1px solid var(--border);
-`
-
-const TranscriptQuestionLabel = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 0.75em;
-  font-weight: 600;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-`
-
-const TranscriptQuestionType = styled.span`
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(21, 133, 161, 0.12);
-  color: var(--primary);
-  font-size: 0.92em;
-  text-transform: capitalize;
-`
-
-const TranscriptQuestionText = styled.p`
-  margin: 0;
-  font-size: 0.92em;
-  line-height: 1.55;
-  color: var(--text);
-`
-
-const TranscriptAnswerBlock = styled.div`
-  padding: 14px 16px;
-  background: var(--hover-bg);
-`
-
-const TranscriptAnswerLabel = styled.div`
-  font-size: 0.75em;
-  font-weight: 600;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 8px;
-`
-
-const TranscriptAnswerText = styled.p`
-  margin: 0;
-  font-size: 0.9em;
-  line-height: 1.6;
-  color: var(--text);
-  white-space: pre-wrap;
-`
-
-const TranscriptAnswerPending = styled.p`
-  margin: 0;
-  font-size: 0.88em;
-  line-height: 1.5;
-  color: var(--text-lighter);
-  font-style: italic;
-`
-
 const TranscriptEmptyState = styled.div`
   flex: 1;
   display: flex;
@@ -735,26 +667,6 @@ const TranscriptEmptyState = styled.div`
     font-size: 0.9em;
     line-height: 1.6;
     max-width: 420px;
-  }
-`
-
-const SidePanelsColumn = styled.aside`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  background: var(--bg-light);
-  border-left: 1px solid var(--border);
-  height: calc(100vh - 80px);
-  max-height: calc(100vh - 80px);
-  overflow: hidden;
-
-  @media (max-width: 768px) {
-    height: auto;
-    max-height: none;
-    border-left: none;
-    padding: 16px;
-    gap: 20px;
   }
 `
 
@@ -1015,7 +927,23 @@ const AIInterviews = () => {
   const { user } = useAuth()
   const [transcriptItems, setTranscriptItems] = useState([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [refreshingTranscript, setRefreshingTranscript] = useState(false)
   const [transcriptSource, setTranscriptSource] = useState(null)
+  const [transcriptHint, setTranscriptHint] = useState(null)
+  const [transcriptUserTurnCount, setTranscriptUserTurnCount] = useState(0)
+  const [sidePanelWidth, setSidePanelWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SIDE_PANEL_WIDTH_KEY)
+      const parsed = saved ? parseInt(saved, 10) : DEFAULT_SIDE_PANEL_WIDTH
+      if (!Number.isFinite(parsed)) return DEFAULT_SIDE_PANEL_WIDTH
+      return Math.min(MAX_SIDE_PANEL_WIDTH, Math.max(MIN_SIDE_PANEL_WIDTH, parsed))
+    } catch {
+      return DEFAULT_SIDE_PANEL_WIDTH
+    }
+  })
+  const [isResizingPanel, setIsResizingPanel] = useState(false)
+  const sidePanelWidthRef = useRef(sidePanelWidth)
+  const isResizingRef = useRef(false)
   const [currentInterview, setCurrentInterview] = useState(null)
   const [startingInterview, setStartingInterview] = useState(false)
   const [completingInterview, setCompletingInterview] = useState(false)
@@ -1127,22 +1055,31 @@ const AIInterviews = () => {
     }
   }
 
-  const fetchTranscript = async (interviewId) => {
+  const fetchTranscript = async (interviewId, { background = false } = {}) => {
     if (!interviewId) return
 
     try {
-      setLoadingTranscript(true)
+      if (background) {
+        setRefreshingTranscript(true)
+      } else {
+        setLoadingTranscript(true)
+      }
       const response = await interviewAPI.getInterviewTranscript(interviewId)
       if (response.data) {
         setTranscriptItems(response.data.items || [])
         setTranscriptSource(response.data.source || null)
+        setTranscriptHint(response.data.hint || null)
+        setTranscriptUserTurnCount(response.data.user_turn_count ?? 0)
       }
     } catch (err) {
       console.error('Error fetching interview transcript:', err)
       setTranscriptItems([])
       setTranscriptSource(null)
+      setTranscriptHint(null)
+      setTranscriptUserTurnCount(0)
     } finally {
       setLoadingTranscript(false)
+      setRefreshingTranscript(false)
     }
   }
 
@@ -1174,6 +1111,8 @@ const AIInterviews = () => {
     setLinkCopied(false)
     setTranscriptItems([])
     setTranscriptSource(null)
+    setTranscriptHint(null)
+    setTranscriptUserTurnCount(0)
   }
 
   const handleBackToFeed = () => {
@@ -1345,9 +1284,64 @@ const AIInterviews = () => {
   }
 
   useEffect(() => {
+    sidePanelWidthRef.current = sidePanelWidth
+  }, [sidePanelWidth])
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      if (!isResizingRef.current) return
+      const nextWidth = window.innerWidth - event.clientX
+      const clamped = Math.min(
+        MAX_SIDE_PANEL_WIDTH,
+        Math.max(MIN_SIDE_PANEL_WIDTH, nextWidth)
+      )
+      sidePanelWidthRef.current = clamped
+      setSidePanelWidth(clamped)
+    }
+
+    const handleMouseUp = () => {
+      if (!isResizingRef.current) return
+      isResizingRef.current = false
+      setIsResizingPanel(false)
+      try {
+        localStorage.setItem(SIDE_PANEL_WIDTH_KEY, String(sidePanelWidthRef.current))
+      } catch {
+        /* ignore storage errors */
+      }
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  const handleResizeStart = (event) => {
+    if (window.innerWidth <= 768) return
+    event.preventDefault()
+    isResizingRef.current = true
+    setIsResizingPanel(true)
+  }
+
+  useEffect(() => {
+    sidePanelWidthRef.current = sidePanelWidth
+  }, [sidePanelWidth])
+
+  useEffect(() => {
+    document.body.classList.toggle('ai-interviews-resizing', isResizingPanel)
+    return () => {
+      document.body.classList.remove('ai-interviews-resizing')
+    }
+  }, [isResizingPanel])
+
+  useEffect(() => {
     if (!currentInterview?.interview_id) {
       setTranscriptItems([])
       setTranscriptSource(null)
+      setTranscriptHint(null)
+      setTranscriptUserTurnCount(0)
       return
     }
 
@@ -1355,8 +1349,8 @@ const AIInterviews = () => {
 
     if (currentInterview.status === 'in_progress') {
       const intervalId = setInterval(() => {
-        fetchTranscript(currentInterview.interview_id)
-      }, 20000)
+        fetchTranscript(currentInterview.interview_id, { background: true })
+      }, 30000)
       return () => clearInterval(intervalId)
     }
   }, [currentInterview?.interview_id, currentInterview?.status])
@@ -1372,6 +1366,7 @@ const AIInterviews = () => {
       <Navbar />
 
       <MainContainer>
+        <MainContent>
         <VideoPanel>
           <DescriptionBanner>
             <BannerTitle>
@@ -1545,15 +1540,16 @@ const AIInterviews = () => {
                 {currentInterview?.interview_id && (
                   <TranscriptRefreshButton
                     type="button"
-                    onClick={() => fetchTranscript(currentInterview.interview_id)}
-                    disabled={loadingTranscript}
+                    onClick={() => fetchTranscript(currentInterview.interview_id, { background: true })}
+                    disabled={loadingTranscript || refreshingTranscript}
                   >
-                    {loadingTranscript ? 'Refreshing...' : 'Refresh transcript'}
+                    {loadingTranscript || refreshingTranscript ? 'Refreshing...' : 'Refresh transcript'}
                   </TranscriptRefreshButton>
                 )}
               </TranscriptHeader>
 
               <TranscriptBody>
+                <div className="ai-interview-transcript">
                 {loadingTranscript && transcriptItems.length === 0 ? (
                   <TranscriptEmptyState>
                     <p>Loading transcript from Tavus...</p>
@@ -1562,50 +1558,72 @@ const AIInterviews = () => {
                   <TranscriptEmptyState>
                     <p>Start an interview to see your question-wise transcript here after you finish in the Tavus room.</p>
                   </TranscriptEmptyState>
-                ) : transcriptItems.length === 0 ? (
-                  <TranscriptEmptyState>
-                    <p>
-                      No responses recorded yet. Join the interview room, answer the questions, then click
-                      &quot;Refresh transcript&quot; or complete the interview to load your answers from Tavus.
-                    </p>
-                  </TranscriptEmptyState>
                 ) : (
                   <>
+                    {transcriptHint && (
+                      <div className="transcript-hint-banner" role="status">
+                        {transcriptHint}
+                      </div>
+                    )}
                     {transcriptItems.map((item) => (
-                      <TranscriptItemCard key={item.question_index}>
-                        <TranscriptQuestionBlock>
-                          <TranscriptQuestionLabel>
-                            Question {item.question_index + 1}
+                      <div key={item.question_index} className="transcript-item">
+                        <div className="transcript-question-block">
+                          <div className="transcript-meta-row">
+                            <span>Question {item.question_index + 1}</span>
                             {item.question_type && (
-                              <TranscriptQuestionType>{item.question_type.replace(/_/g, ' ')}</TranscriptQuestionType>
+                              <span className="transcript-type-badge">
+                                {item.question_type.replace(/_/g, ' ')}
+                              </span>
                             )}
-                          </TranscriptQuestionLabel>
-                          <TranscriptQuestionText>{item.question_text}</TranscriptQuestionText>
-                        </TranscriptQuestionBlock>
-                        <TranscriptAnswerBlock>
-                          <TranscriptAnswerLabel>Your answer</TranscriptAnswerLabel>
+                          </div>
+                          <div className="transcript-q-text">{item.question_text}</div>
+                        </div>
+                        <div className="transcript-answer-block">
+                          <div className="transcript-a-label">Your answer</div>
                           {item.has_response ? (
-                            <TranscriptAnswerText>{item.user_response}</TranscriptAnswerText>
+                            <div className="transcript-a-text">{item.user_response}</div>
                           ) : (
-                            <TranscriptAnswerPending>No response recorded for this question yet.</TranscriptAnswerPending>
+                            <p className="transcript-a-pending">
+                              No response recorded for this question yet.
+                            </p>
                           )}
-                        </TranscriptAnswerBlock>
-                      </TranscriptItemCard>
+                        </div>
+                      </div>
                     ))}
-                    {transcriptSource && (
-                      <TranscriptSubtitle style={{ textAlign: 'center' }}>
-                        Source: {transcriptSource === 'database' ? 'Saved evaluation transcript' : 'Live Tavus transcript'}
-                      </TranscriptSubtitle>
+                    {(transcriptSource || transcriptUserTurnCount > 0) && (
+                      <div className="transcript-footer">
+                        {transcriptSource && (
+                          <span>
+                            Source: {transcriptSource === 'database' ? 'Saved evaluation transcript' : transcriptSource === 'tavus' ? 'Live Tavus transcript' : 'Questions only (Tavus transcript pending)'}
+                          </span>
+                        )}
+                        {transcriptUserTurnCount > 0 && (
+                          <span>
+                            {transcriptSource ? ' · ' : ''}
+                            {transcriptUserTurnCount} user response{transcriptUserTurnCount === 1 ? '' : 's'} captured
+                          </span>
+                        )}
+                      </div>
                     )}
                     <div ref={transcriptEndRef} />
                   </>
                 )}
+                </div>
               </TranscriptBody>
             </TranscriptPanel>
           )}
         </VideoPanel>
+        </MainContent>
 
-        <SidePanelsColumn>
+        <div
+          className={`ai-interviews-resize-handle${isResizingPanel ? ' is-dragging' : ''}`}
+          onMouseDown={handleResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize side panels"
+        />
+
+        <SidePanelsColumn $width={sidePanelWidth}>
           <SidePanel>
             <SidePanelHeader>
               <PanelTitle>

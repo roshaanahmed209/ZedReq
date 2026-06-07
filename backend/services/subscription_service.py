@@ -15,6 +15,8 @@ from typing import Dict, Any, Optional, Tuple
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from config.settings import settings
+
 from models.orm.subscription_plan import SubscriptionPlan
 from models.orm.user_subscription import UserSubscription
 from models.orm.usage_tracking import UsageTracking
@@ -68,17 +70,17 @@ class SubscriptionService:
     @staticmethod
     def seed_plans(db: Session) -> None:
         """
-        Upsert free/pro/premium/enterprise plan rows on startup.
-        Safe to call multiple times (idempotent).
+        Ensure subscription plan rows exist on startup.
+
+        Inserts missing plans from PLAN_DEFINITIONS. Does not overwrite limits on
+        existing rows so admin/DB changes (e.g. interview duration) persist
+        across restarts.
         """
         for plan_name, limits in PLAN_DEFINITIONS.items():
             existing = db.query(SubscriptionPlan).filter_by(plan_name=plan_name).first()
             if existing:
-                # Update limits if changed
-                for key, value in limits.items():
-                    setattr(existing, key, value)
                 existing.is_active = True
-                logger.info(f"Updated subscription plan: {plan_name}")
+                logger.info(f"Subscription plan present: {plan_name}")
             else:
                 plan = SubscriptionPlan(
                     plan_name=plan_name,
@@ -387,6 +389,7 @@ class SubscriptionService:
         }
 
     def get_max_interview_duration(self, user_id: int) -> int:
-        """Get the max interview duration in seconds for a user's plan."""
-        plan = self.get_user_plan(user_id)
-        return plan.get("interview_max_duration_seconds", 60)
+        """Max interview duration in seconds — from INTERVIEW_MAX_DURATION_SECONDS env only."""
+        duration = settings.get_interview_max_duration_seconds()
+        logger.info(f"Interview max duration (env): {duration}s for user {user_id}")
+        return duration

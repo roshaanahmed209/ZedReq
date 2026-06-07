@@ -65,3 +65,131 @@
 .riz-feedback-section li {
   margin-bottom: 2px;
 }
+
+/* Interview transcript — flat cards, readable in dark and light themes */
+.ai-interview-transcript {
+  color: var(--text);
+}
+
+.ai-interview-transcript .transcript-hint-banner {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--text-light);
+  font-size: 0.85em;
+  line-height: 1.55;
+}
+
+.ai-interview-transcript .transcript-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--bg-white);
+  margin-bottom: 14px;
+}
+
+.ai-interview-transcript .transcript-item:last-of-type {
+  margin-bottom: 0;
+}
+
+.ai-interview-transcript .transcript-question-block {
+  padding: 0 0 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.ai-interview-transcript .transcript-answer-block {
+  padding: 0;
+  background: transparent;
+}
+
+.ai-interview-transcript .transcript-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-interview-transcript .transcript-type-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(21, 133, 161, 0.15);
+  color: var(--primary);
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.ai-interview-transcript .transcript-q-text,
+.ai-interview-transcript .transcript-a-text {
+  margin: 0;
+  font-size: 0.92em;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+  z-index: 1;
+}
+
+.ai-interview-transcript .transcript-a-label {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.ai-interview-transcript .transcript-a-pending {
+  margin: 0;
+  font-size: 0.88em;
+  line-height: 1.5;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.ai-interview-transcript .transcript-footer {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.8em;
+  color: var(--text-light);
+}
+
+.ai-interviews-resize-handle {
+  width: 8px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.15s ease;
+  touch-action: none;
+  align-self: stretch;
+}
+
+.ai-interviews-resize-handle:hover,
+.ai-interviews-resize-handle.is-dragging {
+  background: var(--primary);
+}
+
+body.ai-interviews-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.ai-interviews-resizing * {
+  cursor: col-resize !important;
+}
+
+@media (max-width: 768px) {
+  .ai-interviews-resize-handle {
+    display: none;
+  }
+}

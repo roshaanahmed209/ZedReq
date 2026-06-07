@@ -74,6 +74,33 @@ class TavusService:
             }
         else:
             self.headers = {"Content-Type": "application/json"}
+
+    @staticmethod
+    def _payload_has_transcript_turns(payload: Any) -> bool:
+        if not payload:
+            return False
+        if isinstance(payload, list):
+            return len(payload) > 0
+        if not isinstance(payload, dict):
+            return False
+        for key in ('transcript', 'messages', 'utterances', 'data'):
+            val = payload.get(key)
+            if isinstance(val, list) and val:
+                return True
+        props = payload.get('properties')
+        if isinstance(props, dict) and isinstance(props.get('transcript'), list) and props['transcript']:
+            return True
+        events = payload.get('events')
+        if isinstance(events, list):
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                et = str(event.get('event_type') or event.get('type') or '').lower()
+                if 'transcription_ready' in et:
+                    ep = event.get('properties') or {}
+                    if isinstance(ep.get('transcript'), list) and ep['transcript']:
+                        return True
+        return False
     
     def create_conversation(
         self,
@@ -251,12 +278,18 @@ class TavusService:
                 error_msg += f": {error_str[:200]}"
         raise Exception(error_msg)
     
-    def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
+    def get_conversation(
+        self,
+        conversation_id: str,
+        *,
+        verbose: bool = True,
+    ) -> Dict[str, Any]:
         """
         Get conversation details and status
         
         Args:
             conversation_id: Tavus conversation ID
+            verbose: When True, include events (transcription_ready, utterances, etc.)
             
         Returns:
             Dictionary with conversation details
@@ -274,6 +307,7 @@ class TavusService:
             raise ValueError("conversation_id cannot be empty")
         
         url = f"{self.api_url}/conversations/{conversation_id}"
+        params = {"verbose": "true"} if verbose else None
         
         # Log API call
         safe_log_api_call(
@@ -288,7 +322,7 @@ class TavusService:
         for attempt in range(self.max_retries + 1):
             try:
                 with httpx.Client(timeout=self.timeout) as client:
-                    response = client.get(url, headers=self.headers)
+                    response = client.get(url, headers=self.headers, params=params)
                     response.raise_for_status()
                     result = response.json()
                     logger.debug(f"Retrieved Tavus conversation: {conversation_id}")
@@ -416,7 +450,13 @@ class TavusService:
                     response.raise_for_status()
                     result = response.json()
                     logger.debug(f"Retrieved Tavus transcript: {conversation_id}")
-                    return result
+                    if self._payload_has_transcript_turns(result):
+                        return result
+                    logger.info(
+                        f"Transcript endpoint returned no turns for {conversation_id}; "
+                        "falling back to conversation details"
+                    )
+                    return self.get_conversation(conversation_id)
                     
             except httpx.HTTPStatusError as e:
                 last_exception = e
