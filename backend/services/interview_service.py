@@ -392,6 +392,114 @@ class InterviewService:
             result['company_name'] = job.company_name
         
         return result
+
+    def get_interview_transcript(self, interview_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        Get question-wise transcript items for an interview.
+
+        Uses stored user_responses when the interview is completed; otherwise
+        fetches the latest transcript from Tavus for in-progress sessions.
+        """
+        interview = self.db.query(LiveInterview).filter(
+            LiveInterview.interview_id == interview_id,
+            LiveInterview.user_id == user_id,
+        ).first()
+
+        if not interview:
+            raise InterviewNotFoundError(f"Interview {interview_id} not found")
+
+        questions = interview.questions or []
+        user_responses: List[Dict[str, Any]] = []
+        source = "none"
+
+        if interview.user_responses and interview.status == "completed":
+            user_responses = interview.user_responses
+            source = "database"
+        elif interview.tavus_conversation_id:
+            try:
+                transcript = self.tavus_service.get_conversation_transcript(
+                    interview.tavus_conversation_id
+                )
+                user_responses = self._extract_user_responses(transcript)
+                source = "tavus" if user_responses else "none"
+            except Exception as e:
+                logger.warning(
+                    f"Could not fetch Tavus transcript for interview {interview_id}: {e}"
+                )
+                if interview.user_responses:
+                    user_responses = interview.user_responses
+                    source = "database"
+
+        items = self._build_transcript_items(questions, user_responses)
+
+        return {
+            "interview_id": interview.interview_id,
+            "status": interview.status,
+            "items": items,
+            "source": source,
+        }
+
+    @staticmethod
+    def _build_transcript_items(
+        questions: List[Dict[str, Any]],
+        user_responses: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Pair interview questions with user responses by index."""
+        items: List[Dict[str, Any]] = []
+        responses_by_index: Dict[int, str] = {}
+
+        for idx, response in enumerate(user_responses or []):
+            text = ""
+            if isinstance(response, dict):
+                text = (
+                    response.get("response")
+                    or response.get("text")
+                    or response.get("content")
+                    or ""
+                )
+                q_idx = response.get("question_index")
+                if q_idx is not None and isinstance(q_idx, int):
+                    responses_by_index[q_idx] = str(text).strip()
+                    continue
+            elif isinstance(response, str):
+                text = response
+
+            text = str(text).strip()
+            if text and idx not in responses_by_index:
+                responses_by_index[idx] = text
+
+        for i, question in enumerate(questions or []):
+            if not isinstance(question, dict):
+                continue
+
+            question_text = (
+                question.get("question_text")
+                or question.get("text")
+                or ""
+            )
+            user_response = responses_by_index.get(i)
+            if not user_response and i < len(user_responses or []):
+                fallback = user_responses[i]
+                if isinstance(fallback, dict):
+                    user_response = (
+                        fallback.get("response")
+                        or fallback.get("text")
+                        or fallback.get("content")
+                        or ""
+                    )
+                elif isinstance(fallback, str):
+                    user_response = fallback
+                user_response = str(user_response or "").strip() or None
+
+            items.append({
+                "question_index": i,
+                "question_text": question_text,
+                "question_type": question.get("question_type"),
+                "user_response": user_response,
+                "has_response": bool(user_response),
+            })
+
+        return items
     
     def get_user_interview_history(
         self,

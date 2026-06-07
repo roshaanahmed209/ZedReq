@@ -15,8 +15,10 @@ from schemas.interview import (
     InterviewResponse,
     InterviewCompleteResponse,
     InterviewListResponse,
-    InterviewRecommendationResponse
+    InterviewRecommendationResponse,
+    InterviewTranscriptResponse,
 )
+from services.interview_service import InterviewNotFoundError
 
 router = APIRouter()
 
@@ -198,6 +200,27 @@ async def get_interview(
         )
     
     return interview
+
+
+@router.get("/{interview_id}/transcript", response_model=InterviewTranscriptResponse)
+async def get_interview_transcript(
+    interview_id: int,
+    current_user: dict = Depends(get_current_user),
+    service: InterviewService = Depends(get_interview_service),
+):
+    """Get question-wise user responses from Tavus for an interview session."""
+    try:
+        return service.get_interview_transcript(interview_id, current_user["id"])
+    except InterviewNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch interview transcript: {str(e)}",
+        )
 
 
 @router.post("/{interview_id}/complete", response_model=InterviewCompleteResponse)

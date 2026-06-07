@@ -20,7 +20,7 @@ const slideUp = keyframes`
 const Container = styled.div`
   min-height: 100vh;
   width: 100%;
-  background: #0D0D0D;
+  background: var(--bg-light);
   animation: ${fadeIn} 0.6s ease-in;
   overflow-x: hidden;
 `
@@ -55,11 +55,12 @@ const BackButton = styled.button`
 const MainContainer = styled.div`
   width: 100%;
   max-width: 100%;
-  height: calc(100vh - 80px);
+  min-height: calc(100vh - 80px);
   margin: 0;
   display: grid;
   grid-template-columns: 1fr 450px;
   gap: 0;
+  background: var(--bg-light);
   
   @media (max-width: 1400px) {
     grid-template-columns: 1fr 420px;
@@ -98,12 +99,12 @@ const MainContainer = styled.div`
 `
 
 const VideoPanel = styled.div`
-  background: #0D0D0D;
+  background: var(--bg-light);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 30px;
+  padding: 30px 24px;
   position: relative;
 
   @media (max-width: 1024px) {
@@ -138,9 +139,12 @@ const VideoPanel = styled.div`
 const DescriptionBanner = styled.div`
   width: 100%;
   max-width: 900px;
-  border-radius: 12px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 24px 28px;
   margin-bottom: 30px;
+  box-shadow: var(--shadow);
   animation: ${slideUp} 0.4s ease-out;
 
   @media (max-width: 768px) {
@@ -156,9 +160,9 @@ const DescriptionBanner = styled.div`
 
 const BannerTitle = styled.h2`
   font-size: 1.5em;
-  color: white;
+  color: var(--text);
   margin-bottom: 12px;
-  font-weight: 300;
+  font-weight: 400;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -192,9 +196,9 @@ const BannerTitle = styled.h2`
 
 const BannerDescription = styled.p`
   font-size: 0.95em;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-light);
   line-height: 1.6;
-  font-weight: 300;
+  font-weight: 400;
 
   @media (max-width: 768px) {
     font-size: 0.9em;
@@ -206,46 +210,156 @@ const BannerDescription = styled.p`
   }
 `
 
-const VideoContainer = styled.div`
+const InterviewRoomCard = styled.div`
   width: 100%;
   max-width: 900px;
-  background: #000;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
+  padding: 40px 32px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+  min-height: 280px;
+  justify-content: center;
 
   @media (max-width: 768px) {
     border-radius: 12px;
+    padding: 32px 24px;
+    min-height: 240px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 24px 18px;
+    gap: 16px;
   }
 `
 
-const Video = styled.video`
-  width: 100%;
-  height: auto;
-  display: block;
-`
-
-/** Tavus CVI runs on Daily — embed the returned conversation_url */
-const TavusFrame = styled.iframe`
-  width: 100%;
-  min-height: min(70vh, 580px);
-  aspect-ratio: 16 / 10;
-  border: none;
-  display: block;
-  background: #0a0a0a;
-`
-
-const OpenTavusLink = styled.a`
-  margin-top: 12px;
-  font-size: 0.85em;
+const RoomIconWrap = styled.div`
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--primary);
-  text-align: center;
-  display: block;
-  max-width: 900px;
-  width: 100%;
+
+  svg {
+    width: 34px;
+    height: 34px;
+  }
+`
+
+const RoomCardTitle = styled.h3`
+  font-size: 1.25em;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.4;
+
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+  }
+`
+
+const RoomCardDescription = styled.p`
+  font-size: 0.95em;
+  color: var(--text-light);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 560px;
+  font-weight: 400;
+
+  @media (max-width: 480px) {
+    font-size: 0.88em;
+  }
+`
+
+const JoinInterviewButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: var(--primary);
+  color: white;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  margin-top: 4px;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
   &:hover {
-    text-decoration: underline;
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(21, 133, 161, 0.25);
+    color: white;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    padding: 14px 20px;
+  }
+`
+
+const RoomLinkBox = styled.div`
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 4px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
+`
+
+const RoomLinkInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--hover-bg);
+  color: var(--text);
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--bg-white);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
+  }
+`
+
+const CopyLinkButton = styled.button`
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  color: var(--text);
+  font-size: 0.88em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary);
+    color: var(--primary);
   }
 `
 
@@ -377,19 +491,6 @@ const StartButton = styled(CallButton)`
   }
 `
 
-const EndCallButton = styled(CallButton)`
-  background: #e74c3c;
-  border-color: #e74c3c;
-  color: white;
-
-  &:hover {
-    background: #c0392b;
-    border-color: #c0392b;
-    color: white;
-    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
-  }
-`
-
 const CallButtonLabel = styled.span`
   font-size: 0.75em;
   color: var(--text-lighter);
@@ -409,81 +510,108 @@ const CallButtonWrapper = styled.div`
   align-items: center;
 `
 
-const ChatPanel = styled.div`
+const TranscriptPanel = styled.div`
   background: var(--bg-white);
   margin-top: 20px;
   width: 100%;
   max-width: 900px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   animation: ${slideUp} 0.4s ease-out;
   display: flex;
   flex-direction: column;
-  height: 400px;
+  height: 420px;
 
   @media (max-width: 1024px) {
-    height: 380px;
+    height: 400px;
     margin-top: 18px;
-  }
-  
-  @media (max-width: 900px) {
-    height: 360px;
   }
 
   @media (max-width: 768px) {
     margin-top: 16px;
-    height: 350px;
-    border-radius: 10px;
-  }
-  
-  @media (max-width: 600px) {
-    height: 320px;
-    margin-top: 14px;
+    height: 380px;
+    border-radius: 12px;
   }
 
   @media (max-width: 480px) {
     margin-top: 12px;
-    height: 300px;
-    border-radius: 8px;
-  }
-  
-  @media (max-width: 360px) {
-    height: 280px;
-    margin-top: 10px;
+    height: 340px;
+    border-radius: 10px;
   }
 `
 
-const ChatHeader = styled.div`
+const TranscriptHeader = styled.div`
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   background: var(--hover-bg);
-  border-radius: 12px 12px 0 0;
+  border-radius: 16px 16px 0 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
 
   svg {
     width: 20px;
     height: 20px;
     color: var(--primary);
+    flex-shrink: 0;
   }
 
   @media (max-width: 480px) {
     padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 `
 
-const ChatTitle = styled.h3`
+const TranscriptHeaderMain = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+`
+
+const TranscriptTitle = styled.h3`
   font-size: 1em;
   color: var(--text);
-  font-weight: 400;
+  font-weight: 500;
+  margin: 0;
 
   @media (max-width: 480px) {
     font-size: 0.95em;
   }
 `
 
-const ChatMessages = styled.div`
+const TranscriptSubtitle = styled.p`
+  font-size: 0.8em;
+  color: var(--text-light);
+  margin: 0;
+`
+
+const TranscriptRefreshButton = styled.button`
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  color: var(--text-light);
+  font-size: 0.78em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`
+
+const TranscriptBody = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
@@ -510,248 +638,193 @@ const ChatMessages = styled.div`
 
   @media (max-width: 768px) {
     padding: 16px;
+    gap: 14px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
     gap: 12px;
   }
-
-  @media (max-width: 480px) {
-    padding: 12px;
-    gap: 10px;
-  }
 `
 
-const Message = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  animation: ${slideUp} 0.3s ease-out;
-
-  ${props => props.isUser && `
-    flex-direction: row-reverse;
-  `}
-
-  @media (max-width: 480px) {
-    gap: 8px;
-  }
-`
-
-const MessageAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 50%;
-  background: ${props => props.isUser ? 'var(--primary)' : 'linear-gradient(135deg, var(--primary), var(--secondary))'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 500;
-  font-size: 0.9em;
-
-  @media (max-width: 480px) {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    font-size: 0.85em;
-  }
-`
-
-const MessageBubble = styled.div`
-  background: ${props => props.isUser ? 'var(--primary)' : 'var(--hover-bg)'};
-  color: ${props => props.isUser ? 'white' : 'var(--text)'};
-  padding: 12px 16px;
-  border-radius: ${props => props.isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
-  max-width: 70%;
-  font-size: 0.9em;
-  line-height: 1.5;
-  word-wrap: break-word;
-  border: ${props => props.isQuestion ? '1px solid var(--primary)' : 'none'};
-  background: ${props => props.isQuestion ? 'rgba(21, 133, 161, 0.1)' : props.isUser ? 'var(--primary)' : 'var(--hover-bg)'};
-  color: ${props => props.isQuestion ? 'var(--primary)' : props.isUser ? 'white' : 'var(--text)'};
-
-  @media (max-width: 768px) {
-    max-width: 75%;
-    padding: 10px 14px;
-    font-size: 0.875em;
-  }
-
-  @media (max-width: 480px) {
-    max-width: 80%;
-    padding: 10px 12px;
-    font-size: 0.85em;
-  }
-`
-
-const Spinning = styled.div`
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  animation: spin 1s linear infinite;
-`
-
-const ChatInputContainer = styled.div`
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 12px;
-  background: var(--bg-white);
-  border-radius: 0 0 12px 12px;
-
-  @media (max-width: 768px) {
-    padding: 14px 16px;
-    gap: 10px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 12px;
-    gap: 8px;
-  }
-`
-
-const ChatInput = styled.input`
-  flex: 1;
-  padding: 12px 16px;
-  background: var(--hover-bg);
+const TranscriptItemCard = styled.div`
   border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 0.9em;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  min-height: 44px; /* Better touch target */
-
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
-  }
-
-  &::placeholder {
-    color: var(--text-lighter);
-  }
-
-  @media (max-width: 768px) {
-    padding: 10px 14px;
-    font-size: 0.875em;
-    min-height: 42px;
-    
-    &:focus {
-      box-shadow: 0 0 0 2px rgba(21, 133, 161, 0.1);
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: 10px 12px;
-    font-size: 0.85em;
-    min-height: 40px;
-    border-radius: 6px;
-  }
-  
-  @media (max-width: 360px) {
-    padding: 8px 10px;
-    font-size: 0.8em;
-    min-height: 38px;
-  }
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-white);
+  animation: ${slideUp} 0.3s ease-out;
 `
 
-const SendButton = styled.button`
-  padding: 12px 20px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
+const TranscriptQuestionBlock = styled.div`
+  padding: 14px 16px;
+  background: rgba(21, 133, 161, 0.08);
+  border-bottom: 1px solid var(--border);
+`
+
+const TranscriptQuestionLabel = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px; /* Better touch target */
-  min-width: 44px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  @media (max-width: 768px) {
-    padding: 10px 16px;
-    font-size: 0.875em;
-    min-height: 42px;
-    min-width: 42px;
-    
-    &:hover {
-      transform: translateY(-1px);
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: 10px 14px;
-    font-size: 0.85em;
-    min-height: 40px;
-    min-width: 40px;
-    border-radius: 6px;
-    
-    span {
-      display: none;
-    }
-    
-    &:hover {
-      transform: none;
-    }
-  }
-  
-  @media (max-width: 360px) {
-    padding: 8px 12px;
-    font-size: 0.8em;
-    min-height: 38px;
-    min-width: 38px;
-    
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 `
 
-const JobsPanel = styled.div`
-  background: var(--bg-white);
-  border-left: 1px solid var(--border);
+const TranscriptQuestionType = styled.span`
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(21, 133, 161, 0.12);
+  color: var(--primary);
+  font-size: 0.92em;
+  text-transform: capitalize;
+`
+
+const TranscriptQuestionText = styled.p`
+  margin: 0;
+  font-size: 0.92em;
+  line-height: 1.55;
+  color: var(--text);
+`
+
+const TranscriptAnswerBlock = styled.div`
+  padding: 14px 16px;
+  background: var(--hover-bg);
+`
+
+const TranscriptAnswerLabel = styled.div`
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+`
+
+const TranscriptAnswerText = styled.p`
+  margin: 0;
+  font-size: 0.9em;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+`
+
+const TranscriptAnswerPending = styled.p`
+  margin: 0;
+  font-size: 0.88em;
+  line-height: 1.5;
+  color: var(--text-lighter);
+  font-style: italic;
+`
+
+const TranscriptEmptyState = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  color: var(--text-light);
+  gap: 8px;
+
+  p {
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.6;
+    max-width: 420px;
+  }
+`
+
+const SidePanelsColumn = styled.aside`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-light);
+  border-left: 1px solid var(--border);
+  height: calc(100vh - 80px);
+  max-height: calc(100vh - 80px);
   overflow: hidden;
 
   @media (max-width: 768px) {
+    height: auto;
+    max-height: none;
     border-left: none;
-    border-top: 1px solid var(--border);
+    padding: 16px;
+    gap: 20px;
   }
 `
 
-const JobsPanelHeader = styled.div`
-  padding: 24px 28px;
+const SidePanel = styled.section`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    flex: none;
+    min-height: 380px;
+  }
+
+  @media (max-width: 480px) {
+    min-height: 340px;
+    border-radius: 12px;
+  }
+`
+
+const SidePanelHeader = styled.div`
+  padding: 20px 22px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-white);
   flex-shrink: 0;
 
-  @media (max-width: 768px) {
-    padding: 20px 24px;
+  @media (max-width: 480px) {
+    padding: 16px 18px;
+  }
+`
+
+const SidePanelList = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-lighter);
   }
 
   @media (max-width: 480px) {
-    padding: 16px 20px;
+    padding: 12px 16px;
   }
+`
+
+const EmptyState = styled.div`
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9em;
+  line-height: 1.5;
 `
 
 const PanelTitle = styled.h2`
@@ -780,38 +853,6 @@ const PanelSubtitle = styled.p`
 
   @media (max-width: 480px) {
     font-size: 0.8em;
-  }
-`
-
-const JobsList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 28px;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 10px;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--text-lighter);
-  }
-
-  @media (max-width: 768px) {
-    padding: 16px 24px;
-    max-height: 400px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 12px 20px;
   }
 `
 
@@ -942,7 +983,7 @@ const RizFeedbackContainer = styled.div`
 `
 
 const RefreshButton = styled.button`
-  fontSize: 0.75em;
+  font-size: 0.75em;
   padding: 4px 8px;
   background: var(--primary);
   color: white;
@@ -972,21 +1013,18 @@ const AIInterviews = () => {
   const [recommendedJobs, setRecommendedJobs] = useState([])
   const [loadingJobs, setLoadingJobs] = useState(true)
   const { user } = useAuth()
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isCameraOff, setIsCameraOff] = useState(false)
-  const [isScreenSharing, setIsScreenSharing] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [inputMessage, setInputMessage] = useState('')
+  const [transcriptItems, setTranscriptItems] = useState([])
+  const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [transcriptSource, setTranscriptSource] = useState(null)
   const [currentInterview, setCurrentInterview] = useState(null)
-  const [interviewQuestions, setInterviewQuestions] = useState([])
   const [startingInterview, setStartingInterview] = useState(false)
   const [completingInterview, setCompletingInterview] = useState(false)
   const [tavusConversationId, setTavusConversationId] = useState(null)
   const [tavusConversationUrl, setTavusConversationUrl] = useState(null)
   const [tavusMeetingToken, setTavusMeetingToken] = useState(null)
-  const videoRef = useRef(null)
-  const messagesEndRef = useRef(null)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const transcriptEndRef = useRef(null)
+  const copyLinkTimeoutRef = useRef(null)
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -996,6 +1034,28 @@ const AIInterviews = () => {
     const sep = tavusConversationUrl.includes('?') ? '&' : '?'
     return `${tavusConversationUrl}${sep}t=${encodeURIComponent(tavusMeetingToken)}`
   }, [tavusConversationUrl, tavusMeetingToken])
+
+  useEffect(() => {
+    return () => {
+      if (copyLinkTimeoutRef.current) {
+        clearTimeout(copyLinkTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleCopyRoomLink = async () => {
+    if (!tavusEmbedSrc) return
+    try {
+      await navigator.clipboard.writeText(tavusEmbedSrc)
+      setLinkCopied(true)
+      if (copyLinkTimeoutRef.current) {
+        clearTimeout(copyLinkTimeoutRef.current)
+      }
+      copyLinkTimeoutRef.current = setTimeout(() => setLinkCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy interview link:', err)
+    }
+  }
 
   // Fetch interview history and recommendations on mount
   useEffect(() => {
@@ -1067,6 +1127,25 @@ const AIInterviews = () => {
     }
   }
 
+  const fetchTranscript = async (interviewId) => {
+    if (!interviewId) return
+
+    try {
+      setLoadingTranscript(true)
+      const response = await interviewAPI.getInterviewTranscript(interviewId)
+      if (response.data) {
+        setTranscriptItems(response.data.items || [])
+        setTranscriptSource(response.data.source || null)
+      }
+    } catch (err) {
+      console.error('Error fetching interview transcript:', err)
+      setTranscriptItems([])
+      setTranscriptSource(null)
+    } finally {
+      setLoadingTranscript(false)
+    }
+  }
+
   // Use recommended jobs from API, fallback to empty array
   const jobs = recommendedJobs.length > 0 
     ? recommendedJobs.map(job => ({
@@ -1087,25 +1166,14 @@ const AIInterviews = () => {
   const handleJobSelect = (job) => {
     setSelectedJob(job)
     setCurrentInterview(null)
-    setInterviewQuestions([])
     setTavusConversationId(null)
     setTavusConversationUrl(null)
     setTavusMeetingToken(null)
     setInterviewResults(null)
     setRizFeedback(null)
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0
-    }
-    // Initialize chat with AI greeting
-    const companyName = job.company_name || job.company || 'the company'
-    setMessages([
-      {
-        id: 1,
-        text: `Hello! Welcome to your AI mock interview for the ${job.title} position at ${companyName}. I'm your AI interviewer today. Click "Start Interview" to begin!`,
-        isUser: false,
-        timestamp: new Date()
-      }
-    ])
+    setLinkCopied(false)
+    setTranscriptItems([])
+    setTranscriptSource(null)
   }
 
   const handleBackToFeed = () => {
@@ -1133,43 +1201,10 @@ const AIInterviews = () => {
         setTavusConversationId(interview.tavus_conversation_id)
         setTavusConversationUrl(interview.tavus_conversation_url || null)
         setTavusMeetingToken(interview.tavus_meeting_token || null)
-        setInterviewQuestions(interview.questions || [])
-        
-        // Display questions in chat
-        const questionMessages = (interview.questions || []).map((q, idx) => ({
-          id: idx + 2,
-          text: `Question ${idx + 1}: ${q.question_text || q.text || 'Question'}`,
-          isUser: false,
-          timestamp: new Date(),
-          isQuestion: true
-        }))
-        
-        setMessages(prev => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            text: 'Interview started! Here are your questions:',
-            isUser: false,
-            timestamp: new Date()
-          },
-          ...questionMessages,
-          {
-            id: prev.length + questionMessages.length + 2,
-            text: interview.tavus_conversation_url
-              ? 'The live AI interview room is loaded above. Allow camera and microphone when your browser asks. Use the on-screen controls in the Tavus call to talk with your interviewer. When you are done, click "Complete Interview" below for your score and feedback.'
-              : 'Interview session created, but no Tavus room URL was returned. Check backend logs or your Tavus configuration. When finished on Tavus, click "Complete Interview".',
-            isUser: false,
-            timestamp: new Date()
-          }
-        ])
+        await fetchTranscript(interview.interview_id)
         
         // Refresh interview list
         await fetchInterviews()
-        
-        if (!interview.tavus_conversation_url && videoRef.current) {
-          videoRef.current.play()
-          setIsPlaying(true)
-        }
       }
     } catch (err) {
       console.error('Error starting interview:', err)
@@ -1189,25 +1224,6 @@ const AIInterviews = () => {
       }
     } finally {
       setStartingInterview(false)
-    }
-  }
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-  }
-
-  const toggleCamera = () => {
-    setIsCameraOff(!isCameraOff)
-  }
-
-  const toggleScreenShare = () => {
-    setIsScreenSharing(!isScreenSharing)
-  }
-
-  const handleEndCall = () => {
-    if (videoRef.current) {
-      videoRef.current.pause()
-      setIsPlaying(false)
     }
   }
 
@@ -1280,6 +1296,7 @@ const AIInterviews = () => {
         
         // Refresh interview list
         await fetchInterviews()
+        await fetchTranscript(currentInterview.interview_id)
         setTavusConversationUrl(null)
         setTavusMeetingToken(null)
       }
@@ -1327,49 +1344,28 @@ const AIInterviews = () => {
     }
   }
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim() || !selectedJob) return
-
-    // Add user message
-    const userMessage = {
-      id: messages.length + 1,
-      text: inputMessage,
-      isUser: true,
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInputMessage('')
-
-    // Simulate AI response after a delay
-    setTimeout(() => {
-      const aiResponse = {
-        id: messages.length + 2,
-        text: "That's a great question! Let me elaborate on that. In a real interview scenario, the interviewer would provide detailed feedback and follow-up questions based on your response.",
-        isUser: false,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, aiResponse])
-      
-      // Scroll to bottom
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-      }
-    }, 1000)
-  }
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage()
-    }
-  }
-
-  // Auto-scroll chat when new messages arrive
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    if (!currentInterview?.interview_id) {
+      setTranscriptItems([])
+      setTranscriptSource(null)
+      return
     }
-  }, [messages.length])
+
+    fetchTranscript(currentInterview.interview_id)
+
+    if (currentInterview.status === 'in_progress') {
+      const intervalId = setInterval(() => {
+        fetchTranscript(currentInterview.interview_id)
+      }, 20000)
+      return () => clearInterval(intervalId)
+    }
+  }, [currentInterview?.interview_id, currentInterview?.status])
+
+  useEffect(() => {
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [transcriptItems.length, loadingTranscript])
 
   return (
     <Container>
@@ -1390,33 +1386,82 @@ const AIInterviews = () => {
             <BannerDescription>
               <strong className="banner-description-strong">Boost Your Confidence</strong> with our intelligent AI interviewer that adapts to your selected role. 
               Choose a job position from the recommended list on the right, and our AI will conduct a realistic 
-              mock interview tailored to that specific role. Engage in real-time conversation through the chat 
-              interface, receive personalized questions, and get instant feedback to perfect your responses. 
+              mock interview tailored to that specific role. Complete your session in the Tavus room,
+              then review your question-wise transcript and feedback here.
               Practice until you're ready to ace your next real interview with AI-powered sessions designed to 
               help you succeed.
             </BannerDescription>
           </DescriptionBanner>
 
-          <VideoContainer>
+          <InterviewRoomCard>
             {tavusEmbedSrc ? (
-              <TavusFrame
-                key={tavusEmbedSrc}
-                src={tavusEmbedSrc}
-                title="Tavus AI interview"
-                allow="camera; microphone; fullscreen; display-capture; autoplay"
-              />
+              <>
+                <RoomIconWrap>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14"></path>
+                    <rect x="3" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                  </svg>
+                </RoomIconWrap>
+                <RoomCardTitle>Your interview room is ready</RoomCardTitle>
+                <RoomCardDescription>
+                  Open the live AI interview in a new browser tab. Allow camera and microphone access when prompted,
+                  then return here when you are finished to complete the session and view your feedback.
+                </RoomCardDescription>
+                <JoinInterviewButton href={tavusEmbedSrc} target="_blank" rel="noopener noreferrer">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  Join Interview Room
+                </JoinInterviewButton>
+                <RoomLinkBox>
+                  <RoomLinkInput
+                    type="text"
+                    readOnly
+                    value={tavusEmbedSrc}
+                    aria-label="Interview room link"
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <CopyLinkButton type="button" onClick={handleCopyRoomLink}>
+                    {linkCopied ? 'Copied!' : 'Copy link'}
+                  </CopyLinkButton>
+                </RoomLinkBox>
+              </>
+            ) : currentInterview && !tavusConversationUrl ? (
+              <>
+                <RoomIconWrap>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                </RoomIconWrap>
+                <RoomCardTitle>Interview room link unavailable</RoomCardTitle>
+                <RoomCardDescription>
+                  The session was created but no Tavus room URL was returned. Check backend logs or Tavus configuration,
+                  then try starting a new interview.
+                </RoomCardDescription>
+              </>
             ) : (
-              <Video ref={videoRef}>
-                <source src="/static/video.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </Video>
+              <>
+                <RoomIconWrap>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                  </svg>
+                </RoomIconWrap>
+                <RoomCardTitle>
+                  {selectedJob ? 'Ready to start your mock interview' : 'Select a job to begin'}
+                </RoomCardTitle>
+                <RoomCardDescription>
+                  {selectedJob
+                    ? `When you start, a secure interview room link will appear here for ${selectedJob.title}. The live session opens in a new tab — you stay on ZedReq to review questions and complete the interview.`
+                    : 'Choose a recommended job from the panel on the right, then click Start Interview to generate your personalized mock interview room.'}
+                </RoomCardDescription>
+              </>
             )}
-          </VideoContainer>
-          {tavusEmbedSrc && (
-            <OpenTavusLink href={tavusEmbedSrc} target="_blank" rel="noopener noreferrer">
-              Open interview in a new tab if the room does not load above
-            </OpenTavusLink>
-          )}
+          </InterviewRoomCard>
 
           <CallControls>
             <CallButtonWrapper>
@@ -1477,275 +1522,105 @@ const AIInterviews = () => {
                 </CallButtonLabel>
               </CallButtonWrapper>
             )}
-
-            {!tavusConversationUrl && (
-            <>
-            <CallButtonWrapper>
-              <CallButton active={isMuted} onClick={toggleMute}>
-                {isMuted ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
-                    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                  </svg>
-                )}
-              </CallButton>
-              <CallButtonLabel>{isMuted ? 'Unmute' : 'Mute'}</CallButtonLabel>
-            </CallButtonWrapper>
-
-            <CallButtonWrapper>
-              <CallButton active={isCameraOff} onClick={toggleCamera}>
-                {isCameraOff ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                    <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34m-7.72-2.06a4 4 0 1 1-5.56-5.56"></path>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                  </svg>
-                )}
-              </CallButton>
-              <CallButtonLabel>{isCameraOff ? 'Camera Off' : 'Camera On'}</CallButtonLabel>
-            </CallButtonWrapper>
-
-            <CallButtonWrapper>
-              <CallButton active={isScreenSharing} onClick={toggleScreenShare}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                  <line x1="8" y1="21" x2="16" y2="21"></line>
-                  <line x1="12" y1="17" x2="12" y2="21"></line>
-                  {isScreenSharing && (
-                    <path d="M7 11l5 5 5-5"></path>
-                  )}
-                </svg>
-              </CallButton>
-              <CallButtonLabel>{isScreenSharing ? 'Stop Share' : 'Share'}</CallButtonLabel>
-            </CallButtonWrapper>
-
-            <CallButtonWrapper>
-              <EndCallButton onClick={handleEndCall}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path>
-                  <line x1="23" y1="1" x2="1" y2="23"></line>
-                </svg>
-              </EndCallButton>
-              <CallButtonLabel>End</CallButtonLabel>
-            </CallButtonWrapper>
-            </>
-            )}
           </CallControls>
 
           {selectedJob && (
-            <ChatPanel>
-              <ChatHeader>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <ChatTitle>
-                  Interview Chat - {selectedJob.title}
-                  {tavusConversationId && (
-                    <span style={{ fontSize: '0.75em', marginLeft: '8px', color: 'var(--text-light)' }}>
-                      (ID: {tavusConversationId.substring(0, 8)}...)
-                    </span>
-                  )}
-                </ChatTitle>
-              </ChatHeader>
-              
-              <ChatMessages>
-                {messages.map((message) => (
-                  <Message key={message.id} isUser={message.isUser}>
-                    <MessageAvatar isUser={message.isUser}>
-                      {message.isUser ? 'You' : 'AI'}
-                    </MessageAvatar>
-                    <MessageBubble isUser={message.isUser} isQuestion={message.isQuestion}>
-                      {message.text}
-                    </MessageBubble>
-                  </Message>
-                ))}
-                <div ref={messagesEndRef} />
-              </ChatMessages>
-              
-              <ChatInputContainer>
-                <ChatInput
-                  type="text"
-                  placeholder="Type your response..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                />
-                <SendButton onClick={handleSendMessage}>
+            <TranscriptPanel>
+              <TranscriptHeader>
+                <TranscriptHeaderMain>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
                   </svg>
-                  <span>Send</span>
-                </SendButton>
-              </ChatInputContainer>
-            </ChatPanel>
+                  <div>
+                    <TranscriptTitle>Interview Transcript — {selectedJob.title}</TranscriptTitle>
+                    {tavusConversationId && (
+                      <TranscriptSubtitle>Session ID: {tavusConversationId.substring(0, 8)}...</TranscriptSubtitle>
+                    )}
+                  </div>
+                </TranscriptHeaderMain>
+                {currentInterview?.interview_id && (
+                  <TranscriptRefreshButton
+                    type="button"
+                    onClick={() => fetchTranscript(currentInterview.interview_id)}
+                    disabled={loadingTranscript}
+                  >
+                    {loadingTranscript ? 'Refreshing...' : 'Refresh transcript'}
+                  </TranscriptRefreshButton>
+                )}
+              </TranscriptHeader>
+
+              <TranscriptBody>
+                {loadingTranscript && transcriptItems.length === 0 ? (
+                  <TranscriptEmptyState>
+                    <p>Loading transcript from Tavus...</p>
+                  </TranscriptEmptyState>
+                ) : !currentInterview ? (
+                  <TranscriptEmptyState>
+                    <p>Start an interview to see your question-wise transcript here after you finish in the Tavus room.</p>
+                  </TranscriptEmptyState>
+                ) : transcriptItems.length === 0 ? (
+                  <TranscriptEmptyState>
+                    <p>
+                      No responses recorded yet. Join the interview room, answer the questions, then click
+                      &quot;Refresh transcript&quot; or complete the interview to load your answers from Tavus.
+                    </p>
+                  </TranscriptEmptyState>
+                ) : (
+                  <>
+                    {transcriptItems.map((item) => (
+                      <TranscriptItemCard key={item.question_index}>
+                        <TranscriptQuestionBlock>
+                          <TranscriptQuestionLabel>
+                            Question {item.question_index + 1}
+                            {item.question_type && (
+                              <TranscriptQuestionType>{item.question_type.replace(/_/g, ' ')}</TranscriptQuestionType>
+                            )}
+                          </TranscriptQuestionLabel>
+                          <TranscriptQuestionText>{item.question_text}</TranscriptQuestionText>
+                        </TranscriptQuestionBlock>
+                        <TranscriptAnswerBlock>
+                          <TranscriptAnswerLabel>Your answer</TranscriptAnswerLabel>
+                          {item.has_response ? (
+                            <TranscriptAnswerText>{item.user_response}</TranscriptAnswerText>
+                          ) : (
+                            <TranscriptAnswerPending>No response recorded for this question yet.</TranscriptAnswerPending>
+                          )}
+                        </TranscriptAnswerBlock>
+                      </TranscriptItemCard>
+                    ))}
+                    {transcriptSource && (
+                      <TranscriptSubtitle style={{ textAlign: 'center' }}>
+                        Source: {transcriptSource === 'database' ? 'Saved evaluation transcript' : 'Live Tavus transcript'}
+                      </TranscriptSubtitle>
+                    )}
+                    <div ref={transcriptEndRef} />
+                  </>
+                )}
+              </TranscriptBody>
+            </TranscriptPanel>
           )}
         </VideoPanel>
 
-        <JobsPanel>
-          <JobsPanelHeader>
-            <PanelTitle>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v3"></path>
-                <path d="M12 18v3"></path>
-                <path d="M5.5 5.5l2.1 2.1"></path>
-                <path d="M16.4 16.4l2.1 2.1"></path>
-                <path d="M3 12h3"></path>
-                <path d="M18 12h3"></path>
-                <path d="M5.5 18.5l2.1-2.1"></path>
-                <path d="M16.4 7.6l2.1-2.1"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Interview History
-            </PanelTitle>
-            <PanelSubtitle>Your past interviews and results</PanelSubtitle>
-          </JobsPanelHeader>
+        <SidePanelsColumn>
+          <SidePanel>
+            <SidePanelHeader>
+              <PanelTitle>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+                Recommended Jobs
+              </PanelTitle>
+              <PanelSubtitle>Select a role to practice your mock interview</PanelSubtitle>
+            </SidePanelHeader>
 
-          {loadingInterviews ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-              Loading interviews...
-            </div>
-          ) : interviews.length > 0 ? (
-            <JobsList>
-              {interviews.map((interview) => (
-                <JobCard
-                  key={interview.interview_id}
-                  selected={selectedInterview?.interview_id === interview.interview_id}
-                  onClick={() => setSelectedInterview(interview)}
-                >
-                  <JobHeader>
-                    <div style={{ flex: 1 }}>
-                      <JobTitle>{interview.job_title || 'Interview'}</JobTitle>
-                      <JobCompany>{interview.company_name || 'Company'}</JobCompany>
-                    </div>
-                    {interview.overall_score !== null && (
-                      <AIBadge>
-                        {interview.overall_score}/100
-                      </AIBadge>
-                    )}
-                  </JobHeader>
-                  <JobDetails>
-                    <JobTag>Status: {interview.status}</JobTag>
-                    {interview.attempt_number && <JobTag>Attempt #{interview.attempt_number}</JobTag>}
-                    {interview.completed_at && (
-                      <JobTag>Completed: {new Date(interview.completed_at).toLocaleDateString()}</JobTag>
-                    )}
-                  </JobDetails>
-                  {interview.status === 'completed' && interviewResults && interviewResults.interview_id === interview.interview_id && (
-                    <ResultsContainer>
-                      {interviewResults.overall_score !== null && (
-                        <div style={{ fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>
-                          Overall Score: <span style={{ color: 'var(--primary)', fontSize: '1.1em' }}>{interviewResults.overall_score}/100</span>
-                        </div>
-                      )}
-                      {interviewResults.score_breakdown && (
-                        <div style={{ fontSize: '0.85em', marginBottom: '8px' }}>
-                          <div style={{ marginBottom: '4px' }}>Technical: {interviewResults.score_breakdown.technical_score}/100</div>
-                          <div style={{ marginBottom: '4px' }}>Communication: {interviewResults.score_breakdown.communication_score}/100</div>
-                          <div style={{ marginBottom: '4px' }}>Problem Solving: {interviewResults.score_breakdown.problem_solving_score}/100</div>
-                          <div>Domain Knowledge: {interviewResults.score_breakdown.domain_knowledge_score}/100</div>
-                        </div>
-                      )}
-                      {rizFeedback && (
-                        <RizFeedbackContainer>
-                          <div style={{ fontSize: '0.85em', fontWeight: '500', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>Riz Coaching Feedback</span>
-                            <RefreshButton
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRefreshRizFeedback()
-                              }}
-                            >
-                              Refresh
-                            </RefreshButton>
-                          </div>
-                          {rizFeedback.summary && (
-                            <div style={{ fontSize: '0.85em', marginBottom: '8px', fontStyle: 'italic', color: 'var(--text)' }}>
-                              {rizFeedback.summary}
-                            </div>
-                          )}
-                          {rizFeedback.strengths && rizFeedback.strengths.length > 0 && (
-                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
-                              <strong style={{ color: '#22c55e' }}>Strengths:</strong>
-                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                                {rizFeedback.strengths.map((s, idx) => (
-                                  <li key={idx}>{s}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {rizFeedback.weaknesses && rizFeedback.weaknesses.length > 0 && (
-                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
-                              <strong style={{ color: '#f59e0b' }}>Areas for Improvement:</strong>
-                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                                {rizFeedback.weaknesses.map((w, idx) => (
-                                  <li key={idx}>{w}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {rizFeedback.recommendations && rizFeedback.recommendations.length > 0 && (
-                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
-                              <strong style={{ color: 'var(--primary)' }}>Recommendations:</strong>
-                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                                {rizFeedback.recommendations.map((r, idx) => (
-                                  <li key={idx}>{r}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {rizFeedback.next_steps && rizFeedback.next_steps.length > 0 && (
-                            <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
-                              <strong style={{ color: 'var(--primary)' }}>Next Steps:</strong>
-                              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                                {rizFeedback.next_steps.map((ns, idx) => (
-                                  <li key={idx}>{ns}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </RizFeedbackContainer>
-                      )}
-                      {!rizFeedback && interview.status === 'completed' && (
-                        <div style={{ marginTop: '8px', fontSize: '0.8em', color: 'var(--text-light)' }}>
-                          Riz feedback not available. Click "Refresh" to generate.
-                        </div>
-                      )}
-                    </ResultsContainer>
-                  )}
-                </JobCard>
-              ))}
-            </JobsList>
-          ) : (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
-              No interview history. Start a new interview to begin!
-            </div>
-          )}
-
-          {/* Recommended Jobs for Interviews */}
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-            <PanelSubtitle style={{ marginBottom: '12px' }}>
-              {loadingJobs ? 'Loading Recommendations...' : 'Recommended Jobs for Practice'}
-            </PanelSubtitle>
-            <JobsList>
+            <SidePanelList>
               {loadingJobs ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
-                  Loading personalized job recommendations...
-                </div>
+                <EmptyState>Loading personalized job recommendations...</EmptyState>
               ) : jobs.length > 0 ? (
                 jobs.map((job) => (
                   <JobCard
@@ -1795,13 +1670,143 @@ const AIInterviews = () => {
                   </JobCard>
                 ))
               ) : (
-                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
+                <EmptyState>
                   No job recommendations available. Update your profile to get personalized recommendations!
-                </div>
+                </EmptyState>
               )}
-            </JobsList>
-          </div>
-        </JobsPanel>
+            </SidePanelList>
+          </SidePanel>
+
+          <SidePanel>
+            <SidePanelHeader>
+              <PanelTitle>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Interview History
+              </PanelTitle>
+              <PanelSubtitle>Your past interviews, scores, and coaching feedback</PanelSubtitle>
+            </SidePanelHeader>
+
+            <SidePanelList>
+              {loadingInterviews ? (
+                <EmptyState>Loading interviews...</EmptyState>
+              ) : interviews.length > 0 ? (
+                interviews.map((interview) => (
+                  <JobCard
+                    key={interview.interview_id}
+                    selected={selectedInterview?.interview_id === interview.interview_id}
+                    onClick={() => setSelectedInterview(interview)}
+                  >
+                    <JobHeader>
+                      <div style={{ flex: 1 }}>
+                        <JobTitle>{interview.job_title || 'Interview'}</JobTitle>
+                        <JobCompany>{interview.company_name || 'Company'}</JobCompany>
+                      </div>
+                      {interview.overall_score !== null && (
+                        <AIBadge>
+                          {interview.overall_score}/100
+                        </AIBadge>
+                      )}
+                    </JobHeader>
+                    <JobDetails>
+                      <JobTag>Status: {interview.status}</JobTag>
+                      {interview.attempt_number && <JobTag>Attempt #{interview.attempt_number}</JobTag>}
+                      {interview.completed_at && (
+                        <JobTag>Completed: {new Date(interview.completed_at).toLocaleDateString()}</JobTag>
+                      )}
+                    </JobDetails>
+                    {interview.status === 'completed' && interviewResults && interviewResults.interview_id === interview.interview_id && (
+                      <ResultsContainer>
+                        {interviewResults.overall_score !== null && (
+                          <div style={{ fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>
+                            Overall Score: <span style={{ color: 'var(--primary)', fontSize: '1.1em' }}>{interviewResults.overall_score}/100</span>
+                          </div>
+                        )}
+                        {interviewResults.score_breakdown && (
+                          <div style={{ fontSize: '0.85em', marginBottom: '8px' }}>
+                            <div style={{ marginBottom: '4px' }}>Technical: {interviewResults.score_breakdown.technical_score}/100</div>
+                            <div style={{ marginBottom: '4px' }}>Communication: {interviewResults.score_breakdown.communication_score}/100</div>
+                            <div style={{ marginBottom: '4px' }}>Problem Solving: {interviewResults.score_breakdown.problem_solving_score}/100</div>
+                            <div>Domain Knowledge: {interviewResults.score_breakdown.domain_knowledge_score}/100</div>
+                          </div>
+                        )}
+                        {rizFeedback && (
+                          <RizFeedbackContainer>
+                            <div style={{ fontSize: '0.85em', fontWeight: '500', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>Riz Coaching Feedback</span>
+                              <RefreshButton
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRefreshRizFeedback()
+                                }}
+                              >
+                                Refresh
+                              </RefreshButton>
+                            </div>
+                            {rizFeedback.summary && (
+                              <div style={{ fontSize: '0.85em', marginBottom: '8px', fontStyle: 'italic', color: 'var(--text)' }}>
+                                {rizFeedback.summary}
+                              </div>
+                            )}
+                            {rizFeedback.strengths && rizFeedback.strengths.length > 0 && (
+                              <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                                <strong style={{ color: '#22c55e' }}>Strengths:</strong>
+                                <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                  {rizFeedback.strengths.map((s, idx) => (
+                                    <li key={idx}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {rizFeedback.weaknesses && rizFeedback.weaknesses.length > 0 && (
+                              <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                                <strong style={{ color: '#f59e0b' }}>Areas for Improvement:</strong>
+                                <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                  {rizFeedback.weaknesses.map((w, idx) => (
+                                    <li key={idx}>{w}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {rizFeedback.recommendations && rizFeedback.recommendations.length > 0 && (
+                              <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                                <strong style={{ color: 'var(--primary)' }}>Recommendations:</strong>
+                                <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                  {rizFeedback.recommendations.map((r, idx) => (
+                                    <li key={idx}>{r}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {rizFeedback.next_steps && rizFeedback.next_steps.length > 0 && (
+                              <div style={{ fontSize: '0.8em', marginTop: '6px' }}>
+                                <strong style={{ color: 'var(--primary)' }}>Next Steps:</strong>
+                                <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                                  {rizFeedback.next_steps.map((ns, idx) => (
+                                    <li key={idx}>{ns}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </RizFeedbackContainer>
+                        )}
+                        {!rizFeedback && interview.status === 'completed' && (
+                          <div style={{ marginTop: '8px', fontSize: '0.8em', color: 'var(--text-light)' }}>
+                            Riz feedback not available. Click &quot;Refresh&quot; to generate.
+                          </div>
+                        )}
+                      </ResultsContainer>
+                    )}
+                  </JobCard>
+                ))
+              ) : (
+                <EmptyState>No interview history yet. Start a mock interview to see results here.</EmptyState>
+              )}
+            </SidePanelList>
+          </SidePanel>
+        </SidePanelsColumn>
       </MainContainer>
     </Container>
   )

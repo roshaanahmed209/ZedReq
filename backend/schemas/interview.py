@@ -210,6 +210,23 @@ class InterviewCompleteResponse(BaseModel):
         return [str(item)[:500] for item in v]  # Limit each item to 500 chars
 
 
+class TranscriptItemSchema(BaseModel):
+    """Question paired with the candidate's Tavus transcript response"""
+    question_index: int = Field(..., ge=0)
+    question_text: str = Field(..., max_length=2000)
+    question_type: Optional[str] = Field(None, max_length=50)
+    user_response: Optional[str] = Field(None, max_length=5000)
+    has_response: bool = False
+
+
+class InterviewTranscriptResponse(BaseModel):
+    """Schema for question-wise interview transcript"""
+    interview_id: int = Field(..., gt=0)
+    status: str = Field(..., max_length=20)
+    items: List[TranscriptItemSchema] = Field(default_factory=list)
+    source: str = Field(..., max_length=20, description="database, tavus, or none")
+
+
 class InterviewListResponse(BaseModel):
     """Schema for interview list response"""
     interviews: List[InterviewResponse]

@@ -673,6 +673,9 @@ export const interviewAPI = {
   
   getInterview: (interviewId) =>
     api.get(`/api/interviews/${interviewId}`),
+
+  getInterviewTranscript: (interviewId) =>
+    api.get(`/api/interviews/${interviewId}/transcript`),
   
   completeInterview: (interviewId) =>
     api.post(`/api/interviews/${interviewId}/complete`),

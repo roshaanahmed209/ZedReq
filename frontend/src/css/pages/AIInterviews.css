@@ -1,6 +1,6 @@
 ﻿.banner-description-strong {
-  color: white;
-  font-weight: 500;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .job-header-content {
