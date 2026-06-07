@@ -157,6 +157,7 @@ const SidePanel = styled.div`
     overflow-y: auto;
     padding-top: 60px;
     min-width: auto;
+    display: none;
   }
   
   @media (max-width: 480px) {
@@ -324,6 +325,55 @@ const MobileMenuButton = styled.button`
   }
 `
 
+const MobileFilterBar = styled.div`
+  display: none;
+  margin-bottom: 16px;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
+`
+
+const MobileFilterHeading = styled.label`
+  display: block;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-light);
+  margin-bottom: 8px;
+`
+
+const MobileFilterSelect = styled.select`
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-white);
+  color: var(--text);
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.15);
+  }
+`
+
+const JOB_FILTER_OPTIONS = [
+  { value: 'all', label: 'All Jobs' },
+  { value: 'saved', label: 'Saved Jobs' },
+  { value: 'remote', label: 'Remote Jobs' },
+  { value: 'posted', label: 'Posted Jobs' },
+  { value: 'recommended', label: 'Recommended' },
+]
+
 const Overlay = styled.div`
   display: none;
   position: fixed;
@@ -373,10 +423,11 @@ const JobsTitle = styled.h2`
   font-weight: 400;
   margin-bottom: 8px;
   letter-spacing: -0.3px;
-  
+
   @media (max-width: 768px) {
     font-size: 1.3em;
     margin-bottom: 6px;
+    display: ${props => (props.$hideOnMobile ? 'none' : 'block')};
   }
   
   @media (max-width: 480px) {
@@ -1784,6 +1835,25 @@ const Jobs = () => {
     return count
   }
 
+  const getFilterOptionCount = (filter) => {
+    switch (filter) {
+      case 'saved':
+        return filterCountDisplay(savedJobs.length, sliceReady.saved, loadingSaved)
+      case 'remote':
+        return filterCountDisplay(remoteJobs.length, sliceReady.remote, loadingRemote)
+      case 'posted':
+        return filterCountDisplay(postedJobs.length, sliceReady.posted, loadingPosted)
+      case 'recommended':
+        return filterCountDisplay(
+          recommendedJobs.length,
+          sliceReady.recommended,
+          loadingRecommendations
+        )
+      default:
+        return allJobs.length
+    }
+  }
+
   const isActiveTabLoading = () => {
     if (appliedJobSearch) return searchJobsLoading
     switch (activeFilter) {
@@ -2367,7 +2437,26 @@ const Jobs = () => {
 
         <MainContainer>
           <JobsHeader>
-            <JobsTitle>
+            {!appliedJobSearch && (
+              <MobileFilterBar>
+                <MobileFilterHeading htmlFor="jobs-mobile-filter">
+                  Job category
+                </MobileFilterHeading>
+                <MobileFilterSelect
+                  id="jobs-mobile-filter"
+                  value={activeFilter}
+                  onChange={(e) => handleFilterChange(e.target.value)}
+                  aria-label="Select job category"
+                >
+                  {JOB_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} ({getFilterOptionCount(option.value)})
+                    </option>
+                  ))}
+                </MobileFilterSelect>
+              </MobileFilterBar>
+            )}
+            <JobsTitle $hideOnMobile={!appliedJobSearch}>
               {appliedJobSearch ? 'Search results' : getFilterInfo().title}
             </JobsTitle>
             <JobSearchForm onSubmit={handleJobSearchSubmit}>

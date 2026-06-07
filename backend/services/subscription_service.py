@@ -336,7 +336,7 @@ class SubscriptionService:
                 "assigned_by": plan.get("assigned_by", "system"),
                 "started_at": plan.get("started_at"),
                 "expires_at": plan.get("expires_at"),
-                "interview_max_duration_seconds": plan.get("interview_max_duration_seconds", 60),
+                "interview_max_duration_seconds": self.get_max_interview_duration(user_id),
             },
             "usage": usage,
         }

@@ -3,9 +3,17 @@ import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
-import { interviewAPI, jobAPI } from '../services/api'
+import { interviewAPI, jobAPI, userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/AIInterviews.css'
+
+function formatInterviewDuration(seconds) {
+  const total = Number(seconds)
+  if (!Number.isFinite(total) || total <= 0) return '5 minutes'
+  if (total < 60) return `${Math.round(total)} seconds`
+  const minutes = Math.round(total / 60)
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`
+}
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -282,6 +290,19 @@ const RoomCardDescription = styled.p`
 
   @media (max-width: 480px) {
     font-size: 0.88em;
+  }
+`
+
+const RoomDurationNote = styled.p`
+  font-size: 0.88em;
+  color: var(--primary);
+  line-height: 1.5;
+  margin: 10px 0 0;
+  max-width: 560px;
+  font-weight: 500;
+
+  @media (max-width: 480px) {
+    font-size: 0.82em;
   }
 `
 
@@ -931,6 +952,7 @@ const AIInterviews = () => {
   const [transcriptSource, setTranscriptSource] = useState(null)
   const [transcriptHint, setTranscriptHint] = useState(null)
   const [transcriptUserTurnCount, setTranscriptUserTurnCount] = useState(0)
+  const [interviewMaxDurationSeconds, setInterviewMaxDurationSeconds] = useState(300)
   const [sidePanelWidth, setSidePanelWidth] = useState(() => {
     try {
       const saved = localStorage.getItem(SIDE_PANEL_WIDTH_KEY)
@@ -963,6 +985,11 @@ const AIInterviews = () => {
     return `${tavusConversationUrl}${sep}t=${encodeURIComponent(tavusMeetingToken)}`
   }, [tavusConversationUrl, tavusMeetingToken])
 
+  const interviewDurationLabel = useMemo(
+    () => formatInterviewDuration(interviewMaxDurationSeconds),
+    [interviewMaxDurationSeconds]
+  )
+
   useEffect(() => {
     return () => {
       if (copyLinkTimeoutRef.current) {
@@ -989,7 +1016,20 @@ const AIInterviews = () => {
   useEffect(() => {
     fetchInterviews()
     fetchInterviewRecommendations()
+    fetchInterviewSessionLimits()
   }, [])
+
+  const fetchInterviewSessionLimits = async () => {
+    try {
+      const res = await userAPI.getSubscriptionUsage()
+      const seconds = res.data?.plan?.interview_max_duration_seconds
+      if (Number.isFinite(seconds) && seconds > 0) {
+        setInterviewMaxDurationSeconds(seconds)
+      }
+    } catch (err) {
+      console.error('Failed to fetch interview session duration:', err)
+    }
+  }
 
   // Fetch interview recommendations (jobs with attempt counts)
   const fetchInterviewRecommendations = async () => {
@@ -1402,6 +1442,9 @@ const AIInterviews = () => {
                   Open the live AI interview in a new browser tab. Allow camera and microphone access when prompted,
                   then return here when you are finished to complete the session and view your feedback.
                 </RoomCardDescription>
+                <RoomDurationNote>
+                  This session automatically ends after {interviewDurationLabel}.
+                </RoomDurationNote>
                 <JoinInterviewButton href={tavusEmbedSrc} target="_blank" rel="noopener noreferrer">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -1454,6 +1497,9 @@ const AIInterviews = () => {
                     ? `When you start, a secure interview room link will appear here for ${selectedJob.title}. The live session opens in a new tab — you stay on ZedReq to review questions and complete the interview.`
                     : 'Choose a recommended job from the panel on the right, then click Start Interview to generate your personalized mock interview room.'}
                 </RoomCardDescription>
+                <RoomDurationNote>
+                  Each mock interview session automatically ends after {interviewDurationLabel}.
+                </RoomDurationNote>
               </>
             )}
           </InterviewRoomCard>

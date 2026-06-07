@@ -450,6 +450,66 @@ const PanelDivider = styled.div`
   margin: 10px 20px;
 `
 
+const NavMoreWrapper = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`
+
+const NavMoreDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 50%;
+  transform: translateX(50%);
+  min-width: 210px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px 0;
+  z-index: 1100;
+`
+
+const NavMoreDropdownItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--primary);
+  }
+
+  &.active {
+    color: var(--primary);
+    font-weight: 500;
+    background: rgba(21, 133, 161, 0.08);
+  }
+`
+
+const NAV_MORE_LINKS = [
+  { label: 'LMS', path: '/lms' },
+  { label: 'Evaluation', path: '/evaluation' },
+  { label: 'AI Mode', path: '/ai-mode' },
+  { label: 'AI Mock Interviews', path: '/ai-interviews' },
+  { label: 'Profile', profile: true },
+  { label: 'Settings', path: '/settings' },
+]
+
+function isNavMorePathActive(pathname, link) {
+  if (link.profile) {
+    return pathname.startsWith('/profile')
+  }
+  return pathname === link.path || pathname.startsWith(`${link.path}/`)
+}
+
 
 function Navbar() {
     const navigate = useNavigate()
@@ -463,8 +523,25 @@ function Navbar() {
     const [messagesOpen, setMessagesOpen] = useState(false)
     const [searchActive, setSearchActive] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false)
     const searchWrapperRef = useRef(null)
     const inputRef = useRef(null)
+    const moreMenuRef = useRef(null)
+
+    const isMoreMenuActive = NAV_MORE_LINKS.some((link) =>
+        isNavMorePathActive(location.pathname, link)
+    )
+
+    const handleMoreNav = (link) => {
+        if (link.profile) {
+            if (user?.id && user?.username) {
+                navigate(generateProfileUrl(user.id, user.username))
+            }
+        } else {
+            navigate(link.path)
+        }
+        setMoreMenuOpen(false)
+    }
 
     useEffect(() => {
         const handleScroll = () => {
@@ -482,12 +559,19 @@ function Navbar() {
                     setSearchActive(false)
                 }
             }
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+                setMoreMenuOpen(false)
+            }
         }
         document.addEventListener("mousedown", handleClickOutside)
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
     }, [searchQuery])
+
+    useEffect(() => {
+        setMoreMenuOpen(false)
+    }, [location.pathname])
 
     /* ── Search Logic ────────────────────────────────────────── */
     const searchUsers = async (query) => {
@@ -662,6 +746,38 @@ function Navbar() {
                                 </svg>
                                 <span>Notifications</span>
                             </NavMenuItem>
+
+                            <NavMoreWrapper ref={moreMenuRef}>
+                                <NavMenuItem
+                                    className={moreMenuOpen || isMoreMenuActive ? 'active' : ''}
+                                    onClick={() => setMoreMenuOpen((open) => !open)}
+                                    aria-label="More pages"
+                                    aria-haspopup="menu"
+                                    aria-expanded={moreMenuOpen}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                        <circle cx="12" cy="5" r="1.75"></circle>
+                                        <circle cx="12" cy="12" r="1.75"></circle>
+                                        <circle cx="12" cy="19" r="1.75"></circle>
+                                    </svg>
+                                    <span>More</span>
+                                </NavMenuItem>
+                                {moreMenuOpen && (
+                                    <NavMoreDropdown role="menu">
+                                        {NAV_MORE_LINKS.map((link) => (
+                                            <NavMoreDropdownItem
+                                                key={link.label}
+                                                type="button"
+                                                role="menuitem"
+                                                className={isNavMorePathActive(location.pathname, link) ? 'active' : ''}
+                                                onClick={() => handleMoreNav(link)}
+                                            >
+                                                {link.label}
+                                            </NavMoreDropdownItem>
+                                        ))}
+                                    </NavMoreDropdown>
+                                )}
+                            </NavMoreWrapper>
                         </NavMenu>
                     </NavCenter>
 
