@@ -22,9 +22,9 @@ const NavWrapper = styled.nav`
   z-index: 100;
   
   /* Transition properties for shrink effect */
-  width: ${props => props.$scrolled ? (props.$searchActive ? 'min(96%, 1600px)' : 'min(90%, 1200px)') : '100%'};
+  width: ${props => props.$scrolled ? (props.$searchActive ? 'min(96%, 1680px)' : 'min(90%, 1200px)') : '100%'};
   border-radius: ${props => props.$scrolled ? '50px' : '0'};
-  padding: ${props => props.$scrolled ? (props.$searchActive ? '0 40px' : '0 30px') : '0 20px'};
+  padding: ${props => props.$scrolled ? (props.$searchActive ? '0 56px' : '0 40px') : '0 20px'};
   box-shadow: ${props => props.$scrolled ? 'var(--shadow-lg)' : 'var(--shadow)'};
   border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   
@@ -33,7 +33,12 @@ const NavWrapper = styled.nav`
   transform: translateX(-50%);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
   
-  @media (max-width: 768px) { 
+  /* Reclaim side room on narrower capsules so the shifted menu still clears
+     both the search bar and Logout (the generous 56px is only for wide screens). */
+  @media (max-width: 1280px) {
+    padding: ${props => props.$scrolled ? (props.$searchActive ? '0 28px' : '0 24px') : '0 20px'};
+  }
+  @media (max-width: 768px) {
     padding: ${props => props.$scrolled ? '0 20px' : '0 15px'};
     width: ${props => props.$scrolled ? 'calc(100% - 30px)' : '100%'};
     top: ${props => props.$scrolled ? '15px' : '0'};
@@ -84,7 +89,9 @@ const Logo = styled.h1`
 
 const NavCenter = styled.div`
   position: absolute;
-  left: 50%;
+  /* When the capsule is scrolled AND the search is expanded, slide the centered
+     menu toward the open right-side space so it clears the search input. */
+  left: ${props => (props.$scrolled && props.$searchActive) ? 'calc(50% + 130px)' : '50%'};
   transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
@@ -93,7 +100,8 @@ const NavCenter = styled.div`
   z-index: ${props => props.$searchActive ? '0' : '1'};
   pointer-events: none; /* Prevent blocking clicks if covering empty space, but buttons need events */
   overflow: visible;
-  
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
   & > * { pointer-events: auto; }
 
   @media (max-width: 1024px) { display: none; }
@@ -115,7 +123,10 @@ const NavRight = styled.div`
 const NavMenu = styled.div`
   display: flex;
   align-items: center;
-  gap: 30px;
+  /* Tighten the menu in capsule mode so it occupies less width and stays clear
+     of the expanded search bar on the left and the Logout button on the right. */
+  gap: ${props => props.$scrolled ? '16px' : '30px'};
+  transition: gap 0.3s ease;
   @media (max-width: 768px) { display: none; }
 `
 
@@ -705,7 +716,7 @@ function Navbar() {
                     </NavLeft>
 
                     <NavCenter $scrolled={isScrolled} $searchActive={searchActive || searchQuery}>
-                        <NavMenu>
+                        <NavMenu $scrolled={isScrolled}>
                             <NavMenuItem className={location.pathname === '/feed' ? 'active' : ''} onClick={() => navigate('/feed')}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>

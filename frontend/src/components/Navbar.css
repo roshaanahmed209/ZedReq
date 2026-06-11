@@ -74,21 +74,21 @@
 /* Large Desktop (1400px and above) */
 @media (min-width: 1400px) {
     .search-wrapper.active .search-input-wide {
-        width: 320px;
+        width: 300px;
     }
 }
 
 /* Desktop (1200px - 1399px) */
 @media (max-width: 1399px) and (min-width: 1200px) {
     .search-wrapper.active .search-input-wide {
-        width: 260px;
+        width: 230px;
     }
 }
 
 /* Large Tablet and Small Desktop (1024px - 1199px) */
 @media (max-width: 1199px) and (min-width: 1024px) {
     .search-wrapper.active .search-input-wide {
-        width: 240px;
+        width: 200px;
     }
 }
 
