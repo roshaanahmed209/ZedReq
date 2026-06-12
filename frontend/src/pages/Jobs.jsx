@@ -863,6 +863,29 @@ const EmptyState = styled.div`
   font-size: 0.95em;
 `
 
+// Infinite-scroll sentinel + bottom-of-list indicators
+const LoadMoreSentinel = styled.div`
+  width: 100%;
+  height: 1px;
+`
+
+const LoadMoreSpinner = styled.div`
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: ${spin} 0.8s linear infinite;
+  margin: 24px auto;
+`
+
+const EndOfList = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: var(--text-lighter);
+  font-size: 0.85em;
+`
+
 const ErrorMessage = styled.div`
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -1664,6 +1687,9 @@ const JobDetailActions = styled.div`
 
 const PREFETCH_IDLE_GAP_MS = 150
 
+// Number of jobs fetched per page for infinite scroll (backend caps at 100)
+const PAGE_SIZE = 24
+
 function scheduleIdleWork(fn) {
   return new Promise((resolve) => {
     const run = () => Promise.resolve(fn()).then(resolve)
@@ -1698,6 +1724,18 @@ const Jobs = () => {
     posted: false,
     recommended: false,
   })
+  // Infinite-scroll pagination: whether each list has more pages to load.
+  // 'recommended' is a fixed ranked set, so it never paginates.
+  const [hasMore, setHasMore] = useState({
+    all: true,
+    remote: true,
+    saved: true,
+    posted: true,
+    search: false,
+  })
+  const [loadingMore, setLoadingMore] = useState(false)
+  const loadMoreSentinelRef = useRef(null)
+  const loadingMoreRef = useRef(false)
   const [error, setError] = useState(null)
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [applyingTo, setApplyingTo] = useState(null)
@@ -1754,8 +1792,10 @@ const Jobs = () => {
     setLoadingAll(true)
     setError(null)
     try {
-      const res = await jobAPI.getJobs({ limit: 50 })
-      setAllJobs(res.data.jobs || [])
+      const res = await jobAPI.getJobs({ limit: PAGE_SIZE })
+      const jobs = res.data.jobs || []
+      setAllJobs(jobs)
+      setHasMore((h) => ({ ...h, all: jobs.length === PAGE_SIZE }))
     } catch (err) {
       console.error('Failed to fetch jobs:', err)
       setError('Failed to load jobs. Please try again.')
@@ -1769,8 +1809,10 @@ const Jobs = () => {
     if (force) prefetchedRef.current.saved = false
     setLoadingSaved(true)
     try {
-      const res = await jobAPI.getSavedJobs(50)
-      setSavedJobs(res.data.jobs || [])
+      const res = await jobAPI.getSavedJobs(PAGE_SIZE)
+      const jobs = res.data.jobs || []
+      setSavedJobs(jobs)
+      setHasMore((h) => ({ ...h, saved: jobs.length === PAGE_SIZE }))
       prefetchedRef.current.saved = true
       setSliceReady((s) => ({ ...s, saved: true }))
     } catch (err) {
@@ -1785,8 +1827,10 @@ const Jobs = () => {
     if (force) prefetchedRef.current.remote = false
     setLoadingRemote(true)
     try {
-      const res = await jobAPI.getRemoteJobs(50)
-      setRemoteJobs(res.data.jobs || [])
+      const res = await jobAPI.getRemoteJobs(PAGE_SIZE)
+      const jobs = res.data.jobs || []
+      setRemoteJobs(jobs)
+      setHasMore((h) => ({ ...h, remote: jobs.length === PAGE_SIZE }))
       prefetchedRef.current.remote = true
       setSliceReady((s) => ({ ...s, remote: true }))
     } catch (err) {
@@ -1801,8 +1845,10 @@ const Jobs = () => {
     if (force) prefetchedRef.current.posted = false
     setLoadingPosted(true)
     try {
-      const res = await jobAPI.getMyPostedJobs(50)
-      setPostedJobs(res.data.jobs || [])
+      const res = await jobAPI.getMyPostedJobs(PAGE_SIZE)
+      const jobs = res.data.jobs || []
+      setPostedJobs(jobs)
+      setHasMore((h) => ({ ...h, posted: jobs.length === PAGE_SIZE }))
       prefetchedRef.current.posted = true
       setSliceReady((s) => ({ ...s, posted: true }))
     } catch (err) {
@@ -1880,13 +1926,16 @@ const Jobs = () => {
     setSearchJobsLoading(true)
     setError(null)
     try {
-      const res = await jobAPI.getJobs({ query: q, limit: 50 })
-      setSearchJobsList(res.data.jobs || [])
+      const res = await jobAPI.getJobs({ query: q, limit: PAGE_SIZE })
+      const jobs = res.data.jobs || []
+      setSearchJobsList(jobs)
+      setHasMore((h) => ({ ...h, search: jobs.length === PAGE_SIZE }))
       setAppliedJobSearch(q)
     } catch (err) {
       console.error('Job search failed:', err)
       setError('Job search failed. Please try again.')
       setSearchJobsList([])
+      setHasMore((h) => ({ ...h, search: false }))
     } finally {
       setSearchJobsLoading(false)
     }
@@ -1901,7 +1950,65 @@ const Jobs = () => {
     setJobSearchInput('')
     setAppliedJobSearch('')
     setSearchJobsList([])
+    setHasMore((h) => ({ ...h, search: false }))
   }
+
+  // Append the next page for whatever list is currently visible.
+  // Search results take priority over the active filter tab.
+  const loadMoreJobs = useCallback(async () => {
+    if (loadingMoreRef.current) return
+
+    const isSearch = !!appliedJobSearch
+    const key = isSearch ? 'search' : activeFilter
+    if (!hasMore[key]) return
+
+    // Determine the current list + its setter for the active context.
+    let currentList
+    let setter
+    if (isSearch) {
+      currentList = searchJobsList
+      setter = setSearchJobsList
+    } else {
+      switch (activeFilter) {
+        case 'remote': currentList = remoteJobs; setter = setRemoteJobs; break
+        case 'saved': currentList = savedJobs; setter = setSavedJobs; break
+        case 'posted': currentList = postedJobs; setter = setPostedJobs; break
+        case 'recommended': return // ranked set, no pagination
+        default: currentList = allJobs; setter = setAllJobs
+      }
+    }
+
+    const offset = currentList.length
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    try {
+      let res
+      if (isSearch) {
+        res = await jobAPI.getJobs({ query: appliedJobSearch, limit: PAGE_SIZE, offset })
+      } else if (activeFilter === 'remote') {
+        res = await jobAPI.getRemoteJobs(PAGE_SIZE, offset)
+      } else if (activeFilter === 'saved') {
+        res = await jobAPI.getSavedJobs(PAGE_SIZE, offset)
+      } else if (activeFilter === 'posted') {
+        res = await jobAPI.getMyPostedJobs(PAGE_SIZE, offset)
+      } else {
+        res = await jobAPI.getJobs({ limit: PAGE_SIZE, offset })
+      }
+
+      const page = res.data.jobs || []
+      // Append while de-duping by job_id (guards against overlapping pages).
+      setter((prev) => {
+        const seen = new Set(prev.map((j) => j.job_id))
+        return [...prev, ...page.filter((j) => !seen.has(j.job_id))]
+      })
+      setHasMore((h) => ({ ...h, [key]: page.length === PAGE_SIZE }))
+    } catch (err) {
+      console.error('Failed to load more jobs:', err)
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
+  }, [appliedJobSearch, activeFilter, hasMore, searchJobsList, remoteJobs, savedJobs, postedJobs, allJobs])
 
   useEffect(() => {
     fetchAllJobs()
@@ -1933,6 +2040,24 @@ const Jobs = () => {
       fetchRecommendations(false)
     }
   }, [user?.id, activeFilter, fetchRecommendations])
+
+  // Lazy loading: observe a sentinel at the bottom of the list and fetch
+  // the next page as it scrolls into view.
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreJobs()
+        }
+      },
+      { rootMargin: '300px' }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMoreJobs])
 
   // Handle apply to job
   const handleApply = async (jobId, e) => {
@@ -2511,6 +2636,28 @@ const Jobs = () => {
             ) : (
               getCurrentJobs().map((job, index) => renderJobCard(job, index))
             )}
+
+            {/* Infinite-scroll sentinel + bottom indicators */}
+            {(() => {
+              const isSearch = !!appliedJobSearch
+              const key = isSearch ? 'search' : activeFilter
+              const list = isSearch ? searchJobsList : getCurrentJobs()
+              const initialLoading = isSearch ? searchJobsLoading : isActiveTabLoading()
+              if (initialLoading || list.length === 0) return null
+              return (
+                <>
+                  {hasMore[key] && (
+                    <LoadMoreSentinel ref={loadMoreSentinelRef} aria-hidden="true" />
+                  )}
+                  {loadingMore && <LoadMoreSpinner />}
+                  {!hasMore[key] && !loadingMore && (
+                    <EndOfList>
+                      You&apos;ve reached the end — {list.length} job{list.length !== 1 ? 's' : ''}
+                    </EndOfList>
+                  )}
+                </>
+              )
+            })()}
           </JobsContainer>
         </MainContainer>
       </MainContent>
