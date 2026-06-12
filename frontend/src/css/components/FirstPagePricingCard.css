@@ -125,10 +125,11 @@
 }
 
 .zedreq-root .fp-pricing-card.card .card_title__container .card_paragraph {
-  margin-top: 0.25rem;
-  width: 65%;
+  margin-top: 0.5rem;
+  width: 90%;
 
-  font-size: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--paragraph);
 }
 

@@ -1127,6 +1127,11 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
 .features {
   padding: var(--section-y) var(--pad-x);
   border-top: 4px solid var(--fp-rule-strong);
+  position: relative;
+  background-image: url('/static/images/4k_blue2.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .features__head {
@@ -1143,15 +1148,18 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
   font-weight: 200;
   line-height: 1.0;
   max-width: 660px;
+  /* Sits over the background image — keep white in both light & dark themes */
+  color: #fff;
 }
-.features__hl em { font-style: italic; color: var(--fp-text-muted); }
+.features__hl em { font-style: italic; color: #fff; }
 
 .features__sub {
   max-width: 300px;
   font-family: var(--font-body);
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--fp-text-muted);
+  /* Keep white in both light & dark themes */
+  color: #fff;
 }
 
 /* Bento grid */
