@@ -1,0 +1,31 @@
+<svg width="184" height="90" viewBox="108 4 184 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="barGrad" x1="115" y1="0" x2="286" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0B2F6B"/>
+      <stop offset="35%" stop-color="#1565A8"/>
+      <stop offset="70%" stop-color="#1E9FD4"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="url(#barGrad)">
+    <rect x="115" y="8" width="11" height="38" rx="1"/>
+    <rect x="131" y="8" width="11" height="44" rx="1"/>
+    <rect x="147" y="8" width="11" height="50" rx="1"/>
+    <rect x="163" y="8" width="11" height="56" rx="1"/>
+    <rect x="179" y="8" width="11" height="54" rx="1"/>
+    <rect x="179" y="66" width="11" height="6" rx="1"/>
+    <rect x="195" y="8" width="11" height="36" rx="1"/>
+    <rect x="195" y="48" width="11" height="28" rx="1"/>
+    <path d="M195 76 L200.5 84 L206 76 Z"/>
+    <rect x="211" y="8" width="11" height="27" rx="1"/>
+    <rect x="211" y="39" width="11" height="19" rx="1"/>
+    <rect x="211" y="62" width="11" height="10" rx="1"/>
+    <rect x="227" y="8" width="11" height="32" rx="1"/>
+    <rect x="227" y="44" width="11" height="20" rx="1"/>
+    <rect x="243" y="8" width="11" height="26" rx="1"/>
+    <rect x="243" y="38" width="11" height="20" rx="1"/>
+    <rect x="259" y="8" width="11" height="44" rx="1"/>
+    <rect x="275" y="8" width="11" height="38" rx="1"/>
+  </g>
+</svg>

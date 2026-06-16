@@ -435,7 +435,7 @@ export default function FirstPage() {
       {/* ════════════ NAV ════════════ */}
       <nav className="nav" aria-label="Primary navigation">
         <a href="/" className="nav__brand" aria-label="ZedReq home">
-          <img src={A('logo.svg')} alt="" className="nav__logo" width={28} height={28} />
+          <img src={A('logo_tr1.svg')} alt="" className="nav__logo" />
           <span className="nav__wordmark">ZedReq</span>
         </a>
 
@@ -945,7 +945,7 @@ export default function FirstPage() {
         <footer className="footer">
           <div className="footer__inner">
             <a href="/" aria-label="ZedReq home">
-              <img src={A('logo.svg')} alt="ZedReq" className="footer__logo" />
+              <img src={A('logo_tr1.svg')} alt="ZedReq" className="footer__logo" />
             </a>
 
             <nav className="footer__nav" aria-label="Footer navigation">

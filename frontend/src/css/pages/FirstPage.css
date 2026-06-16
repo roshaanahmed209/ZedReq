@@ -584,7 +584,7 @@ button {
 
 .nav__logo {
   height: 1.75rem;
-  width: 1.75rem;
+  width: auto;
   flex-shrink: 0;
   display: block;
 }
@@ -2205,7 +2205,8 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
 
 .footer__logo {
   height: 1.5rem;
-  opacity: 0.75;
+  width: auto;
+  opacity: 0.85;
 }
 
 .footer__nav {
