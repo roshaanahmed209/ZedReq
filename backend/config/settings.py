@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     RECOMMENDATION_CACHE_ENABLED: bool = True
     RECOMMENDATION_CACHE_TTL_HOURS: int = 24  # Optional TTL for cache expiration
     JOB_EMBEDDING_BACKFILL_BATCH_SIZE: int = 100
+    POST_EMBEDDING_BACKFILL_BATCH_SIZE: int = 100
 
     # Backoffice → main app user purge (shared secret; must match backoffice BACKOFFICE_USER_PURGE_KEY)
     BACKOFFICE_USER_PURGE_KEY: str | None = None

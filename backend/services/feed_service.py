@@ -1,5 +1,6 @@
 """Feed Service - Production-grade feed with Redis caching and cursor pagination using ORM"""
 import json
+import math
 import os
 import re
 import secrets
@@ -8,9 +9,11 @@ from datetime import datetime
 from sqlalchemy import and_, or_, desc, func, cast, String
 from sqlalchemy.orm import Session
 
-from config.cache import get_redis_client, is_redis_available
+from config.cache import get_redis_client, is_redis_available, get_cached, set_cached
+from config.database import get_database
 from models.orm import Post, Like, Connection, User, Description
 from services.post_service import PostService
+from services.user_interest_service import get_user_interest_vector
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -92,6 +95,7 @@ class FeedService:
                 # No (more) connection posts: discovery on this request (infinite scroll continues seamlessly)
                 feed_segment = 'discovery'
                 posts, has_more, next_cursor = self._paginate_discovery(
+                    user_id=user_id,
                     exclude_uids=circle_uids,
                     disc_state=disc_state,
                     limit=limit,
@@ -99,6 +103,7 @@ class FeedService:
         else:
             feed_segment = 'discovery'
             posts, has_more, next_cursor = self._paginate_discovery(
+                user_id=user_id,
                 exclude_uids=circle_uids,
                 disc_state=disc_state,
                 limit=limit,
@@ -257,10 +262,44 @@ class FeedService:
     
     def _paginate_discovery(
         self,
+        user_id: int,
         exclude_uids: List[int],
         disc_state: Optional[Tuple[str, Any, int]],
         limit: int,
     ) -> Tuple[List[Dict[str, Any]], bool, Optional[str]]:
+        """
+        Discovery pagination. Personalized (vector-ranked) when the user has an
+        interest vector; otherwise falls back to the original random shuffle.
+        """
+        kind = disc_state[0] if disc_state else 'new'
+
+        # Continuing a ranked session: serve the next page from the cached ranking.
+        if kind == 'ranked':
+            ranking_id = str(disc_state[1])
+            offset = int(disc_state[2])
+            ranked_ids = self._load_ranked_list(ranking_id)
+            if ranked_ids is not None:
+                return self._serve_ranked_page(ranked_ids, ranking_id, offset, limit)
+            # Ranking expired from cache → rebuild a fresh personalized ranking.
+            kind = 'new'
+            disc_state = ('new', None, 0)
+
+        # Starting (or restarting) discovery: try personalized first.
+        if kind == 'new':
+            personalized = self._build_personalized_discovery(user_id, exclude_uids, limit)
+            if personalized is not None:
+                return personalized
+
+        # Cold-start / no embeddings / no candidates → original random discovery.
+        return self._paginate_random_discovery(exclude_uids, disc_state, limit)
+
+    def _paginate_random_discovery(
+        self,
+        exclude_uids: List[int],
+        disc_state: Optional[Tuple[str, Any, int]],
+        limit: int,
+    ) -> Tuple[List[Dict[str, Any]], bool, Optional[str]]:
+        """Original seed-shuffled discovery (cold-start fallback)."""
         if disc_state is None or disc_state[0] == 'new':
             seed = self._make_discovery_seed()
             offset = int(disc_state[2]) if disc_state else 0
@@ -280,6 +319,171 @@ class FeedService:
         if not raw:
             return [], False, None
         return raw, False, None
+
+    # ------------------------------------------------------------------
+    # Personalized (vector-ranked) discovery
+    # ------------------------------------------------------------------
+
+    DISC_RANK_PREFIX = "feed:disc_rank:"
+    DISC_RANK_TTL = int(os.environ.get('FEED_DISC_RANK_TTL', 1800))  # ranked-session lifetime
+    DISC_CANDIDATE_LIMIT = int(os.environ.get('FEED_DISC_CANDIDATE_LIMIT', 200))
+
+    def _build_personalized_discovery(
+        self,
+        user_id: int,
+        exclude_uids: List[int],
+        limit: int,
+    ) -> Optional[Tuple[List[Dict[str, Any]], bool, Optional[str]]]:
+        """
+        Build a fresh personalized ranking and return its first page.
+        Returns None to signal the caller to fall back to random discovery
+        (no interest vector, or no candidates).
+        """
+        try:
+            user_vec = get_user_interest_vector(user_id, self.db)
+        except Exception as e:
+            logger.warning(f"Interest vector failed for user {user_id}: {e}")
+            user_vec = None
+        if not user_vec:
+            return None
+
+        candidates = self._vector_post_search(
+            user_vec, exclude_uids, candidate_limit=self.DISC_CANDIDATE_LIMIT
+        )
+        if not candidates:
+            return None
+
+        ranked_ids = self._score_candidates(candidates)
+        if not ranked_ids:
+            return None
+
+        ranking_id = secrets.token_hex(8)
+        self._store_ranked_list(ranking_id, ranked_ids)
+        return self._serve_ranked_page(ranked_ids, ranking_id, 0, limit)
+
+    def _vector_post_search(
+        self,
+        user_vec: List[float],
+        exclude_uids: List[int],
+        candidate_limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        """pgvector cosine search over post embeddings, excluding the viewer's circle."""
+        try:
+            embedding_str = '[' + ','.join(map(str, user_vec)) + ']'
+            query = """
+            SELECT post_id, uid, created_at, likes, comments,
+                   1 - (embedding::vector <=> %s::vector) AS similarity
+            FROM post
+            WHERE (is_deleted IS NOT TRUE)
+                AND embedding IS NOT NULL
+                AND (uid IS NULL OR uid <> ALL(%s))
+            ORDER BY embedding::vector <=> %s::vector
+            LIMIT %s
+            """
+            params = (embedding_str, list(exclude_uids or []), embedding_str, candidate_limit)
+            db_raw = get_database()
+            rows = db_raw.fetch_all(query, params)
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Vector post search failed: {e}", exc_info=True)
+            return []
+
+    def _recency_score(self, created_at) -> float:
+        """Recency decay (mirrors recommendation_service tiers): newer → higher."""
+        if not created_at:
+            return 0.2
+        try:
+            if isinstance(created_at, str):
+                post_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            else:
+                post_date = created_at
+            now = datetime.now(post_date.tzinfo) if post_date.tzinfo else datetime.now()
+            age_days = (now - post_date).days
+        except (ValueError, AttributeError, TypeError):
+            return 0.2
+        if age_days <= 1:
+            return 1.0
+        if age_days <= 7:
+            return 0.8
+        if age_days <= 30:
+            return 0.6
+        if age_days <= 90:
+            return 0.4
+        return 0.2
+
+    def _score_candidates(self, candidates: List[Dict[str, Any]]) -> List[int]:
+        """
+        Composite re-rank of vector-search candidates. Discovery excludes the
+        viewer's circle, so the connection bonus does not apply here.
+            score = 0.6*similarity + 0.2*recency + 0.2*popularity
+        Returns post_ids ordered best-first.
+        """
+        if not candidates:
+            return []
+
+        pops = [
+            math.log1p((c.get('likes') or 0) + (c.get('comments') or 0))
+            for c in candidates
+        ]
+        max_pop = max(pops) if pops else 0.0
+
+        scored: List[Tuple[float, int]] = []
+        for c, pop in zip(candidates, pops):
+            similarity = float(c.get('similarity') or 0.0)
+            recency = self._recency_score(c.get('created_at'))
+            popularity = (pop / max_pop) if max_pop > 0 else 0.0
+            score = 0.6 * similarity + 0.2 * recency + 0.2 * popularity
+            scored.append((score, c['post_id']))
+
+        scored.sort(key=lambda x: (-x[0], -x[1]))
+        return [pid for _, pid in scored]
+
+    def _serve_ranked_page(
+        self,
+        ranked_ids: List[int],
+        ranking_id: str,
+        offset: int,
+        limit: int,
+    ) -> Tuple[List[Dict[str, Any]], bool, Optional[str]]:
+        """Return one page (offset..offset+limit) of a cached ranked post-id list."""
+        slice_ids = ranked_ids[offset:offset + limit]
+        posts = self._fetch_posts_by_ids_ordered(slice_ids)
+        has_more = (offset + limit) < len(ranked_ids)
+        next_cursor = (
+            self._build_disc_ranked_cursor(ranking_id, offset + limit) if has_more else None
+        )
+        return posts, has_more, next_cursor
+
+    def _fetch_posts_by_ids_ordered(self, post_ids: List[int]) -> List[Dict[str, Any]]:
+        """Fetch and format posts preserving the given id order; drops deleted/missing."""
+        if not post_ids:
+            return []
+        posts = (
+            self.db.query(Post)
+            .join(User, Post.uid == User.uid)
+            .outerjoin(Description, User.description_id == Description.desc_id)
+            .filter(Post.post_id.in_(post_ids), Post.not_deleted())
+            .all()
+        )
+        by_id = {p.post_id: p for p in posts}
+        ordered = [by_id[pid] for pid in post_ids if pid in by_id]
+        return self._format_post_rows(ordered)
+
+    def _store_ranked_list(self, ranking_id: str, post_ids: List[int]) -> None:
+        try:
+            set_cached(f"{self.DISC_RANK_PREFIX}{ranking_id}", post_ids, ttl=self.DISC_RANK_TTL)
+        except Exception as e:
+            logger.debug(f"Failed to store ranked discovery list {ranking_id}: {e}")
+
+    def _load_ranked_list(self, ranking_id: str) -> Optional[List[int]]:
+        try:
+            cached = get_cached(f"{self.DISC_RANK_PREFIX}{ranking_id}")
+            if cached is None:
+                return None
+            return [int(x) for x in cached]
+        except Exception as e:
+            logger.debug(f"Failed to load ranked discovery list {ranking_id}: {e}")
+            return None
     
     def _enrich_posts(self, posts: List[Dict], user_id: int) -> List[Dict[str, Any]]:
         """Enrich posts with like status and format for API response (optimized with batch query)"""
@@ -394,6 +598,14 @@ class FeedService:
             except ValueError:
                 logger.warning(f"Invalid conn cursor: {cursor}")
                 return 'conn', None, None
+        disc_ranked_offset = re.match(r'^disc:r([0-9a-f]+):o(\d+)$', cursor)
+        if disc_ranked_offset:
+            ranking_id, offset_str = disc_ranked_offset.groups()
+            try:
+                return 'disc', None, ('ranked', ranking_id, int(offset_str))
+            except ValueError:
+                logger.warning(f"Invalid ranked disc offset in cursor: {cursor}")
+                return 'disc', None, ('new', None, 0)
         disc_seed_offset = re.match(r'^disc:s([0-9a-f]+):o(\d+)$', cursor)
         if disc_seed_offset:
             seed, offset_str = disc_seed_offset.groups()
@@ -419,6 +631,9 @@ class FeedService:
     
     def _build_disc_cursor(self, seed: str, offset: int) -> str:
         return f"disc:s{seed}:o{offset}"
+
+    def _build_disc_ranked_cursor(self, ranking_id: str, offset: int) -> str:
+        return f"disc:r{ranking_id}:o{offset}"
     
     def _get_cache_key(self, user_id: int) -> str:
         """Get Redis cache key for user's feed"""

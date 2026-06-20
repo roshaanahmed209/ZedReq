@@ -34,6 +34,8 @@ class User(Base):
     auth_provider = Column(String(20), nullable=False, default='email', server_default='email')  # 'email' or 'google'
     profile_url = Column(Text)  # Profile URL in format: {API_URL}/profile/{username}-{hashed_user_id}
     last_login = Column(DateTime)
+    login_count = Column(Integer, nullable=False, default=0, server_default='0')  # successful logins (first-login detection)
+    synthetic_profile_views = Column(Integer, nullable=False, default=0, server_default='0')  # accumulating baseline added to real profile views
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

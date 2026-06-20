@@ -1,13 +1,46 @@
 """Profile Analytics Service - Track profile views and search appearances"""
+import os
+import random
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_
 from datetime import datetime, timedelta
 
-from models.orm import ProfileAnalytics
+from models.orm import ProfileAnalytics, User
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# Random profile-view increment added on each login from the 2nd login onward.
+# First login adds nothing, so a brand-new account shows 0 profile views.
+LOGIN_VIEW_BUMP_MIN = int(os.environ.get('LOGIN_VIEW_BUMP_MIN', 2))
+LOGIN_VIEW_BUMP_MAX = int(os.environ.get('LOGIN_VIEW_BUMP_MAX', 9))
+
+
+def apply_login_analytics_bump(db: Session, user: User) -> None:
+    """
+    Record a login and grow the user's synthetic profile-view baseline.
+
+    Must be called BEFORE `user.last_login` is overwritten for this login, since
+    first-login detection relies on the prior value. Mutates the user in the
+    caller's session; the caller is responsible for committing.
+
+    Behavior:
+    - First ever login (no prior last_login and login_count == 0): only bumps
+      login_count. synthetic_profile_views stays 0 → account shows 0 views.
+    - 2nd login onward: adds a fresh random increment to synthetic_profile_views
+      (persisted, so it accumulates and stays consistent across devices).
+    """
+    try:
+        is_first_login = (user.last_login is None) and not (user.login_count or 0)
+        user.login_count = (user.login_count or 0) + 1
+        if not is_first_login:
+            user.synthetic_profile_views = (user.synthetic_profile_views or 0) + random.randint(
+                LOGIN_VIEW_BUMP_MIN, LOGIN_VIEW_BUMP_MAX
+            )
+    except Exception as e:
+        # Analytics must never break login
+        logger.error(f"apply_login_analytics_bump failed for user {getattr(user, 'uid', '?')}: {e}", exc_info=True)
 
 
 class ProfileAnalyticsService:
@@ -163,8 +196,17 @@ class ProfileAnalyticsService:
             .scalar() or 0
         )
         
+        # Add the persisted synthetic baseline (0 until the user's 2nd login).
+        synthetic_views = 0
+        user = self.db.query(User).filter(User.uid == user_id).first()
+        if user:
+            synthetic_views = user.synthetic_profile_views or 0
+
+        total_views_combined = total_views + synthetic_views
+
         return {
-            'total_views': total_views,
+            'total_views': total_views_combined,
+            'profile_views': total_views_combined,  # alias for clients expecting this key
             'total_search_appearances': total_appearances,
             'views_by_source': {source: count for source, count in view_counts},
             'period_days': days

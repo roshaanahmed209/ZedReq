@@ -1,10 +1,18 @@
 """Post ORM Model"""
 from typing import TYPE_CHECKING
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index, or_
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Index, TypeDecorator, or_
+from sqlalchemy.orm import relationship, Mapped, deferred
 from sqlalchemy.sql import func
 
 from config.database_orm import Base
+
+
+# Custom type for pgvector - just passes through as text for ORM purposes
+class VectorType(TypeDecorator):
+    """Pass-through type for pgvector - actual vector operations use raw SQL"""
+    impl = Text
+    cache_ok = True
+
 
 if TYPE_CHECKING:
     from .user import User
@@ -30,7 +38,12 @@ class Post(Base):
     is_deleted = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, server_default=func.now(), index=True)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
+
+    # Embedding (pgvector) - deferred to avoid loading in regular queries.
+    # Managed via raw SQL, not through SQLAlchemy ORM. VectorType is a text
+    # pass-through; actual vector operations use raw SQL (see utils/post_embeddings.py).
+    embedding = deferred(Column('embedding', VectorType, nullable=True))
+
     # Relationships
     user: Mapped["User"] = relationship(
         "User",

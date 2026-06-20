@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from models.orm import User
 from services.user_service import UserService
+from services.profile_analytics_service import apply_login_analytics_bump
 from config.settings import settings
 from utils.logger import setup_logger
 from utils.errors import GoogleSignInNoAccountError
@@ -282,10 +283,12 @@ class AuthService:
                 "message": "Please enter your 2FA code to complete login"
             }
         
+        # Record login + grow synthetic profile-view baseline (before overwriting last_login)
+        apply_login_analytics_bump(self.db, user)
         # Update last login using ORM
         user.last_login = datetime.utcnow()
         self.db.commit()
-        
+
         # Format user for token creation
         user_dict = {
             "id": user.uid,
@@ -296,7 +299,7 @@ class AuthService:
             "name": user.name,
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
-        
+
         # Return tokens
         return self._create_tokens(user_dict)
     
@@ -346,6 +349,8 @@ class AuthService:
             if not two_factor_service.verify_code(int(user_id), code):
                 raise ValueError("Invalid 2FA code")
             
+            # Record login + grow synthetic profile-view baseline (before overwriting last_login)
+            apply_login_analytics_bump(self.db, user)
             # Update last login
             user.last_login = datetime.utcnow()
             self.db.commit()
@@ -548,6 +553,8 @@ class AuthService:
             
             if user:
                 # User exists, update last login and return tokens
+                # Record login + grow synthetic profile-view baseline (before overwriting last_login)
+                apply_login_analytics_bump(self.db, user)
                 user.last_login = datetime.utcnow()
                 if google_picture and not user.profile_url:
                     user.profile_url = google_picture
@@ -599,6 +606,7 @@ class AuthService:
                     email_verified=True,  # Google emails are verified
                     profile_url=google_picture,
                     last_login=datetime.utcnow(),
+                    login_count=1,  # signup == first login; synthetic_profile_views stays 0
                     auth_provider='google',
                 )
                 

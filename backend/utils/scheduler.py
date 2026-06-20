@@ -7,6 +7,7 @@ import os
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
 
 from agents.Vec_agent import get_vec_agent
@@ -110,7 +111,27 @@ def start_scheduler():
             max_instances=1  # Prevent overlapping runs
         )
         logger.info(f"Job embedding backfill job added (interval: {backfill_interval_hours} hours)")
-    
+
+    # Add post embedding backfill job (nightly batch that powers the personalized feed).
+    # Runs at a fixed off-peak hour (CronTrigger) rather than an interval-from-startup,
+    # so the embedding work never lands during peak request traffic. It already runs on
+    # a background scheduler thread and the work is I/O-bound (OpenAI), so it does not
+    # block request handlers; the cron hour + max_instances keep it isolated from traffic.
+    post_backfill_enabled = os.environ.get('POST_EMBEDDING_BACKFILL_ENABLED', 'true').lower() == 'true'
+    if post_backfill_enabled:
+        post_backfill_hour = int(os.environ.get('POST_EMBEDDING_BACKFILL_HOUR', 3))  # 03:00 by default
+        _scheduler.add_job(
+            func=run_post_embedding_backfill,
+            trigger=CronTrigger(hour=post_backfill_hour, minute=0),
+            id='post_embedding_backfill_job',
+            name='Post Embedding Backfill',
+            replace_existing=True,
+            max_instances=1,        # Prevent overlapping runs
+            coalesce=True,          # Collapse missed runs into one
+            misfire_grace_time=3600  # Tolerate up to 1h scheduler delay
+        )
+        logger.info(f"Post embedding backfill job added (daily at {post_backfill_hour:02d}:00, off-peak)")
+
     _scheduler.start()
     logger.info(f"Vec agent scheduler started (interval: {interval_hours} hours)")
     
@@ -176,6 +197,24 @@ def run_job_embedding_backfill():
         
     except Exception as e:
         logger.error(f"Error in scheduled job embedding backfill: {e}", exc_info=True)
+
+
+def run_post_embedding_backfill():
+    """Function to backfill post embeddings for posts missing embeddings (powers the personalized feed)."""
+    try:
+        logger.info("Running scheduled post embedding backfill...")
+
+        # Import here to avoid circular dependencies
+        from scripts.backfill_post_embeddings import backfill_post_embeddings
+
+        result = backfill_post_embeddings(dry_run=False)
+        logger.info(
+            f"Post embedding backfill completed: {result.get('processed', 0)} processed, "
+            f"{result.get('successful', 0)} successful, {result.get('failed', 0)} failed"
+        )
+
+    except Exception as e:
+        logger.error(f"Error in scheduled post embedding backfill: {e}", exc_info=True)
 
 
 def run_firebase_purge_retries():
