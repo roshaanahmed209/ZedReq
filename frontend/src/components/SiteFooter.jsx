@@ -24,7 +24,7 @@ export default function SiteFooter() {
         <div className="footer-section scroll-reveal">
           <h4>Resources</h4>
           <ul>
-            <li><a href={sitePath('/blog')}>Blog</a></li>
+            <li><a href={sitePath('/blogs')}>Blog</a></li>
             <li><a href={sitePath('/help')}>Help Center</a></li>
             <li><a href={sitePath('/privacy')}>Privacy Policy</a></li>
           </ul>

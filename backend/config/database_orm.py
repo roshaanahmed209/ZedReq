@@ -106,4 +106,5 @@ def init_orm_tables():
     import models.orm.deleted_user_archive  # noqa: F401
     import models.orm.post_comment  # noqa: F401
     import models.orm.contact_submission  # noqa: F401
+    import models.orm.blog_post  # noqa: F401
     Base.metadata.create_all(bind=engine)

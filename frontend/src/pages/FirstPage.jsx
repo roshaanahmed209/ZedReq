@@ -954,7 +954,7 @@ export default function FirstPage() {
                 { label: 'Product',   href: '#product' },
                 { label: 'Pricing',   href: '/pricing' },
                 { label: 'About',     href: '/about' },
-                { label: 'Blog',      href: '/blog' },
+                { label: 'Blog',      href: '/blogs' },
                 { label: 'Careers',   href: '/careers' },
                 { label: 'Privacy',   href: '/privacy' },
                 { label: 'Terms',     href: '/terms' },

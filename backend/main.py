@@ -46,6 +46,7 @@ from routers import (
 from routers.reserved_seats import router as reserved_seats_router
 from routers.monitoring import router as monitoring_router
 from routers.prelaunch_public import router as prelaunch_public_router
+from routers.blog_public import router as blog_public_router
 from routers.paddle_webhook import router as paddle_billing_router
 from routers.system_purge import router as system_purge_router
 from routers.contact_submissions import router as contact_submissions_router
@@ -494,6 +495,7 @@ app.include_router(context_router, prefix="/api/context", tags=["Context"])
 app.include_router(reserved_seats_router)
 app.include_router(monitoring_router)
 app.include_router(prelaunch_public_router, prefix="/api")
+app.include_router(blog_public_router, prefix="/api")
 app.include_router(paddle_billing_router, prefix="/api")
 app.include_router(system_purge_router, prefix="/api/system")
 app.include_router(contact_submissions_router, prefix="/api/contact", tags=["Contact"])

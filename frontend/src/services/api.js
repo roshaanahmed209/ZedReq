@@ -17,6 +17,13 @@ const api = axios.create({
 export const fetchPublicPrelaunchNotice = () =>
   api.get('/api/public/prelaunch-notice')
 
+/** Public (no auth) — published blog posts for marketing site. */
+export const fetchPublicBlogPosts = (params) =>
+  api.get('/api/public/blog-posts', { params })
+
+export const fetchPublicBlogPost = (slug) =>
+  api.get(`/api/public/blog-posts/${encodeURIComponent(slug)}`)
+
 // Token management functions
 export const tokenService = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),

@@ -24,7 +24,8 @@ import PricingPublic from './pages/PricingPublic'
 import About from './pages/About'
 import Careers from './pages/Careers'
 import Contact from './pages/Contact'
-import Blog from './pages/Blog'
+import Blogs from './pages/Blogs'
+import BlogPost from './pages/BlogPost'
 import HelpCenter from './pages/HelpCenter'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
@@ -83,7 +84,9 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/careers" element={<Careers />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/blog" element={<Blog />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/:slug" element={<BlogPost />} />
+          <Route path="/blog" element={<Navigate to="/blogs" replace />} />
           <Route path="/help" element={<HelpCenter />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
