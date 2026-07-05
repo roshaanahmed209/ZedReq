@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import SiteFooter from '../components/SiteFooter'
+import MarketingShell from '../components/MarketingShell'
 import TiltedCard from '../components/TiltedCard'
 import { ZEDREQ_EMAIL, zedreqMailto } from '../config/contact'
 import roshaanImg from '../../static/roshaan.png'
@@ -151,18 +151,8 @@ export default function About() {
   const [founderRef, founderOn] = useInView(0.1)
 
   return (
-    <div className="ap">
-
-      {/* ── nav ── */}
-      <header className="ap-nav">
-        <Link to="/"           className="ap-nav-logo">ZedReq</Link>
-        <nav className="ap-nav-links" aria-label="Primary">
-          <Link to="/">Home</Link>
-          <Link to="/features">Features</Link>
-          <Link to="/pricing">Pricing</Link>
-          <Link to="/login" className="ap-nav-cta">Log in</Link>
-        </nav>
-      </header>
+    <MarketingShell className="ap-shell" mainClassName="ap-main" showVeil>
+      <div className="ap">
 
       {/* ── hero ── */}
       <section className="ap-hero" aria-label="Hero">
@@ -358,7 +348,7 @@ export default function About() {
         </div>
       </section>
 
-      <SiteFooter />
-    </div>
+      </div>
+    </MarketingShell>
   )
 }

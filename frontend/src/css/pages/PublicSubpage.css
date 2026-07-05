@@ -1,82 +1,83 @@
-.public-subpage {
+/* Public marketing subpages — FirstPage editorial theme */
+
+.marketing-subpage {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #0a0a0f;
-  color: rgba(255, 255, 255, 0.88);
+  background: var(--fp-canvas);
+  color: var(--fp-text);
 }
 
-.public-subpage-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(10, 10, 15, 0.92);
-  backdrop-filter: blur(12px);
+.marketing-subpage__main {
+  position: relative;
+  flex: 1;
+  padding-top: 3.5rem;
 }
 
-.public-subpage-logo {
-  font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: 0.02em;
-  color: #fff;
-  text-decoration: none;
+.marketing-subpage__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.28;
 }
 
-.public-subpage-logo:hover {
-  color: #a78bfa;
+.marketing-subpage__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, var(--section-y)) var(--pad-x) clamp(4rem, 10vw, 6rem);
 }
 
-.public-subpage-nav {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.public-subpage-nav a {
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  font-size: 0.9375rem;
-}
-
-.public-subpage-nav a:hover {
-  color: #fff;
+.marketing-subpage__prefooter {
+  position: relative;
+  z-index: 1;
 }
 
 .public-subpage-main {
-  flex: 1;
   width: 100%;
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 3rem;
 }
 
-.public-subpage-prefooter {
-  width: 100%;
-  flex-shrink: 0;
+.public-subpage-hero {
+  margin-bottom: clamp(2rem, 5vw, 3rem);
+  padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--fp-line);
+}
+
+.public-subpage-eyebrow {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .public-subpage-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0 0 1.5rem;
-  color: #fff;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(2rem, 5.5vw, 3.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: var(--fp-text);
 }
 
 .public-subpage-prose {
-  line-height: 1.65;
-  color: rgba(255, 255, 255, 0.78);
+  max-width: 44rem;
+  line-height: 1.7;
+  color: var(--fp-text-muted);
+  font-family: var(--font-body);
 }
 
 .public-subpage-prose h2 {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
-  margin: 2.25rem 0 0.65rem;
-  color: #fff;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 2.5rem 0 0.75rem;
+  color: var(--fp-text);
 }
 
 .public-subpage-prose h2:first-child {
@@ -86,89 +87,97 @@
 .public-subpage-prose h3 {
   font-size: 1rem;
   font-weight: 600;
-  margin: 1.35rem 0 0.5rem;
-  color: rgba(255, 255, 255, 0.95);
+  margin: 1.5rem 0 0.5rem;
+  color: var(--fp-text);
 }
 
 .public-subpage-prose p {
   margin: 0 0 1rem;
 }
 
-.public-subpage-prose ul {
+.public-subpage-prose ul,
+.public-subpage-prose ol {
   margin: 0 0 1rem;
   padding-left: 1.25rem;
 }
 
+.public-subpage-prose li {
+  margin-bottom: 0.35rem;
+}
+
 .public-subpage-prose a {
-  color: #a78bfa;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .public-subpage-prose a:hover {
+  color: var(--accent-h);
   text-decoration: underline;
 }
 
 .public-subpage-cta {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 .public-subpage-cta a {
   display: inline-block;
-  padding: 0.65rem 1.25rem;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #7c3aed, #5b21b6);
-  color: #fff !important;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--white) !important;
   text-decoration: none !important;
+  font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .public-subpage-cta a:hover {
-  opacity: 0.95;
+  background: var(--fp-btn-primary-hover-bg);
+  color: var(--fp-btn-primary-hover-fg) !important;
 }
 
 .public-subpage-inline-links a {
-  color: #a78bfa;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 600;
 }
 
 .public-subpage-inline-links a:hover {
+  color: var(--accent-h);
   text-decoration: underline;
 }
 
-/* Legal docs: reuse shared legal modal typography (GetStarted.css) on full pages */
 .public-subpage-main .public-legal-article.get-started-modal-body {
   max-height: none;
+  max-width: 44rem;
   padding: 0;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--fp-text-muted);
 }
 
-/* About page */
 .public-subpage-main.about-page-main {
-  max-width: 48rem;
+  max-width: none;
 }
 
 .about-founder-card {
   margin: 1rem 0 1.25rem;
-  padding: 1.25rem 1.35rem;
-  border-radius: 12px;
-  border: 1px solid rgba(167, 139, 250, 0.25);
-  background: linear-gradient(
-    145deg,
-    rgba(124, 58, 237, 0.12),
-    rgba(10, 10, 15, 0.6)
-  );
+  padding: 1.35rem 1.5rem;
+  border: 1px solid var(--fp-line);
+  background: var(--fp-surface-raised);
 }
 
 .about-founder-name {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--fp-text);
   margin: 0 0 0.35rem !important;
 }
 
 .about-founder-role {
   font-size: 0.9375rem;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--fp-text-muted);
   margin: 0 0 1rem !important;
   line-height: 1.5;
 }
@@ -187,10 +196,16 @@
 }
 
 .about-pill-row li {
-  font-size: 0.8125rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--fp-line);
+  color: var(--fp-text-muted);
+}
+
+@media (max-width: 768px) {
+  .marketing-subpage__content {
+    padding-top: 2.5rem;
+  }
 }

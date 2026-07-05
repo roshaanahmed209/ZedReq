@@ -1,25 +1,27 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import SiteFooter from './SiteFooter'
+import MarketingShell from './MarketingShell'
 import '../css/pages/PublicSubpage.css'
 
-export default function PublicSubpageLayout({ title, children, mainClassName = '', preFooter = null }) {
+export default function PublicSubpageLayout({
+  title,
+  children,
+  mainClassName = '',
+  preFooter = null,
+  eyebrow = 'ZedReq',
+}) {
   const mainClass = ['public-subpage-main', mainClassName].filter(Boolean).join(' ')
+
   return (
-    <div className="public-subpage">
-      <header className="public-subpage-header">
-        <Link to="/" className="public-subpage-logo">ZedReq</Link>
-        <nav className="public-subpage-nav">
-          <Link to="/">Home</Link>
-          <Link to="/login">Log in</Link>
-        </nav>
-      </header>
-      <main className={mainClass}>
-        {title ? <h1 className="public-subpage-title">{title}</h1> : null}
+    <MarketingShell mainClassName={mainClass} preFooter={preFooter}>
+      <div className="marketing-subpage__content">
+        {title ? (
+          <header className="public-subpage-hero">
+            {eyebrow ? <p className="public-subpage-eyebrow">{eyebrow}</p> : null}
+            <h1 className="public-subpage-title">{title}</h1>
+          </header>
+        ) : null}
         {children}
-      </main>
-      {preFooter ? <div className="public-subpage-prefooter">{preFooter}</div> : null}
-      <SiteFooter />
-    </div>
+      </div>
+    </MarketingShell>
   )
 }

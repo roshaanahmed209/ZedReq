@@ -1,36 +1,30 @@
 ﻿/* ═══════════════════════════════════════════════════════
-   About.css — ZedReq luxury editorial about page
-   Triadic palette (120° apart, maximum contrast):
-     violet  #8b5cf6  — brand, CTAs, card borders
-     emerald #10b981  — accents, labels, dividers
-     amber   #f59e0b  — warmth, hero underline, quote
+   About.css — ZedReq editorial (FirstPage theme)
+   Black canvas, Instrument Sans, teal accent #1585A1
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --ap-bg:     #07070e;
-  --ap-bg-mid: #0b0b16;
-  --ap-bg-alt: #0e0e1c;
-  --ap-text:   #f0f0f2;
-  --ap-muted:  #5c5c72;
-  --ap-dim:    #38384c;
-  --ap-line:   rgba(255, 255, 255, 0.07);
-  --ap-max:    1140px;
-  --ap-pad:    clamp(1.5rem, 5vw, 4rem);
+  --ap-bg:     var(--fp-canvas, #000000);
+  --ap-bg-mid: var(--fp-surface-raised, #0d0d0d);
+  --ap-bg-alt: var(--fp-surface, #000000);
+  --ap-text:   var(--fp-text, #ffffff);
+  --ap-muted:  var(--fp-text-muted, #999999);
+  --ap-dim:    var(--fp-text-subtle, #787878);
+  --ap-line:   var(--fp-line, #333333);
+  --ap-max:    var(--max-w, 1200px);
+  --ap-pad:    var(--pad-x, clamp(1.5rem, 5vw, 4rem));
 
-  /* ── The 3 accent colors ── */
-  --vi:    #8b5cf6;   /* violet  */
-  --em:    #10b981;   /* emerald */
-  --am:    #f59e0b;   /* amber   */
+  --vi:    var(--accent, #1585A1);
+  --em:    var(--accent, #1585A1);
+  --am:    var(--accent, #1585A1);
 
-  /* ── Accent solids (used for dividers, marks, pills) ── */
-  --c-gold:  #c8922a;
-  --c-blue:  #1585A1;
-  --c-green: #3adb7a;
+  --c-gold:  var(--accent, #1585A1);
+  --c-blue:  var(--accent, #1585A1);
+  --c-green: var(--accent-h, #1a9bb8);
 
-  /* Card surface — frosted glass base */
-  --card-bg:     rgba(255, 255, 255, 0.028);
-  --card-border: rgba(255, 255, 255, 0.07);
-  --card-shine:  rgba(255, 255, 255, 0.06);
+  --card-bg:     var(--fp-surface-raised, #0d0d0d);
+  --card-border: var(--fp-line, #333333);
+  --card-shine:  rgba(255, 255, 255, 0.04);
 }
 
 /* ── keyframes ── */
@@ -53,23 +47,20 @@
 
 /* ── base ── */
 .ap {
-  /*
-    Three deep "light-pool" radials layered over the near-black base:
-      golden     #c8922a  — top-left corner, warm sunrise bleed
-      dark-teal  #1585A1  — right side, cool depth
-      light-green #3adb7a — bottom-left, grounding glow
-    Each pool is very large (60-80 vw) but extremely dim (≤ 12% opacity)
-    so the dark luxury feel is preserved while the page breathes with colour.
-  */
-  background-color: #07070e;
-  background-image:
-    radial-gradient(ellipse 80vw 70vh at 0% 0%,   rgba(200, 146, 42,  0.10) 0%, transparent 65%),
-    radial-gradient(ellipse 65vw 80vh at 100% 40%, rgba(21, 133, 161,  0.11) 0%, transparent 60%),
-    radial-gradient(ellipse 70vw 60vh at 15% 100%, rgba(58,  219, 122, 0.09) 0%, transparent 60%);
+  background-color: transparent;
+  background-image: none;
   color: var(--ap-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+}
+
+.ap-shell .ap-main {
+  padding-top: 0;
+}
+
+.ap-shell .marketing-subpage__veil {
+  opacity: 0.22;
 }
 .ap-rule      { height: 1px; background: var(--ap-line); }
 .ap-rule-full { margin: 0; }
@@ -168,7 +159,7 @@
   right: 0;
   height: 2px;
   border-radius: 2px;
-  background: #c8922a;
+  background: var(--accent);
   transform-origin: left;
   animation: ap-draw-line 0.9s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -181,7 +172,7 @@
 .ap-hero-desc {
   font-size: 1.0625rem;
   line-height: 1.74;
-  color: rgba(240, 240, 242, 0.68);
+  color: var(--ap-muted);
   margin: 0;
 }
 .ap-hero-aside {
@@ -351,7 +342,7 @@
 .ap-row-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: rgba(240, 240, 242, 0.82);
+  color: var(--ap-text);
   flex: 1;
   letter-spacing: -0.01em;
   transition: color .2s;
@@ -488,7 +479,7 @@
 .ap-tl-txt {
   font-size: 0.9375rem;
   line-height: 1.66;
-  color: rgba(240, 240, 242, 0.68);
+  color: var(--ap-muted);
   margin: 0;
 }
 
@@ -591,10 +582,10 @@
 .ap-founder-bio {
   font-size: 0.9375rem;
   line-height: 1.74;
-  color: rgba(240, 240, 242, 0.66);
+  color: var(--ap-muted);
   margin: 0 0 1rem;
 }
-.ap-founder-bio strong { color: rgba(240, 240, 242, 0.9); font-weight: 600; }
+.ap-founder-bio strong { color: var(--ap-text); font-weight: 600; }
 
 /* violet-bordered skill pills */
 .ap-founder-pills {
@@ -614,12 +605,12 @@
   border-radius: 5px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(240, 240, 242, 0.65);
+  color: var(--ap-muted);
   transition: border-color .2s, color .2s;
 }
 .ap-founder-pills li:hover {
   border-color: rgba(200, 146, 42, 0.4);
-  color: rgba(240, 240, 242, 0.9);
+  color: var(--ap-text);
 }
 
 /* project cards */
@@ -718,21 +709,21 @@
 .ap-cta-btn {
   display: inline-block;
   padding: 0.85rem 1.85rem;
-  border-radius: 8px;
-  background: #c8922a;
-  color: #07070e;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--white, #fff);
   text-decoration: none;
-  font-weight: 800;
-  font-size: 0.9375rem;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
-  box-shadow: 0 6px 22px rgba(200, 146, 42, 0.3);
-  transition: background .2s, transform .2s, box-shadow .2s;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
 }
 .ap-cta-btn:hover {
-  background: #daa43a;
+  background: var(--fp-btn-primary-hover-bg, #fff);
+  color: var(--fp-btn-primary-hover-fg, #000);
   transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(200, 146, 42, 0.45);
 }
 .ap-cta-email {
   font-size: 0.8125rem;

@@ -4,13 +4,9 @@
  */
 
 .pricing-section {
-  background: radial-gradient(
-      ellipse 50% 35% at 50% 30%,
-      rgba(0, 180, 216, 0.06) 0%,
-      transparent 70%
-    ),
-    linear-gradient(180deg, #0d0d0d 0%, #0e0e13 50%, #0d0d0d 100%);
-  padding: clamp(3rem, 8vw, 6.25rem) clamp(1rem, 4vw, 1.25rem);
+  background: var(--fp-canvas, #000);
+  border-top: 1px solid var(--fp-line, #333);
+  padding: clamp(3rem, 8vw, 6.25rem) var(--pad-x, clamp(1rem, 4vw, 1.25rem));
   position: relative;
   overflow: hidden;
 }
@@ -38,14 +34,14 @@
   text-align: center;
   margin: 0 auto 1rem;
   max-width: 52rem;
-  color: #fff;
+  color: var(--fp-text, #fff);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .pricing-subtitle {
   text-align: center;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--fp-text-muted, rgba(255, 255, 255, 0.55));
   font-size: clamp(0.95rem, 2vw, 1.15rem);
   font-weight: 400;
   line-height: 1.65;
