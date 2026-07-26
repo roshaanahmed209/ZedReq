@@ -574,7 +574,9 @@ class VecAgent:
         
         Args:
             limit: Maximum number of jobs to index (None = all)
-            since: Only index jobs created/updated after this datetime
+            since: Only index jobs created/updated after this datetime.
+                   When set, upserts into the existing collection (no rebuild)
+                   so older jobs already in Qdrant are preserved for AI Mode search.
             
         Returns:
             Number of jobs indexed
@@ -583,9 +585,14 @@ class VecAgent:
             logger.warning("Qdrant or OpenAI not available, cannot index jobs")
             return 0
         
-        # Rebuild collection before indexing
+        # Full reindex may rebuild; incremental must NOT rebuild (would risk
+        # replacing the full corpus with only the last-24h slice if copy fails).
         collection_name = self.collections['jobs']
-        new_collection_name = self._rebuild_collection(collection_name)
+        new_collection_name = None
+        if since is None:
+            new_collection_name = self._rebuild_collection(collection_name)
+        else:
+            self._create_collection_if_not_exists(collection_name)
         target_collection = new_collection_name if new_collection_name else collection_name
         
         db = next(get_db())
@@ -610,7 +617,12 @@ class VecAgent:
                     (JobPosting.created_at >= since) | (JobPosting.updated_at >= since)
                 )
             total_count = count_query.scalar()
-            logger.info(f"Starting to index jobs (total: {total_count}, batch size: {self.batch_size})")
+            logger.info(
+                "Starting to index jobs (total: %s, batch size: %s, incremental=%s)",
+                total_count,
+                self.batch_size,
+                since is not None,
+            )
             
             offset = 0
             all_chunks = []  # Collect all chunks for batch embedding
@@ -733,6 +745,109 @@ class VecAgent:
                     logger.error(f"Failed to swap collections for jobs, keeping both collections")
         
         return indexed_count
+
+    @staticmethod
+    def _stable_point_id(key: str) -> int:
+        """Stable Qdrant point id (process-independent), unlike Python hash()."""
+        digest = hashlib.md5(key.encode("utf-8")).hexdigest()
+        return int(digest[:16], 16)
+
+    def _job_searchable_text(self, job: JobPosting) -> str:
+        text_parts = [
+            f"Title: {job.title or ''}",
+            f"Description: {job.description or ''}",
+            f"Company: {job.company_name or ''}",
+            f"Location: {job.location or ''}",
+            f"Skills Required: {job.skills_required or ''}",
+            f"Experience Level: {job.experience_level or ''}",
+            f"Job Type: {job.job_type or ''}",
+            f"Remote: {'Yes' if job.is_remote else 'No'}",
+        ]
+        return "\n".join(text_parts)
+
+    def upsert_job(self, job: JobPosting) -> bool:
+        """
+        Upsert a single active job into Qdrant so AI Mode can vector-search it
+        without waiting for the daily sync / panel pagination.
+        """
+        if not self.qdrant_available or not self.openai_available or not job:
+            return False
+        if (job.status or "active") != "active":
+            return self.remove_job(job.job_id)
+
+        try:
+            collection_name = self.collections["jobs"]
+            self._create_collection_if_not_exists(collection_name)
+            # Drop prior chunks for this job (stable or legacy hash ids)
+            self.remove_job(job.job_id)
+
+            chunks = self._chunk_text(self._job_searchable_text(job))
+            embeddings = self._get_embeddings_batch(chunks)
+            points = []
+            for chunk_idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                if not embedding:
+                    continue
+                point_id = self._stable_point_id(f"job_{job.job_id}_{chunk_idx}")
+                points.append(
+                    PointStruct(
+                        id=point_id,
+                        vector=embedding,
+                        payload={
+                            "entity_type": "job",
+                            "job_id": job.job_id,
+                            "chunk_index": chunk_idx,
+                            "total_chunks": len(chunks),
+                            "title": job.title or "",
+                            "description": job.description or "",
+                            "company_name": job.company_name or "",
+                            "location": job.location or "",
+                            "job_link": job.job_link or "",
+                            "skills_required": job.skills_required or "",
+                            "experience_level": job.experience_level or "",
+                            "job_type": job.job_type or "",
+                            "is_remote": job.is_remote,
+                            "salary_min": job.salary_min,
+                            "salary_max": job.salary_max,
+                            "status": job.status or "active",
+                            "created_at": job.created_at.isoformat() if job.created_at else None,
+                            "indexed_at": datetime.now().isoformat(),
+                        },
+                    )
+                )
+            if points:
+                self.qdrant_client.upsert(collection_name=collection_name, points=points)
+                logger.info("Upserted job %s into Qdrant (%s chunks)", job.job_id, len(points))
+            return True
+        except Exception as e:
+            logger.warning("Failed to upsert job %s into Qdrant: %s", getattr(job, "job_id", None), e)
+            return False
+
+    def remove_job(self, job_id: int) -> bool:
+        """Remove all Qdrant points for a job (by payload job_id)."""
+        if not self.qdrant_available or not self.qdrant_client or not job_id:
+            return False
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue, FilterSelector
+
+            collection_name = self.collections["jobs"]
+            self.qdrant_client.delete(
+                collection_name=collection_name,
+                points_selector=FilterSelector(
+                    filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="job_id",
+                                match=MatchValue(value=int(job_id)),
+                            )
+                        ]
+                    )
+                ),
+            )
+            logger.info("Removed job %s from Qdrant", job_id)
+            return True
+        except Exception as e:
+            logger.warning("Failed to remove job %s from Qdrant: %s", job_id, e)
+            return False
     
     def index_users(self, limit: Optional[int] = None, since: Optional[datetime] = None) -> int:
         """
@@ -749,9 +864,12 @@ class VecAgent:
             logger.warning("Qdrant or OpenAI not available, cannot index users")
             return 0
         
-        # Rebuild collection before indexing
         collection_name = self.collections['users']
-        new_collection_name = self._rebuild_collection(collection_name)
+        new_collection_name = None
+        if since is None:
+            new_collection_name = self._rebuild_collection(collection_name)
+        else:
+            self._create_collection_if_not_exists(collection_name)
         target_collection = new_collection_name if new_collection_name else collection_name
         
         db = next(get_db())
@@ -987,9 +1105,12 @@ class VecAgent:
             logger.warning("Qdrant or OpenAI not available, cannot index posts")
             return 0
         
-        # Rebuild collection before indexing
         collection_name = self.collections['posts']
-        new_collection_name = self._rebuild_collection(collection_name)
+        new_collection_name = None
+        if since is None:
+            new_collection_name = self._rebuild_collection(collection_name)
+        else:
+            self._create_collection_if_not_exists(collection_name)
         target_collection = new_collection_name if new_collection_name else collection_name
         
         db = next(get_db())
@@ -1125,7 +1246,9 @@ class VecAgent:
         Uses parallel processing to index jobs, users, and posts concurrently.
         
         Args:
-            force: If True, re-index all entities regardless of timestamps
+            force: If True, re-index all entities regardless of timestamps.
+                   Also auto-upgraded to full index when a collection is empty
+                   so AI Mode never searches a last-24h-only corpus.
             
         Returns:
             Dictionary with statistics: jobs_indexed, users_indexed, posts_indexed
@@ -1136,7 +1259,30 @@ class VecAgent:
         logger.info("Starting Vec Agent sync for all entities (parallel mode)")
         sync_start_time = time.time()
         
-        since = None if force else datetime.now() - timedelta(days=1)
+        # Per-entity since windows: empty collections always get a full index
+        def _collection_empty(key: str) -> bool:
+            try:
+                name = self.collections[key]
+                info = self.qdrant_client.get_collection(name)
+                count = getattr(info, "points_count", 0) or 0
+                return count == 0
+            except Exception:
+                return True
+
+        force_jobs = force or _collection_empty("jobs")
+        force_users = force or _collection_empty("users")
+        force_posts = force or _collection_empty("posts")
+
+        since_jobs = None if force_jobs else datetime.now() - timedelta(days=1)
+        since_users = None if force_users else datetime.now() - timedelta(days=1)
+        since_posts = None if force_posts else datetime.now() - timedelta(days=1)
+
+        if force_jobs and not force:
+            logger.info("Jobs Qdrant collection empty — running FULL job index (not last-24h)")
+        if force_users and not force:
+            logger.info("Users Qdrant collection empty — running FULL user index")
+        if force_posts and not force:
+            logger.info("Posts Qdrant collection empty — running FULL post index")
         
         # Get max workers from environment (default: 3 for the three entity types)
         max_workers = int(os.environ.get('VEC_SYNC_MAX_WORKERS', 3))
@@ -1153,9 +1299,9 @@ class VecAgent:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all three indexing tasks
             future_to_entity = {
-                executor.submit(self.index_jobs, None, since): 'jobs',
-                executor.submit(self.index_users, None, since): 'users',
-                executor.submit(self.index_posts, None, since): 'posts'
+                executor.submit(self.index_jobs, None, since_jobs): 'jobs',
+                executor.submit(self.index_users, None, since_users): 'users',
+                executor.submit(self.index_posts, None, since_posts): 'posts'
             }
             
             # Collect results as they complete
@@ -1180,7 +1326,8 @@ class VecAgent:
             'posts_indexed': results['posts_indexed'],
             'total_indexed': results['jobs_indexed'] + results['users_indexed'] + results['posts_indexed'],
             'total_time_seconds': round(total_time, 2),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'full_jobs_index': since_jobs is None,
         }
         
         if errors:

@@ -61,6 +61,16 @@ class JobService:
             logger.warning(f"Failed to generate embedding for job {job.job_id}: {e}")
             # Don't fail job creation if embedding fails
 
+        # Also index into Qdrant so AI Mode vector search sees this job immediately
+        try:
+            from agents.Vec_agent import get_vec_agent
+            get_vec_agent().upsert_job(job)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to upsert job %s into Qdrant for AI Mode: %s", job.job_id, e
+            )
+
         try:
             from services.job_cache import invalidate_job_lists_for_user, invalidate_job_lists_global
             invalidate_job_lists_for_user(poster_id)
@@ -333,6 +343,15 @@ class JobService:
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to regenerate embedding for job {job.job_id}: {e}")
                 # Don't fail job update if embedding fails
+
+            try:
+                from agents.Vec_agent import get_vec_agent
+                get_vec_agent().upsert_job(job)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to upsert updated job %s into Qdrant: %s", job.job_id, e
+                )
         
         return job
     
@@ -355,6 +374,13 @@ class JobService:
         job.status = 'closed'
         self.db.commit()
         self.db.refresh(job)
+
+        try:
+            from agents.Vec_agent import get_vec_agent
+            get_vec_agent().remove_job(job_id)
+        except Exception:
+            pass
+
         return job
     
     def delete_job(self, job_id: int, poster_id: int) -> bool:

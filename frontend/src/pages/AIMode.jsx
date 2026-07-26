@@ -1096,41 +1096,45 @@ const AIMode = () => {
     }
   }, [chatMessages, isThinking])
 
-  // Check Qdrant collections on page load and populate if empty
+  // Check Qdrant collections on page load — AI Mode searches ALL jobs via vectors,
+  // so empty/underfilled collections must get a FULL reindex (force=true), not last-24h.
   useEffect(() => {
     const checkAndPopulateData = async () => {
       try {
         setIsCheckingData(true)
         
-        // Get Vec agent status to check point counts
         const statusResponse = await vecAPI.getStatus()
         
         if (statusResponse.data && statusResponse.data.success) {
           const totalPoints = statusResponse.data.total_points || 0
           const pointCounts = statusResponse.data.point_counts || {}
+          const jobsKey = Object.keys(pointCounts).find((k) => k.includes('job')) 
+            || 'nemz_jobs'
+          const jobsPoints = pointCounts[jobsKey] ?? pointCounts['nemz_jobs'] ?? 0
           
-          // Check if all collections have 0 points
-          const allEmpty = Object.values(pointCounts).every(count => count === 0) && totalPoints === 0
+          const allEmpty = Object.values(pointCounts).every((count) => count === 0) && totalPoints === 0
+          const jobsEmpty = jobsPoints === 0
           
-          if (allEmpty) {
-            console.log('[AIMode] All Qdrant collections are empty. Triggering data population...')
-            
-            // Trigger sync in background (non-blocking)
+          if (allEmpty || jobsEmpty) {
+            console.log(
+              '[AIMode] Qdrant needs full index (allEmpty=%s, jobsPoints=%s). Triggering force sync…',
+              allEmpty,
+              jobsPoints
+            )
             try {
-              await vecAPI.syncBackground(false)
-              console.log('[AIMode] Data population triggered successfully')
+              // force=true indexes ALL active jobs/users/posts — not just last 24h
+              await vecAPI.syncBackground(true)
+              console.log('[AIMode] Full data population triggered successfully')
             } catch (syncError) {
               console.error('[AIMode] Failed to trigger data population:', syncError)
             }
           } else {
             console.log('[AIMode] Qdrant collections have data. Point counts:', pointCounts)
             console.log('[AIMode] Total points:', totalPoints)
-            console.log('[AIMode] 24-hour scheduler will handle future updates')
           }
         }
       } catch (error) {
         console.error('[AIMode] Error checking Vec agent status:', error)
-        // Don't block the UI if status check fails
       } finally {
         setIsCheckingData(false)
       }
