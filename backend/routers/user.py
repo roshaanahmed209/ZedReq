@@ -302,10 +302,10 @@ async def get_subscription(
             detail="User not found"
         )
     except Exception as e:
-        logger.error(f"Get subscription error: {e}")
+        logger.error(f"Get subscription error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get subscription information"
+            detail=f"Failed to get subscription information: {e}",
         )
 
 
@@ -351,10 +351,10 @@ async def update_subscription(
             detail=e.message
         )
     except Exception as e:
-        logger.error(f"Update subscription error: {e}")
+        logger.error(f"Update subscription error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update subscription"
+            detail=f"Failed to update subscription: {e}",
         )
 
 

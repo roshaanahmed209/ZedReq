@@ -35,8 +35,11 @@ const RequirePlanSelected = ({ children }) => {
           setRequiresSelection(Boolean(data?.requires_plan_selection))
         }
       } catch (e) {
+        // Only force choose-plan when the API clearly says selection is required.
+        // Hard 500s should not trap users who already have a plan in the DB.
+        const status = e?.response?.status
         if (!cancelled) {
-          setRequiresSelection(true)
+          setRequiresSelection(status === 403 || status === 402)
         }
       } finally {
         if (!cancelled) {

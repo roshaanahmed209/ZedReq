@@ -19,8 +19,6 @@ import cloudinary.utils
 
 from models.orm import User, Description, UsersContext, Payment
 from services.user_deletion_service import UserDeletionService
-from models.orm.subscription_plan import SubscriptionPlan
-from models.orm.user_subscription import UserSubscription
 from services.auth_service import hash_password, verify_password, validate_password_strength, validate_email
 from services.profile_service import ProfileService
 from utils.api_security import sanitize_text_for_storage, validate_url_safe, validate_request_timeout
@@ -965,53 +963,81 @@ class SettingsService:
         logger.info(f"2FA disabled for user {user_id}")
         return False
     
+    @staticmethod
+    def _dt_iso(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        s = str(value).strip()
+        return s or None
+
     def get_subscription_info(self, user_id: int) -> Dict[str, Any]:
         """
         Get user subscription information.
-        Reads from user_subscriptions (authoritative) with fallback to payment.
+
+        Uses narrow SQL (only needed columns) instead of full ORM User/Plan/Payment
+        hydrates — avoids 500s when unrelated columns (e.g. login_count) are missing.
         """
         try:
-            user = self.db.query(User).filter(User.uid == user_id).first()
-            if not user:
-                raise NotFoundError('User')
-            
-            # 1. Check user_subscriptions (authoritative source for quotas)
-            user_sub = (
-                self.db.query(UserSubscription)
-                .filter(UserSubscription.user_id == user_id, UserSubscription.status == 'active')
-                .first()
-            )
-            if user_sub and user_sub.plan:
+            exists = self.db.execute(
+                text("SELECT 1 FROM users WHERE uid = :uid LIMIT 1"),
+                {"uid": user_id},
+            ).first()
+            if not exists:
+                raise NotFoundError("User")
+
+            # 1. user_subscriptions + plan_name only (authoritative)
+            row = self.db.execute(
+                text(
+                    """
+                    SELECT us.status, us.started_at, us.expires_at, sp.plan_name
+                    FROM user_subscriptions us
+                    JOIN subscription_plans sp ON sp.plan_id = us.plan_id
+                    WHERE us.user_id = :uid AND us.status = 'active'
+                    LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).mappings().first()
+            if row and row.get("plan_name"):
                 return {
-                    'plan': str(user_sub.plan.plan_name),
-                    'status': str(user_sub.status or 'inactive'),
-                    'subscription_start': user_sub.started_at.isoformat() if user_sub.started_at else None,
-                    'subscription_end': user_sub.expires_at.isoformat() if user_sub.expires_at else None
+                    "plan": str(row["plan_name"]),
+                    "status": str(row.get("status") or "inactive"),
+                    "subscription_start": self._dt_iso(row.get("started_at")),
+                    "subscription_end": self._dt_iso(row.get("expires_at")),
                 }
-            
-            # 2. Fallback to payment table (for users not yet migrated)
-            if user.pay_id:
-                payment = (
-                    self.db.query(Payment)
-                    .filter(Payment.pay_id == user.pay_id)
-                    .first()
-                )
-                if payment and payment.subscription_plan:
-                    return {
-                        'plan': str(payment.subscription_plan),
-                        'status': str(payment.subscription_status) if payment.subscription_status else 'inactive',
-                        'subscription_start': payment.subscription_start.isoformat() if payment.subscription_start else None,
-                        'subscription_end': payment.subscription_end.isoformat() if payment.subscription_end else None
-                    }
-            
-            # Default to free plan
+
+            # 2. Fallback to payment (via users.pay_id or payment.uid)
+            pay = self.db.execute(
+                text(
+                    """
+                    SELECT p.subscription_plan, p.subscription_status,
+                           p.subscription_start, p.subscription_end
+                    FROM payment p
+                    LEFT JOIN users u ON u.pay_id = p.pay_id
+                    WHERE u.uid = :uid OR p.uid = :uid
+                    ORDER BY CASE WHEN u.uid IS NOT NULL THEN 0 ELSE 1 END, p.pay_id DESC
+                    LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).mappings().first()
+            if pay and pay.get("subscription_plan"):
+                return {
+                    "plan": str(pay["subscription_plan"]),
+                    "status": str(pay.get("subscription_status") or "inactive"),
+                    "subscription_start": self._dt_iso(pay.get("subscription_start")),
+                    "subscription_end": self._dt_iso(pay.get("subscription_end")),
+                }
+
             return {
-                'plan': 'free',
-                'status': 'inactive',
-                'subscription_start': None,
-                'subscription_end': None
+                "plan": "free",
+                "status": "inactive",
+                "subscription_start": None,
+                "subscription_end": None,
             }
-            
+
         except NotFoundError:
             raise
         except Exception as e:
@@ -1023,22 +1049,32 @@ class SettingsService:
         True until the user has a persisted plan signal (active subscription and/or payment row with a plan).
         """
         try:
-            user = self.db.query(User).filter(User.uid == user_id).first()
-            if not user:
-                return True
-            active_sub = (
-                self.db.query(UserSubscription)
-                .filter(UserSubscription.user_id == user_id, UserSubscription.status == 'active')
-                .first()
-            )
-            if active_sub:
+            active = self.db.execute(
+                text(
+                    """
+                    SELECT 1 FROM user_subscriptions
+                    WHERE user_id = :uid AND status = 'active'
+                    LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).first()
+            if active:
                 return False
-            if user.pay_id:
-                payment = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
-                if payment and payment.subscription_plan and str(payment.subscription_plan).strip():
-                    return False
-            payment_orphan = self.db.query(Payment).filter(Payment.uid == user_id).first()
-            if payment_orphan and payment_orphan.subscription_plan and str(payment_orphan.subscription_plan).strip():
+
+            pay = self.db.execute(
+                text(
+                    """
+                    SELECT p.subscription_plan
+                    FROM payment p
+                    LEFT JOIN users u ON u.pay_id = p.pay_id
+                    WHERE u.uid = :uid OR p.uid = :uid
+                    LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).mappings().first()
+            if pay and pay.get("subscription_plan") and str(pay["subscription_plan"]).strip():
                 return False
             return True
         except Exception as e:
@@ -1048,15 +1084,26 @@ class SettingsService:
     def get_subscription_info_with_flags(self, user_id: int) -> Dict[str, Any]:
         """Subscription dict plus requires_plan_selection for API responses."""
         info = self.get_subscription_info(user_id)
-        info['requires_plan_selection'] = self.requires_plan_selection(user_id)
-        user = self.db.query(User).filter(User.uid == user_id).first()
-        if user:
-            if user.pay_id:
-                pay = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
-            else:
-                pay = self.db.query(Payment).filter(Payment.uid == user_id).first()
-            if pay:
-                info['paddle_subscription_id'] = pay.paddle_subscription_id
+        info["requires_plan_selection"] = self.requires_plan_selection(user_id)
+        try:
+            pay = self.db.execute(
+                text(
+                    """
+                    SELECT p.paddle_subscription_id
+                    FROM payment p
+                    LEFT JOIN users u ON u.pay_id = p.pay_id
+                    WHERE u.uid = :uid OR p.uid = :uid
+                    ORDER BY CASE WHEN u.uid IS NOT NULL THEN 0 ELSE 1 END, p.pay_id DESC
+                    LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).mappings().first()
+            if pay and pay.get("paddle_subscription_id"):
+                info["paddle_subscription_id"] = pay["paddle_subscription_id"]
+        except Exception as e:
+            # Column may be absent on older DBs — subscription read must still succeed
+            logger.warning("paddle_subscription_id read skipped: %s", e)
         return info
 
     def update_subscription(
@@ -1067,90 +1114,170 @@ class SettingsService:
     ) -> Dict[str, Any]:
         """
         Update user subscription plan (payment-first flow).
-        
-        Write order (payment is source of truth):
-        1. Look up plan_id from subscription_plans.
-        2. UPSERT payment FIRST (plan, billing subscription status).
-        3. UPSERT user_subscriptions (entitlement; always active for self-serve tiers).
-        4. SET payment.subscription_id FK link.
-        
-        Free tier: payment.subscription_status stays inactive (no paid sub);
-        user_subscriptions.status is active so quota/API reads match the chosen plan.
-        
-        Enterprise plan cannot be self-assigned — admin only.
+
+        Uses narrow SQL for reads/writes so Free selection does not depend on
+        hydrating full ORM User/Payment rows (schema-drift safe).
         """
         try:
-            if plan not in ['free', 'pro', 'premium']:
-                raise ValidationError('Invalid subscription plan. Enterprise is admin-only.')
+            if plan not in ["free", "pro", "premium"]:
+                raise ValidationError("Invalid subscription plan. Enterprise is admin-only.")
 
-            if plan in ('pro', 'premium'):
+            if plan in ("pro", "premium"):
                 raise ValidationError(
-                    'Paid plans are managed through Paddle. Use checkout to subscribe, or '
-                    'POST /api/user/subscription/change-plan if you already have an active subscription.'
+                    "Paid plans are managed through Paddle. Use checkout to subscribe, or "
+                    "POST /api/user/subscription/change-plan if you already have an active subscription."
                 )
 
-            user = self.db.query(User).filter(User.uid == user_id).first()
-            if not user:
-                raise NotFoundError('User')
-            
-            # Billing row: inactive for free (no recurring payment), active for paid tiers
-            payment_subscription_status = 'inactive' if plan == 'free' else 'active'
-            # Entitlement row: active whenever user has a self-serve plan (used by get_user_plan)
-            user_sub_status = 'active'
-            
-            # 1. Look up plan_id from subscription_plans
-            plan_obj = self.db.query(SubscriptionPlan).filter_by(plan_name=plan, is_active=True).first()
-            if not plan_obj:
+            user_row = self.db.execute(
+                text("SELECT uid, pay_id FROM users WHERE uid = :uid LIMIT 1"),
+                {"uid": user_id},
+            ).mappings().first()
+            if not user_row:
+                raise NotFoundError("User")
+
+            payment_subscription_status = "inactive" if plan == "free" else "active"
+            user_sub_status = "active"
+
+            plan_row = self.db.execute(
+                text(
+                    """
+                    SELECT plan_id FROM subscription_plans
+                    WHERE plan_name = :name AND is_active = TRUE
+                    LIMIT 1
+                    """
+                ),
+                {"name": plan},
+            ).mappings().first()
+            if not plan_row:
                 raise ValidationError(f"Plan '{plan}' not found. Ensure plans are seeded.")
-            
-            # 2. UPSERT payment FIRST (source of truth)
-            if user.pay_id:
-                payment = self.db.query(Payment).filter(Payment.pay_id == user.pay_id).first()
-            else:
-                payment = self.db.query(Payment).filter(Payment.uid == user_id).first()
-            
-            if payment:
-                payment.subscription_plan = plan
-                payment.subscription_status = payment_subscription_status
-            else:
-                payment = Payment(
-                    uid=user_id,
-                    subscription_plan=plan,
-                    subscription_status=payment_subscription_status,
-                )
-                self.db.add(payment)
-                self.db.flush()
-                user.pay_id = payment.pay_id
+            plan_id = int(plan_row["plan_id"])
 
-            be = (billing_email or "").strip()
-            if be:
-                payment.billing_email = be[:150]
-            
-            # 3. UPSERT user_subscriptions (synced from payment, used for quota reads)
-            user_sub = self.db.query(UserSubscription).filter_by(user_id=user_id).first()
-            if user_sub:
-                user_sub.plan_id = plan_obj.plan_id
-                user_sub.status = user_sub_status
-                user_sub.assigned_by = 'self'
-            else:
-                from datetime import datetime, timezone
-                user_sub = UserSubscription(
-                    user_id=user_id,
-                    plan_id=plan_obj.plan_id,
-                    status=user_sub_status,
-                    assigned_by='self',
-                    started_at=datetime.now(timezone.utc),
+            pay_id = user_row.get("pay_id")
+            payment = None
+            if pay_id:
+                payment = self.db.execute(
+                    text(
+                        """
+                        SELECT pay_id FROM payment
+                        WHERE pay_id = :pay_id LIMIT 1
+                        """
+                    ),
+                    {"pay_id": pay_id},
+                ).mappings().first()
+            if not payment:
+                payment = self.db.execute(
+                    text("SELECT pay_id FROM payment WHERE uid = :uid ORDER BY pay_id DESC LIMIT 1"),
+                    {"uid": user_id},
+                ).mappings().first()
+
+            be = (billing_email or "").strip()[:150] or None
+
+            if payment:
+                pay_id = int(payment["pay_id"])
+                self.db.execute(
+                    text(
+                        """
+                        UPDATE payment
+                        SET subscription_plan = :plan,
+                            subscription_status = :status,
+                            billing_email = COALESCE(:billing_email, billing_email),
+                            updated_at = NOW()
+                        WHERE pay_id = :pay_id
+                        """
+                    ),
+                    {
+                        "plan": plan,
+                        "status": payment_subscription_status,
+                        "billing_email": be,
+                        "pay_id": pay_id,
+                    },
                 )
-                self.db.add(user_sub)
-                self.db.flush()  # Get subscription_id
-            
-            # 4. SET payment.subscription_id FK link
-            payment.subscription_id = user_sub.subscription_id
-            
+            else:
+                inserted = self.db.execute(
+                    text(
+                        """
+                        INSERT INTO payment (uid, payment_provider, subscription_plan, subscription_status, billing_email)
+                        VALUES (:uid, 'stripe', :plan, :status, :billing_email)
+                        RETURNING pay_id
+                        """
+                    ),
+                    {
+                        "uid": user_id,
+                        "plan": plan,
+                        "status": payment_subscription_status,
+                        "billing_email": be,
+                    },
+                ).mappings().first()
+                pay_id = int(inserted["pay_id"])
+                self.db.execute(
+                    text("UPDATE users SET pay_id = :pay_id WHERE uid = :uid"),
+                    {"pay_id": pay_id, "uid": user_id},
+                )
+
+            existing_sub = self.db.execute(
+                text(
+                    """
+                    SELECT subscription_id FROM user_subscriptions
+                    WHERE user_id = :uid LIMIT 1
+                    """
+                ),
+                {"uid": user_id},
+            ).mappings().first()
+
+            if existing_sub:
+                subscription_id = int(existing_sub["subscription_id"])
+                self.db.execute(
+                    text(
+                        """
+                        UPDATE user_subscriptions
+                        SET plan_id = :plan_id,
+                            status = :status,
+                            assigned_by = 'self',
+                            updated_at = NOW()
+                        WHERE subscription_id = :sid
+                        """
+                    ),
+                    {
+                        "plan_id": plan_id,
+                        "status": user_sub_status,
+                        "sid": subscription_id,
+                    },
+                )
+            else:
+                inserted_sub = self.db.execute(
+                    text(
+                        """
+                        INSERT INTO user_subscriptions (user_id, plan_id, status, assigned_by, started_at)
+                        VALUES (:uid, :plan_id, :status, 'self', NOW())
+                        RETURNING subscription_id
+                        """
+                    ),
+                    {
+                        "uid": user_id,
+                        "plan_id": plan_id,
+                        "status": user_sub_status,
+                    },
+                ).mappings().first()
+                subscription_id = int(inserted_sub["subscription_id"])
+
+            self.db.execute(
+                text(
+                    """
+                    UPDATE payment
+                    SET subscription_id = :sid, updated_at = NOW()
+                    WHERE pay_id = :pay_id
+                    """
+                ),
+                {"sid": subscription_id, "pay_id": pay_id},
+            )
+
             self.db.commit()
-            
-            logger.info(f"Subscription updated to {plan} for user {user_id} (subscription_id={user_sub.subscription_id})")
-            
+            logger.info(
+                "Subscription updated to %s for user %s (subscription_id=%s)",
+                plan,
+                user_id,
+                subscription_id,
+            )
             return self.get_subscription_info_with_flags(user_id)
 
         except (NotFoundError, ValidationError):

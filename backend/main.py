@@ -218,6 +218,14 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] auth_provider column migration failed: {e}")
 
+    def _init_login_count_columns():
+        try:
+            from db.migrations.add_login_count_and_synthetic_views import run_migration
+            run_migration()
+            print("[OK] login_count + synthetic_profile_views columns ready")
+        except Exception as e:
+            print(f"[WARN] login_count migration failed: {e}")
+
     def _init_user_deletion_tables():
         try:
             from config.database import get_connection_params, Database
@@ -305,6 +313,7 @@ async def lifespan(app: FastAPI):
         ("azel_jobs", _init_azel_jobs_table),
         ("paddle_billing", _init_paddle_billing_columns),
         ("auth_provider_column", _init_auth_provider_column),
+        ("login_count_columns", _init_login_count_columns),
         ("user_deletion_tables", _init_user_deletion_tables),
         ("description_columns", _init_description_columns),
     ]:
