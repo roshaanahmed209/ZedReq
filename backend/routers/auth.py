@@ -20,6 +20,7 @@ from schemas.two_factor import (
     TwoFactorVerifySetup
 )
 from services.auth_service import AuthService
+from services.analytics_service import track_server_event, stitch_identity
 from services.two_factor_service import TwoFactorService
 from services.context_updater import ContextUpdater
 from services.lms_preloader import schedule_lms_preload
@@ -88,6 +89,91 @@ class _IpRateLimiter:
 _ip_limiter = _IpRateLimiter()
 
 
+def _anon_id(request: Request) -> str | None:
+    """
+    Read the caller's analytics anonymous id from the X-ZedReq-Anon-Id header.
+
+    Sent by the frontend SDK on auth calls so the conversion event emitted here can be
+    attributed to the same visitor who viewed the landing page before signing up.
+    Missing or malformed values are ignored - analytics never blocks authentication.
+    """
+    value = request.headers.get("x-zedreq-anon-id")
+    if not value:
+        return None
+    value = value.strip()
+    if 6 <= len(value) <= 64 and value.replace("-", "").replace("_", "").isalnum():
+        return value
+    return None
+
+
+def _is_new_account(result: dict) -> bool:
+    """
+    True when the authenticated account was created by this very request.
+
+    Used only for Google auth, where sign-in and sign-up share one endpoint and the
+    service does not report which happened. If the timestamp cannot be read the answer
+    is False - miscounting a signup as a login is the safer of the two errors, since
+    signup_succeeded is deduplicated per user anyway.
+    """
+    try:
+        from datetime import datetime as _dt, timedelta as _td
+
+        created = (result.get("user") or {}).get("created_at")
+        if not created:
+            return False
+        parsed = _dt.fromisoformat(str(created).replace("Z", ""))
+        return (_dt.utcnow() - parsed) < _td(seconds=60)
+    except Exception:
+        return False
+
+
+def _track_auth_success(event_name: str, result: dict, anonymous_id: str | None, method: str) -> None:
+    """
+    Emit the trusted post-auth events and stitch the visitor to their account.
+
+    Wrapped end to end: a failure in analytics must never turn a successful login or
+    signup into an error for the user.
+    """
+    try:
+        user = result.get("user") or {}
+        user_id = user.get("id") or user.get("uid")
+        if not user_id:
+            return
+
+        if anonymous_id:
+            stitch_identity(
+                anonymous_id,
+                user_id,
+                traits={
+                    "username": user.get("username"),
+                    "email": user.get("email") or user.get("user_email"),
+                    "name": user.get("name"),
+                },
+            )
+
+        track_server_event(
+            event_name,
+            user_id=user_id,
+            anonymous_id=anonymous_id,
+            properties={"authentication_method": method},
+        )
+        if event_name == "signup_succeeded":
+            track_server_event(
+                "user_registered",
+                user_id=user_id,
+                anonymous_id=anonymous_id,
+                properties={"signup_method": method},
+            )
+        elif event_name == "login_succeeded":
+            track_server_event(
+                "user_authenticated",
+                user_id=user_id,
+                anonymous_id=anonymous_id,
+                properties={"authentication_method": method},
+            )
+    except Exception as exc:
+        logger.debug("analytics: auth tracking failed: %s", exc)
+
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     """Dependency to get auth service with ORM session"""
     return AuthService(db)
@@ -101,8 +187,10 @@ async def register(
 ):
     """Register a new user"""
     _ip_limiter.check(request.client.host, "register", limit=5, window=600)
+    anonymous_id = _anon_id(request)
     try:
         result = auth_service.register(user_data.model_dump())
+        _track_auth_success("signup_succeeded", result, anonymous_id, "email")
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -126,6 +214,7 @@ async def login(
     dashboard is instant.
     """
     _ip_limiter.check(request.client.host, "login", limit=10, window=300)
+    anonymous_id = _anon_id(request)
     try:
         result = auth_service.login(credentials.username, credentials.password)
 
@@ -135,6 +224,8 @@ async def login(
             user_id = result.get("user", {}).get("id")
             if user_id:
                 background_tasks.add_task(schedule_lms_preload, user_id)
+            # Only a completed login counts; a pending 2FA challenge is not a success.
+            _track_auth_success("login_succeeded", result, anonymous_id, "password")
 
         return result
     except ValueError as e:
@@ -173,6 +264,7 @@ def get_two_factor_service(db: Session = Depends(get_db)) -> TwoFactorService:
 
 @router.post("/2fa/verify")
 async def verify_2fa_login(
+    request: Request,
     verify_data: TwoFactorVerify,
     background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service)
@@ -192,6 +284,8 @@ async def verify_2fa_login(
         user_id = result.get("user", {}).get("id")
         if user_id:
             background_tasks.add_task(schedule_lms_preload, user_id)
+
+        _track_auth_success("login_succeeded", result, _anon_id(request), "password_2fa")
 
         return result
     except ValueError as e:
@@ -218,6 +312,7 @@ class GoogleAuthRequest(BaseModel):
 
 @router.post("/google", response_model=TokenResponse)
 async def google_auth(
+    request: Request,
     google_data: GoogleAuthRequest,
     background_tasks: BackgroundTasks,
     auth_service: AuthService = Depends(get_auth_service)
@@ -236,6 +331,16 @@ async def google_auth(
         user_id = result.get("user", {}).get("id")
         if user_id:
             background_tasks.add_task(schedule_lms_preload, user_id)
+
+        # "signup" intent returns an existing account when there is one, so intent
+        # alone cannot tell a registration from a sign-in. The account age can:
+        # a row created moments ago is this request's own new user.
+        _track_auth_success(
+            "signup_succeeded" if _is_new_account(result) else "login_succeeded",
+            result,
+            _anon_id(request),
+            "google",
+        )
 
         return TokenResponse(**result)
     except GoogleSignInNoAccountError as e:

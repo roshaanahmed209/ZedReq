@@ -50,6 +50,7 @@ from routers.blog_public import router as blog_public_router
 from routers.paddle_webhook import router as paddle_billing_router
 from routers.system_purge import router as system_purge_router
 from routers.contact_submissions import router as contact_submissions_router
+from routers.analytics import router as analytics_router
 from middleware.monitoring_middleware import MonitoringMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.body_limit import BodySizeLimitMiddleware
@@ -401,7 +402,7 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "X-API-Key"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "X-API-Key", "X-ZedReq-Anon-Id"],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"],
     max_age=3600,
 )
@@ -508,6 +509,7 @@ app.include_router(blog_public_router, prefix="/api")
 app.include_router(paddle_billing_router, prefix="/api")
 app.include_router(system_purge_router, prefix="/api/system")
 app.include_router(contact_submissions_router, prefix="/api/contact", tags=["Contact"])
+app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"])
 
 
 # Get paths for static files

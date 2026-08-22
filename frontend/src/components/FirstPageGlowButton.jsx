@@ -1,4 +1,5 @@
 import '../css/components/FirstPageGlowButton.css'
+import { trackCTA } from '../utils/analytics'
 
 const SparkleIcon = () => (
   <svg
@@ -22,6 +23,11 @@ const SparkleIcon = () => (
 
 /**
  * First-page CTA button (Uiverse glow). Use only inside `.zedreq-root`.
+ *
+ * Pass `ctaId` to have the click tracked. Every marketing CTA in the product renders
+ * through this component, so instrumenting it here is what keeps `cta_clicked` a
+ * single event distinguished by properties, rather than a per-button event name
+ * duplicated across a dozen call sites.
  */
 export default function FirstPageGlowButton({
   children,
@@ -31,6 +37,9 @@ export default function FirstPageGlowButton({
   showIcon = false,
   disabled,
   onClick,
+  ctaId,
+  ctaLocation,
+  ctaPosition,
   ...rest
 }) {
   const classes = ['fp-glow-btn', className].filter(Boolean).join(' ')
@@ -41,16 +50,32 @@ export default function FirstPageGlowButton({
     </>
   )
 
+  const handleClick = (event) => {
+    if (ctaId) {
+      // Never awaited and never allowed to throw: the navigation or handler below
+      // must happen whether or not tracking succeeds. In-flight events survive the
+      // page unload via the SDK's beacon flush on pagehide.
+      trackCTA({
+        ctaId,
+        ctaText: typeof children === 'string' ? children : undefined,
+        location: ctaLocation,
+        destination: href,
+        position: ctaPosition,
+      })
+    }
+    if (onClick) onClick(event)
+  }
+
   if (href) {
     return (
-      <a href={href} className={classes} {...rest}>
+      <a href={href} className={classes} onClick={handleClick} {...rest}>
         {content}
       </a>
     )
   }
 
   return (
-    <button type={type} className={classes} disabled={disabled} onClick={onClick} {...rest}>
+    <button type={type} className={classes} disabled={disabled} onClick={handleClick} {...rest}>
       {content}
     </button>
   )

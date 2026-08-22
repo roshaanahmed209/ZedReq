@@ -9,6 +9,7 @@ from dependencies.subscription import require_interview_quota
 from config.database_orm import get_db
 from config.settings import settings
 from services.interview_service import InterviewService
+from services.analytics_service import track_server_event
 from services.recommendation_service import RecommendationService
 from schemas.interview import (
     InterviewStartRequest,
@@ -157,6 +158,15 @@ async def start_interview(
             job_id=request.job_id,
             max_call_duration=max_duration
         )
+        track_server_event(
+            "mock_interview_started",
+            user_id=current_user["id"],
+            properties={
+                "interview_id": result.get("interview_id"),
+                "job_id": request.job_id,
+                "max_duration_seconds": max_duration,
+            },
+        )
         return result
     except ValueError as e:
         raise HTTPException(
@@ -244,6 +254,19 @@ async def complete_interview(
     
     try:
         result = service.complete_interview(interview_id)
+        # Activation event. Scores and durations are safe to record; the transcript
+        # and the user's actual answers are not, and stay in live_interview where
+        # they already live. Only the id is referenced here.
+        track_server_event(
+            "mock_interview_completed",
+            user_id=current_user["id"],
+            properties={
+                "interview_id": interview_id,
+                "job_id": interview.get("job_id"),
+                "overall_score": result.get("overall_score"),
+                "duration_seconds": result.get("duration_seconds"),
+            },
+        )
         return result
     except ValueError as e:
         raise HTTPException(

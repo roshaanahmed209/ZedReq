@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
 import { isStartupMode } from '../utils/startupMode'
+import { trackEvent } from '../utils/analytics'
 import '../css/pages/Checkout.css'
 
 const PADDLE_SCRIPT = 'https://cdn.paddle.com/paddle/v2/paddle.js'
@@ -120,12 +121,21 @@ const Checkout = () => {
       return
     }
     setOpening(true)
+    // payment_succeeded and subscription_started are NOT emitted here - they come
+    // from the signed Paddle webhook. A browser saying "I paid" is not evidence.
+    trackEvent('checkout_started', { plan_id: priceId, plan_name: plan })
+    trackEvent('payment_submitted', { plan_id: priceId, plan_name: plan })
     try {
       Paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
         customData: { zedreq_user_id: String(uid) },
       })
     } catch (e) {
+      trackEvent('payment_error', {
+        error_category: 'checkout_open_failed',
+        feature: 'checkout',
+        plan_name: plan,
+      })
       setInitError(e?.message || 'Could not open checkout.')
     } finally {
       setOpening(false)

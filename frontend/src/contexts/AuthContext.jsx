@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { authAPI, tokenService, NotificationWebSocket } from '../services/api'
 import { clearPrelaunchNoticePending } from '../utils/prelaunchNotice'
+import { identify as analyticsIdentify, resetIdentity, trackEvent } from '../utils/analytics'
 
 const AuthContext = createContext()
 
@@ -134,6 +135,9 @@ export const AuthProvider = ({ children }) => {
       if (response.data) {
         const userData = response.data
         setUser(userData)
+        // Re-assert the anonymous -> user binding for an already-signed-in visitor.
+        // The SDK no-ops when this browser is already stitched to this user.
+        analyticsIdentify(userData.id ?? userData.uid)
         hydrateSessionFeedStats(userData.id ?? userData.uid)
       } else {
         setUser(null)
@@ -168,18 +172,25 @@ export const AuthProvider = ({ children }) => {
       if (response.data && response.data.user) {
         const u = response.data.user
         setUser(u)
+        // Stitch before anything else: this is what joins the visitor's pre-login
+        // landing page view and CTA click to the account they just signed into.
+        analyticsIdentify(u.id ?? u.uid)
         refreshSessionFeedStats(u.id ?? u.uid)
-        return { 
-          success: true, 
-          message: 'Login successful' 
+        return {
+          success: true,
+          message: 'Login successful'
         }
       }
-      
-      return { 
-        success: false, 
-        message: 'Login failed' 
+
+      return {
+        success: false,
+        message: 'Login failed'
       }
     } catch (error) {
+      trackEvent('login_failed', {
+        authentication_method: 'password',
+        failure_category: error.response?.status === 401 ? 'invalid_credentials' : 'error',
+      })
       const noResponse = !error.response
       const looksLikeNetwork =
         noResponse &&
@@ -198,10 +209,11 @@ export const AuthProvider = ({ children }) => {
   const verify2FA = async (tempToken, code) => {
     try {
       const response = await authAPI.verify2FA(tempToken, code)
-      
+
       if (response.data && response.data.user) {
         const u = response.data.user
         setUser(u)
+        analyticsIdentify(u.id ?? u.uid)
         refreshSessionFeedStats(u.id ?? u.uid)
         return { 
           success: true, 
@@ -223,23 +235,37 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
+      trackEvent('signup_submitted', { signup_method: 'email' })
       const response = await authAPI.register(userData)
-      
+
       if (response.data && response.data.user) {
         const u = response.data.user
         setUser(u)
+        // The signup_succeeded / user_registered conversion events are emitted
+        // server-side; this call is what attaches the whole anonymous journey that
+        // preceded the account to the new user.
+        analyticsIdentify(u.id ?? u.uid)
         refreshSessionFeedStats(u.id ?? u.uid)
-        return { 
-          success: true, 
-          message: 'Registration successful' 
+        return {
+          success: true,
+          message: 'Registration successful'
         }
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         message: 'Registration failed'
       }
     } catch (error) {
+      trackEvent('signup_failed', {
+        signup_method: 'email',
+        failure_category:
+          error.response?.status === 409
+            ? 'already_exists'
+            : error.response?.status === 400
+              ? 'validation'
+              : 'error',
+      })
       const noResponse = !error.response
       const looksLikeNetwork =
         noResponse &&
@@ -263,11 +289,15 @@ export const AuthProvider = ({ children }) => {
     }
 
     // Clear state immediately so the UI reacts instantly
+    trackEvent('logout')
     setUser(null)
     setUnreadNotifications(0)
     setSessionFeedStats(null)
     clearStoredFeedStats()
     clearPrelaunchNoticePending()
+    // Drops only the user binding. The anonymous id survives on purpose: it is the
+    // same browser, so a returning visitor stays recognisable as one person.
+    resetIdentity()
 
     // Fire backend logout (context update) in the background — don't await
     authAPI.logout().catch(err => console.warn('Background logout call failed:', err))

@@ -6,6 +6,7 @@ import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
 import { interviewAPI, jobAPI, userAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/AIInterviews.css'
+import { trackEvent } from '../utils/analytics'
 
 function formatInterviewDuration(seconds) {
   const total = Number(seconds)
@@ -936,6 +937,12 @@ const RefreshButton = styled.button`
 `
 
 const AIInterviews = () => {
+  // Feature-level view event. mock_interview_started / _completed are emitted
+  // server-side from the interviews router, where they can be trusted.
+  useEffect(() => {
+    trackEvent('mock_interview_viewed')
+  }, [])
+
   const { showAccessDeniedModal } = useAccessDeniedModal()
   const [selectedJob, setSelectedJob] = useState(null)
   const [interviews, setInterviews] = useState([])

@@ -13,6 +13,7 @@ from dependencies.auth import get_current_user
 from dependencies.subscription import require_lms_quota
 from config.database_orm import get_db
 from services.lms_service import LMSService
+from services.analytics_service import track_server_event
 from services.rate_limit_service import (
     RateLimitService,
     RateLimitExceeded,
@@ -206,6 +207,11 @@ async def enroll_in_course(
     """
     try:
         user_course = service.enroll_in_course(current_user["id"], course_id)
+        track_server_event(
+            "course_enrolled",
+            user_id=current_user["id"],
+            properties={"course_id": course_id},
+        )
         return user_course.to_dict(include_relations=True)
     except ValueError as e:
         raise HTTPException(
@@ -325,7 +331,16 @@ async def update_course_progress(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Course enrollment not found"
         )
-    
+
+    # Course completion is a distinct milestone, so it gets its own event rather
+    # than being inferred later from a progress number.
+    if (progress_data.progress or 0) >= 100:
+        track_server_event(
+            "course_completed",
+            user_id=current_user["id"],
+            properties={"course_id": course_id, "progress_percentage": 100},
+        )
+
     return user_course.to_dict(include_relations=True)
 
 
@@ -918,7 +933,22 @@ async def update_section_progress(
         completed_items=progress_data.completed_items,
         total_items=progress_data.total_items
     )
-    
+
+    # A section is ZedReq's unit of "lesson". Emitting started vs completed here
+    # keeps the LMS funnel derivable without a second write path.
+    completed = progress_data.completed_items or 0
+    total = progress_data.total_items or 0
+    track_server_event(
+        "lesson_completed" if total and completed >= total else "lesson_started",
+        user_id=current_user["id"],
+        properties={
+            "section_id": section_id,
+            "completed_items": completed,
+            "total_items": total,
+            "progress_percentage": round(completed * 100 / total) if total else 0,
+        },
+    )
+
     return progress.to_dict(include_relations=True)
 
 

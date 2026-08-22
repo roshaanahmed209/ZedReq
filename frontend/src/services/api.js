@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getAnonymousId } from '../utils/analyticsIdentity'
+import { trackEvent } from '../utils/analytics'
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'access_token'
@@ -49,6 +51,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // Analytics visitor id. The backend reads it on auth endpoints to stitch this
+    // browser's pre-login journey to the account being created or signed into.
+    // Never fatal: if storage is unavailable the header is simply omitted.
+    try {
+      config.headers['X-ZedReq-Anon-Id'] = getAnonymousId()
+    } catch {
+      /* analytics must never block a request */
+    }
     // Let the runtime set multipart boundary; a bare "multipart/form-data" header breaks uploads
     if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
       if (config.headers && typeof config.headers.delete === 'function') {
@@ -82,6 +92,18 @@ api.interceptors.response.use(
           url: error.config?.url,
           message: error.response?.data?.detail || error.response?.data?.message || error.response?.data?.error
         })
+
+        // Track only server faults. 4xx responses are mostly expected control flow
+        // here - quota limits, validation, auth - and recording them as errors would
+        // bury the failures that actually cost conversions. The endpoint path is
+        // recorded, never the response body, which can contain user data.
+        if (status >= 500) {
+          trackEvent('api_error', {
+            error_category: 'server_error',
+            endpoint: (error.config?.url || '').split('?')[0].slice(0, 200),
+            status,
+          })
+        }
         
         // Handle quota exceeded (403) - extract user-friendly message
         if (status === 403) {

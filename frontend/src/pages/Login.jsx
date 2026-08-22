@@ -7,6 +7,7 @@ import { auth, googleProvider } from '../config/firebase'
 import api, { tokenService } from '../services/api'
 import { extractApiErrorMessage } from '../utils/apiError'
 import { markPrelaunchNoticePending } from '../utils/prelaunchNotice'
+import { trackEvent } from '../utils/analytics'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -511,6 +512,9 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    // login_submitted marks intent; login_succeeded is emitted server-side so a
+    // client can never assert an authentication that did not happen.
+    trackEvent('login_submitted', { authentication_method: 'password' })
     setLoading(true)
     setMessage('')
     setErrors([])
@@ -633,9 +637,15 @@ const Login = () => {
     }
   }
 
-  const handleGoogleSignIn = () => runGoogleAuth('login')
+  const handleGoogleSignIn = () => {
+    trackEvent('login_submitted', { authentication_method: 'google' })
+    return runGoogleAuth('login')
+  }
 
-  const handleGoogleSignUp = () => runGoogleAuth('signup')
+  const handleGoogleSignUp = () => {
+    trackEvent('signup_submitted', { signup_method: 'google' })
+    return runGoogleAuth('signup')
+  }
 
   const handleRegister = async (e) => {
     e.preventDefault()
@@ -678,7 +688,7 @@ const Login = () => {
     }
     
     const result = await register(userData)
-    
+
     if (result.success) {
       markPrelaunchNoticePending()
       navigate('/feed')
@@ -701,6 +711,7 @@ const Login = () => {
             <TabButton 
               className={activeTab === 'login' ? 'active' : ''}
               onClick={() => {
+                trackEvent('login_started', { authentication_method: 'password' })
                 setActiveTab('login')
                 setMessage('')
                 setErrors([])
@@ -711,6 +722,9 @@ const Login = () => {
             <TabButton 
               className={activeTab === 'register' ? 'active' : ''}
               onClick={() => {
+                // The step between "viewed the auth page" and "submitted the form" -
+                // this is where the signup funnel usually leaks.
+                trackEvent('signup_started', { signup_method: 'email' })
                 setActiveTab('register')
                 setMessage('')
                 setErrors([])

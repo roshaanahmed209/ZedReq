@@ -4,6 +4,7 @@ import Beams from '../components/Beams'
 import PlanFlowBackButton from '../components/PlanFlowBackButton'
 import api from '../services/api'
 import { isStartupMode } from '../utils/startupMode'
+import { trackEvent, trackCTA } from '../utils/analytics'
 import {
   PLATFORM_ACCESS_LINES,
   FREE_TEASER_WORDS,
@@ -24,6 +25,13 @@ const ChoosePlan = () => {
 
   const goToFeed = () => navigate('/feed', { replace: true })
 
+  // Plan selection is the one step every new account must pass through
+  // (enforced by RequirePlanSelected), so it is ZedReq's de-facto onboarding.
+  useEffect(() => {
+    trackEvent('onboarding_started', { step_id: 'choose_plan', step_number: 1 })
+    trackEvent('onboarding_step_viewed', { step_id: 'choose_plan', step_number: 1 })
+  }, [])
+
   useEffect(() => {
     if (!showFreePlanActive) return undefined
     const t = setTimeout(() => navigate('/feed', { replace: true }), 2800)
@@ -35,6 +43,8 @@ const ChoosePlan = () => {
     setLoading(true)
     try {
       await api.put('/api/user/subscription', { plan: 'free' })
+      trackEvent('onboarding_step_completed', { step_id: 'choose_plan', step_number: 1, plan: 'free' })
+      trackEvent('onboarding_completed', { completion_status: 'completed', plan: 'free' })
       setShowFreePlanActive(true)
     } catch (e) {
       setError(e.response?.data?.detail || e.message || 'Could not select Free plan')
@@ -182,7 +192,11 @@ const ChoosePlan = () => {
               <ul className="pricing__features">
                 {PRO_MONTHLY_LIMITS.map((line, i) => feature(line, i < 3))}
               </ul>
-              <Link to="/checkout?plan=pro" className="btn pricing__cta">
+              <Link to="/checkout?plan=pro" className="btn pricing__cta"
+                onClick={() => {
+                  trackCTA({ ctaId: 'plan_upgrade_pro', location: 'choose_plan', destination: '/checkout' })
+                  trackEvent('upgrade_cta_clicked', { plan_id: 'pro', plan_name: 'pro', location: 'choose_plan' })
+                }}>
                 Checkout
               </Link>
             </div>
@@ -204,7 +218,11 @@ const ChoosePlan = () => {
               <ul className="pricing__features">
                 {PREMIUM_MONTHLY_LIMITS.map((line, i) => feature(line, i < 3))}
               </ul>
-              <Link to="/checkout?plan=premium" className="btn btn--outline pricing__cta">
+              <Link to="/checkout?plan=premium" className="btn btn--outline pricing__cta"
+                onClick={() => {
+                  trackCTA({ ctaId: 'plan_upgrade_premium', location: 'choose_plan', destination: '/checkout' })
+                  trackEvent('upgrade_cta_clicked', { plan_id: 'premium', plan_name: 'premium', location: 'choose_plan' })
+                }}>
                 Checkout
               </Link>
             </div>

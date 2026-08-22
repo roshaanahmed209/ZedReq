@@ -48,14 +48,17 @@ function WithPlanGate({ children }) {
   )
 }
 
-// Component to track route changes
+// Component to track route changes.
+// Only the pathname is passed: query strings would defeat the repeat-view guard and
+// would put campaign parameters into the page identity. UTM values are captured
+// separately by the SDK and attached to every event as attribution.
 function RouteTracker() {
   const location = useLocation()
-  
+
   useEffect(() => {
-    trackPageView(location.pathname + location.search)
-  }, [location])
-  
+    trackPageView(location.pathname)
+  }, [location.pathname])
+
   return null
 }
 

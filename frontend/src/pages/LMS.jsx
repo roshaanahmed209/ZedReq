@@ -7,6 +7,7 @@ import { motion, useInView } from 'framer-motion'
 import { lmsAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import '../css/pages/LMS.css'
+import { trackEvent } from '../utils/analytics'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -2322,6 +2323,12 @@ function usePersistentCounter(key, max) {
 }
 
 const LMS = () => {
+  // Feature-level view event. Enrolment and lesson/course completion are
+  // emitted server-side from the LMS router.
+  useEffect(() => {
+    trackEvent('lms_viewed')
+  }, [])
+
   const { showAccessDeniedModal } = useAccessDeniedModal()
   const [activeTab, setActiveTab] = useState('all')
   const [topGradientOpacity, setTopGradientOpacity] = useState(0)

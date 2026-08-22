@@ -30,8 +30,15 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         """Process request and track metrics"""
         start_time = time.time()
         
-        # Skip monitoring endpoints to avoid recursion
-        if request.url.path.startswith("/api/monitoring") or request.url.path.startswith("/health"):
+        # Skip monitoring endpoints to avoid recursion.
+        # /api/analytics is skipped too: it is a high-volume beacon endpoint, and
+        # recording an API metric for every batch would swamp the metrics table
+        # without telling us anything the analytics stream does not already say.
+        if (
+            request.url.path.startswith("/api/monitoring")
+            or request.url.path.startswith("/api/analytics")
+            or request.url.path.startswith("/health")
+        ):
             return await call_next(request)
         
         # Process request

@@ -94,7 +94,7 @@ export default function MarketingNav({ rootRef }) {
             <span />
             <span />
           </button>
-          <FirstPageGlowButton href="/login" className="fp-glow-btn--nav">
+          <FirstPageGlowButton href="/login" className="fp-glow-btn--nav" ctaId="navbar_get_started" ctaLocation="navbar">
             Get Started
           </FirstPageGlowButton>
         </div>
@@ -126,7 +126,7 @@ export default function MarketingNav({ rootRef }) {
         <a href="/blogs" className="nav-overlay__link" onClick={closeMenu}>
           Blog
         </a>
-        <FirstPageGlowButton href="/login" className="nav-overlay__cta" onClick={closeMenu}>
+        <FirstPageGlowButton href="/login" className="nav-overlay__cta" onClick={closeMenu} ctaId="mobile_nav_get_started" ctaLocation="mobile_nav">
           Get Started
         </FirstPageGlowButton>
       </div>

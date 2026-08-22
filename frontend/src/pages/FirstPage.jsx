@@ -483,7 +483,7 @@ export default function FirstPage() {
           >
             <span /><span /><span />
           </button>
-          <FirstPageGlowButton href="/login" className="fp-glow-btn--nav">
+          <FirstPageGlowButton href="/login" className="fp-glow-btn--nav" ctaId="navbar_get_started" ctaLocation="navbar">
             Get Started
           </FirstPageGlowButton>
         </div>
@@ -583,10 +583,10 @@ export default function FirstPage() {
 
             {/* CTAs */}
             <div className="hero__actions" style={{ justifyContent: 'center' }}>
-              <FirstPageGlowButton showIcon onClick={openModal}>
+              <FirstPageGlowButton showIcon onClick={openModal} ctaId="hero_reserve_seat" ctaLocation="hero">
                 Reserve Early Access ↗
               </FirstPageGlowButton>
-              <FirstPageGlowButton href="/login">Get Started</FirstPageGlowButton>
+              <FirstPageGlowButton href="/login" ctaId="hero_get_started" ctaLocation="hero">Get Started</FirstPageGlowButton>
             </div>
           </div>
 
@@ -674,7 +674,7 @@ export default function FirstPage() {
                 ))}
               </div>
 
-              <FirstPageGlowButton href="/features">Explore AI Profile →</FirstPageGlowButton>
+              <FirstPageGlowButton href="/features" ctaId="feature_ai_profile" ctaLocation="features">Explore AI Profile →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -694,7 +694,7 @@ export default function FirstPage() {
                 compensation, team structure, growth trajectory, commute, culture signals — and
                 returns a ranked shortlist of roles where you&apos;re genuinely competitive.
               </p>
-              <FirstPageGlowButton href="/features">See how matching works →</FirstPageGlowButton>
+              <FirstPageGlowButton href="/features" ctaId="feature_job_matching" ctaLocation="features">See how matching works →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -714,7 +714,7 @@ export default function FirstPage() {
                 structure, delivery, and technical depth. Twelve sessions and you won&apos;t feel the
                 anxiety — just the conversation.
               </p>
-              <FirstPageGlowButton href="/login">Try a mock interview →</FirstPageGlowButton>
+              <FirstPageGlowButton href="/login" ctaId="hero_start_mock_interview" ctaLocation="features">Try a mock interview →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -734,7 +734,7 @@ export default function FirstPage() {
                 focused modules, earn shareable credentials, and keep your edge sharp — without
                 leaving the platform.
               </p>
-              <FirstPageGlowButton href="/lms">Open the LMS →</FirstPageGlowButton>
+              <FirstPageGlowButton href="/lms" ctaId="feature_open_lms" ctaLocation="features">Open the LMS →</FirstPageGlowButton>
             </div>
           </div>
 
@@ -934,10 +934,10 @@ export default function FirstPage() {
             Your next role<br />is <em>already waiting.</em>
           </h2>
           <div className="cta-band__actions reveal" style={{ '--d': 2 }}>
-            <FirstPageGlowButton showIcon onClick={openModal}>
+            <FirstPageGlowButton showIcon onClick={openModal} ctaId="footer_reserve_seat" ctaLocation="footer_cta">
               Reserve Early Access ↗
             </FirstPageGlowButton>
-            <FirstPageGlowButton href="/login">Get Started</FirstPageGlowButton>
+            <FirstPageGlowButton href="/login" ctaId="footer_get_started" ctaLocation="footer_cta">Get Started</FirstPageGlowButton>
           </div>
         </section>
 
