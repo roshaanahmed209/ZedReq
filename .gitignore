@@ -210,3 +210,20 @@ plannnnnnnnnnnn.txt
 agents.md
 
 firebase_auth_config.txt
+
+# =========================
+# Local workspace / sibling projects (not part of main repo)
+# =========================
+.claude/
+remotion-videos/
+security_audits/
+testing UI/
+zedreq saas/
+zedreq_backoffice/
+ZEDREC sahi wala/
+Capture.PNG
+jobs_seed.sql
+price cards.txt
+todo.txt
+VIDEO_STYLE_PROMPT.md
+zedreq_summary.txt
