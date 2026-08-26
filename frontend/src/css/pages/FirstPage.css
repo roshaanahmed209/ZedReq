@@ -1179,10 +1179,12 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  cursor: default;
+  cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: background 0.3s ease, color 0.3s ease;
+  text-decoration: none;
+  color: inherit;
 }
 .feat-card::before {
   content: '';
@@ -1666,36 +1668,32 @@ html.hl-hero-swapped .hero__hl-line.hero__hl-line--swap:not(.hl-swap-enter) {
 
 .trust__layout {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.05fr);
-  gap: clamp(2rem, 5vw, 4.5rem);
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(1.75rem, 4vw, 3rem);
   align-items: start;
 }
 
 .trust__head {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 0;
-}
-
-.trust__head--sticky {
-  position: sticky;
-  top: clamp(4.5rem, 11vh, 6.5rem);
 }
 
 .trust__hl {
   font-family: var(--font-body);
-  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 200;
-  line-height: 1.0;
+  line-height: 1.05;
 }
 .trust__hl em { font-style: italic; }
 
 .trust__sub {
   font-family: var(--font-body);
-  font-size: 0.9375rem;
-  line-height: 1.7;
+  font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--fp-text-muted);
+  max-width: 22rem;
 }
 
 /* Legacy trust grid — kept for reference; cards now use StackedCards */

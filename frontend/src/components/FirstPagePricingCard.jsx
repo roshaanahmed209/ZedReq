@@ -33,14 +33,6 @@ export default function FirstPagePricingCard({
 
   const listItems = [];
 
-  if (price || period) {
-    listItems.push({
-      key: 'price',
-      type: 'price',
-      text: [price, period].filter(Boolean).join(' · '),
-    });
-  }
-
   if (tags.length > 0) {
     listItems.push({ key: 'tags-header', type: 'label', text: 'Platform highlights' });
     tags.forEach((tag) => listItems.push({ key: tag, type: 'item', text: tag }));
@@ -63,8 +55,16 @@ export default function FirstPagePricingCard({
       <div className="card__border" aria-hidden />
 
       <div className="card_title__container">
-        {badge ? <span className="card_badge">{badge}</span> : null}
+        <div className="card_badge-slot">
+          {badge ? <span className="card_badge">{badge}</span> : null}
+        </div>
         <span className="card_title">{tier}</span>
+        {price || period ? (
+          <div className="card_price-row" aria-label={[price, period].filter(Boolean).join(', ')}>
+            {price ? <span className="card_price">{price}</span> : null}
+            {period ? <span className="card_price-period">{period}</span> : null}
+          </div>
+        ) : null}
         {description ? <p className="card_paragraph">{description}</p> : null}
       </div>
 
@@ -75,14 +75,6 @@ export default function FirstPagePricingCard({
           if (entry.type === 'label') {
             return (
               <li key={entry.key} className="card__list_item card__list_item--label">
-                <span className="list_text">{entry.text}</span>
-              </li>
-            );
-          }
-
-          if (entry.type === 'price') {
-            return (
-              <li key={entry.key} className="card__list_item card__list_item--price">
                 <span className="list_text">{entry.text}</span>
               </li>
             );

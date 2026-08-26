@@ -1,108 +1,57 @@
-.stacked-cards {
-  position: relative;
-  width: 100%;
-}
-
-.stacked-cards__scroll-room {
-  position: relative;
-  padding-top: 8vh;
-  padding-bottom: 90vh;
-}
-
-.stacked-cards__sticky-slot {
-  position: sticky;
-  top: clamp(4.5rem, 11vh, 6.5rem);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: min(280px, 42vh);
-  pointer-events: none;
-}
-
-.stacked-cards__card {
-  position: relative;
-  width: 100%;
-  max-width: min(420px, 100%);
-  min-height: min(260px, 38vh);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.75rem 2rem;
-  background: var(--fp-surface);
-  border: 1px solid var(--fp-card-border);
-  border-radius: 14px;
-  box-sizing: border-box;
-  transform-origin: center top;
-  will-change: transform;
-  box-shadow: var(--fp-stacked-card-shadow, 0 12px 36px rgba(0, 0, 0, 0.12));
-  pointer-events: auto;
-}
-
-.stacked-cards__num {
-  font-family: var(--font-body);
-  font-size: 2.25rem;
-  font-weight: 200;
-  line-height: 1;
-  color: var(--fp-text);
-}
-
-.stacked-cards__title {
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  letter-spacing: 1.1px;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-top: 0.5rem;
-}
-
-.stacked-cards__desc {
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--fp-text-muted);
-  margin: 0;
-}
-
-/* Reduced motion: simple vertical list */
 .stacked-cards--static {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: 100%;
 }
 
 .stacked-cards__card--static {
   position: relative;
-  top: auto !important;
-  transform: none !important;
-  box-shadow: none;
+  width: 100%;
+  max-width: none;
   min-height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.15rem 1.25rem;
+  background: var(--fp-surface);
+  border: 1px solid var(--fp-card-border);
+  border-radius: 12px;
+  box-sizing: border-box;
+  box-shadow: none;
 }
 
-@media (max-width: 1024px) {
-  .stacked-cards__sticky-slot {
-    top: clamp(3.5rem, 8vh, 5rem);
-    min-height: min(250px, 38vh);
-  }
+.stacked-cards__num {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--fp-text-muted);
+}
 
-  .stacked-cards__scroll-room {
-    padding-top: 4vh;
-    padding-bottom: 75vh;
-  }
+.stacked-cards__title {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+.stacked-cards__desc {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fp-text-muted);
+  margin: 0;
 }
 
 @media (max-width: 768px) {
-  .stacked-cards__card {
-    padding: 1.5rem 1.65rem;
-    min-height: min(240px, 36vh);
-    border-radius: 12px;
-    max-width: 100%;
+  .stacked-cards--static {
+    grid-template-columns: 1fr;
   }
 
-  .stacked-cards__num {
-    font-size: 1.85rem;
-  }
-
-  .stacked-cards__scroll-room {
-    padding-bottom: 65vh;
+  .stacked-cards__card--static {
+    padding: 1rem 1.1rem;
   }
 }

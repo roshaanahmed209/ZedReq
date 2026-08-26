@@ -29,9 +29,12 @@ BACKOFFICE_COLLECTOR_URL = os.getenv(
 )
 COLLECTOR_API_KEY = os.getenv("COLLECTOR_API_KEY", "")
 
-# Short enough that a slow back office cannot hold a request handler open. Forwarding
-# happens off the request path anyway, but a hung socket still costs a task slot.
-FORWARD_TIMEOUT_SECONDS = 3.0
+# Forwarding happens off the request path, so this never delays a user. It exists so a
+# hung socket cannot pile up task slots. The default suits a cross-internet hop to a
+# warm host; raise it if the collector is somewhere that cold-starts (a sleeping free
+# tier instance can take 30s+, and no sane timeout covers that - see the deployment
+# notes about keeping the back office always-on).
+FORWARD_TIMEOUT_SECONDS = float(os.getenv("ANALYTICS_FORWARD_TIMEOUT", "8"))
 
 MAX_BATCH = 50
 

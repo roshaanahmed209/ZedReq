@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import '../css/pages/FirstPage.css';
+import '../css/pages/LandingV1.css';
+import '../css/pages/LandingV1Action.css';
+import '../css/pages/LandingV1Tabs.css';
+import '../css/pages/LandingV1Lms.css';
 import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
 import { isStartupMode } from '../utils/startupMode';
 import { sendReservationEmail } from '../services/emailjs';
 import DarkVeil from '../components/DarkVeil';
-import GlobeAnimation from '../components/GlobeAnimation';
-import CareerAssistant from '../components/CareerAssistant';
-import InterviewSimulatorDashboard from '../components/InterviewSimulatorDashboard';
-import LMSDashboard from '../components/LMSDashboard';
+import interviewMockImg from '../../static/interviewwww.png';
+import { Target, Mic, ClipboardCheck, TrendingUp } from 'lucide-react';
+import { useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import FirstPageGlowButton from '../components/FirstPageGlowButton';
 import FirstPagePricingCard from '../components/FirstPagePricingCard';
 import StackedCards from '../components/StackedCards';
+import LMSDashboard from '../components/LMSDashboard';
+import LMSTopicPanel from '../components/LMSTopicPanel';
+import LMSQuizPanel from '../components/LMSQuizPanel';
+import LMSEvaluationPanel from '../components/LMSEvaluationPanel';
 import {
   PLATFORM_ACCESS_LINES,
   FREE_TEASER_WORDS,
@@ -25,49 +31,407 @@ import {
 /** Resolve a public asset URL (works in both Vite dev and production build). */
 const A = (file) => `${import.meta.env.BASE_URL}assets/${file}`;
 
-/* ─── Rotating hero taglines ───────────────────────────── */
-const HERO_ROT = [
-  'Curated to your skills.',
-  'Optimized for hiring managers.',
-  'Practice until you ace it.',
-  'Private, secure, and bias-aware.',
+/* ─── Hero V1 — proof chips under the CTA row ──────────── */
+const HERO_CHIPS = [
+  { label: 'AI Mock Interviews',  icon: 'icon-interview.svg' },
+  { label: 'Interview Feedback',  icon: 'icon-analytics.svg' },
+  { label: 'Career Preparation',  icon: 'icon-learning.svg'  },
 ];
 
-/** Second line of the hero headline rotates (two lines total: “Your Career.” + one swap line). */
-const HERO_HL_VARIANTS = [
+/** Hero headline + lead rotate together — all variants stay on AI mock interviews. */
+const HERO_COPY_VARIANTS = [
   {
-    ariaLabel: 'Your Career. Less guessing. More gravity.',
-    line2: (
-      <>
-        <em>Less</em> guessing. More gravity.
-      </>
-    ),
+    ariaLabel:
+      'Your next interview should not be your first practice interview. Practice real interview scenarios with AI.',
+    line2: 'shouldn\u2019t be your first',
+    line3: 'practice interview.',
+    lead:
+      'Practice real interview scenarios with AI, get detailed feedback, and build the skills you need to land your next role.',
   },
   {
-    ariaLabel: 'Your Career. Orchestrated from profile to signature.',
-    line2: (
-      <>
-        <em>Orchestrated</em> from profile to signature.
-      </>
-    ),
+    ariaLabel:
+      'Your next interview deserves a real AI mock session. Run role-specific mocks scored in real time.',
+    line2: 'deserves a real',
+    line3: 'AI mock session.',
+    lead:
+      'Run role-specific mock interviews with an AI panel — scored on structure, clarity, and depth while you answer out loud.',
   },
   {
-    ariaLabel: 'Your Career. From invisible to undeniable.',
-    line2: (
-      <>
-        From <em>invisible</em> to undeniable.
-      </>
-    ),
+    ariaLabel:
+      'Your next interview needs rehearsal with instant feedback. Know what to fix before the real panel.',
+    line2: 'needs rehearsal',
+    line3: 'with instant feedback.',
+    lead:
+      'Rehearse behavioral and technical questions, then get a breakdown of what landed and what to sharpen next.',
   },
   {
-    ariaLabel: 'Your Career. Engineered for the next yes.',
-    line2: (
-      <>
-        <em>Engineered</em> for the next yes.
-      </>
-    ),
+    ariaLabel:
+      'Your next interview is not the place to wing answers. Build confidence with AI practice rounds.',
+    line2: 'isn\u2019t the place',
+    line3: 'to wing answers.',
+    lead:
+      'Turn interview nerves into a repeatable prep routine — AI sessions that feel like the real thing, without the stakes.',
+  },
+  {
+    ariaLabel:
+      'Your next interview starts with AI mock interviews. Walk in having already heard the hard questions.',
+    line2: 'starts with AI',
+    line3: 'mock interviews.',
+    lead:
+      'Practice the questions hiring managers actually ask, get scored after every round, and walk in already having answered them.',
   },
 ];
+
+const HERO_SWAP_MS = 5000;
+const HERO_FADE_MS = 480;
+const HERO_ENTER_MS = 680;
+
+/* ─── Hero V1 — live-session panel (right column) ──────── */
+const HERO_PANEL_QUESTION =
+  'Tell me about a time you shipped something under a hard deadline. What did you cut, and why?';
+
+const HERO_PANEL_SIGNALS = [
+  { label: 'Structure', pct: 82 },
+  { label: 'Clarity',   pct: 74 },
+  { label: 'Depth',     pct: 79 },
+];
+
+/** Overall score shown in the panel gauge. */
+const HERO_PANEL_SCORE = 78;
+
+/* ═══════════════════════════════════════════════════════════════
+   SEE IT IN ACTION — section directly below the hero
+════════════════════════════════════════════════════════════════ */
+
+/** The four-step rail. `Icon` is rendered, not a string, so tree-shaking keeps only these. */
+const ACTION_STEPS = [
+  { Icon: Target,         title: 'Choose Role',      desc: 'Select your target job or industry.' },
+  { Icon: Mic,            title: 'Get Interviewed',  desc: 'Answer real questions from our AI interviewer.' },
+  { Icon: ClipboardCheck, title: 'Receive Feedback', desc: 'Get detailed insights and a score.' },
+  { Icon: TrendingUp,     title: 'Improve',          desc: 'Practice again and track your progress.' },
+];
+
+/** Waveform bar heights (%) for the recording mock — fixed so the render is deterministic. */
+const WAVE_BARS = [
+  22, 40, 68, 92, 60, 34, 78, 100, 54, 30,
+  46, 84, 66, 38, 90, 58, 26, 72, 44, 20,
+];
+
+const ACTION_STRENGTHS = [
+  'Clear communication',
+  'Good problem solving',
+  'Relevant experience',
+];
+
+const ACTION_IMPROVEMENTS = [
+  'More specific examples',
+  'Stronger technical depth',
+  'Better STAR structure',
+];
+
+/** Step 1 panel — role picker. */
+const ROLE_OPTIONS = [
+  { label: 'Frontend Engineer', meta: 'React · TypeScript', active: true },
+  { label: 'Product Manager',   meta: 'B2B SaaS' },
+  { label: 'Data Analyst',      meta: 'SQL · Python' },
+  { label: 'Backend Engineer',  meta: 'Go · Postgres' },
+  { label: 'UX Designer',       meta: 'Product design' },
+];
+
+const SENIORITY_LEVELS = ['Junior', 'Mid', 'Senior', 'Staff'];
+const SENIORITY_ACTIVE = 'Senior';
+
+/** Footer summary for the role panel — what the picked set actually produces. */
+const ROLE_SUMMARY = [
+  { k: 'Questions', v: '8' },
+  { k: 'Length',    v: '~15 min' },
+  { k: 'Mix',       v: 'Behavioural + technical' },
+];
+
+/** Step 2 panel — session chrome around the question. */
+const INTERVIEW_META = { position: 'Question 2 of 8', elapsed: '01:12' };
+const INTERVIEW_HINT = 'Aim for 60–90 seconds. Structure beats detail.';
+
+/** Step 3 panel — the per-dimension marks behind the overall score. */
+const FEEDBACK_BREAKDOWN = [
+  { label: 'Structure', val: 82 },
+  { label: 'Clarity',   val: 74 },
+  { label: 'Depth',     val: 79 },
+];
+
+/** Step 4 panel — what the next session should target. */
+const PROGRESS_FOCUS = ['Quantify your impact', 'Tighten the opening line'];
+
+/** Step 4 panel — session history. Scores climb so the trend reads at a glance. */
+const PROGRESS_SESSIONS = [
+  { label: 'Session 1', date: 'Mon', score: 62 },
+  { label: 'Session 2', date: 'Wed', score: 71 },
+  { label: 'Session 3', date: 'Fri', score: 78, active: true },
+];
+
+/** How long each tab holds before auto-advancing, in ms. */
+const ACTION_TAB_MS = 5200;
+
+/**
+ * True when focus arrived by keyboard rather than a click.
+ *
+ * Clicking a button focuses it, so a plain `onFocus` would pause the carousel on every
+ * click — exactly the behaviour the tabs are meant not to have. `:focus-visible` is the
+ * browser's own answer to that distinction. Guarded because older engines throw on an
+ * unrecognised pseudo-class in `matches()`; treating that as "not keyboard" simply leaves
+ * the carousel running, which is the safe default here.
+ */
+function isKeyboardFocus(el) {
+  try {
+    return el.matches(':focus-visible');
+  } catch {
+    return false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LMS — scroll-driven walkthrough (replaces the old dashboard mock)
+   Three views, advanced by scroll position while the section is pinned.
+════════════════════════════════════════════════════════════════ */
+
+const LMS_STEPS = [
+  {
+    n: '01',
+    title: 'Pick your topic',
+    desc: 'ZedReq reads the gap between your profile and your target role, then searches the open web for current, credible material on it.',
+  },
+  {
+    n: '02',
+    title: 'Answer the set',
+    desc: 'Work through questions written from those sources. Every answer is timed, scored, and kept against the topic.',
+  },
+  {
+    n: '03',
+    title: 'Read the evaluation',
+    desc: 'Accuracy by domain, the questions you lost, and the one thing worth studying before the next set.',
+  },
+  {
+    n: '04',
+    title: 'Track it in one place',
+    desc: 'Every set, score and course lands in one dashboard — progress by week, strength by domain, and what to take next.',
+  },
+];
+
+/* ─── Step panels ──────────────────────────────────────── */
+
+const MockChrome = ({ name, children }) => (
+  <article className="v1-mock">
+    <div className="v1-mock__bar">
+      <span className="v1-mock__name">{name}</span>
+      <span className="v1-mock__close" aria-hidden="true" />
+    </div>
+    <div className="v1-mock__body">{children}</div>
+  </article>
+);
+
+/** Plain progress ring — no glyph inside; the figure beside it carries the number. */
+const ScoreRing = ({ score, size = 'md' }) => (
+  <span className={`v1-fb__ring v1-fb__ring--${size}`} aria-hidden="true">
+    <svg viewBox="0 0 100 100" focusable="false">
+      <circle className="v1-fb__ring-track" cx="50" cy="50" r="42" />
+      <circle
+        className="v1-fb__ring-fill"
+        cx="50"
+        cy="50"
+        r="42"
+        style={{ strokeDashoffset: 264 - (264 * score) / 100 }}
+      />
+    </svg>
+  </span>
+);
+
+/** 1 — Choose Role */
+const RolePanel = () => (
+  <MockChrome name="Choose your role">
+    <ul className="v1-role__list" role="list">
+      {ROLE_OPTIONS.map((role) => (
+        <li key={role.label} className={`v1-role${role.active ? ' is-active' : ''}`}>
+          <span className="v1-role__text">
+            <span className="v1-role__label">{role.label}</span>
+            <span className="v1-role__meta">{role.meta}</span>
+          </span>
+          {role.active ? <span className="v1-role__check" aria-hidden="true" /> : null}
+        </li>
+      ))}
+    </ul>
+
+    <p className="v1-fb__label v1-role__seniority-label">Seniority</p>
+    <div className="v1-role__seniority">
+      {SENIORITY_LEVELS.map((level) => (
+        <span
+          key={level}
+          className={`v1-role__pill${level === SENIORITY_ACTIVE ? ' is-active' : ''}`}
+        >
+          {level}
+        </span>
+      ))}
+    </div>
+
+    <dl className="v1-role__summary">
+      {ROLE_SUMMARY.map((row) => (
+        <div key={row.k} className="v1-role__summary-row">
+          <dt>{row.k}</dt>
+          <dd>{row.v}</dd>
+        </div>
+      ))}
+    </dl>
+  </MockChrome>
+);
+
+/** 2 — Get Interviewed */
+const InterviewPanel = () => (
+  <MockChrome name="AI Interviewer">
+    <p className="v1-mock__meta">
+      <span>{INTERVIEW_META.position}</span>
+      <span>{INTERVIEW_META.elapsed}</span>
+    </p>
+
+    <p className="v1-mock__bubble">Tell me about yourself.</p>
+
+    {/* Recorder is its own framed surface, as in the reference */}
+    <div className="v1-mock__recorder">
+      <div className="v1-wave" aria-hidden="true">
+        {WAVE_BARS.map((h, i) => (
+          <span key={i} className="v1-wave__bar" style={{ '--h': `${h}%`, '--i': i }} />
+        ))}
+      </div>
+
+      <p className="v1-mock__rec">
+        <span className="v1-mock__rec-dots" aria-hidden="true">
+          <i /><i /><i />
+        </span>
+        Recording…
+      </p>
+
+      <span className="v1-mock__stop" />
+    </div>
+
+    <p className="v1-mock__hint">{INTERVIEW_HINT}</p>
+  </MockChrome>
+);
+
+/** 3 — Receive Feedback */
+const FeedbackPanel = () => (
+  <MockChrome name="Interview Feedback">
+    <div className="v1-fb__score">
+      <ScoreRing score={HERO_PANEL_SCORE} />
+      <span className="v1-fb__score-text">
+        <span className="v1-fb__score-label">Your Score</span>
+        <span className="v1-fb__score-val">
+          {HERO_PANEL_SCORE}
+          <span>/100</span>
+        </span>
+      </span>
+    </div>
+
+    <ul className="v1-fb__breakdown" role="list">
+      {FEEDBACK_BREAKDOWN.map((d) => (
+        <li key={d.label}>
+          <span className="v1-fb__breakdown-val">{d.val}</span>
+          <span className="v1-fb__breakdown-label">{d.label}</span>
+        </li>
+      ))}
+    </ul>
+
+    <p className="v1-fb__label">Key Strengths</p>
+    <ul className="v1-fb__list v1-fb__list--good" role="list">
+      {ACTION_STRENGTHS.map((item) => <li key={item}>{item}</li>)}
+    </ul>
+
+    <p className="v1-fb__label v1-fb__label--work">Areas to Improve</p>
+    <ul className="v1-fb__list v1-fb__list--work" role="list">
+      {ACTION_IMPROVEMENTS.map((item) => <li key={item}>{item}</li>)}
+    </ul>
+  </MockChrome>
+);
+
+/** 4 — Improve */
+const ProgressPanel = () => {
+  const first = PROGRESS_SESSIONS[0].score;
+  const last = PROGRESS_SESSIONS[PROGRESS_SESSIONS.length - 1].score;
+
+  return (
+    <MockChrome name="Your progress">
+      <div className="v1-prog__head">
+        <ScoreRing score={last} />
+        <span className="v1-fb__score-text">
+          <span className="v1-fb__score-label">Latest score</span>
+          <span className="v1-fb__score-val">
+            {last}
+            <span>/100</span>
+          </span>
+        </span>
+        <span className="v1-prog__delta">+{last - first}</span>
+      </div>
+
+      <p className="v1-fb__label">Session history</p>
+      <ul className="v1-prog__list" role="list">
+        {PROGRESS_SESSIONS.map((s) => (
+          <li key={s.label} className={`v1-prog__row${s.active ? ' is-active' : ''}`}>
+            <span className="v1-prog__row-label">
+              {s.label}
+              <span className="v1-prog__row-date">{s.date}</span>
+            </span>
+            <span className="v1-prog__track">
+              <span className="v1-prog__fill" style={{ width: `${s.score}%` }} />
+            </span>
+            <span className="v1-prog__val">{s.score}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="v1-fb__label v1-prog__focus-label">Next focus</p>
+      <ul className="v1-fb__list v1-fb__list--work" role="list">
+        {PROGRESS_FOCUS.map((item) => <li key={item}>{item}</li>)}
+      </ul>
+    </MockChrome>
+  );
+};
+
+/* ─── LMS views ────────────────────────────────────────── */
+/* Each step shows a full product mock — same dash scale treatment as step 4 so
+   the walkthrough reads as one surface, not four different designs. */
+
+const LmsDashWrap = ({ children }) => (
+  <div className="v1-lms__dash">
+    <div className="v1-lms__dash-inner">{children}</div>
+  </div>
+);
+
+const LmsTopicView = () => (
+  <LmsDashWrap>
+    <LMSTopicPanel />
+  </LmsDashWrap>
+);
+
+const LmsQuizView = () => (
+  <LmsDashWrap>
+    <LMSQuizPanel />
+  </LmsDashWrap>
+);
+
+const LmsEvaluationView = () => (
+  <LmsDashWrap>
+    <LMSEvaluationPanel />
+  </LmsDashWrap>
+);
+
+const LmsDashboardView = () => (
+  <LmsDashWrap>
+    <LMSDashboard />
+  </LmsDashWrap>
+);
+
+/** View per LMS step index — order matches LMS_STEPS. */
+const LMS_VIEWS = [LmsTopicView, LmsQuizView, LmsEvaluationView, LmsDashboardView];
+
+/** Panel per step index — order matches ACTION_STEPS. */
+const ACTION_PANELS = [RolePanel, InterviewPanel, FeedbackPanel, ProgressPanel];
 
 /* ─── Features ─────────────────────────────────────────── */
 const FEATURES = [
@@ -76,42 +440,49 @@ const FEATURES = [
     icon: 'icon-matching.svg',
     title: 'AI-Built Profile',
     desc: 'Your resume is 30 seconds of a recruiter\'s attention. ZedReq surfaces skills, patterns, and signals that static PDFs can\'t — built by AI trained on 2M+ successful applications.',
+    href: '/features',
   },
   {
     label: 'Opportunity Engine',
     icon: 'icon-network.svg',
     title: 'Smart Job Matching',
     desc: 'Skip the keyword-spray. Our engine ranks roles by genuine fit — salary, team structure, growth trajectory, and culture.',
+    href: '/features',
   },
   {
     label: 'Skill Intelligence',
     icon: 'icon-learning.svg',
     title: 'Adaptive Learning',
     desc: 'ZedReq maps your gap to the role you want, then builds a personalized path to close it — courses, projects, mentors.',
+    href: '/lms',
   },
   {
     label: 'Career Network',
     icon: 'icon-tracking.svg',
     title: 'Warm Introductions',
     desc: 'Cold applications convert at 2%. Warm introductions convert at 40%. ZedReq routes you through the right second-degree connection.',
+    href: '/features',
   },
   {
     label: 'AI Interview Coach',
     icon: 'icon-interview.svg',
     title: 'Interview Prep',
     desc: 'Realistic mock interviews for your exact target role. Feedback in real-time on delivery, structure, and technical depth.',
+    href: '/login',
   },
   {
     label: 'Application Tracking',
     icon: 'icon-analytics.svg',
     title: 'Pipeline Intelligence',
     desc: 'See every stage of every application in one board. Know exactly when to follow up — and what to say when you do.',
+    href: '/features',
   },
   {
     label: 'AI Assistant',
     icon: 'icon-assistant.svg',
     title: 'Your Career Co-Pilot',
     desc: 'Ask anything. Cover letter in 90 seconds. Salary benchmark by city. Offer negotiation script. ZedReq AI never leaves your side.',
+    href: '/login',
   },
 ];
 
@@ -189,27 +560,18 @@ const MARQUEE_SEGS = [
 
 /* ─── Trust stats ───────────────────────────────────────── */
 const TRUST_ITEMS = [
-  { num: '01', title: 'Zero Data Brokering', desc: 'We never sell, share, or broker your data. Your career profile stays private until you choose to share it.' },
-  { num: '02', title: 'GDPR Article 17 Compliant', desc: 'Delete your account and all data is purged within 30 days — no backups, no traces, by law.' },
-  { num: '03', title: 'Monthly Bias Audits', desc: 'Our scoring models are audited for demographic bias every 30 days by an independent panel.' },
-  { num: '04', title: 'AES-256 Encryption', desc: 'Every piece of data — at rest and in transit — is encrypted using bank-grade AES-256 protocols.' },
-  {
-    num: '05',
-    title: 'OWASP-informed hardening',
-    desc: 'We design against common OWASP-style risks: TLS everywhere, strict auth on APIs, input validation, rate limits on sensitive routes, and dependency updates—so typical web attacks are mitigated by design, not ad hoc patches.',
-  },
-  {
-    num: '06',
-    title: 'Sign in the way you already trust',
-    desc: 'Sign in with Google—the account you already use every day—so you are not juggling yet another password for ZedReq.',
-  },
+  { num: '01', title: 'Zero Data Brokering', desc: 'We never sell or share your data. You control what\'s visible.' },
+  { num: '02', title: 'GDPR Article 17', desc: 'Delete your account — all data purged within 30 days.' },
+  { num: '03', title: 'Monthly Bias Audits', desc: 'Scoring models checked for demographic bias every 30 days.' },
+  { num: '04', title: 'AES-256 Encryption', desc: 'Bank-grade encryption at rest and in transit.' },
+  { num: '05', title: 'OWASP-informed hardening', desc: 'TLS, strict auth, validation, and rate limits by design.' },
+  { num: '06', title: 'Sign in with Google', desc: 'Use the account you already trust — no extra password.' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════
    COMPONENT
 ════════════════════════════════════════════════════════════════ */
 export default function FirstPage() {
-  const navigate = useNavigate();
   const startupMode = isStartupMode();
   const { theme, setTheme } = useTheme();
   const rootRef = useRef(null);
@@ -223,14 +585,52 @@ export default function FirstPage() {
   const [reserveEmailFailed, setReserveEmailFailed] = useState(false);
   const [faqOpen,        setFaqOpen]        = useState(null);
   const [tIdx,           setTIdx]           = useState(0);
-  const [rotIdx,         setRotIdx]         = useState(0);
-  const [rotFade,        setRotFade]        = useState(false);
-  const [hlIdx,          setHlIdx]          = useState(0);
-  const [hlFade,         setHlFade]         = useState(false);
-  /** One frame: new line starts blurred + transparent, then transitions in */
-  const [hlSwapEnter,    setHlSwapEnter]    = useState(false);
-  const hlSwapTimersRef = useRef([]);
-  const hlEnterFallbackRef = useRef(null);
+  /* Hero copy rotation */
+  const [heroIdx,        setHeroIdx]        = useState(0);
+  const [heroFade,       setHeroFade]       = useState(false);
+  const [heroEnter,      setHeroEnter]      = useState(false);
+  /* "See it in action" tabs */
+  const [actionTab,      setActionTab]      = useState(0);
+  /* Bumped on every manual pick so the dwell timer restarts from that tab */
+  const [actionCycle,    setActionCycle]    = useState(0);
+  /* Hovering the tabs does nothing — they are click-only. The carousel is held
+     solely while a tab has *keyboard* focus, so arrowing through the strip is not
+     fighting an auto-advance. A click focuses the button too, which is why the
+     handler screens for :focus-visible rather than plain focus. */
+  const [actionFocus,    setActionFocus]    = useState(false);
+  const actionTabRefs = useRef([]);
+  const actionHeld = actionFocus;
+  /* Dwell balance for the current tab, and when the running stretch started */
+  const dwellLeftRef  = useRef(ACTION_TAB_MS);
+  const dwellStartRef = useRef(0);
+
+  /* ── LMS walkthrough ── */
+  const lmsRef = useRef(null);
+  const [lmsStep, setLmsStep] = useState(0);
+  const [lmsNarrow, setLmsNarrow] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  /* Pinning is dropped on small screens and for reduced motion; the three views
+     then stack in the normal flow, each under its own step. */
+  const lmsStatic = lmsNarrow || !!prefersReducedMotion;
+
+  const { scrollYProgress: lmsProgress } = useScroll({
+    target: lmsRef,
+    offset: ['start start', 'end end'],
+  });
+
+  useMotionValueEvent(lmsProgress, 'change', (v) => {
+    if (lmsStatic) return;
+    const i = Math.min(LMS_STEPS.length - 1, Math.max(0, Math.floor(v * LMS_STEPS.length)));
+    setLmsStep((cur) => (cur === i ? cur : i));
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const sync = () => setLmsNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   /* Attach imperative DOM effects once */
   useEffect(() => {
@@ -238,110 +638,103 @@ export default function FirstPage() {
     return cleanup;
   }, []);
 
-  /** Outgoing headline line 2 — must match CSS transition on `.hero__hl-line--swap.fade-out` */
-  const HL_SWAP_OUT_MS = 520;
-  const HL_SWAP_FALLBACK_MS = HL_SWAP_OUT_MS + 80;
-  const ROT_SWAP_MS = 480;
-  /** Safety if `animationend` does not fire (e.g. reduced motion quirks) */
-  const HL_ENTER_FALLBACK_MS = 720;
-
-  const hlFadeRef = useRef(false);
-  const hlSwapArmedRef = useRef(false);
-  const hlSwapOutFallbackRef = useRef(null);
-
+  /* Scroll to hash targets (e.g. /#pricing from the pricing stub page). */
   useEffect(() => {
-    hlFadeRef.current = hlFade;
-  }, [hlFade]);
-
-  /* Rotating hero tagline */
-  useEffect(() => {
-    const id = setInterval(() => {
-      setRotFade(true);
-      setTimeout(() => {
-        setRotIdx((i) => (i + 1) % HERO_ROT.length);
-        setRotFade(false);
-      }, ROT_SWAP_MS);
-    }, 3200);
-    return () => clearInterval(id);
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return undefined;
+    const id = requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
-  const finishHlSwapEnter = useCallback(() => {
-    if (hlEnterFallbackRef.current != null) {
-      clearTimeout(hlEnterFallbackRef.current);
-      hlEnterFallbackRef.current = null;
-    }
-    setHlSwapEnter(false);
-    document.documentElement.classList.add('hl-hero-swapped');
+  /* ── "See it in action" tabs ───────────────────────────── */
+
+  /**
+   * Picking a tab does not retire the carousel — it keeps cycling so the four
+   * steps still play on their own. Bumping the cycle counter restarts the dwell,
+   * so a deliberate pick gets a full window before anything moves on.
+   */
+  const selectActionTab = useCallback((i) => {
+    setActionTab(i);
+    setActionCycle((c) => c + 1);
+    /* A deliberate pick earns a full window, not whatever was left of the last one */
+    dwellLeftRef.current = ACTION_TAB_MS;
+    dwellStartRef.current = 0;
   }, []);
 
-  const performHlSwap = useCallback(() => {
-    if (!hlSwapArmedRef.current) return;
-    hlSwapArmedRef.current = false;
-    if (hlSwapOutFallbackRef.current != null) {
-      clearTimeout(hlSwapOutFallbackRef.current);
-      hlSwapOutFallbackRef.current = null;
-    }
-    setHlIdx((i) => (i + 1) % HERO_HL_VARIANTS.length);
-    setHlFade(false);
-    setHlSwapEnter(true);
-    hlEnterFallbackRef.current = setTimeout(() => {
-      finishHlSwapEnter();
-    }, HL_ENTER_FALLBACK_MS);
-  }, [finishHlSwapEnter]);
-
-  const handleHlSwapTransitionEnd = useCallback(
-    (e) => {
-      if (e.target !== e.currentTarget) return;
-      if (e.propertyName !== 'opacity') return;
-      if (!hlSwapArmedRef.current) return;
-      performHlSwap();
-    },
-    [performHlSwap]
-  );
-
-  const handleHlSwapAnimEnd = useCallback(
-    (e) => {
-      const name = e.animationName || '';
-      if (!/hero-hl-swap-in/i.test(name)) return;
-      finishHlSwapEnter();
-    },
-    [finishHlSwapEnter]
-  );
-
-  /* Rotating hero headline (line 2 only; “Your Career.” fixed) */
+  /*
+   * Auto-advance the step tabs.
+   *
+   * A plain interval cannot express "pause on hover": clearing and recreating it hands
+   * back a full window every time, which would drift out of sync with the timer bar —
+   * that resumes from where it froze. So the dwell is tracked as remaining milliseconds,
+   * banked on hold and re-armed with only the balance.
+   */
   useEffect(() => {
-    const clearHlTimers = () => {
-      hlSwapTimersRef.current.forEach(clearTimeout);
-      hlSwapTimersRef.current = [];
-      if (hlSwapOutFallbackRef.current != null) {
-        clearTimeout(hlSwapOutFallbackRef.current);
-        hlSwapOutFallbackRef.current = null;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    if (actionHeld) {
+      if (dwellStartRef.current) {
+        dwellLeftRef.current = Math.max(
+          0,
+          dwellLeftRef.current - (Date.now() - dwellStartRef.current)
+        );
+        dwellStartRef.current = 0;
       }
-    };
-    const id = setInterval(() => {
-      hlSwapArmedRef.current = true;
-      setHlFade(true);
-      hlSwapOutFallbackRef.current = setTimeout(() => {
-        performHlSwap();
-      }, HL_SWAP_FALLBACK_MS);
-      hlSwapTimersRef.current.push(hlSwapOutFallbackRef.current);
-    }, 5000);
-    return () => {
-      clearInterval(id);
-      clearHlTimers();
-      hlSwapArmedRef.current = false;
-      if (hlEnterFallbackRef.current != null) {
-        clearTimeout(hlEnterFallbackRef.current);
-        hlEnterFallbackRef.current = null;
-      }
-    };
-  }, [performHlSwap]);
+      return;
+    }
+
+    dwellStartRef.current = Date.now();
+    const id = setTimeout(() => {
+      dwellLeftRef.current = ACTION_TAB_MS;
+      dwellStartRef.current = 0;
+      setActionTab((i) => (i + 1) % ACTION_STEPS.length);
+    }, dwellLeftRef.current);
+    return () => clearTimeout(id);
+    // `actionTab`/`actionCycle` re-arm the dwell after an advance or a manual pick.
+  }, [actionHeld, actionTab, actionCycle]);
+
+  /** Roving focus across the tablist, per the ARIA tabs pattern. */
+  const onActionTabKeyDown = useCallback((e) => {
+    const last = ACTION_STEPS.length - 1;
+    let next = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = actionTab === last ? 0 : actionTab + 1;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = actionTab === 0 ? last : actionTab - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = last;
+    if (next == null) return;
+    e.preventDefault();
+    selectActionTab(next);
+    actionTabRefs.current[next]?.focus();
+  }, [actionTab, selectActionTab]);
 
   /* Auto-advance testimonials */
   useEffect(() => {
     const id = setInterval(() => setTIdx((i) => (i + 1) % TESTIMONIALS.length), 5500);
     return () => clearInterval(id);
   }, []);
+
+  /* Rotating hero headline + lead (AI mock interview variants) */
+  useEffect(() => {
+    if (prefersReducedMotion) return undefined;
+    let enterTimer;
+    let fadeTimer;
+    const id = setInterval(() => {
+      setHeroFade(true);
+      fadeTimer = setTimeout(() => {
+        setHeroIdx((i) => (i + 1) % HERO_COPY_VARIANTS.length);
+        setHeroFade(false);
+        setHeroEnter(true);
+        enterTimer = setTimeout(() => setHeroEnter(false), HERO_ENTER_MS);
+      }, HERO_FADE_MS);
+    }, HERO_SWAP_MS);
+    return () => {
+      clearInterval(id);
+      clearTimeout(fadeTimer);
+      clearTimeout(enterTimer);
+    };
+  }, [prefersReducedMotion]);
 
   /* Body overflow lock when modal / menu open */
   useEffect(() => {
@@ -425,6 +818,8 @@ export default function FirstPage() {
   }, []);
 
   /* ─── Render ─────────────────────────────────────────── */
+  const heroCopy = HERO_COPY_VARIANTS[heroIdx];
+
   return (
     <div className="zedreq-root" ref={rootRef}>
       <a href="#main" className="skip-link">Skip to content</a>
@@ -514,8 +909,8 @@ export default function FirstPage() {
 
       {/* ════════════ HERO ════════════ */}
       <main id="main">
-        <section className="hero" id="hero" aria-label="Hero">
-          {/* Background effects */}
+        <section className="hero herov1" id="hero" aria-label="Hero">
+          {/* Background effects — DarkVeil carried over unchanged */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 0 }} aria-hidden="true">
             <DarkVeil
               hueShift={399}
@@ -530,69 +925,200 @@ export default function FirstPage() {
           </div>
           <div className="hero__texture" aria-hidden="true" />
 
-          {/* Orbit ring decorations */}
-          <div className="hero__orbit-ring" style={{ width: 480, height: 480, top: '50%', right: '10%' }} aria-hidden="true" />
-          <div className="hero__orbit-ring" style={{ width: 640, height: 640, top: '50%', right: '10%', opacity: 0.4 }} aria-hidden="true" />
-          <div className="hero__orbit-ring" style={{ width: 760, height: 760, top: '50%', right: '10%', opacity: 0.2 }} aria-hidden="true" />
+          <div className="herov1__grid">
+            {/* ── Left column: copy ── */}
+            <div className="herov1__copy">
+              <h1 className="herov1__hl" aria-label={heroCopy.ariaLabel}>
+                <span className="herov1__hl-line">Your next interview</span>
+                <span
+                  className={`herov1__hl-swapped${heroFade ? ' is-fading' : ''}${heroEnter ? ' is-entering' : ''}`}
+                  aria-hidden={heroFade}
+                >
+                  <span className="herov1__hl-line">{heroCopy.line2}</span>
+                  <span className="herov1__hl-line herov1__hl-line--accent">{heroCopy.line3}</span>
+                </span>
+              </h1>
 
-          {/* Orbiting feature icons */}
-          <div className="hero__orbits" aria-hidden="true">
-            {['icon-matching.svg','icon-interview.svg','icon-analytics.svg','icon-learning.svg','icon-network.svg'].map((icon, i) => (
-              <div key={icon} className="hero__orbit-icon">
-                <img src={A(icon)} alt="" />
+              <p className={`herov1__lead${heroFade ? ' is-fading' : ''}`}>{heroCopy.lead}</p>
+
+              <div className="herov1__actions">
+                <FirstPageGlowButton
+                  showIcon
+                  href="/login"
+                  ctaId="hero_start_free_interview"
+                  ctaLocation="hero"
+                >
+                  Start Free Interview →
+                </FirstPageGlowButton>
+                <button type="button" className="herov1__ghost-btn" onClick={openModal}>
+                  Reserve Early Access ↗
+                </button>
               </div>
-            ))}
-          </div>
 
-          {/* Status badge */}
-          <div className="hero__status">
-            <span className="hero__status-dot" aria-hidden="true" />
-            Now in Early Access — Limited Seats
-          </div>
-
-          {/* Monumental headline */}
-          <div className="hero__head" style={{ textAlign: 'center', alignItems: 'center' }}>
-            <h1
-              className="hero__hl"
-              aria-label={HERO_HL_VARIANTS[hlIdx].ariaLabel}
-            >
-              <span className="hero__hl-line">Your Career.</span>
-              <span
-                className={`hero__hl-line hero__hl-line--swap${hlFade ? ' fade-out' : ''}${hlSwapEnter ? ' hl-swap-enter' : ''}`}
-                onAnimationEnd={handleHlSwapAnimEnd}
-                onTransitionEnd={handleHlSwapTransitionEnd}
-              >
-                {HERO_HL_VARIANTS[hlIdx].line2}
-              </span>
-            </h1>
-
-            {/* Rotating tagline */}
-            <div className="hero__rotating" aria-live="polite" aria-atomic="true">
-              <span className="hero__rot-sep" aria-hidden="true" />
-              <span className={`hero__rot-text${rotFade ? ' fade-out' : ''}`}>
-                {HERO_ROT[rotIdx]}
-              </span>
+              <ul className="herov1__chips" role="list">
+                {HERO_CHIPS.map((chip) => (
+                  <li key={chip.label} className="herov1__chip">
+                    <img src={A(chip.icon)} alt="" className="herov1__chip-icon" />
+                    {chip.label}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* Lead */}
-            <p className="hero__lead">
-              ZedReq is a career operating system in one lane: AI that hardens your profile into proof,
-              only surfaces roles that respect your trajectory, and runs interview-grade reps until the room
-              feels smaller than your preparation — then keeps score until the offer lands.
-            </p>
+            {/* ── Right column: live mock-interview panel ── */}
+            <div className="herov1__panel" role="img" aria-label="Preview of an AI mock interview session scoring 78 out of 100">
+              <div className="herov1__panel-bar">
+                <span className="herov1__panel-live">
+                  <span className="herov1__panel-dot" aria-hidden="true" />
+                  Live Session
+                </span>
+                <span className="herov1__panel-meta">Question 3 of 8 · 12:04</span>
+              </div>
 
-            {/* CTAs */}
-            <div className="hero__actions" style={{ justifyContent: 'center' }}>
-              <FirstPageGlowButton showIcon onClick={openModal} ctaId="hero_reserve_seat" ctaLocation="hero">
-                Reserve Early Access ↗
-              </FirstPageGlowButton>
-              <FirstPageGlowButton href="/login" ctaId="hero_get_started" ctaLocation="hero">Get Started</FirstPageGlowButton>
+              <div className="herov1__panel-body">
+                <figure className="herov1__panel-video">
+                  <img src={interviewMockImg} alt="" loading="lazy" decoding="async" />
+                  <figcaption className="herov1__panel-videotag">Interview in progress</figcaption>
+                </figure>
+
+                <div className="herov1__panel-side">
+                  <span className="herov1__panel-label">Current question</span>
+                  <p className="herov1__panel-question">{HERO_PANEL_QUESTION}</p>
+
+                  <span className="herov1__panel-label">Live signals</span>
+                  <ul className="herov1__panel-signals" role="list">
+                    {HERO_PANEL_SIGNALS.map((sig) => (
+                      <li key={sig.label} className="herov1__panel-signal">
+                        <span className="herov1__panel-signal-name">{sig.label}</span>
+                        <span className="herov1__panel-signal-track">
+                          <span
+                            className="herov1__panel-signal-fill"
+                            style={{ width: `${sig.pct}%` }}
+                          />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="herov1__panel-score">
+                <svg className="herov1__gauge" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                  <circle className="herov1__gauge-track" cx="50" cy="50" r="42" />
+                  <circle
+                    className="herov1__gauge-fill"
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    style={{ strokeDashoffset: 264 - (264 * HERO_PANEL_SCORE) / 100 }}
+                  />
+                </svg>
+                <div className="herov1__panel-score-text">
+                  <span className="herov1__panel-score-val">
+                    {HERO_PANEL_SCORE}
+                    <span>/100</span>
+                  </span>
+                  <span className="herov1__panel-score-label">Overall score</span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Scroll indicator */}
           <div className="hero__scroll" aria-hidden="true">
             <span className="hero__scroll-line" />
+          </div>
+        </section>
+
+        {/* ════════════ SEE IT IN ACTION ════════════ */}
+        <section className="v1-action" id="how-it-works" aria-labelledby="v1-action-hl">
+          <div className="v1-action__inner">
+            <header className="v1-action__head">
+              <h2 className="v1-action__hl reveal" id="v1-action-hl">See it in action</h2>
+              <p className="v1-action__sub reveal" style={{ '--d': 1 }}>
+                Go from interview to improvement in just a few minutes.
+              </p>
+            </header>
+
+            {/* ── Four-step tablist ── */}
+            {/* `reveal` sits on the tablist, never on the buttons: `is-visible` is added
+                imperatively by firstPageEffects, and React rewrites a button's className
+                every time the active tab moves — which would strip it and leave the
+                button stuck at opacity 0. This container's className never changes. */}
+            <div
+              className="v1-action__tablist reveal"
+              role="tablist"
+              aria-label="How ZedReq works"
+              onKeyDown={onActionTabKeyDown}
+            >
+              {ACTION_STEPS.map(({ Icon, title, desc }, i) => {
+                const active = actionTab === i;
+                return (
+                  <button
+                    key={title}
+                    type="button"
+                    role="tab"
+                    id={`v1-tab-${i}`}
+                    aria-selected={active}
+                    aria-controls={`v1-panel-${i}`}
+                    tabIndex={active ? 0 : -1}
+                    ref={(el) => { actionTabRefs.current[i] = el; }}
+                    className={`v1-step${active ? ' is-active' : ''}`}
+                    style={{ '--d': i + 1 }}
+                    onClick={() => selectActionTab(i)}
+                    onFocus={(e) => setActionFocus(isKeyboardFocus(e.target))}
+                    onBlur={() => setActionFocus(false)}
+                  >
+                    <span className="v1-step__icon" aria-hidden="true">
+                      <Icon size={20} strokeWidth={1.9} />
+                    </span>
+                    <span className="v1-step__title">
+                      <span className="v1-step__num">{i + 1}.</span> {title}
+                    </span>
+                    <span className="v1-step__desc">{desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Showcase: paired mocks + copy ── */}
+            <div className="v1-action__showcase">
+              <div className="v1-action__stage reveal-left">
+                {ACTION_PANELS.map((Panel, i) => (
+                  <div
+                    key={ACTION_STEPS[i].title}
+                    role="tabpanel"
+                    id={`v1-panel-${i}`}
+                    aria-labelledby={`v1-tab-${i}`}
+                    hidden={actionTab !== i}
+                    tabIndex={0}
+                    className="v1-action__panel"
+                  >
+                    {/* Keyed on the tab so the panel's entry animation replays on each swap */}
+                    <Panel key={actionTab} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="v1-action__copy reveal-right">
+                <h3 className="v1-action__copy-hl">
+                  Getting the interview<br />is only half the battle.
+                </h3>
+                {/* Each quoted question sits on its own line, as in the reference —
+                    the break is what gives them their weight, not extra styling. */}
+                <p className="v1-action__copy-p">
+                  You might have a good resume and the right skills, but when the interviewer
+                  asks:
+                  <br />&ldquo;Tell me about yourself&rdquo;,
+                  <br />&ldquo;Why should we hire you?&rdquo;
+                  <br />you need to actually perform.
+                </p>
+                <p className="v1-action__copy-p v1-action__copy-p--close">
+                  ZedReq lets you practice that,
+                  <br />before the real interview.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -608,6 +1134,82 @@ export default function FirstPage() {
           </div>
         </div>
 
+        {/* ════════════ LMS WALKTHROUGH ════════════ */}
+        <section
+          className={`v1-lms${lmsStatic ? ' v1-lms--static' : ''}`}
+          id="product"
+          ref={lmsRef}
+          aria-labelledby="v1-lms-hl"
+        >
+          <div className="v1-lms__sticky">
+            <div className="v1-lms__inner">
+              <header className="v1-lms__head">
+                <span className="v1-lms__eyebrow">04 — LMS</span>
+                <h2 className="v1-lms__title" id="v1-lms-hl">
+                  Skills that <em>compound</em>
+                </h2>
+                <p className="v1-lms__desc">
+                  Curated learning paths align with your profile gaps and target roles —
+                  built from what the web says today, not a static syllabus.
+                </p>
+              </header>
+
+              <div className="v1-lms__layout">
+                {/* Left: the steps */}
+                <ol className="v1-lms__list">
+                  {LMS_STEPS.map((step, i) => (
+                    <li
+                      key={step.n}
+                      className={`v1-lms__step${!lmsStatic && lmsStep === i ? ' is-active' : ''}`}
+                      aria-current={!lmsStatic && lmsStep === i ? 'step' : undefined}
+                    >
+                      <span className="v1-lms__step-n">{step.n}</span>
+                      <h3 className="v1-lms__step-title">{step.title}</h3>
+                      <p className="v1-lms__step-desc">{step.desc}</p>
+
+                      {/* Stacked fallback: each view sits under its own step */}
+                      {lmsStatic ? (
+                        <div className="v1-lms__stacked-view">
+                          {(() => {
+                            const View = LMS_VIEWS[i];
+                            return <View />;
+                          })()}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+
+                  <FirstPageGlowButton
+                    href="/lms"
+                    ctaId="feature_open_lms"
+                    ctaLocation="features"
+                    className="v1-lms__cta"
+                  >
+                    Open the LMS →
+                  </FirstPageGlowButton>
+                </ol>
+
+                {/* Right: the pinned stage */}
+                {!lmsStatic ? (
+                  <div className="v1-lms__stage">
+                    {LMS_VIEWS.map((View, i) => (
+                      <div
+                        key={LMS_STEPS[i].n}
+                        className="v1-lms__view"
+                        hidden={lmsStep !== i}
+                        aria-hidden={lmsStep !== i}
+                      >
+                        {/* Keyed on the step so the entry animation replays per swap */}
+                        <View key={lmsStep} />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ════════════ FEATURES ════════════ */}
         <section className="features" id="features" aria-labelledby="feat-hl">
           <div className="features__head">
@@ -622,122 +1224,15 @@ export default function FirstPage() {
 
           <div className="features__grid" role="list">
             {FEATURES.map((f) => (
-              <article key={f.label} className="feat-card" role="listitem">
+              <a key={f.label} href={f.href} className="feat-card" role="listitem">
                 <span className="feat-card__label">{f.label}</span>
                 <img src={A(f.icon)} alt="" className="feat-card__icon" />
                 <h3 className="feat-card__title">{f.title}</h3>
                 <p className="feat-card__desc">{f.desc}</p>
                 <span className="feat-card__arrow" aria-hidden="true">Learn more →</span>
-              </article>
+              </a>
             ))}
           </div>
-        </section>
-
-        {/* ════════════ CHAPTERS (product showcase) ════════════ */}
-        <section className="chapters" id="product" aria-label="Product showcase">
-
-          {/* Chapter 1 — AI Profile */}
-          <div className="chapter">
-            <div className="chapter__img-wrap chapter__img-wrap--career-ui">
-              <CareerAssistant />
-            </div>
-
-            <div className="chapter__body reveal-right">
-              <span className="chapter__num">01 — AI Profile</span>
-              <h2 className="chapter__title">
-                A resume that<br /><em>speaks for you</em>
-              </h2>
-              <p className="chapter__desc">
-                Our AI reads your entire work history — every role, project, skill, and result —
-                and builds a multi-dimensional profile that surfaces what static PDFs bury. Hiring
-                managers see the whole story, not just the keywords.
-              </p>
-
-              {/* Score widget */}
-              <div className="chapter__score-wrap">
-                {[
-                  { label: 'Match Score',   val: '94/100', pct: '94%',  delay: '0s'   },
-                  { label: 'Visibility',    val: '88/100', pct: '88%',  delay: '0.15s' },
-                  { label: 'Completeness',  val: '97/100', pct: '97%',  delay: '0.3s'  },
-                ].map((row) => (
-                  <div key={row.label} className="chapter__score-row">
-                    <span className="chapter__score-label">{row.label}</span>
-                    <div className="chapter__score-track">
-                      <div
-                        className="chapter__score-fill"
-                        data-target={row.pct}
-                        style={{ '--delay': row.delay, width: 0 }}
-                      />
-                    </div>
-                    <span className="chapter__score-val">{row.val}</span>
-                  </div>
-                ))}
-              </div>
-
-              <FirstPageGlowButton href="/features" ctaId="feature_ai_profile" ctaLocation="features">Explore AI Profile →</FirstPageGlowButton>
-            </div>
-          </div>
-
-          {/* Chapter 2 — Smart Matching (reversed) */}
-          <div className="chapter chapter--rev chapter--rev-globe">
-            <div className="chapter__img-wrap" style={{ position: 'relative', overflow: 'hidden' }}>
-              <GlobeAnimation />
-            </div>
-
-            <div className="chapter__body reveal-left">
-              <span className="chapter__num">02 — Smart Matching</span>
-              <h2 className="chapter__title">
-                Roles that <em>actually fit</em>
-              </h2>
-              <p className="chapter__desc">
-                Stop spray-and-praying. ZedReq&apos;s matching engine weighs 47 dimensions of fit —
-                compensation, team structure, growth trajectory, commute, culture signals — and
-                returns a ranked shortlist of roles where you&apos;re genuinely competitive.
-              </p>
-              <FirstPageGlowButton href="/features" ctaId="feature_job_matching" ctaLocation="features">See how matching works →</FirstPageGlowButton>
-            </div>
-          </div>
-
-          {/* Chapter 3 — Interview Sim */}
-          <div className="chapter">
-            <div className="chapter__img-wrap chapter__img-wrap--interview-ui">
-              <InterviewSimulatorDashboard />
-            </div>
-
-            <div className="chapter__body reveal-right">
-              <span className="chapter__num">03 — Interview Simulator</span>
-              <h2 className="chapter__title">
-                Practice until<br /><em>it&apos;s automatic</em>
-              </h2>
-              <p className="chapter__desc">
-                Realistic mock interviews tailored to your exact target role. Real-time coaching on
-                structure, delivery, and technical depth. Twelve sessions and you won&apos;t feel the
-                anxiety — just the conversation.
-              </p>
-              <FirstPageGlowButton href="/login" ctaId="hero_start_mock_interview" ctaLocation="features">Try a mock interview →</FirstPageGlowButton>
-            </div>
-          </div>
-
-          {/* Chapter 4 — LMS (reversed) */}
-          <div className="chapter chapter--rev">
-            <div className="chapter__img-wrap chapter__img-wrap--lms-ui">
-              <LMSDashboard />
-            </div>
-
-            <div className="chapter__body reveal-left">
-              <span className="chapter__num">04 — LMS</span>
-              <h2 className="chapter__title">
-                Skills that<br /><em>compound</em>
-              </h2>
-              <p className="chapter__desc">
-                Curated learning paths align with your profile gaps and target roles. Complete
-                focused modules, earn shareable credentials, and keep your edge sharp — without
-                leaving the platform.
-              </p>
-              <FirstPageGlowButton href="/lms" ctaId="feature_open_lms" ctaLocation="features">Open the LMS →</FirstPageGlowButton>
-            </div>
-          </div>
-
         </section>
 
         {/* ════════════ STATS ════════════ */}
@@ -769,21 +1264,17 @@ export default function FirstPage() {
         {/* ════════════ TRUST ════════════ */}
         <section className="trust" id="about" aria-labelledby="trust-hl">
           <div className="trust__layout">
-            <div className="trust__head trust__head--sticky">
-              <div>
-                <span className="mono-label mono-label--accent" style={{ marginBottom: '1.5rem', display: 'block' }}>
-                  Privacy &amp; Security
-                </span>
-                <h2 className="trust__hl" id="trust-hl">
-                  Your data.<br /><em>Your rules.</em>
-                </h2>
-              </div>
+            <header className="trust__head">
+              <span className="mono-label mono-label--accent" style={{ marginBottom: '1rem', display: 'block' }}>
+                Privacy &amp; Security
+              </span>
+              <h2 className="trust__hl" id="trust-hl">
+                Your data.<br /><em>Your rules.</em>
+              </h2>
               <p className="trust__sub">
-                We built ZedReq on a simple principle: your career data belongs to you, not
-                to advertisers, not to recruiters, and not to us. Every feature, every data
-                store, and every algorithm is designed around that belief.
+                Your career data belongs to you — not advertisers, recruiters, or us.
               </p>
-            </div>
+            </header>
 
             <StackedCards items={TRUST_ITEMS} />
           </div>

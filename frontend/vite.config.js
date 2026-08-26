@@ -37,6 +37,8 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_STARTUP_STATUS': JSON.stringify(startupStatus),
     },
     server: {
+      // Bind IPv4 + IPv6 so http://localhost:3000 works on Windows (default [::1]-only fails for 127.0.0.1).
+      host: true,
       port: 3000,
       fs: {
         allow: [path.resolve(__dirname), repoPackageRoot],
