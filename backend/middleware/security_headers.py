@@ -18,6 +18,9 @@ _FIREBASE_AND_GOOGLE_CONNECT = (
     "https://accounts.google.com "
     "https://www.google.com "
     "https://apis.google.com "
+    "https://www.googletagmanager.com "
+    "https://www.google-analytics.com "
+    "https://region1.google-analytics.com "
     "wss://*.firebaseio.com "
     "https://*.firebaseio.com"
 )
@@ -153,11 +156,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         connect_src = _build_connect_src(request)
+        _script_allow = (
+            "'self' 'unsafe-inline' "
+            "https://apis.google.com https://www.gstatic.com "
+            "https://www.googletagmanager.com https://www.google-analytics.com "
+            "https://cdn.paddle.com https://sandbox-cdn.paddle.com "
+            "https://public.profitwell.com"
+        )
         csp = (
             "default-src 'self'; "
             # TODO: replace 'unsafe-inline' with nonce-based CSP once the frontend
             # injects per-request nonces into inline scripts.
-            "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://cdn.paddle.com https://sandbox-cdn.paddle.com https://public.profitwell.com; "
+            f"script-src {_script_allow}; "
+            f"script-src-elem {_script_allow}; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; "
             "img-src 'self' data: https: blob:; "
             "media-src 'self' data: https: blob:; "

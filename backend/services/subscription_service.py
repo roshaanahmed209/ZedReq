@@ -102,14 +102,18 @@ class SubscriptionService:
         Returns the free plan if user has no subscription row (default fallback).
         Always fetches from DB - never trusts JWT or cache.
         """
-        subscription = (
-            self.db.query(UserSubscription)
-            .filter(
-                UserSubscription.user_id == user_id,
-                UserSubscription.status == 'active'
+        subscription = None
+        try:
+            subscription = (
+                self.db.query(UserSubscription)
+                .filter(
+                    UserSubscription.user_id == user_id,
+                    UserSubscription.status == 'active'
+                )
+                .first()
             )
-            .first()
-        )
+        except Exception as e:
+            logger.warning("UserSubscription lookup failed for user %s: %s", user_id, e)
 
         if subscription and subscription.plan:
             plan = subscription.plan
@@ -128,7 +132,11 @@ class SubscriptionService:
             }
 
         # Default to free plan
-        free_plan = self.db.query(SubscriptionPlan).filter_by(plan_name="free").first()
+        free_plan = None
+        try:
+            free_plan = self.db.query(SubscriptionPlan).filter_by(plan_name="free").first()
+        except Exception as e:
+            logger.warning("SubscriptionPlan lookup failed: %s", e)
         if free_plan:
             return {
                 "plan_id": free_plan.plan_id,

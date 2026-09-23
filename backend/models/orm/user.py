@@ -3,7 +3,7 @@ User ORM Model - SQLAlchemy ORM version
 This replaces the raw SQL User model in models/user.py
 """
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.orm import relationship, Mapped, deferred
 from sqlalchemy.sql import func
 from typing import TYPE_CHECKING, Optional
 
@@ -34,8 +34,14 @@ class User(Base):
     auth_provider = Column(String(20), nullable=False, default='email', server_default='email')  # 'email' or 'google'
     profile_url = Column(Text)  # Profile URL in format: {API_URL}/profile/{username}-{hashed_user_id}
     last_login = Column(DateTime)
-    login_count = Column(Integer, nullable=False, default=0, server_default='0')  # successful logins (first-login detection)
-    synthetic_profile_views = Column(Integer, nullable=False, default=0, server_default='0')  # accumulating baseline added to real profile views
+    # Deferred: added in a later migration; omit from default SELECT so older DBs
+    # don't 500 on profile/feed/messaging until ensure_production_schema runs.
+    login_count = deferred(
+        Column(Integer, nullable=False, default=0, server_default='0')
+    )  # successful logins (first-login detection)
+    synthetic_profile_views = deferred(
+        Column(Integer, nullable=False, default=0, server_default='0')
+    )  # accumulating baseline added to real profile views
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

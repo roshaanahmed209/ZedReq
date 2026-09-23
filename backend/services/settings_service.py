@@ -988,18 +988,23 @@ class SettingsService:
                 raise NotFoundError("User")
 
             # 1. user_subscriptions + plan_name only (authoritative)
-            row = self.db.execute(
-                text(
-                    """
-                    SELECT us.status, us.started_at, us.expires_at, sp.plan_name
-                    FROM user_subscriptions us
-                    JOIN subscription_plans sp ON sp.plan_id = us.plan_id
-                    WHERE us.user_id = :uid AND us.status = 'active'
-                    LIMIT 1
-                    """
-                ),
-                {"uid": user_id},
-            ).mappings().first()
+            row = None
+            try:
+                row = self.db.execute(
+                    text(
+                        """
+                        SELECT us.status, us.started_at, us.expires_at, sp.plan_name
+                        FROM user_subscriptions us
+                        JOIN subscription_plans sp ON sp.plan_id = us.plan_id
+                        WHERE us.user_id = :uid AND us.status = 'active'
+                        LIMIT 1
+                        """
+                    ),
+                    {"uid": user_id},
+                ).mappings().first()
+            except Exception as sub_err:
+                # Table/column may be absent on older DBs — fall through to payment/free.
+                logger.warning("user_subscriptions read skipped: %s", sub_err)
             if row and row.get("plan_name"):
                 return {
                     "plan": str(row["plan_name"]),
@@ -1009,20 +1014,24 @@ class SettingsService:
                 }
 
             # 2. Fallback to payment (via users.pay_id or payment.uid)
-            pay = self.db.execute(
-                text(
-                    """
-                    SELECT p.subscription_plan, p.subscription_status,
-                           p.subscription_start, p.subscription_end
-                    FROM payment p
-                    LEFT JOIN users u ON u.pay_id = p.pay_id
-                    WHERE u.uid = :uid OR p.uid = :uid
-                    ORDER BY CASE WHEN u.uid IS NOT NULL THEN 0 ELSE 1 END, p.pay_id DESC
-                    LIMIT 1
-                    """
-                ),
-                {"uid": user_id},
-            ).mappings().first()
+            pay = None
+            try:
+                pay = self.db.execute(
+                    text(
+                        """
+                        SELECT p.subscription_plan, p.subscription_status,
+                               p.subscription_start, p.subscription_end
+                        FROM payment p
+                        LEFT JOIN users u ON u.pay_id = p.pay_id
+                        WHERE u.uid = :uid OR p.uid = :uid
+                        ORDER BY CASE WHEN u.uid IS NOT NULL THEN 0 ELSE 1 END, p.pay_id DESC
+                        LIMIT 1
+                        """
+                    ),
+                    {"uid": user_id},
+                ).mappings().first()
+            except Exception as pay_err:
+                logger.warning("payment subscription read skipped: %s", pay_err)
             if pay and pay.get("subscription_plan"):
                 return {
                     "plan": str(pay["subscription_plan"]),

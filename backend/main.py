@@ -250,6 +250,15 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WARN] User deletion tables init failed: {e}")
 
+    def _init_production_schema():
+        """Reconcile ORM/subscription columns before other startup tasks."""
+        try:
+            from db.migrations.ensure_production_schema import run_migration
+            run_migration()
+            print("[OK] Production schema reconciled")
+        except Exception as e:
+            print(f"[WARN] ensure_production_schema failed: {e}")
+
     def _init_redis():
         try:
             from config.cache import ping_redis
@@ -307,6 +316,7 @@ async def lifespan(app: FastAPI):
 
     # Run all blocking startup tasks in threads with a 20s timeout each
     for name, fn in [
+        ("production_schema", _init_production_schema),
         ("redis", _init_redis),
         ("db", _init_db),
         ("orm", _init_orm),
