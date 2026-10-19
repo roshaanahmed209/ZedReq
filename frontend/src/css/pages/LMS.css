@@ -6,6 +6,13 @@
   grid-column: span 2;
 }
 
+/* Ensure cards are single column on mobile */
+@media (max-width: 900px) {
+  .dashboard-card-span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
 .trend-bar-wrapper {
   flex: 1;
   display: flex;

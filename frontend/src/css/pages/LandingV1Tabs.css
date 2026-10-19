@@ -1,0 +1,517 @@
+/*
+  ZedReq — Landing V1 · "See it in action" tabs
+  ─────────────────────────────────────────────────────────────────────
+  Loaded after LandingV1Action.css. Turns the four static step cards into a
+  tablist and styles the two panels that did not exist as mocks before
+  (Choose Role, Your progress).
+  ─────────────────────────────────────────────────────────────────────
+*/
+
+/* ═══════════════════════════════════════════════════════════
+   1. TABLIST
+════════════════════════════════════════════════════════════ */
+.v1-action__tablist {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(0.75rem, 1.6vw, 1.25rem);
+  margin-top: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+/* Scroll-in stagger hangs off the tablist's `.is-visible`, not each button's.
+   `.is-visible` is set imperatively by firstPageEffects; on a button it would be
+   destroyed the first time React re-rendered it with a new className (i.e. the
+   moment you click a tab), leaving the button invisible. Keying the selector to
+   the parent means a button's own className can change freely.
+
+   The entry uses an animation rather than a transition so the per-tab stagger
+   lives in animation-delay, leaving transition-delay free at 0 — otherwise every
+   hover would sit idle for up to 0.36s before responding. */
+.v1-action__tablist .v1-step {
+  opacity: 0;
+}
+.v1-action__tablist.is-visible .v1-step {
+  animation: v1-tab-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 0.09s);
+}
+
+@keyframes v1-tab-in {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* `.v1-step` is now a <button>; reset the UA chrome and restate the card. */
+.zedreq-root .v1-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 0;
+  margin: 0;
+  padding: clamp(0.85rem, 1.2vw, 1.1rem) clamp(0.9rem, 1.2vw, 1.1rem);
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  /* Opacity/transform match `.reveal`'s timing: this rule out-specifies it, and a
+     shorthand `transition` replaces the whole list, so omitting them here would
+     make the scroll-in pop instead of fade. `.reveal` still supplies the delay. */
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* No :hover rule by design — these are click-only. `cursor: pointer` above and the
+   focus ring below are the whole affordance. */
+
+.zedreq-root .v1-step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.zedreq-root .v1-step.is-active {
+  background: var(--v1-panel-bg-soft);
+  border-color: var(--v1-panel-border);
+}
+
+/* Inactive tabs recede so the current step reads first */
+.v1-step:not(.is-active) .v1-step__icon {
+  opacity: 0.6;
+}
+.v1-step:not(.is-active) .v1-step__desc {
+  opacity: 0.75;
+}
+
+.v1-step__icon,
+.v1-step__desc,
+.v1-step__title {
+  transition: opacity 0.35s ease, color 0.35s ease;
+}
+
+.v1-step.is-active .v1-step__icon {
+  box-shadow: 0 0 26px rgba(21, 133, 161, 0.32);
+}
+
+/* Title/desc were <h3>/<p>, now spans — restate block flow. */
+.v1-step__title,
+.v1-step__desc {
+  display: block;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. PANEL STAGE
+════════════════════════════════════════════════════════════ */
+.v1-action__stage {
+  min-width: 0;
+  width: 100%;
+  max-width: 38rem;
+  /* The reference frames the mock in a square; keeping the stage square means the
+     four panels never resize the section as they swap, however tall their content. */
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+}
+
+.v1-action__panel {
+  min-width: 0;
+  height: 100%;
+}
+/* The class sets no display, but be explicit so `hidden` can never be
+   out-specified by a later rule. */
+.v1-action__panel[hidden] {
+  display: none;
+}
+
+.v1-action__panel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 18px;
+}
+
+/* Panels are keyed on the active tab, so this replays on every swap */
+.v1-action__panel .v1-mock {
+  animation: v1-panel-swap 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes v1-panel-swap {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* One mock now fills the stage rather than sitting in a pair, so give it
+   a comfortable reading width instead of letting it stretch full-bleed. */
+.v1-action__stage .v1-mock {
+  height: 100%;
+  max-width: none;
+}
+
+/* Content is centred in the square rather than pinned to the top, so a short
+   panel does not leave a block of dead space under it. */
+.v1-action__stage .v1-mock__body {
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. PANEL 1 — CHOOSE ROLE
+════════════════════════════════════════════════════════════ */
+.v1-role__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v1-role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--v1-panel-hairline);
+  border-radius: 11px;
+  background: var(--v1-panel-bg);
+}
+
+.v1-role.is-active {
+  border-color: var(--v1-badge-border);
+  background: var(--v1-badge-bg);
+}
+
+.v1-role__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.v1-role__label {
+  font-family: var(--font-body);
+  font-size: clamp(0.8rem, 0.88vw, 0.88rem);
+  font-weight: 600;
+  color: var(--v1-panel-text);
+}
+
+.v1-role__meta {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--v1-panel-text-dim);
+}
+
+/* Drawn tick — same treatment as the strengths list */
+.v1-role__check {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.v1-role__check::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  width: 9px;
+  height: 5px;
+  border-left: 1.8px solid var(--v1-score);
+  border-bottom: 1.8px solid var(--v1-score);
+  transform: rotate(-45deg);
+}
+
+.v1-role__seniority-label {
+  margin-top: 1.15rem;
+}
+
+.v1-role__seniority {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.v1-role__pill {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--v1-panel-hairline);
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-role__pill.is-active {
+  border-color: var(--v1-badge-border);
+  background: var(--v1-badge-bg);
+  color: var(--v1-badge-text);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4. PANEL 4 — YOUR PROGRESS
+════════════════════════════════════════════════════════════ */
+.v1-prog__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 1.05rem;
+  margin-bottom: 1.05rem;
+  border-bottom: 1px solid var(--v1-panel-hairline);
+}
+
+.v1-prog__delta {
+  margin-left: auto;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.12);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--v1-score);
+  white-space: nowrap;
+}
+
+.v1-prog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v1-prog__row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.v1-prog__row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-prog__row.is-active .v1-prog__row-label {
+  color: var(--v1-panel-text);
+  font-weight: 600;
+}
+
+.v1-prog__row-date {
+  font-size: 0.66rem;
+  font-weight: 400;
+  color: var(--v1-panel-text-dim);
+  opacity: 0.8;
+}
+
+.v1-prog__track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--v1-score-track);
+  overflow: hidden;
+}
+
+.v1-prog__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #38bdf8);
+  transform-origin: left;
+  animation: v1-signal-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.v1-prog__row.is-active .v1-prog__fill {
+  background: linear-gradient(90deg, var(--accent), var(--v1-score));
+}
+
+.v1-prog__val {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+  color: var(--v1-panel-text);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4b. ADDED PANEL CONTENT
+   Each panel gained one block so the square does not read as empty.
+   Deliberately one block each — the mocks are a glance, not a spec.
+════════════════════════════════════════════════════════════ */
+
+/* ── Interview: session position + elapsed ── */
+.v1-mock__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  color: var(--v1-panel-text-dim);
+}
+
+/* ── Interview: closing guidance ── */
+.v1-mock__hint {
+  margin-top: 0.85rem;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--v1-panel-text-dim);
+}
+
+/* ── Role: what the picked set produces ── */
+.v1-role__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.15rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--v1-lit-border);
+}
+
+.v1-role__summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+}
+.v1-role__summary-row dt {
+  color: var(--v1-panel-text-dim);
+}
+.v1-role__summary-row dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--v1-panel-text);
+  text-align: right;
+}
+
+/* ── Feedback: the marks behind the overall score ── */
+.v1-fb__breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.8rem 0;
+  list-style: none;
+  border-top: 1px solid var(--v1-lit-border);
+  border-bottom: 1px solid var(--v1-lit-border);
+}
+
+.v1-fb__breakdown li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.v1-fb__breakdown-val {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--v1-panel-text);
+}
+
+.v1-fb__breakdown-label {
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  letter-spacing: 0.6px;
+  color: var(--v1-panel-text-dim);
+}
+
+/* ── Progress: next focus ── */
+.v1-prog__focus-label {
+  margin-top: 1.25rem;
+}
+.v1-prog__focus-label + .v1-fb__list {
+  margin-top: 0.55rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. SMALLER SCORE RING VARIANT
+════════════════════════════════════════════════════════════ */
+.v1-fb__ring--sm {
+  width: 42px;
+  height: 42px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. RESPONSIVE
+════════════════════════════════════════════════════════════ */
+@media (max-width: 1360px) {
+  .v1-action__stage {
+    max-width: 30rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .v1-action__tablist {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .v1-action__tablist {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Collapse to a compact list: the description only earns its space
+     on the step the visitor is actually looking at. */
+  .v1-step:not(.is-active) .v1-step__desc {
+    display: none;
+  }
+
+  .zedreq-root .v1-step {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .v1-step__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .v1-step__title {
+    margin-top: 0.75rem;
+  }
+
+  .v1-prog__row {
+    grid-template-columns: 4.75rem minmax(0, 1fr) 1.85rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. REDUCED MOTION
+════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .v1-action__panel .v1-mock,
+  .v1-prog__fill {
+    animation: none;
+    transition: none;
+  }
+  /* Kill the entry animation but not its result — without the explicit opacity
+     the tabs would stay at the base rule's 0 and never appear. */
+  .v1-action__tablist.is-visible .v1-step {
+    animation: none;
+  }
+  .v1-action__tablist .v1-step {
+    opacity: 1;
+  }
+}

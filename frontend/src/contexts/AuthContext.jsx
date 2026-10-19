@@ -1,7 +1,46 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { authAPI, tokenService, NotificationWebSocket } from '../services/api'
+import { clearPrelaunchNoticePending } from '../utils/prelaunchNotice'
+import { identify as analyticsIdentify, resetIdentity, trackEvent } from '../utils/analytics'
 
 const AuthContext = createContext()
+
+const SESSION_FEED_STATS_KEY = 'zedreq_session_feed_stats'
+
+function randomFeedStats() {
+  return {
+    profileViews: Math.floor(Math.random() * 200),
+    postImpressions: Math.floor(Math.random() * 800),
+  }
+}
+
+function readStoredFeedStats(userId) {
+  if (userId == null) return null
+  try {
+    const raw = sessionStorage.getItem(SESSION_FEED_STATS_KEY)
+    if (!raw) return null
+    const o = JSON.parse(raw)
+    if (String(o.userId) !== String(userId)) return null
+    return {
+      profileViews: o.profileViews,
+      postImpressions: o.postImpressions,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStoredFeedStats(userId, stats) {
+  if (userId == null) return
+  sessionStorage.setItem(
+    SESSION_FEED_STATS_KEY,
+    JSON.stringify({ userId, ...stats })
+  )
+}
+
+function clearStoredFeedStats() {
+  sessionStorage.removeItem(SESSION_FEED_STATS_KEY)
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -16,6 +55,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [notificationWs, setNotificationWs] = useState(null)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [sessionFeedStats, setSessionFeedStats] = useState(null)
 
   useEffect(() => {
     checkAuthStatus()
@@ -23,6 +63,8 @@ export const AuthProvider = ({ children }) => {
     // Listen for unauthorized events (token expired, etc.)
     const handleUnauthorized = () => {
       setUser(null)
+      setSessionFeedStats(null)
+      clearStoredFeedStats()
       tokenService.clearTokens()
     }
     
@@ -37,14 +79,11 @@ export const AuthProvider = ({ children }) => {
     if (user && tokenService.isAuthenticated()) {
       const ws = new NotificationWebSocket(
         (notification) => {
-          // Handle incoming notification
-          console.log('Received notification:', notification)
           setUnreadNotifications(prev => prev + 1)
-          // You can dispatch a custom event or use a state manager here
           window.dispatchEvent(new CustomEvent('notification:received', { detail: notification }))
         },
-        (error) => {
-          console.error('WebSocket error:', error)
+        () => {
+          // error surfaced on backend
         }
       )
       ws.connect()
@@ -60,11 +99,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user])
 
+  const hydrateSessionFeedStats = (userId) => {
+    const id = userId
+    if (id == null) return
+    const existing = readStoredFeedStats(id)
+    if (existing) {
+      setSessionFeedStats(existing)
+      return
+    }
+    const stats = randomFeedStats()
+    writeStoredFeedStats(id, stats)
+    setSessionFeedStats(stats)
+  }
+
+  const refreshSessionFeedStats = (userId) => {
+    const id = userId
+    if (id == null) return
+    const stats = randomFeedStats()
+    writeStoredFeedStats(id, stats)
+    setSessionFeedStats(stats)
+  }
+
   const checkAuthStatus = async () => {
     try {
       // Check if we have a token
       if (!tokenService.isAuthenticated()) {
         setUser(null)
+        setSessionFeedStats(null)
         setLoading(false)
         return
       }
@@ -72,15 +133,22 @@ export const AuthProvider = ({ children }) => {
       // Verify token by getting current user
       const response = await authAPI.getCurrentUser()
       if (response.data) {
-        setUser(response.data)
+        const userData = response.data
+        setUser(userData)
+        // Re-assert the anonymous -> user binding for an already-signed-in visitor.
+        // The SDK no-ops when this browser is already stitched to this user.
+        analyticsIdentify(userData.id ?? userData.uid)
+        hydrateSessionFeedStats(userData.id ?? userData.uid)
       } else {
         setUser(null)
+        setSessionFeedStats(null)
         tokenService.clearTokens()
       }
     } catch (error) {
       // Token invalid or expired
       console.log('Not authenticated or token expired')
       setUser(null)
+      setSessionFeedStats(null)
       tokenService.clearTokens()
     } finally {
       setLoading(false)
@@ -91,8 +159,62 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.login(username, password)
       
+      // Check if 2FA is required
+      if (response.data && response.data.requires_2fa) {
+        return {
+          success: false,
+          requires2FA: true,
+          tempToken: response.data.temp_token,
+          message: response.data.message || 'Please enter your 2FA code'
+        }
+      }
+      
       if (response.data && response.data.user) {
-        setUser(response.data.user)
+        const u = response.data.user
+        setUser(u)
+        // Stitch before anything else: this is what joins the visitor's pre-login
+        // landing page view and CTA click to the account they just signed into.
+        analyticsIdentify(u.id ?? u.uid)
+        refreshSessionFeedStats(u.id ?? u.uid)
+        return {
+          success: true,
+          message: 'Login successful'
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Login failed'
+      }
+    } catch (error) {
+      trackEvent('login_failed', {
+        authentication_method: 'password',
+        failure_category: error.response?.status === 401 ? 'invalid_credentials' : 'error',
+      })
+      const noResponse = !error.response
+      const looksLikeNetwork =
+        noResponse &&
+        (error.code === 'ERR_NETWORK' ||
+          String(error.message || '').toLowerCase().includes('network'))
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (looksLikeNetwork
+          ? 'Cannot reach the API. Confirm the backend is running, and that VITE_API_URL (or the URL in your browser) matches your CORS settings — localhost and 127.0.0.1 are not interchangeable.'
+          : 'Network error. Please try again.')
+      return { success: false, message: errorMessage }
+    }
+  }
+
+  const verify2FA = async (tempToken, code) => {
+    try {
+      const response = await authAPI.verify2FA(tempToken, code)
+
+      if (response.data && response.data.user) {
+        const u = response.data.user
+        setUser(u)
+        analyticsIdentify(u.id ?? u.uid)
+        refreshSessionFeedStats(u.id ?? u.uid)
         return { 
           success: true, 
           message: 'Login successful' 
@@ -101,55 +223,84 @@ export const AuthProvider = ({ children }) => {
       
       return { 
         success: false, 
-        message: 'Login failed' 
+        message: '2FA verification failed' 
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message || 
-                          'Network error. Please try again.'
-      return { success: false, message: errorMessage }
+      return { 
+        success: false, 
+        message: error.response?.data?.detail || '2FA verification failed' 
+      }
     }
   }
 
   const register = async (userData) => {
     try {
+      trackEvent('signup_submitted', { signup_method: 'email' })
       const response = await authAPI.register(userData)
-      
+
       if (response.data && response.data.user) {
-        setUser(response.data.user)
-        return { 
-          success: true, 
-          message: 'Registration successful' 
+        const u = response.data.user
+        setUser(u)
+        // The signup_succeeded / user_registered conversion events are emitted
+        // server-side; this call is what attaches the whole anonymous journey that
+        // preceded the account to the new user.
+        analyticsIdentify(u.id ?? u.uid)
+        refreshSessionFeedStats(u.id ?? u.uid)
+        return {
+          success: true,
+          message: 'Registration successful'
         }
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         message: 'Registration failed'
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message || 
-                          'Network error. Please try again.'
+      trackEvent('signup_failed', {
+        signup_method: 'email',
+        failure_category:
+          error.response?.status === 409
+            ? 'already_exists'
+            : error.response?.status === 400
+              ? 'validation'
+              : 'error',
+      })
+      const noResponse = !error.response
+      const looksLikeNetwork =
+        noResponse &&
+        (error.code === 'ERR_NETWORK' ||
+          String(error.message || '').toLowerCase().includes('network'))
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (looksLikeNetwork
+          ? 'Cannot reach the API. Confirm the backend is running, and that VITE_API_URL (or the URL in your browser) matches your CORS settings — localhost and 127.0.0.1 are not interchangeable.'
+          : 'Network error. Please try again.')
       return { success: false, message: errorMessage }
     }
   }
 
-  const logout = async () => {
-    try {
-      // Disconnect WebSocket
-      if (notificationWs) {
-        notificationWs.disconnect()
-        setNotificationWs(null)
-      }
-      
-      await authAPI.logout()
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setUser(null)
-      setUnreadNotifications(0)
+  const logout = () => {
+    // Disconnect WebSocket
+    if (notificationWs) {
+      notificationWs.disconnect()
+      setNotificationWs(null)
     }
+
+    // Clear state immediately so the UI reacts instantly
+    trackEvent('logout')
+    setUser(null)
+    setUnreadNotifications(0)
+    setSessionFeedStats(null)
+    clearStoredFeedStats()
+    clearPrelaunchNoticePending()
+    // Drops only the user binding. The anonymous id survives on purpose: it is the
+    // same browser, so a returning visitor stays recognisable as one person.
+    resetIdentity()
+
+    // Fire backend logout (context update) in the background — don't await
+    authAPI.logout().catch(err => console.warn('Background logout call failed:', err))
   }
 
   const updateUser = (userData) => {
@@ -159,6 +310,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    verify2FA,
     register,
     logout,
     loading,
@@ -166,7 +318,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user && tokenService.isAuthenticated(),
     checkAuthStatus,
     unreadNotifications,
-    setUnreadNotifications
+    setUnreadNotifications,
+    sessionFeedStats,
+    refreshSessionFeedStats,
   }
 
   return (

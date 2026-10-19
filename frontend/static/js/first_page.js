@@ -1,19 +1,22 @@
 // Intersection Observer for scroll reveal animations
 const observerOptions = {
     threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
+    rootMargin: '0px 0px -40px 0px'
 };
 
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
         }
     });
 }, observerOptions);
 
-// Observe all scroll reveal elements
+// Observe all scroll reveal elements (all variants)
 document.addEventListener('DOMContentLoaded', () => {
+    const revealElements = document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-right, .scroll-reveal-scale');
+    revealElements.forEach(el => observer.observe(el));
     // Smooth scroll for anchor links
     const anchorLinks = document.querySelectorAll('a[href^="#"]');
     anchorLinks.forEach(link => {
@@ -168,7 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Smooth page transitions for navigation
-    const navigationLinks = document.querySelectorAll('a[href="/landing"], a[href="/feed"]');
+    const navigationLinks = document.querySelectorAll(
+        'a[href="/login"], a[href="/get-started"], a[href="/feed"], a[href="/landing"]'
+    );
     navigationLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();

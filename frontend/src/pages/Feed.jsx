@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
+import Messages from './Messages'
+import { generateProfileUrl } from '../utils/profileUrl'
+import { shouldSkipMediaLoad } from '../utils/mediaUrl'
+import Navbar from '../components/Navbar'
+import PostComments from '../components/PostComments'
+import SharePostButton from '../components/SharePostButton'
+import UserProfileLink from '../components/UserProfileLink'
 import '../css/pages/Feed.css'
 
 const fadeIn = keyframes`
@@ -11,206 +19,90 @@ const fadeIn = keyframes`
 `
 
 const slideUp = keyframes`
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 `
 
 const Container = styled.div`
-  min-height: 100vh;
-  background: var(--bg-light);
-  animation: ${fadeIn} 0.6s ease-in;
-`
-
-const Navbar = styled.nav`
-  background: rgba(13, 13, 13, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  padding: 0 20px;
-`
-
-const NavContainer = styled.div`
-  max-width: 100%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  gap: 30px;
-`
-
-const NavLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
   position: relative;
-`
+  min-height: 100vh;
+  animation: ${fadeIn} 0.6s ease-in;
 
-const Logo = styled.h1`
-  font-size: 1.8em;
-  font-weight: 300;
-  color: var(--primary);
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
-`
-
-const NavRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 30px;
-`
-
-const NavMenu = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 30px;
-  
-  @media (max-width: 768px) {
-    display: none;
-  }
-`
-
-const NavMenuItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  color: var(--text-light);
-  font-size: 0.85em;
-  transition: color 0.2s ease;
-  padding: 8px 12px;
-  border-radius: 8px;
-  min-width: 80px;
-  text-align: center;
-  
-  svg {
-    width: 22px;
-    height: 22px;
-  }
-  
-  span {
-    white-space: nowrap;
-  }
-  
-  &:hover {
-    color: var(--primary);
-    background: rgba(10, 102, 194, 0.1);
-  }
-  
-  &.active {
-    color: var(--primary);
-  }
-`
-
-const SearchInput = styled.input`
-  padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-size: 0.9em;
-  transition: all 0.2s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.08);
-  }
-  
-  &::placeholder {
-    color: var(--text-lighter);
-  }
-`
-
-const SearchResults = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 280px;
-  background: var(--bg-white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-top: 8px;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  display: none;
-  max-height: 400px;
-  overflow-y: auto;
-`
-
-const SearchResultItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background: var(--hover-bg);
-  }
-  
-  &:first-child {
-    border-radius: 8px 8px 0 0;
-  }
-  
-  &:last-child {
-    border-radius: 0 0 8px 8px;
-  }
-`
-
-const SearchAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 500;
-`
-
-const LogoutButton = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background: var(--hover-bg);
-    border-color: var(--primary);
+  /*
+   * Beam: radial burst originating from the bottom-right corner using #1585A1,
+   * fading to transparent as it travels toward the top-left.
+   */
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--bg-light);
+    background-image:
+      radial-gradient(ellipse 100% 80% at 100% 0%, rgba(21, 133, 161, 0.14) 0%, transparent 52%),
+      radial-gradient(ellipse 70% 60% at 0% 100%, rgba(21, 133, 161, 0.08) 0%, transparent 48%);
+    pointer-events: none;
   }
 `
 
 const MainContainer = styled.div`
-  max-width: 1600px;
-  margin: 0 auto 0 0;
+  position: relative;
+  z-index: 1;
+  max-width: 1880px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 280px 280px 1fr;
-  gap: 25px;
-  padding: 30px 20px;
+  grid-template-columns: 268px 248px minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px clamp(16px, 2.5vw, 32px);
+  background: transparent;
+  
+  @media (max-width: 1400px) {
+    max-width: 100%;
+    margin: 0 auto;
+    grid-template-columns: 254px 236px minmax(0, 1fr);
+    gap: 22px;
+    padding: 28px 18px;
+  }
+  
+  @media (max-width: 1200px) {
+    max-width: 100%;
+    margin: 0 auto;
+    grid-template-columns: 298px 1fr;
+    gap: 20px;
+    padding: 25px 15px;
+  }
   
   @media (max-width: 1024px) {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 276px 1fr;
+    gap: 18px;
+    padding: 20px 15px;
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: 256px 1fr;
+    gap: 16px;
+    padding: 18px 12px;
   }
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding: 20px 15px;
+  }
+  
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+    padding: 15px 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+    padding: 12px 10px;
   }
 `
 
@@ -218,53 +110,129 @@ const Sidebar = styled.aside`
   position: sticky;
   top: 100px;
   height: fit-content;
+  background: transparent;
+
+  @media (max-width: 768px) {
+    position: static;
+    top: auto;
+  }
 `
 
 const ProfileCard = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 30px;
+  padding: 28px 24px;
   border: 1px solid var(--border);
   text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: rgba(21, 133, 161, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.06);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 25px 20px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 20px 15px;
+    border-radius: 10px;
+  }
 `
 
 const ProfileAvatar = styled.div`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--primary);
+  background: linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 2em;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0 auto 20px;
+  box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.12);
+  
+  @media (max-width: 768px) {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8em;
+    margin-bottom: 16px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5em;
+    margin-bottom: 12px;
+  }
 `
 
 const ProfileName = styled.h3`
-  font-size: 1.3em;
+  font-size: 1.2em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 10px;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const ProfileHeadline = styled.p`
   color: var(--text-light);
   margin-bottom: 15px;
-  font-size: 0.9em;
+  font-size: 0.875em;
+  line-height: 1.45;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+    margin-bottom: 12px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+    margin-bottom: 10px;
+  }
 `
 
 const ProfileBio = styled.p`
   color: var(--text-lighter);
   font-size: 0.85em;
   line-height: 1.5;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    line-height: 1.4;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    line-height: 1.4;
+  }
 `
 
 const LeftSidebar = styled.aside`
   position: sticky;
   top: 100px;
   height: fit-content;
-  
+  background: transparent;
+
   @media (max-width: 1024px) {
     display: none;
   }
@@ -272,21 +240,141 @@ const LeftSidebar = styled.aside`
 
 const SidePanel = styled.div`
   background: var(--bg-white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.3s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 28px rgba(0, 0, 0, 0.06);
+  }
+`
+
+const MobileMenuButton = styled.button`
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  z-index: 101;
+  
+  @media (max-width: 1024px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: rgba(21, 133, 161, 0.1);
+    color: var(--primary);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`
+
+const MobileMenuOverlay = styled.div`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: opacity 0.3s ease;
+  
+  @media (max-width: 1024px) {
+    display: block;
+  }
+`
+
+const MobileSidePanel = styled.aside`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: ${props => props.isOpen ? '0' : '-100%'};
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  background: var(--bg-white);
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (max-width: 1024px) {
+    display: block;
+  }
+  
+  @media (max-width: 480px) {
+    width: 260px;
+    max-width: 90vw;
+  }
+  
+  & ${SidePanel} {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+  }
+`
+
+const MobileMenuHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-white);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  h2 {
+    font-size: 1.2em;
+    color: var(--text);
+    font-weight: 600;
+    margin: 0;
+  }
+`
+
+const MobileMenuCloseButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text);
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
   }
 `
 
 const PanelSection = styled.div`
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
   
   &:last-child {
     border-bottom: none;
@@ -295,30 +383,18 @@ const PanelSection = styled.div`
   &:hover {
     background: var(--hover-bg);
     cursor: pointer;
-    padding-left: 24px;
   }
 `
 
 const PanelHeader = styled.div`
-  padding: 24px 20px;
-  background: linear-gradient(135deg, #0a66c2 0%, #004182 100%);
+  padding: 18px 20px;
+  background: #0f6a82;
   color: white;
   font-weight: 600;
-  font-size: 1em;
-  letter-spacing: 0.3px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border-bottom: 3px solid var(--primary-dark);
-  position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -3px;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: var(--secondary);
-  }
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 `
 
 const PanelItem = styled.div`
@@ -335,13 +411,10 @@ const PanelItem = styled.div`
   }
   
   .value {
-    font-weight: 700;
-    font-size: 1.1em;
+    font-weight: 600;
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
     color: var(--primary);
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 `
 
@@ -352,34 +425,32 @@ const PanelLink = styled.div`
   color: var(--text);
   font-size: 0.9em;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
   
   .icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: rgba(10, 102, 194, 0.1);
+    width: 30px;
+    height: 30px;
+    background: rgba(21, 133, 161, 0.08);
     border-radius: 8px;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease;
     
     svg {
       color: var(--text-light);
-      transition: all 0.2s ease;
+      transition: color 0.15s ease;
     }
   }
   
   &:hover {
     color: var(--primary);
-    transform: translateX(2px);
     
     .icon {
-      background: var(--primary);
-      transform: scale(1.05);
+      background: rgba(21, 133, 161, 0.16);
       
       svg {
-        color: white;
+        color: var(--primary);
       }
     }
   }
@@ -396,14 +467,31 @@ const PanelDivider = styled.div`
   margin: 8px 0;
 `
 
-const FeedContainer = styled.main``
+const FeedContainer = styled.main`
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+`
 
 const PostCreator = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 30px;
+  padding: 22px 22px 20px;
+  margin-bottom: 24px;
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  
+  @media (max-width: 768px) {
+    padding: 18px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+  }
 `
 
 const PostCreatorHeader = styled.div`
@@ -411,8 +499,26 @@ const PostCreatorHeader = styled.div`
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+  }
 `
 
 const PostCreatorAvatar = styled.div`
@@ -426,6 +532,25 @@ const PostCreatorAvatar = styled.div`
   color: white;
   font-weight: 500;
   font-size: 1.2em;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    font-size: 1em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9em;
+  }
 `
 
 const PostCreatorInfo = styled.div`
@@ -433,15 +558,42 @@ const PostCreatorInfo = styled.div`
 `
 
 const PostCreatorTitle = styled.h3`
-  font-size: 1em;
+  font-size: 0.9375rem;
   color: var(--text);
   margin-bottom: 4px;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+    margin-bottom: 3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostCreatorSubtitle = styled.p`
   font-size: 0.85em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.7em;
+  }
 `
 
 const PostInputContainer = styled.div`
@@ -452,58 +604,136 @@ const PostInputContainer = styled.div`
 
 const PostTextarea = styled.textarea`
   width: 100%;
-  padding: 15px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-light);
   color: var(--text);
-  font-size: 1em;
+  font-size: 0.9375rem;
+  line-height: 1.5;
   resize: vertical;
-  min-height: 80px;
+  min-height: 88px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   
   &:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.45);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
   
   &::placeholder {
     color: var(--text-lighter);
   }
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+    font-size: 0.95em;
+    min-height: 70px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px;
+    font-size: 0.9em;
+    min-height: 60px;
+    border-radius: 6px;
+  }
 `
 
 const PostButton = styled.button`
   align-self: flex-end;
-  padding: 12px 24px;
+  padding: 10px 22px;
   background: var(--primary);
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  min-height: 44px; /* Better touch target */
   
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
   
-  &:active {
-    transform: translateY(0) scale(0.98);
+  &:active:not(:disabled) {
+    opacity: 0.92;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 20px;
+    font-size: 0.95em;
+    align-self: stretch;
+    width: 100%;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 16px;
+    font-size: 0.9em;
+    border-radius: 6px;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 8px 14px;
+    font-size: 0.85em;
   }
 `
 
 const PostsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  
+  @media (max-width: 768px) {
+    gap: 18px;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 12px;
+  }
+`
+
+const DiscoveryBanner = styled.div`
+  text-align: center;
+  padding: 12px 16px;
+  margin: 8px 0 16px;
+  font-size: 0.85rem;
+  color: var(--text-lighter);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-light);
+  border-radius: 8px;
 `
 
 const Post = styled.div`
   background: var(--bg-white);
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 22px;
   border: 1px solid var(--border);
-  animation: ${slideUp} 0.3s ease-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.04);
+  animation: ${slideUp} 0.35s ease-out;
+  
+  @media (max-width: 768px) {
+    padding: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 15px;
+    border-radius: 8px;
+  }
 `
 
 const PostHeader = styled.div`
@@ -511,46 +741,128 @@ const PostHeader = styled.div`
   align-items: center;
   gap: 15px;
   margin-bottom: 15px;
+  
+  @media (max-width: 480px) {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
 `
 
 const PostAvatar = styled.div`
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--primary);
+  background: linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 500;
-  font-size: 1.2em;
+  font-weight: 600;
+  font-size: 1.05em;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(21, 133, 161, 0.1);
+  
+  @media (max-width: 768px) {
+    width: 45px;
+    height: 45px;
+    font-size: 1.1em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    font-size: 1em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9em;
+  }
 `
 
 const PostInfo = styled.div`
   flex: 1;
 `
 
-const PostName = styled.h4`
-  font-size: 1em;
+const PostName = styled.div`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin-bottom: 2px;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 1px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostUsername = styled.div`
   font-size: 0.85em;
   color: var(--text-lighter);
   margin-bottom: 2px;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    margin-bottom: 1px;
+  }
 `
 
 const PostTime = styled.div`
   font-size: 0.8em;
   color: var(--text-lighter);
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+  }
 `
 
 const PostContent = styled.div`
   margin-bottom: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
+  font-size: 0.9375rem;
   color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 10px;
+    line-height: 1.5;
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+  }
 `
 
 const PostMedia = styled.div`
@@ -563,6 +875,32 @@ const PostMedia = styled.div`
     width: 100%;
     max-height: 500px;
     object-fit: cover;
+  }
+  
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+    border-radius: 10px;
+    
+    img, video {
+      max-height: 400px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 10px;
+    border-radius: 8px;
+    
+    img, video {
+      max-height: 300px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    border-radius: 6px;
+    
+    img, video {
+      max-height: 250px;
+    }
   }
 `
 
@@ -577,6 +915,32 @@ const MediaPreviewContainer = styled.div`
     width: 100%;
     max-height: 200px;
     object-fit: cover;
+  }
+  
+  @media (max-width: 768px) {
+    max-width: 250px;
+    border-radius: 10px;
+    
+    img, video {
+      max-height: 180px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    max-width: 100%;
+    border-radius: 8px;
+    
+    img, video {
+      max-height: 150px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    border-radius: 6px;
+    
+    img, video {
+      max-height: 120px;
+    }
   }
 `
 
@@ -595,10 +959,26 @@ const MediaRemoveButton = styled.button`
   cursor: pointer;
   color: white;
   transition: all 0.2s ease;
+  min-width: 44px; /* Better touch target */
+  min-height: 44px;
   
   &:hover {
     background: rgba(0, 0, 0, 0.9);
     transform: scale(1.1);
+  }
+  
+  @media (max-width: 480px) {
+    width: 32px;
+    height: 32px;
+    top: 6px;
+    right: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    top: 4px;
+    right: 4px;
   }
 `
 
@@ -606,33 +986,84 @@ const MediaUploadButton = styled.label`
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: var(--hover-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  color: var(--text-lighter);
-  transition: all 0.2s ease;
+  color: var(--text-light);
+  font-size: 0.875rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  min-height: 44px; /* Better touch target */
   
   &:hover {
-    background: var(--accent);
-    color: white;
+    background: rgba(21, 133, 161, 0.08);
+    border-color: rgba(21, 133, 161, 0.25);
+    color: var(--primary);
   }
   
   input {
     display: none;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 8px 10px;
+    font-size: 0.9em;
+    gap: 5px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 6px 8px;
+    font-size: 0.85em;
+    border-radius: 6px;
+    gap: 4px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    padding: 6px;
+    font-size: 0.8em;
   }
 `
 
 const LoadMoreSpinner = styled.div`
   display: flex;
   justify-content: center;
-  padding: 20px;
-  color: var(--text-lighter);
+  padding: 22px 20px;
+  color: var(--text-light);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
 `
 
 const PostActions = styled.div`
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+
+  @media (max-width: 480px) {
+    gap: 6px;
+  }
+`
+
+const PostActionsStart = styled.div`
+  justify-self: start;
+`
+
+const PostActionsCenter = styled.div`
+  justify-self: center;
+`
+
+const PostActionsEnd = styled.div`
+  justify-self: end;
 `
 
 const PostAction = styled.button`
@@ -641,14 +1072,14 @@ const PostAction = styled.button`
   gap: 8px;
   background: none;
   border: none;
-  color: var(--text-lighter);
+  color: var(--text-light);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   
   svg {
-    transition: all 0.3s ease;
+    transition: color 0.15s ease;
   }
   
   &:hover {
@@ -657,22 +1088,50 @@ const PostAction = styled.button`
   }
   
   &.liked {
-    color: #e74c3c;
-    
+    color: var(--primary);
+
     svg {
-      color: #e74c3c;
+      color: var(--primary);
+    }
+  }
+
+  @media (max-width: 768px) {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 8px 12px;
+    gap: 8px;
+    font-size: 0.9em;
+    min-height: 44px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
   }
 `
 
 const LikeCount = styled.span`
-  font-size: 0.9em;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  min-width: 1ch;
 `
 
 const Loading = styled.div`
   text-align: center;
-  padding: 40px;
+  padding: 44px 28px;
   color: var(--text-light);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 `
 
 const MessagesPanel = styled.aside`
@@ -683,9 +1142,9 @@ const MessagesPanel = styled.aside`
   height: 500px;
   max-height: calc(100vh - 140px);
   background: var(--bg-white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -721,9 +1180,10 @@ const MessagesPanelHeader = styled.div`
 `
 
 const MessagesPanelTitle = styled.h3`
-  font-size: 1.2em;
+  font-size: 1.05rem;
   color: var(--text);
-  font-weight: 300;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 `
 
 const CloseButton = styled.button`
@@ -733,16 +1193,15 @@ const CloseButton = styled.button`
   background: transparent;
   color: var(--text-light);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
     background: var(--hover-bg);
     color: var(--text);
-    transform: rotate(90deg);
   }
 
   svg {
@@ -778,14 +1237,12 @@ const ContactItem = styled.div`
   padding: 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease;
   margin-bottom: 4px;
   opacity: 1;
-  transform: translateX(0);
 
   &:hover {
     background: var(--hover-bg);
-    transform: translateX(4px);
   }
 `
 
@@ -794,23 +1251,17 @@ const ContactAvatar = styled.div`
   height: 44px;
   min-width: 44px;
   border-radius: 50%;
-  background: ${props => props.isBot ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--primary)'};
+  background: ${props => props.isBot ? 'linear-gradient(145deg, var(--primary) 0%, #0f6a82 100%)' : 'var(--primary)'};
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.9em;
-  transition: all 0.3s ease;
 
   svg {
     width: 24px;
     height: 24px;
-    transition: transform 0.3s ease;
-  }
-
-  &:hover svg {
-    transform: rotate(15deg) scale(1.1);
   }
 `
 
@@ -910,16 +1361,10 @@ const MessageBubble = styled.div`
   padding: 10px 14px;
   border-radius: ${props => props.isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px'};
   max-width: 75%;
-  font-size: 0.9em;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  line-height: 1.45;
   word-wrap: break-word;
-  transition: all 0.3s ease;
-  opacity: 1;
-
-  &:hover {
-    opacity: 0.95;
-    transform: scale(1.02);
-  }
+  border: ${props => (!props.isUser ? '1px solid var(--border)' : 'none')};
 `
 
 const ChatInputContainer = styled.div`
@@ -938,16 +1383,15 @@ const ChatInput = styled.input`
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 0.9em;
+  font-size: 0.875rem;
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 
   &:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: rgba(21, 133, 161, 0.45);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
-    transform: scale(1.01);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
 
   &::placeholder {
@@ -957,25 +1401,23 @@ const ChatInput = styled.input`
 
 const SendButton = styled.button`
   padding: 10px 14px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 1;
 
   &:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);
-    opacity: 0.9;
+    background: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
 
   &:active {
-    transform: translateY(0) scale(0.98);
+    opacity: 0.92;
   }
 
   svg {
@@ -996,17 +1438,15 @@ const BackIconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 1;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.4);
-    opacity: 0.9;
+    background: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(21, 133, 161, 0.35);
   }
 
   &:active {
-    transform: scale(0.95);
+    opacity: 0.9;
   }
 
   svg {
@@ -1026,65 +1466,23 @@ const Feed = () => {
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [cursor, setCursor] = useState(null)
   const [hasMore, setHasMore] = useState(true)
+  const [discoveryStartIndex, setDiscoveryStartIndex] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [messagesOpen, setMessagesOpen] = useState(false)
-  const [selectedContact, setSelectedContact] = useState(null)
-  const [chatMessages, setChatMessages] = useState({})
-  const [messageInput, setMessageInput] = useState('')
-  const { logout } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [commentsOpenByPost, setCommentsOpenByPost] = useState({})
+  const { logout, sessionFeedStats } = useAuth()
+  const { theme } = useTheme()
   const navigate = useNavigate()
-
-  const contacts = [
-    {
-      id: 0,
-      name: 'AI Assistant',
-      status: 'Always available',
-      isBot: true,
-      avatar: 'AI'
-    },
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'SJ'
-    },
-    {
-      id: 2,
-      name: 'Mike Chen',
-      status: 'Active 2h ago',
-      isBot: false,
-      avatar: 'MC'
-    },
-    {
-      id: 3,
-      name: 'Emma Davis',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'ED'
-    },
-    {
-      id: 4,
-      name: 'Alex Rodriguez',
-      status: 'Active 1d ago',
-      isBot: false,
-      avatar: 'AR'
-    },
-    {
-      id: 5,
-      name: 'Lisa Wang',
-      status: 'Active now',
-      isBot: false,
-      avatar: 'LW'
-    }
-  ]
+  const likingPostIdsRef = useRef(new Set())
 
   useEffect(() => {
     loadUser()
     loadPosts()
   }, [])
+
 
   const loadUser = async () => {
     try {
@@ -1106,8 +1504,8 @@ const Feed = () => {
           id: userData.id || userData.uid
         })
       }
-    } catch (error) {
-      console.error('Error loading user:', error)
+    } catch {
+      // error surfaced on backend
     }
   }
 
@@ -1136,13 +1534,22 @@ const Feed = () => {
       
       if (feedData && feedData.posts) {
         const newPosts = feedData.posts || []
-        
+        const segment = feedData.meta?.feed_segment
+
         if (loadMore) {
-          setPosts(prev => [...prev, ...newPosts])
+          if (segment === 'discovery' && discoveryStartIndex === null) {
+            setPosts((prev) => {
+              setDiscoveryStartIndex(prev.length)
+              return [...prev, ...newPosts]
+            })
+          } else {
+            setPosts((prev) => [...prev, ...newPosts])
+          }
         } else {
           setPosts(newPosts)
+          setDiscoveryStartIndex(segment === 'discovery' ? 0 : null)
         }
-        
+
         // Update pagination state
         if (feedData.pagination) {
           setCursor(feedData.pagination.next_cursor)
@@ -1152,11 +1559,9 @@ const Feed = () => {
         // Direct array response
         setPosts(loadMore ? prev => [...prev, ...feedData] : feedData)
       } else {
-        console.log('Unexpected feed response format:', response.data)
         if (!loadMore) setPosts([])
       }
-    } catch (error) {
-      console.error('Error loading posts:', error)
+    } catch {
       if (!loadMore) setPosts([])
     } finally {
       setLoading(false)
@@ -1225,7 +1630,6 @@ const Feed = () => {
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
     
     if (!cloudName || !uploadPreset) {
-      console.error('Cloudinary config missing')
       return null
     }
     
@@ -1245,8 +1649,7 @@ const Feed = () => {
         url: data.secure_url,
         type: resourceType
       }
-    } catch (error) {
-      console.error('Cloudinary upload error:', error)
+    } catch {
       return null
     }
   }
@@ -1288,34 +1691,58 @@ const Feed = () => {
         // Reset pagination and reload feed
         setCursor(null)
         setHasMore(true)
+        setDiscoveryStartIndex(null)
         loadPosts()
       }
-    } catch (error) {
-      console.error('Error creating post:', error)
+    } catch {
       alert('Failed to create post')
       setUploadingMedia(false)
     }
   }
 
   const handleLike = async (postId) => {
+    if (likingPostIdsRef.current.has(postId)) return
+    const target = posts.find(p => p.id === postId)
+    if (!target) return
+
+    const prevLiked = !!target.is_liked
+    const prevCount = Number(target.like_count) || 0
+
+    likingPostIdsRef.current.add(postId)
+    setPosts(prev =>
+      prev.map(post =>
+        post.id === postId
+          ? {
+              ...post,
+              is_liked: !prevLiked,
+              like_count: Math.max(0, prevCount + (prevLiked ? -1 : 1)),
+            }
+          : post
+      )
+    )
+
     try {
       const response = await api.post(`/api/posts/${postId}/like`)
-      // Handle FastAPI response (direct) or Flask response (wrapped in data)
       const data = response.data?.data || response.data
       if (data) {
-        // Update the specific post's like count
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { 
-                ...post, 
-                like_count: data.like_count,
-                is_liked: data.is_liked 
-              }
-            : post
-        ))
+        setPosts(prev =>
+          prev.map(post =>
+            post.id === postId
+              ? { ...post, like_count: data.like_count, is_liked: data.is_liked }
+              : post
+          )
+        )
       }
-    } catch (error) {
-      console.error('Error toggling like:', error)
+    } catch {
+      setPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? { ...post, is_liked: prevLiked, like_count: prevCount }
+            : post
+        )
+      )
+    } finally {
+      likingPostIdsRef.current.delete(postId)
     }
   }
 
@@ -1329,15 +1756,27 @@ const Feed = () => {
     
     try {
       const response = await api.get(`/api/user/search?q=${encodeURIComponent(query)}`)
+      // Handle new response format with users, jobs, posts
+      // Extract users array from response
+      let usersData = []
+      if (response && response.data) {
+        // Check if new format (has users property)
+        if (response.data.users && Array.isArray(response.data.users)) {
+          usersData = response.data.users
+        } else if (Array.isArray(response.data)) {
+          // Old format - direct array
+          usersData = response.data
+        }
+      }
       // Normalize user data to have consistent field names
-      const users = (response.data || []).map(u => ({
+      const users = usersData.map(u => ({
         ...u,
         id: u.id || u.uid,
         full_name: u.full_name || u.name || u.username
       }))
       setSearchResults(users)
-    } catch (error) {
-      console.error('Error searching users:', error)
+    } catch {
+      // error surfaced on backend
     }
   }
 
@@ -1356,13 +1795,9 @@ const Feed = () => {
     setSearchTimeout(timeout)
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      navigate('/landing')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
   }
 
   const getTimeAgo = (dateString) => {
@@ -1377,156 +1812,21 @@ const Feed = () => {
   }
 
   const escapeHtml = (text) => {
+    if (text == null) return ''
     const div = document.createElement('div')
-    div.textContent = text
-    return div.innerHTML
+    div.textContent = String(text)
+    return div.innerHTML.replace(/\n/g, '<br />')
   }
 
   const handleMessagesClick = () => {
+    // Toggle messages overlay panel
     setMessagesOpen(!messagesOpen)
-    setSelectedContact(null)
   }
 
-  const handleContactSelect = (contact) => {
-    setSelectedContact(contact)
-    // Initialize chat if it doesn't exist
-    if (!chatMessages[contact.id]) {
-      setChatMessages(prev => ({
-        ...prev,
-        [contact.id]: contact.isBot ? [
-          {
-            id: 1,
-            text: "Hello! I'm your AI assistant. How can I help you today?",
-            isUser: false,
-            timestamp: new Date()
-          }
-        ] : []
-      }))
-    }
-  }
-
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedContact) return
-
-    const newMessage = {
-      id: Date.now(),
-      text: messageInput,
-      isUser: true,
-      timestamp: new Date()
-    }
-
-    setChatMessages(prev => ({
-      ...prev,
-      [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage]
-    }))
-
-    setMessageInput('')
-
-    // Simulate AI response for bot
-    if (selectedContact.isBot) {
-      setTimeout(() => {
-        const aiResponse = {
-          id: Date.now() + 1,
-          text: "I understand. Let me help you with that. This is a prototype, so I'll provide a generic response. In a real implementation, I would analyze your message and provide relevant assistance.",
-          isUser: false,
-          timestamp: new Date()
-        }
-        setChatMessages(prev => ({
-          ...prev,
-          [selectedContact.id]: [...(prev[selectedContact.id] || []), aiResponse]
-        }))
-      }, 1000)
-    }
-  }
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage()
-    }
-  }
-
-  const handleBackToContacts = () => {
-    setSelectedContact(null)
-  }
 
   return (
     <Container>
-      <Navbar>
-        <NavContainer>
-          <NavLeft>
-            <Logo>ZedReq</Logo>
-            <SearchInput 
-              type="text" 
-              placeholder="Search..." 
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="search-input-wide"
-            />
-            {searchResults.length > 0 && (
-              <SearchResults className="search-results-positioned">
-                {searchResults.map(user => (
-                  <SearchResultItem key={user.id}>
-                    <SearchAvatar>
-                      {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
-                    </SearchAvatar>
-                    <div>
-                      <div><strong>{user.full_name || user.username}</strong></div>
-                      <div className="search-username">@{user.username}</div>
-                    </div>
-                  </SearchResultItem>
-                ))}
-              </SearchResults>
-            )}
-          </NavLeft>
-          
-          <NavRight>
-            <NavMenu>
-              <NavMenuItem className="active">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-                <span>Home</span>
-              </NavMenuItem>
-              
-              <NavMenuItem onClick={() => navigate('/network')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                <span>Network</span>
-              </NavMenuItem>
-              
-              <NavMenuItem onClick={() => navigate('/jobs')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                </svg>
-                <span>Jobs</span>
-              </NavMenuItem>
-              
-              <NavMenuItem onClick={handleMessagesClick}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Messages</span>
-              </NavMenuItem>
-              
-              <NavMenuItem onClick={() => navigate('/notifications')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                <span>Notifications</span>
-              </NavMenuItem>
-            </NavMenu>
-            
-            <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
-          </NavRight>
-        </NavContainer>
-      </Navbar>
+      <Navbar />
 
       <MainContainer>
         <LeftSidebar>
@@ -1534,14 +1834,22 @@ const Feed = () => {
             <PanelSection>
               <PanelItem>
                 <span className="label">Profile views</span>
-                <span className="value">142</span>
+                <span className="value">
+                  {sessionFeedStats != null
+                    ? sessionFeedStats.profileViews.toLocaleString()
+                    : '—'}
+                </span>
               </PanelItem>
             </PanelSection>
             
             <PanelSection>
               <PanelItem>
                 <span className="label">Post impressions</span>
-                <span className="value">1,234</span>
+                <span className="value">
+                  {sessionFeedStats != null
+                    ? sessionFeedStats.postImpressions.toLocaleString()
+                    : '—'}
+                </span>
               </PanelItem>
             </PanelSection>
             
@@ -1574,24 +1882,24 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
 
-              <PanelSection onClick={() => navigate('/ai-mode')}>
-                <PanelLink>
-                  <span className="icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3v3"></path>
-                      <path d="M12 18v3"></path>
-                      <path d="M5.5 5.5l2.1 2.1"></path>
-                      <path d="M16.4 16.4l2.1 2.1"></path>
-                      <path d="M3 12h3"></path>
-                      <path d="M18 12h3"></path>
-                      <path d="M5.5 18.5l2.1-2.1"></path>
-                      <path d="M16.4 7.6l2.1-2.1"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  </span>
-                  <span>AI Mode</span>
-                </PanelLink>
-              </PanelSection>
+            <PanelSection onClick={() => navigate('/ai-mode')}>
+              <PanelLink>
+                <span className="icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3v3"></path>
+                    <path d="M12 18v3"></path>
+                    <path d="M5.5 5.5l2.1 2.1"></path>
+                    <path d="M16.4 16.4l2.1 2.1"></path>
+                    <path d="M3 12h3"></path>
+                    <path d="M18 12h3"></path>
+                    <path d="M5.5 18.5l2.1-2.1"></path>
+                    <path d="M16.4 7.6l2.1-2.1"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+                <span>AI Mode</span>
+              </PanelLink>
+            </PanelSection>
             
             <PanelSection onClick={() => navigate('/ai-interviews')}>
               <PanelLink>
@@ -1607,9 +1915,8 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
             
-            
-            <PanelSection>
-              <PanelLink onClick={() => navigate('/jobs')}>
+            <PanelSection onClick={() => navigate('/jobs')}>
+              <PanelLink>
                 <span className="icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
@@ -1620,28 +1927,24 @@ const Feed = () => {
               </PanelLink>
             </PanelSection>
             
-            <PanelDivider />
-            
-            <PanelSection>
+            <PanelSection onClick={() => user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username))}>
               <PanelLink>
                 <span className="icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="4" y1="9" x2="20" y2="9"></line>
-                    <line x1="4" y1="15" x2="20" y2="15"></line>
-                    <line x1="10" y1="3" x2="8" y2="21"></line>
-                    <line x1="16" y1="3" x2="14" y2="21"></line>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                 </span>
-                <span>Followed Hashtags</span>
+                <span>Profile</span>
               </PanelLink>
             </PanelSection>
             
-            <PanelSection>
+            <PanelSection onClick={() => navigate('/settings')}>
               <PanelLink>
                 <span className="icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M12 1v6m0 6v6m5.656-14.657l-4.242 4.243m0 4.242l-4.243 4.243m12.728 0l-4.243-4.243m0-4.242l-4.242-4.243"></path>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                   </svg>
                 </span>
                 <span>Settings</span>
@@ -1651,7 +1954,7 @@ const Feed = () => {
         </LeftSidebar>
 
         <Sidebar>
-          <ProfileCard>
+          <ProfileCard onClick={() => user?.id && user?.username && navigate(generateProfileUrl(user.id, user.username))}>
             <ProfileAvatar>
               {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
             </ProfileAvatar>
@@ -1721,20 +2024,44 @@ const Feed = () => {
             ) : posts.length === 0 ? (
               <Loading>No posts yet. Be the first to share!</Loading>
             ) : (
-              posts.map(post => (
-                <Post key={post.id}>
+              posts.map((post, index) => (
+                <React.Fragment key={post.id}>
+                  {discoveryStartIndex !== null && index === discoveryStartIndex && (
+                    <DiscoveryBanner>
+                      You&apos;ve seen posts from your network — here are more from across the platform
+                    </DiscoveryBanner>
+                  )}
+                <Post>
                   <PostHeader>
                     <PostAvatar>
                       {post.full_name ? post.full_name.charAt(0).toUpperCase() : 'U'}
                     </PostAvatar>
                     <PostInfo>
-                      <PostName>{post.full_name || post.username}</PostName>
-                      <PostUsername>@{post.username}</PostUsername>
+                      <PostName>
+                        <UserProfileLink
+                          userId={post.user_id}
+                          username={post.username}
+                          variant="name"
+                        >
+                          {post.full_name || post.username}
+                        </UserProfileLink>
+                      </PostName>
+                      {post.username && (
+                        <PostUsername>
+                          <UserProfileLink
+                            userId={post.user_id}
+                            username={post.username}
+                            variant="username"
+                          >
+                            @{post.username}
+                          </UserProfileLink>
+                        </PostUsername>
+                      )}
                       <PostTime>{getTimeAgo(post.created_at)}</PostTime>
                     </PostInfo>
                   </PostHeader>
                   <PostContent dangerouslySetInnerHTML={{ __html: escapeHtml(post.content) }} />
-                  {post.media_url && (
+                  {post.media_url && !shouldSkipMediaLoad(post.media_url) && (
                     <PostMedia>
                       {post.media_type === 'video' ? (
                         <video 
@@ -1754,17 +2081,80 @@ const Feed = () => {
                     </PostMedia>
                   )}
                   <PostActions>
-                    <PostAction 
-                      className={post.is_liked ? 'liked' : ''}
-                      onClick={() => handleLike(post.id)}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill={post.is_liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                      </svg>
-                      <LikeCount>{post.like_count}</LikeCount>
-                    </PostAction>
+                    <PostActionsStart>
+                      <PostAction
+                        type="button"
+                        aria-label={post.is_liked ? 'Unlike' : 'Like'}
+                        className={post.is_liked ? 'liked' : ''}
+                        onClick={() => handleLike(post.id)}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill={post.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                        </svg>
+                        <LikeCount>{post.like_count}</LikeCount>
+                      </PostAction>
+                    </PostActionsStart>
+                    <PostActionsCenter>
+                      <PostAction
+                        type="button"
+                        aria-label={
+                          commentsOpenByPost[post.id]
+                            ? 'Hide comments'
+                            : 'Show comments'
+                        }
+                        aria-expanded={!!commentsOpenByPost[post.id]}
+                        onClick={() =>
+                          setCommentsOpenByPost(prev => ({
+                            ...prev,
+                            [post.id]: !prev[post.id],
+                          }))
+                        }
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                        >
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <LikeCount>
+                          {post.comment_count ?? 0}
+                        </LikeCount>
+                      </PostAction>
+                    </PostActionsCenter>
+                    <PostActionsEnd>
+                      <SharePostButton postId={post.id} />
+                    </PostActionsEnd>
                   </PostActions>
+                  <PostComments
+                    postId={post.id}
+                    initialCount={post.comment_count ?? 0}
+                    defaultExpanded={false}
+                    hideToggle
+                    expanded={!!commentsOpenByPost[post.id]}
+                    onExpandedChange={v =>
+                      setCommentsOpenByPost(prev => ({
+                        ...prev,
+                        [post.id]: v,
+                      }))
+                    }
+                    flush
+                    onCountChange={n => {
+                      setPosts(prev =>
+                        prev.map(p =>
+                          p.id === post.id ? { ...p, comment_count: n } : p
+                        )
+                      )
+                    }}
+                  />
                 </Post>
+                </React.Fragment>
               ))
             )}
             {loadingMore && (
@@ -1777,102 +2167,7 @@ const Feed = () => {
         </FeedContainer>
 
         <MessagesPanel isOpen={messagesOpen}>
-            <MessagesPanelHeader>
-              <MessagesPanelTitle>Messages</MessagesPanelTitle>
-              <CloseButton onClick={() => setMessagesOpen(false)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </CloseButton>
-            </MessagesPanelHeader>
-
-            {!selectedContact ? (
-              <ContactsList>
-                {contacts.map(contact => (
-                  <ContactItem key={contact.id} onClick={() => handleContactSelect(contact)}>
-                    <ContactAvatar isBot={contact.isBot}>
-                      {contact.isBot ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v3"></path>
-                          <path d="M12 18v3"></path>
-                          <path d="M5.5 5.5l2.1 2.1"></path>
-                          <path d="M16.4 16.4l2.1 2.1"></path>
-                          <path d="M3 12h3"></path>
-                          <path d="M18 12h3"></path>
-                          <path d="M5.5 18.5l2.1-2.1"></path>
-                          <path d="M16.4 7.6l2.1-2.1"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      ) : (
-                        contact.avatar
-                      )}
-                    </ContactAvatar>
-                    <ContactInfo>
-                      <ContactName>{contact.name}</ContactName>
-                      <ContactStatus>{contact.status}</ContactStatus>
-                    </ContactInfo>
-                  </ContactItem>
-                ))}
-              </ContactsList>
-            ) : (
-              <ChatView>
-                <ChatHeader>
-                  <ChatHeaderLeft>
-                    <ContactAvatar isBot={selectedContact.isBot}>
-                      {selectedContact.isBot ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3v3"></path>
-                          <path d="M12 18v3"></path>
-                          <path d="M5.5 5.5l2.1 2.1"></path>
-                          <path d="M16.4 16.4l2.1 2.1"></path>
-                          <path d="M3 12h3"></path>
-                          <path d="M18 12h3"></path>
-                          <path d="M5.5 18.5l2.1-2.1"></path>
-                          <path d="M16.4 7.6l2.1-2.1"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      ) : (
-                        selectedContact.avatar
-                      )}
-                    </ContactAvatar>
-                    <ChatHeaderName>{selectedContact.name}</ChatHeaderName>
-                  </ChatHeaderLeft>
-                  <BackIconButton onClick={handleBackToContacts}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="19" y1="12" x2="5" y2="12"></line>
-                      <polyline points="12 19 5 12 12 5"></polyline>
-                    </svg>
-                  </BackIconButton>
-                </ChatHeader>
-
-                <ChatMessages>
-                  {(chatMessages[selectedContact.id] || []).map(msg => (
-                    <ChatMessage key={msg.id} isUser={msg.isUser}>
-                      <MessageBubble isUser={msg.isUser}>
-                        {msg.text}
-                      </MessageBubble>
-                    </ChatMessage>
-                  ))}
-                </ChatMessages>
-
-                <ChatInputContainer>
-                  <ChatInput
-                    type="text"
-                    placeholder="Type a message..."
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                  />
-                  <SendButton onClick={handleSendMessage}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </SendButton>
-                </ChatInputContainer>
-              </ChatView>
-            )}
+          <Messages overlay={true} onClose={() => setMessagesOpen(false)} />
         </MessagesPanel>
       </MainContainer>
     </Container>

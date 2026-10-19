@@ -1,0 +1,376 @@
+﻿/* ═══════════════════════════════════════════════════════════════════════════
+   Network Expansion Graph Section — Radial Layout
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.network-expansion-section {
+    width: 100%;
+    background: transparent;
+    padding: 240px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+
+
+.network-expansion-container {
+    max-width: 2800px;
+    min-height: 480px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Section Header ─────────────────────────────────────────────────────── */
+.network-header {
+    text-align: center;
+    margin-bottom: 64px;
+}
+
+.network-headline {
+    font-size: clamp(2.1em, 5vw, 3.6em);
+    font-weight: 300;
+    line-height: 1.15;
+    margin-bottom: 18px;
+    color: #ffffff;
+    position: relative;
+}
+
+.network-headline-glow {
+    position: relative;
+    display: inline-block;
+    color: #ffffff;
+}
+
+.network-subheading {
+    color: #ffffff;
+    font-size: 1.15em;
+    line-height: 1.8;
+    max-width: 700px;
+    margin: 0 auto;
+    font-weight: 400;
+}
+
+/* ─── Unified card ───────────────────────────────────────────────────────── */
+.network-unified-card {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    background: #040a14;
+    border: 1px solid rgba(21, 133, 161, 0.14);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow:
+        0 12px 48px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    min-height: 740px;
+}
+
+/* Left — suggestions */
+.network-unified-left {
+    padding: 36px 32px;
+    border-right: 1px solid rgba(21, 133, 161, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.insights-card-title {
+    font-size: 0.78em;
+    font-weight: 400;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 22px;
+}
+
+/* Right — globe */
+.network-unified-right {
+    position: relative;
+    overflow: hidden;
+    background: #040a14;
+}
+
+/* Globe text overlay */
+.globe-text-overlay {
+    position: absolute;
+    top: 28px;
+    left: 28px;
+    z-index: 10;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.globe-text-eyebrow {
+    font-size: 0.72em;
+    font-weight: 400;
+    color: #1585A1;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+}
+
+.globe-text-heading {
+    font-size: clamp(1.1em, 2.2vw, 1.55em);
+    font-weight: 300;
+    line-height: 1.25;
+    color: #ffffff;
+    margin: 0;
+}
+
+.globe-text-sub {
+    font-size: 0.78em;
+    color: rgba(21, 133, 161, 0.6);
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+/* ─── Network Strength ───────────────────────────────────────────────────── */
+.network-strength-indicator {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.strength-circle {
+    width: 100%;
+    height: 100%;
+}
+
+.strength-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.strength-number {
+    font-size: 2em;
+    font-weight: 600;
+    color: #1585A1;
+    line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(21, 133, 161, 0.4));
+}
+
+.strength-label {
+    font-size: 0.72em;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ─── Industry Bars ──────────────────────────────────────────────────────── */
+.industry-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.industry-bar-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 36px;
+    align-items: center;
+    gap: 10px;
+}
+
+.industry-name {
+    color: #b0c4d8;
+    font-size: 0.82em;
+    font-weight: 400;
+}
+
+.industry-bar-track {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(21, 133, 161, 0.08);
+    overflow: hidden;
+}
+
+.industry-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(21, 133, 161, 0.3);
+}
+
+.industry-value {
+    color: #1585A1;
+    font-size: 0.78em;
+    font-weight: 500;
+    text-align: right;
+}
+
+/* ─── Suggested Professionals ────────────────────────────────────────────── */
+.suggested-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.suggested-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(21, 133, 161, 0.12);
+    background: rgba(21, 133, 161, 0.03);
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.suggested-card:hover {
+    border-color: rgba(21, 133, 161, 0.35);
+    background: rgba(21, 133, 161, 0.06);
+}
+
+.suggested-avatar-circle {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(21, 133, 161, 0.1);
+    border: 1px solid rgba(21, 133, 161, 0.3);
+    flex-shrink: 0;
+}
+
+.suggested-avatar-initials {
+    color: #1585A1;
+    font-size: 0.82em;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.suggested-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.suggested-name {
+    color: #ffffff;
+    font-size: 0.88em;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggested-role {
+    color: #888;
+    font-size: 0.78em;
+}
+
+.suggested-mutual {
+    color: rgba(21, 133, 161, 0.7);
+    font-size: 0.72em;
+}
+
+.suggested-connect-btn {
+    padding: 5px 14px;
+    background: transparent;
+    color: #1585A1;
+    border: 1px solid rgba(21, 133, 161, 0.4);
+    border-radius: 6px;
+    font-size: 0.75em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.suggested-connect-btn:hover {
+    background: #1585A1;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(21, 133, 161, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive Design
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 968px) {
+    .network-expansion-section {
+        padding: 90px 20px;
+    }
+
+    .network-unified-card {
+        grid-template-columns: 1fr;
+        min-height: unset;
+    }
+
+    .network-unified-left {
+        border-right: none;
+        border-bottom: 1px solid rgba(21, 133, 161, 0.1);
+        padding: 28px 24px;
+    }
+
+    .network-unified-right {
+        min-height: 360px;
+    }
+
+    .globe-text-overlay {
+        top: 20px;
+        left: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .network-expansion-section {
+        padding: 70px 16px;
+    }
+
+    .network-header {
+        margin-bottom: 40px;
+    }
+
+    .network-headline {
+        font-size: 2em;
+    }
+
+    .network-subheading {
+        font-size: 1em;
+    }
+
+    .network-unified-left {
+        padding: 24px 20px;
+    }
+
+    .network-unified-right {
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .network-expansion-section {
+        padding: 50px 12px;
+    }
+
+    .network-headline {
+        font-size: 1.7em;
+    }
+
+    .network-subheading {
+        font-size: 0.92em;
+    }
+
+    .network-unified-right {
+        min-height: 260px;
+    }
+}
+
+@media (max-width: 360px) {
+    .network-headline {
+        font-size: 1.5em;
+    }
+}

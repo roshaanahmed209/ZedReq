@@ -1,38 +1,69 @@
 """Database connection and utilities for PostgreSQL"""
 import os
 from typing import Dict, Any, Optional, List
+from pathlib import Path
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load .env from project root
+_project_root = Path(__file__).parent.parent.parent
+_env_file = _project_root / ".env"
+load_dotenv(_env_file)
 
 # Try psycopg3 first, fall back to psycopg2
 try:
     import psycopg
     from psycopg.rows import dict_row
-    from psycopg_pool import ConnectionPool
+    try:
+        from psycopg_pool import ConnectionPool
+    except ImportError:
+        ConnectionPool = None  # ConnectionPool not available
     PSYCOPG_VERSION = 3
 except ImportError:
     import psycopg2
     from psycopg2.extras import RealDictCursor
+    ConnectionPool = None  # ConnectionPool not available in psycopg2
     PSYCOPG_VERSION = 2
 
 
 def get_connection_params() -> Dict[str, Any]:
-    """Get database connection parameters from environment"""
-    # Check for DATABASE_URL first (common in cloud deployments)
-    database_url = os.environ.get('DATABASE_URL')
+    """Get database connection parameters. Requires POSTGRES_PASSWORD in production."""
+    try:
+        from config.settings import get_settings
+        s = get_settings()
+        if s.DATABASE_URL:
+            return {"conninfo": s.DATABASE_URL}
+        return {
+            "host": s.POSTGRES_HOST,
+            "port": s.POSTGRES_PORT,
+            "dbname": s.POSTGRES_DB,
+            "user": s.POSTGRES_USER,
+            "password": s.POSTGRES_PASSWORD,
+        }
+    except Exception:
+        pass
+    database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        return {'conninfo': database_url}
-    
+        return {"conninfo": database_url}
+    password = os.environ.get("POSTGRES_PASSWORD", "")
+    if not password and os.environ.get("DEBUG", "true").lower() in ("false", "0"):
+        raise ValueError("POSTGRES_PASSWORD must be set in production. Set DEBUG=true only for development.")
     return {
-        'host': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'port': int(os.environ.get('POSTGRES_PORT', 5432)),
-        'dbname': os.environ.get('POSTGRES_DB', 'zedreq'),
-        'user': os.environ.get('POSTGRES_USER', 'postgres'),
-        'password': os.environ.get('POSTGRES_PASSWORD', ''),
+        "host": os.environ.get("POSTGRES_HOST", "localhost"),
+        "port": int(os.environ.get("POSTGRES_PORT", 5432)),
+        "dbname": os.environ.get("POSTGRES_DB", "ZedReq"),
+        "user": os.environ.get("POSTGRES_USER", "postgres"),
+        "password": password,
     }
+
+
+def _is_conn_open(conn) -> bool:
+    """Return True if *conn* is a live, usable psycopg2/psycopg3 connection."""
+    if conn is None:
+        return False
+    if hasattr(conn, 'closed') and conn.closed:
+        return False
+    return True
 
 
 class Database:
@@ -44,10 +75,23 @@ class Database:
         self._connect()
     
     def _connect(self):
-        """Establish database connection"""
+        """Establish database connection with keepalive settings to prevent silent SSL drops."""
+        # TCP keepalive params prevent the OS from silently dropping idle connections
+        # (e.g. Supabase / cloud DBs that close idle sockets after a few minutes)
+        keepalive_kwargs = dict(
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5,
+        )
         if PSYCOPG_VERSION == 3:
             if 'conninfo' in self.params:
-                self._conn = psycopg.connect(self.params['conninfo'], row_factory=dict_row)
+                self._conn = psycopg.connect(
+                    self.params['conninfo'],
+                    row_factory=dict_row,
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
             else:
                 self._conn = psycopg.connect(
                     host=self.params['host'],
@@ -55,31 +99,51 @@ class Database:
                     dbname=self.params['dbname'],
                     user=self.params['user'],
                     password=self.params['password'],
-                    row_factory=dict_row
+                    row_factory=dict_row,
+                    connect_timeout=15,
+                    **keepalive_kwargs,
                 )
         else:
             if 'conninfo' in self.params:
-                self._conn = psycopg2.connect(self.params['conninfo'])
+                self._conn = psycopg2.connect(
+                    self.params['conninfo'],
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
             else:
-                self._conn = psycopg2.connect(**self.params)
-        
+                self._conn = psycopg2.connect(
+                    **self.params,
+                    connect_timeout=15,
+                    **keepalive_kwargs,
+                )
+
         self._conn.autocommit = True
-    
+
     @property
     def conn(self):
-        """Get connection, reconnecting if necessary"""
-        if self._conn is None or (hasattr(self._conn, 'closed') and self._conn.closed):
+        """Get connection, reconnecting if necessary."""
+        if not _is_conn_open(self._conn):
             self._connect()
         return self._conn
-    
+
     def execute(self, query: str, params: tuple = None):
-        """Execute a query and return cursor"""
+        """Execute a query, retrying once after reconnecting on a stale-connection error."""
         if PSYCOPG_VERSION == 3:
-            cursor = self.conn.execute(query, params)
+            try:
+                return self.conn.execute(query, params)
+            except psycopg.OperationalError:
+                self._connect()
+                return self._conn.execute(query, params)
         else:
-            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, params)
-        return cursor
+            try:
+                cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute(query, params)
+                return cursor
+            except psycopg2.OperationalError:
+                self._connect()
+                cursor = self._conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute(query, params)
+                return cursor
     
     def fetch_one(self, query: str, params: tuple = None) -> Optional[Dict[str, Any]]:
         """Execute query and fetch one result"""
@@ -112,13 +176,16 @@ class Database:
 _pool: Optional[ConnectionPool] = None
 
 
-def get_pool() -> ConnectionPool:
+def get_pool() -> Optional[ConnectionPool]:
     """Get or create connection pool"""
+    if ConnectionPool is None:
+        return None  # ConnectionPool not available
+    
     global _pool
     if _pool is None:
         params = get_connection_params()
-        min_size = int(os.environ.get('DB_POOL_MIN', 1))
-        max_size = int(os.environ.get('DB_POOL_SIZE', 5))
+        min_size = int(os.environ.get('DB_POOL_MIN', 10))
+        max_size = int(os.environ.get('DB_POOL_SIZE', 100))
         
         if 'conninfo' in params:
             conninfo = params['conninfo']
@@ -133,11 +200,19 @@ def get_pool() -> ConnectionPool:
 def get_db_connection():
     """Context manager for getting a pooled database connection"""
     pool = get_pool()
-    conn = pool.getconn()
-    try:
-        yield conn
-    finally:
-        pool.putconn(conn)
+    if pool is None:
+        # Fallback to direct connection if pool not available
+        db = Database()
+        try:
+            yield db.conn
+        finally:
+            db.close()
+    else:
+        conn = pool.getconn()
+        try:
+            yield conn
+        finally:
+            pool.putconn(conn)
 
 
 # Global database instance for simple usage

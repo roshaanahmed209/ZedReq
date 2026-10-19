@@ -10,15 +10,18 @@ import json
 import webbrowser
 from pathlib import Path
 
-# Load environment variables from backend/.env
+# Load environment variables from .env file in project root
 def load_env():
-    env_path = Path(__file__).parent / 'backend' / '.env'
+    # Use Path to get the .env file location (works cross-platform)
+    project_root = Path(__file__).parent
+    env_path = project_root / '.env'
+    
     if not env_path.exists():
         print(f"Error: .env file not found at {env_path}")
-        print("Please create backend/.env file based on backend/env.example")
+        print("Please create .env file based on backend/env.example")
         sys.exit(1)
     
-    with open(env_path, 'r') as f:
+    with open(env_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
@@ -35,7 +38,7 @@ def get_connection():
     return psycopg2.connect(
         host=os.environ.get('POSTGRES_HOST', 'localhost'),
         port=int(os.environ.get('POSTGRES_PORT', 5432)),
-        dbname=os.environ.get('POSTGRES_DB', 'zedreq'),
+        dbname=os.environ.get('POSTGRES_DB', 'ZedReq'),
         user=os.environ.get('POSTGRES_USER', 'postgres'),
         password=os.environ.get('POSTGRES_PASSWORD', 'database')
     )
@@ -101,7 +104,7 @@ def generate_html():
         db_info = {
             'host': os.environ.get('POSTGRES_HOST', 'localhost'),
             'port': os.environ.get('POSTGRES_PORT', 5432),
-            'database': os.environ.get('POSTGRES_DB', 'zedreq'),
+            'database': os.environ.get('POSTGRES_DB', 'ZedReq'),
             'user': os.environ.get('POSTGRES_USER', 'postgres')
         }
         
@@ -193,7 +196,7 @@ def generate_html_content(tables, table_data, db_info):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZedRec Database Viewer</title>
+    <title>ZedReq Database Viewer</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {{
@@ -513,7 +516,7 @@ def generate_html_content(tables, table_data, db_info):
 </head>
 <body>
     <aside class="sidebar">
-        <div class="logo">ZedRec DB</div>
+        <div class="logo">ZedReq DB</div>
         <div class="db-info">
             <p><strong>Host:</strong> {db_info['host']}</p>
             <p><strong>Port:</strong> {db_info['port']}</p>
@@ -529,7 +532,7 @@ def generate_html_content(tables, table_data, db_info):
     <main class="main">
         <header class="header">
             <h1>Database Tables</h1>
-            <p>Viewing all tables from the ZedRec PostgreSQL database</p>
+            <p>Viewing all tables from the ZedReq PostgreSQL database</p>
         </header>
         
         <div class="stats">

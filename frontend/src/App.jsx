@@ -1,8 +1,9 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import FirstPage from './pages/FirstPage'
-import Landing from './pages/Landing'
+import Login from './pages/Login'
 import Feed from './pages/Feed'
 import Network from './pages/Network'
 import Jobs from './pages/Jobs'
@@ -11,83 +12,137 @@ import Evaluation from './pages/Evaluation'
 import AIMode from './pages/AIMode'
 import AIInterviews from './pages/AIInterviews'
 import Notifications from './pages/Notifications'
+import Messages from './pages/Messages'
+import Profile from './pages/Profile'
+import PostDetail from './pages/PostDetail'
+import Settings from './pages/Settings'
+import ChoosePlan from './pages/ChoosePlan'
+import Checkout from './pages/Checkout'
+import EnterpriseInquiry from './pages/EnterpriseInquiry'
+import Features from './pages/Features'
+import PricingPublic from './pages/PricingPublic'
+import About from './pages/About'
+import Careers from './pages/Careers'
+import Contact from './pages/Contact'
+import Blogs from './pages/Blogs'
+import BlogPost from './pages/BlogPost'
+import HelpCenter from './pages/HelpCenter'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import CookiePolicy from './pages/CookiePolicy'
 import ProtectedRoute from './components/ProtectedRoute'
+import RequirePlanSelected from './components/RequirePlanSelected'
+import PrelaunchNoticeHost from './components/PrelaunchNoticeHost'
+import RouteNavigationLoader from './components/RouteNavigationLoader'
+import ConfirmModal from './components/ConfirmModal'
+import AccessDeniedModal from './components/AccessDeniedModal'
+import { ConfirmModalProvider } from './contexts/ConfirmModalContext'
+import { AccessDeniedModalProvider } from './contexts/AccessDeniedModalContext'
+import { initAnalytics, trackPageView } from './utils/analytics'
+
+function WithPlanGate({ children }) {
+  return (
+    <ProtectedRoute>
+      <RequirePlanSelected>{children}</RequirePlanSelected>
+    </ProtectedRoute>
+  )
+}
+
+// Component to track route changes.
+// Only the pathname is passed: query strings would defeat the repeat-view guard and
+// would put campaign parameters into the page identity. UTM values are captured
+// separately by the SDK and attached to every event as attribution.
+function RouteTracker() {
+  const location = useLocation()
+
+  useEffect(() => {
+    trackPageView(location.pathname)
+  }, [location.pathname])
+
+  return null
+}
 
 function App() {
+  useEffect(() => {
+    // Initialize analytics on app load
+    initAnalytics()
+  }, [])
+  
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <ConfirmModalProvider>
+        <AccessDeniedModalProvider>
+        <Router>
+          <RouteNavigationLoader />
+          <ConfirmModal />
+          <AccessDeniedModal />
+          <RouteTracker />
+          <PrelaunchNoticeHost />
         <Routes>
           <Route path="/first-page" element={<FirstPage />} />
           <Route path="/" element={<FirstPage />} />
-          <Route path="/landing" element={<Landing />} />
-          <Route 
-            path="/feed" 
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<PricingPublic />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/careers" element={<Careers />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/:slug" element={<BlogPost />} />
+          <Route path="/blog" element={<Navigate to="/blogs" replace />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/cookies" element={<CookiePolicy />} />
+          <Route path="/get-started" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/landing" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/choose-plan"
             element={
               <ProtectedRoute>
-                <Feed />
+                <ChoosePlan />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/network" 
+          <Route
+            path="/checkout"
             element={
               <ProtectedRoute>
-                <Network />
+                <Checkout />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/jobs" 
+          <Route
+            path="/enterprise-inquiry"
             element={
               <ProtectedRoute>
-                <Jobs />
+                <EnterpriseInquiry />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/lms" 
-            element={
-              <ProtectedRoute>
-                <LMS />
-              </ProtectedRoute>
-            } 
+          <Route path="/feed" element={<WithPlanGate><Feed /></WithPlanGate>} />
+          <Route path="/post/:postId" element={<WithPlanGate><PostDetail /></WithPlanGate>} />
+          <Route path="/network" element={<WithPlanGate><Network /></WithPlanGate>} />
+          <Route path="/jobs" element={<WithPlanGate><Jobs /></WithPlanGate>} />
+          <Route path="/lms" element={<WithPlanGate><LMS /></WithPlanGate>} />
+          <Route path="/evaluation" element={<WithPlanGate><Evaluation /></WithPlanGate>} />
+          <Route path="/ai-mode" element={<WithPlanGate><AIMode /></WithPlanGate>} />
+          <Route path="/ai-interviews" element={<WithPlanGate><AIInterviews /></WithPlanGate>} />
+          <Route path="/notifications" element={<WithPlanGate><Notifications /></WithPlanGate>} />
+          <Route path="/messages" element={<WithPlanGate><Messages /></WithPlanGate>} />
+          <Route
+            path="/profile/:username-:hashedId"
+            element={<WithPlanGate><Profile /></WithPlanGate>}
           />
-          <Route 
-            path="/evaluation" 
-            element={
-              <ProtectedRoute>
-                <Evaluation />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/ai-mode" 
-            element={
-              <ProtectedRoute>
-                <AIMode />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/ai-interviews" 
-            element={
-              <ProtectedRoute>
-                <AIInterviews />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/notifications" 
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/profile/:userId" element={<WithPlanGate><Profile /></WithPlanGate>} />
+          <Route path="/settings" element={<WithPlanGate><Settings /></WithPlanGate>} />
         </Routes>
       </Router>
-    </AuthProvider>
+        </AccessDeniedModalProvider>
+        </ConfirmModalProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

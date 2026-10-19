@@ -1,0 +1,339 @@
+ZEDREQ
+TERMS OF USE
+Last Updated: April 8, 2026
+Effective Date: April 8, 2026
+Important: Please read these Terms of Use carefully before using ZedReq. By accessing or using our Services, you confirm that you have read, understood, and agree to be bound by these Terms. If you do not agree, you must stop using our Services immediately.
+
+We are ZedReq ("Company," "we," "us," or "our"). We operate https://zedreq.com and the ZedReq mobile application, along with any related products or services that link to these Terms (collectively, the "Services"). You can contact us at zed.req@yahoo.com.
+
+These Terms of Use constitute a legally binding agreement between you ("you" or "user") and ZedReq concerning your access to and use of the Services. By accessing the Services, you confirm you have read, understood, and agreed to be bound by all of these Terms. IF YOU DO NOT AGREE, YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND MUST DISCONTINUE USE IMMEDIATELY.
+
+We reserve the right to modify these Terms at any time. Changes take effect upon posting of an updated "Last Updated" date. Your continued use of the Services constitutes acceptance of the revised Terms. We recommend you review these Terms periodically.
+
+TABLE OF CONTENTS
+
+1.  Our Services
+2.  Intellectual Property Rights
+3.  User Representations
+4.  Prohibited Activities
+5.  User-Generated Contributions
+6.  Contribution License
+7.  AI-Powered Features — Special Terms
+8.  Subscription, Payments, and Refunds
+9.  Services Management
+10.  Term and Termination
+11.  Modifications and Interruptions
+12.  Service Availability and Third-Party Dependencies
+13.  Governing Law
+14.  Dispute Resolution
+15.  Disclaimer of Warranties
+16.  Limitation of Liability
+17.  Indemnification
+18.  User Data
+19.  Electronic Communications and Signatures
+20.  Professional Advice Disclaimer
+21.  Miscellaneous
+22.  Contact Us
+
+1. OUR SERVICES
+In Short: ZedReq is an AI-powered career intelligence platform. Understanding what we do — and do not — provide is important before using our Services.
+
+ZedReq provides a professional networking and career development platform that includes intelligent job matching, skill gap analysis, personalized learning recommendations, AI-powered mock interviews, and related career tools (collectively, the "Services").
+
+The Services are intended for users who are at least 18 years of age and are legally permitted to use such services in their jurisdiction. By using the Services, you represent that you meet these requirements.
+
+The information provided through the Services is not intended for distribution or use in any jurisdiction where such distribution or use would be contrary to law or regulation, or would subject us to any registration requirement. Users who access the Services from other locations do so on their own initiative and are solely responsible for compliance with applicable local laws.
+
+2. INTELLECTUAL PROPERTY RIGHTS
+Our Intellectual Property
+In Short: ZedReq owns or licenses all content, code, and marks on the platform. You may use them only as expressly permitted here.
+
+We are the owner or licensee of all intellectual property rights in the Services, including all source code, databases, functionality, software, website and app designs, audio, video, text, photographs, graphics, AI models, and training data (collectively, "Content"), as well as all trademarks, service marks, and logos ("Marks").
+
+Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to access and use the Services solely for your personal, non-commercial use. No Content or Marks may be copied, reproduced, aggregated, republished, uploaded, publicly displayed, encoded, translated, distributed, sold, licensed, or otherwise commercially exploited without our express prior written permission.
+
+Any breach of these intellectual property provisions will constitute a material breach of these Terms, and your right to use the Services will terminate immediately and automatically.
+
+Your Submissions
+By submitting any question, comment, suggestion, idea, feedback, or other information to us ("Submissions"), you assign to us all intellectual property rights in such Submission. We may use your Submissions for any lawful purpose without acknowledgment or compensation. You warrant that your Submissions are original, accurate, and do not violate any third-party rights or applicable law. You are solely responsible for your Submissions and agree to indemnify us for any losses arising from them.
+
+3. USER REPRESENTATIONS
+In Short: By using ZedReq, you make the following warranties and representations to us.
+
+By using the Services, you represent and warrant that:
+1.	You are at least 18 years of age and have the legal capacity to enter into these Terms;
+2.	All registration information you submit is truthful, accurate, current, and complete;
+3.	You will maintain the accuracy of your account information and promptly update it as needed;
+4.	You will not access the Services through automated or non-human means (bots, scripts, scrapers, etc.) unless expressly authorized by us in writing;
+5.	You will not use the Services for any illegal or unauthorized purpose;
+6.	Your use of the Services will not violate any applicable law, regulation, or third-party right;
+7.	You will not misrepresent your professional qualifications, experience, or credentials on your profile or in any use of the Services;
+8.	You understand that AI-generated content, recommendations, and career assessments provided by the Services are for informational purposes only and do not constitute professional advice.
+
+If any information you provide is untrue, inaccurate, or incomplete, we reserve the right to suspend or terminate your account and refuse any current or future use of the Services without liability to you.
+
+4. PROHIBITED ACTIVITIES
+In Short: The following activities are strictly prohibited. Violations may result in immediate account termination and legal action.
+
+You agree not to:
+•	Systematically scrape, harvest, or extract data or content from the Services to build competing products, databases, or directories without our prior written permission;
+•	Use the Services to harass, threaten, defame, bully, discriminate against, or harm any person or group;
+•	Upload or transmit viruses, malware, spyware, Trojan horses, or any other malicious code or software;
+•	Engage in any automated use of the Services, including bots, scripts, scrapers, or data mining tools;
+•	Circumvent, disable, or interfere with any security, authentication, or access control features of the Services;
+•	Attempt to impersonate another user, person, or entity, or misrepresent your affiliation with any person or organization;
+•	Post, upload, or transmit content that is illegal, obscene, defamatory, sexually explicit, hateful, or otherwise objectionable;
+•	Engage in unauthorized framing of or linking to the Services;
+•	Collect or harvest usernames, email addresses, or other personal information of users without authorization;
+•	Use the Services to compete with us or to build a competing product or service;
+•	Reverse engineer, decompile, disassemble, or otherwise attempt to extract the source code or underlying logic of any part of the Services;
+•	Sell, resell, sublicense, or otherwise commercially exploit any part of the Services or its content;
+•	Interfere with or disrupt the integrity, performance, or availability of the Services or its underlying infrastructure;
+•	Submit false reports of abuse, misconduct, or misuse to our support team;
+•	Use the Services in any manner that violates applicable laws or regulations, including data protection, consumer protection, and intellectual property laws;
+•	Attempt to gain unauthorized access to any portion of the Services or any systems or networks connected to them.
+
+We reserve the right to investigate and prosecute violations of any of the above to the fullest extent of the law, and to cooperate with law enforcement authorities in doing so.
+
+5. USER-GENERATED CONTRIBUTIONS
+In Short: You may create and share content on ZedReq. You are solely responsible for anything you post.
+
+The Services may allow you to create, submit, post, display, transmit, or distribute content and materials, including text, profile information, career history, skill listings, comments, suggestions, photographs, audio, or video (collectively, "Contributions"). Contributions may be visible to other users of the Services.
+
+When you create or make available any Contributions, you represent and warrant that:
+•	You own or have the necessary licenses, rights, consents, and permissions to post the Contributions and to authorize us to use them as described in these Terms;
+•	Your Contributions do not infringe any third-party intellectual property, privacy, publicity, or contractual rights;
+•	Your Contributions are accurate and not misleading — in particular, any professional credentials, qualifications, or work history you post must be truthful;
+•	Your Contributions do not contain viruses, malware, or any other harmful code;
+•	Your Contributions do not violate any applicable law or regulation;
+•	Your Contributions are not confidential, and you have no expectation of confidentiality with respect to them.
+
+We reserve the right to remove any Contributions at any time and for any reason without notice or liability to you. We do not endorse, verify, or guarantee the accuracy of any user Contributions.
+
+6. CONTRIBUTION LICENSE
+In Short: You keep ownership of your Contributions. You grant us a license to use them to operate and improve the Services.
+
+By posting Contributions, you grant us a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to access, store, reproduce, distribute, prepare derivative works of, display, and perform your Contributions in connection with operating, providing, and improving the Services. This license does not transfer ownership of your Contributions.
+
+You retain full ownership of your Contributions and any associated intellectual property rights. We are not liable for any statements or representations made in your Contributions. You are solely responsible for your Contributions and agree to indemnify and hold us harmless from any claims arising from them.
+
+By submitting feedback or suggestions about the Services, you agree that we may use and share such feedback for any purpose without any obligation, restriction, or compensation to you.
+
+7. AI-POWERED FEATURES — SPECIAL TERMS
+In Short: ZedReq's core features are AI-driven. These special terms govern your use of all AI-powered tools and the outputs they generate.
+
+ZedReq's Services are powered substantially by artificial intelligence technologies, including job matching algorithms, skill gap analysis engines, mock interview tools, and personalized learning recommendations (collectively, "AI Features"). By using the Services, you acknowledge and agree to the following terms specifically governing AI Features:
+
+AI Output Disclaimer
+All outputs, assessments, recommendations, scores, match results, and feedback generated by AI Features ("AI Outputs") are provided for informational and self-improvement purposes only. AI Outputs do not constitute professional career advice, employment advice, legal advice, psychological advice, or any other form of professional guidance. You should not rely solely on AI Outputs when making significant career, employment, educational, or financial decisions.
+
+No Guarantee of Accuracy
+AI Outputs are generated by probabilistic models and may be incomplete, incorrect, outdated, or inappropriate for your specific circumstances. We make no warranty, express or implied, regarding the accuracy, reliability, suitability, or completeness of any AI Output. You use AI Outputs entirely at your own risk.
+
+Automated Decision-Making
+Certain AI Features may generate scores, rankings, or recommendations that affect how you interact with the platform (e.g., job match scores). These are automated outputs that reflect algorithmic assessments, not human judgments. We are not responsible for any decisions — made by you or by third parties — that are based in whole or in part on AI Outputs.
+
+Third-Party AI Providers
+Some AI Features are powered by third-party AI service providers, including but not limited to OpenAI. Your use of these features may be subject to additional terms imposed by those providers. We are not responsible for the actions, outputs, or data practices of third-party AI providers beyond our contractual agreements with them.
+
+AI Feature Availability
+AI Features may be modified, suspended, or discontinued at any time without notice. We are not liable for any loss, inconvenience, or damage arising from changes to or unavailability of AI Features.
+
+8. SUBSCRIPTION, PAYMENTS, AND REFUNDS
+In Short: Certain features of ZedReq require a paid subscription. All billing is handled by our third-party payment processor, Paddle.
+
+Access to certain premium features of the Services may require a paid subscription. All payments are processed by Paddle (https://www.paddle.com), our third-party payment processor. By subscribing, you authorize Paddle to charge your chosen payment method in accordance with the applicable subscription plan.
+
+Subscription Terms
+•	Subscriptions are billed on a recurring basis (monthly or annually, as selected) until cancelled;
+•	You may cancel your subscription at any time through your account settings at https://zedreq.com/settings;
+•	Cancellation takes effect at the end of the current billing period; you will retain access until then;
+•	We reserve the right to change subscription pricing with reasonable notice to existing subscribers;
+•	We reserve the right to offer free trials or promotional pricing, which may be subject to additional terms.
+
+Refund Policy
+All payments are processed by Paddle (paddle.com), who acts as the Merchant of Record for all ZedReq transactions. As Merchant of Record, Paddle owns and controls the refund process entirely. All refund requests must be submitted directly to Paddle at paddle.net — ZedReq does not process, approve, or deny refunds.
+30-Day Refund Window (First Payment Only)
+In compliance with Paddle's seller requirements, we offer a 30-day money-back window on your first subscription payment only, subject to the conditions below. This window does not apply to any subsequent renewal payments.
+Conditions That Must Be Met
+To be eligible, you must demonstrate that the Services did not perform materially as described. Refunds are not available for change of mind, dissatisfaction with AI outputs, failure to use the Services, or where you have actively used and benefited from premium AI features during the period.
+Digital Content Waiver
+By accessing any AI-powered feature — including job matching, skill gap analysis, mock interviews, or learning recommendations — you acknowledge you are consuming digital content and expressly consent to waiving your statutory withdrawal right with respect to that content. This waiver is consistent with applicable consumer protection law and Paddle's buyer terms.
+Renewals Are Non-Refundable
+All subscription renewal payments are strictly non-refundable. You may cancel at any time through your account settings, and cancellation takes effect at the end of the current billing period. No partial refunds are issued for unused time within a paid period.
+Paddle's Discretion
+All refund decisions are made by Paddle at their sole discretion on a case-by-case basis. Submission of a refund request does not guarantee approval. Paddle may refuse requests where there is evidence of fraud, refund abuse, or manipulative behaviour.
+Chargebacks
+Before initiating any chargeback with your bank or card issuer, you must first submit a refund request to Paddle at paddle.net. Chargebacks initiated without first attempting resolution through Paddle may result in immediate account suspension.
+Payment Disputes
+Any disputes regarding charges must first be raised with us directly before initiating a chargeback with your payment provider. Chargebacks initiated without first contacting us may result in account suspension. We reserve the right to contest any chargebacks we believe are made in bad faith.
+
+9. SERVICES MANAGEMENT
+In Short: We reserve broad rights to manage, modify, and protect the Services at our sole discretion.
+
+We reserve the right, but not the obligation, to:
+9.	Monitor the Services for violations of these Terms;
+10.	Take appropriate legal action against anyone who, in our sole discretion, violates applicable law or these Terms, including reporting such users to law enforcement;
+11.	Refuse, restrict, or limit access to the Services, or disable any Contributions or user accounts, at our sole discretion and without notice or liability;
+12.	Remove from the Services any content that is excessive in size, burdensome to our systems, or otherwise objectionable in our sole discretion;
+13.	Otherwise manage the Services in a manner designed to protect our rights, property, users, and the proper functioning of the platform.
+
+Any exercise of these rights by us shall not create any liability on our part to you or any third party.
+
+10. TERM AND TERMINATION
+In Short: We may suspend or terminate your access at any time. You agree not to re-register after termination.
+
+These Terms remain in full force and effect for as long as you use the Services. WITHOUT LIMITING ANY OTHER PROVISION OF THESE TERMS, WE RESERVE THE RIGHT TO DENY ACCESS TO AND USE OF THE SERVICES — INCLUDING BLOCKING IP ADDRESSES — TO ANY PERSON, FOR ANY REASON OR NO REASON, WITHOUT NOTICE OR LIABILITY.
+
+We may suspend or terminate your account, delete your content, and restrict your access if: (a) you breach any provision of these Terms; (b) we are required to do so by law; (c) your account poses a security or legal risk to us or other users; or (d) we determine in our sole discretion that termination is in the best interest of the platform.
+
+If your account is terminated for any reason, you are prohibited from re-registering under any name — your own, a false name, or a third party's name — without our express written consent. We reserve the right to take legal action for unauthorized re-registration.
+
+Upon termination, all licenses granted to you under these Terms immediately cease. Provisions that by their nature should survive termination (including Sections 2, 4, 6, 7, 12, 14, 15, 16, 17, 18, and 20) shall survive.
+
+11. MODIFICATIONS AND INTERRUPTIONS
+
+We reserve the right to change, modify, update, suspend, or discontinue the Services — or any part thereof — at any time and for any reason, without notice and without liability to you or any third party. We have no obligation to provide corrections, updates, or continued availability of the Services.
+
+The Services may experience downtime due to hardware, software, or maintenance issues. We make no guarantee that the Services will be available at any particular time or on an uninterrupted basis. You agree that we shall have no liability whatsoever for any loss, damage, or inconvenience caused by interruptions, errors, or unavailability of the Services.
+
+12. SERVICE AVAILABILITY AND THIRD-PARTY DEPENDENCIES
+
+Limitation of Liability for Outages and Third-Party Services
+
+ZedReq (including its owners, operators, affiliates, and service providers) does not guarantee uninterrupted or error-free access to the platform. The Services may be unavailable, delayed, or impaired due to factors outside our reasonable control, including but not limited to: internet or telecommunications failures; hosting, cloud, payment, authentication, email, analytics, or other third-party tools and APIs; scheduled or emergency maintenance; security incidents; force majeure events; or software defects, bugs, or updates in our systems or in third-party systems we rely on, regardless of how those third-party systems were selected or configured by us.
+
+In the event of any outage, degradation, or service disruption, our sole obligation is to use commercially reasonable efforts to restore the Services within a reasonable timeframe. We are under no obligation beyond this, and no service level, uptime guarantee, or duty of care shall be implied from our past performance or any other circumstance.
+
+To the fullest extent permitted by applicable law, you agree that you will not assert any claim, demand, or legal action against ZedReq or its owners (personally or in any representative capacity) arising from: temporary or extended downtime; degraded performance; data loss attributable to third-party services regardless of how those services were selected or configured by us; or errors, bugs, or failures in the platform or any integrated third-party components.
+
+Nothing in this section limits liability that cannot legally be excluded in your jurisdiction, including liability for gross negligence, willful misconduct, or mandatory statutory consumer rights where applicable.
+
+13. GOVERNING LAW
+
+These Terms shall be governed by and construed in accordance with the laws applicable in the jurisdiction in which ZedReq operates, without regard to conflict of law principles. To the extent permitted by applicable law, the parties agree that the exclusive forum for resolving disputes shall be determined in accordance with the Dispute Resolution section below.
+
+If you access the Services from a jurisdiction with laws that conflict with these Terms, you are responsible for compliance with applicable local laws. We make no representation that the Services are appropriate or available for use in all locations.
+
+14. DISPUTE RESOLUTION
+Step 1 — Informal Negotiation (Required First Step)
+Before initiating any formal legal proceedings, the parties agree to attempt in good faith to resolve any dispute informally. The complaining party must send a written notice to zed.req@yahoo.com describing the dispute and the relief sought. The parties will have 30 days from receipt of such notice to resolve the dispute informally. This informal negotiation requirement is a condition precedent to arbitration or litigation.
+
+Step 2 — Binding Arbitration
+If informal resolution fails, all disputes, claims, or controversies arising out of or relating to these Terms or the Services — including questions of validity, existence, or termination — shall be resolved by final and binding arbitration on an individual basis. The arbitration shall be conducted by a mutually agreed upon arbitration service, or if no agreement is reached, under the rules of the International Commercial Arbitration Court under the European Arbitration Chamber (Brussels, Belgium). The arbitration shall be conducted in English. The arbitrator's decision shall be final and binding and may be enforced in any court of competent jurisdiction.
+
+Class Action Waiver
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, YOU WAIVE ANY RIGHT TO BRING OR PARTICIPATE IN ANY CLASS ACTION, COLLECTIVE ACTION, OR REPRESENTATIVE PROCEEDING. ALL DISPUTES MUST BE BROUGHT ON AN INDIVIDUAL BASIS ONLY. If this waiver is found unenforceable as to a particular claim, that claim shall be severed and brought in court; all other claims shall remain in arbitration.
+
+Exceptions to Arbitration
+The following are not subject to arbitration and may be brought in a court of competent jurisdiction: (a) claims to enforce or protect intellectual property rights; (b) claims arising from theft, piracy, or unauthorized access; (c) claims for emergency injunctive or equitable relief where delay would cause irreparable harm.
+
+Time Limitation on Claims
+ANY CLAIM ARISING OUT OF OR RELATED TO THESE TERMS OR THE SERVICES MUST BE FILED WITHIN ONE (1) YEAR AFTER THE CAUSE OF ACTION AROSE, OR IT IS PERMANENTLY BARRED. This one-year limitation applies regardless of any statute of limitations that would otherwise apply.
+
+15. DISCLAIMER OF WARRANTIES
+
+THE SERVICES, INCLUDING ALL CONTENT, AI FEATURES, AI OUTPUTS, RECOMMENDATIONS, JOB MATCHES, SKILL ASSESSMENTS, AND MOCK INTERVIEW FEEDBACK, ARE PROVIDED ON AN "AS-IS" AND "AS-AVAILABLE" BASIS WITHOUT ANY WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, ZEDREQ EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO: (A) ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT; (B) ANY WARRANTIES REGARDING THE ACCURACY, RELIABILITY, COMPLETENESS, TIMELINESS, OR SUITABILITY OF ANY CONTENT OR AI OUTPUTS; (C) ANY WARRANTIES THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS; AND (D) ANY WARRANTIES REGARDING THE RESULTS THAT MAY BE OBTAINED FROM USE OF THE SERVICES, INCLUDING EMPLOYMENT OUTCOMES, CAREER ADVANCEMENT, OR SKILL DEVELOPMENT.
+
+WE DO NOT WARRANT, ENDORSE, OR ASSUME RESPONSIBILITY FOR ANY THIRD-PARTY PRODUCTS, SERVICES, JOB LISTINGS, OR CONTENT ACCESSIBLE THROUGH THE SERVICES.
+
+Some jurisdictions do not allow the exclusion of certain warranties. If these laws apply to you, some of the above disclaimers may not apply, and you may have additional rights.
+
+16. LIMITATION OF LIABILITY
+
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL ZEDREQ, ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AFFILIATES, OR LICENSORS BE LIABLE TO YOU OR ANY THIRD PARTY FOR ANY:
+
+•	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES;
+•	LOST PROFITS, LOST REVENUE, LOSS OF DATA, LOSS OF BUSINESS OPPORTUNITY, OR LOSS OF GOODWILL;
+•	DAMAGES ARISING FROM RELIANCE ON AI OUTPUTS, JOB MATCH RECOMMENDATIONS, SKILL ASSESSMENTS, OR MOCK INTERVIEW FEEDBACK;
+•	DAMAGES ARISING FROM CAREER DECISIONS, EMPLOYMENT OUTCOMES, OR FINANCIAL DECISIONS MADE BASED ON THE SERVICES;
+•	DAMAGES ARISING FROM UNAUTHORIZED ACCESS TO OR ALTERATION OF YOUR TRANSMISSIONS OR DATA;
+•	DAMAGES ARISING FROM ANY INTERRUPTION, SUSPENSION, OR TERMINATION OF THE SERVICES;
+•	ANY OTHER LOSS OR DAMAGE OF ANY KIND, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THESE TERMS OR THE SERVICES, REGARDLESS OF THE FORM OF ACTION, SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS IMMEDIATELY PRECEDING THE CLAIM, OR (B) USD $50.00 (FIFTY US DOLLARS).
+
+The limitations above reflect a reasonable allocation of risk between us. You acknowledge that, without these limitations, we would not be able to provide the Services on the terms offered.
+
+Some jurisdictions do not allow the exclusion or limitation of certain damages. If these laws apply to you, some of the above limitations may not apply.
+
+17. INDEMNIFICATION
+In Short: You agree to cover our legal costs if your actions cause us to be sued or suffer losses.
+
+You agree to defend, indemnify, and hold harmless ZedReq and its officers, directors, employees, agents, affiliates, and licensors from and against any and all claims, liabilities, damages, judgments, awards, losses, costs, expenses, and attorneys' fees arising out of or relating to:
+14.	Your use or misuse of the Services;
+15.	Your violation of any provision of these Terms;
+16.	Your breach of any representations or warranties made in these Terms;
+17.	Your Contributions, including any claims that they infringe a third party's rights;
+18.	Your violation of any applicable law or regulation;
+19.	Any harmful act you commit toward another user through the Services;
+20.	Any misrepresentation of your professional qualifications or credentials on the platform.
+
+We reserve the right, at our own expense, to assume exclusive control of the defense of any matter otherwise subject to indemnification by you. You agree to cooperate fully with our defense. We will use reasonable efforts to notify you of any such claim promptly after becoming aware of it.
+
+18. USER DATA
+
+We maintain certain data you transmit to the Services for the purpose of managing the Services' performance and your use of them. You are solely responsible for all data you transmit or that relates to any activity you undertake using the Services.
+
+Although we perform regular backups, WE SHALL HAVE NO LIABILITY TO YOU FOR ANY LOSS, CORRUPTION, OR UNAUTHORIZED ACCESS TO YOUR DATA. You waive any right of action against us for any such loss or corruption. We strongly encourage you to maintain your own independent copies of any data you consider important.
+
+Our collection, use, and protection of your personal information is governed by our Privacy Policy at https://zedreq.com/privacy, which is incorporated into these Terms by reference.
+
+19. ELECTRONIC COMMUNICATIONS AND SIGNATURES
+
+Visiting the Services, sending us emails, and completing online forms constitute electronic communications. You consent to receive electronic communications from us. You agree that all agreements, notices, disclosures, and communications we provide electronically satisfy any legal requirement that such communication be in writing.
+
+YOU AGREE TO THE USE OF ELECTRONIC SIGNATURES, CONTRACTS, ORDERS, AND RECORDS, AND TO ELECTRONIC DELIVERY OF NOTICES, POLICIES, AND TRANSACTION RECORDS. You waive any rights or requirements under applicable laws in any jurisdiction that require an original signature, delivery or retention of non-electronic records, or payments by means other than electronic means.
+
+20. PROFESSIONAL ADVICE DISCLAIMER
+In Short: ZedReq is a technology platform, not a licensed professional services firm. Our AI tools are not a substitute for qualified professional advice.
+
+The Services, including all AI-generated career assessments, job matches, skill gap analyses, learning recommendations, and mock interview feedback, are provided for general informational and self-improvement purposes only. Nothing in the Services constitutes:
+•	Professional career counseling or career advisory services;
+•	Legal advice regarding employment contracts, workplace rights, or immigration;
+•	Financial advice regarding salary negotiations, investments, or economic decisions;
+•	Psychological or therapeutic counseling;
+•	A guarantee or prediction of employment outcomes, career advancement, or earnings.
+
+You acknowledge that career decisions are inherently personal and complex, and that you should seek qualified human professionals for advice tailored to your specific circumstances. We expressly disclaim any liability for decisions you make based on content generated or provided through the Services.
+
+21. MISCELLANEOUS
+Entire Agreement
+These Terms, together with our Privacy Policy and any other legal notices or policies posted on the Services, constitute the entire agreement between you and ZedReq with respect to the Services, and supersede all prior and contemporaneous agreements, understandings, and negotiations.
+
+Severability
+If any provision of these Terms is found to be unlawful, void, or unenforceable, that provision shall be severed from these Terms without affecting the validity of the remaining provisions, which shall continue in full force and effect.
+
+No Waiver
+Our failure to exercise or enforce any right or provision of these Terms shall not constitute a waiver of that right or provision. A waiver of any specific breach does not constitute a waiver of any subsequent breach.
+
+Assignment
+We may assign our rights and obligations under these Terms to any party at any time without notice. You may not assign your rights or obligations under these Terms without our prior written consent. Any attempted assignment in violation of this provision shall be null and void.
+
+Force Majeure
+We shall not be liable for any failure or delay in performance resulting from causes beyond our reasonable control, including but not limited to acts of God, natural disasters, war, terrorism, labor disputes, government actions, power failures, cyberattacks, or internet outages.
+
+No Agency or Partnership
+Nothing in these Terms creates any joint venture, partnership, employment, or agency relationship between you and ZedReq.
+
+Headings
+Section headings in these Terms are for convenience only and have no legal or contractual effect.
+
+Construction
+These Terms shall not be construed against us by virtue of our having drafted them. You acknowledge that you had the opportunity to review and seek independent legal advice regarding these Terms before accepting them.
+
+22. CONTACT US
+
+For questions, complaints, or further information about these Terms or the Services, please contact us:
+
+•	Email: zed.req@yahoo.com
+•	Website: https://zedreq.com
+•	Settings & Account: https://zedreq.com/settings
+
+We aim to respond to all inquiries within 5 business days. For legal notices, please send communications to zed.req@yahoo.com with the subject line "Legal Notice — ZedReq Terms."
+
+
+
+By using ZedReq's Services, you acknowledge that you have read, understood, and agree to be bound by these Terms of Use.

@@ -1,0 +1,151 @@
+﻿/* Choose Plan — page layout + overrides; pricing visuals from FirstPage.css */
+
+.choose-plan-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--black, #0a0a0a);
+  color: var(--white, #e8e8e8);
+}
+
+.choose-plan-page a.btn {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.choose-plan-pricing {
+  padding-top: clamp(4rem, 10vw, 6rem);
+}
+
+.choose-plan-pricing__inner {
+  position: relative;
+  z-index: 2;
+}
+
+.choose-plan__lead {
+  font-family: var(--font-body);
+  color: var(--gray);
+  font-size: clamp(0.95rem, 1.1vw, 1.05rem);
+  line-height: 1.65;
+  max-width: 52rem;
+  margin: -2rem 0 3rem;
+  text-align: left;
+}
+
+.choose-plan-error {
+  max-width: 52rem;
+  margin: 0 auto 1.5rem;
+  padding: 0.85rem 1.1rem;
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #ffb4bc;
+  border: 1px solid rgba(255, 180, 188, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 180, 188, 0.06);
+}
+
+/* Four tiers vs First Page’s three */
+.choose-plan-page .choose-plan__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.choose-plan-page .choose-plan__grid.pricing__grid--1 {
+  grid-template-columns: minmax(0, 420px);
+  justify-content: center;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 1200px) {
+  .choose-plan-page .choose-plan__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .choose-plan-page .choose-plan__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Short plan blurbs (not on marketing First Page cards) */
+.choose-plan__card-desc {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--gray);
+  margin: 0 0 1.25rem;
+}
+
+.choose-plan__card-desc--on-light {
+  color: #444;
+  font-weight: 500;
+}
+
+.choose-plan-page .pricing__cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.choose-plan__footnote {
+  font-family: var(--font-body);
+  text-align: center;
+  color: var(--gray);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  max-width: 44rem;
+  margin: 3rem auto 0;
+}
+
+.choose-plan__footnote a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.choose-plan__footnote a:hover {
+  text-decoration: underline;
+}
+
+/* Success overlay */
+.choose-plan-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(5, 5, 8, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.choose-plan-success-card {
+  max-width: 26rem;
+  width: 100%;
+  padding: 1.75rem 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(20, 28, 36, 0.98), rgba(12, 16, 22, 0.99));
+  border: 1px solid rgba(21, 133, 161, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.choose-plan-success-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #7ec8d9;
+}
+
+.choose-plan-success-body {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(220, 235, 240, 0.88);
+}
+
+.choose-plan-success-cta {
+  width: 100%;
+  justify-content: center;
+}

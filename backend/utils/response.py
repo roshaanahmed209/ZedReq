@@ -1,5 +1,5 @@
 """Response utility functions"""
-from flask import jsonify
+from fastapi.responses import JSONResponse
 from typing import Any, Optional, Dict, List
 
 def success_response(data: Any = None, message: str = "Success", status_code: int = 200):
@@ -10,7 +10,7 @@ def success_response(data: Any = None, message: str = "Success", status_code: in
     }
     if data is not None:
         response["data"] = data
-    return jsonify(response), status_code
+    return JSONResponse(content=response, status_code=status_code)
 
 def error_response(message: str = "An error occurred", status_code: int = 500, errors: Optional[List] = None):
     """Create an error response"""
@@ -20,13 +20,13 @@ def error_response(message: str = "An error occurred", status_code: int = 500, e
     }
     if errors:
         response["errors"] = errors
-    return jsonify(response), status_code
+    return JSONResponse(content=response, status_code=status_code)
 
 def paginated_response(data: List[Any], pagination: Dict[str, Any], message: str = "Success"):
     """Create a paginated response"""
-    return jsonify({
+    return JSONResponse(content={
         "success": True,
         "message": message,
         "data": data,
         "pagination": pagination
-    }), 200
+    }, status_code=200)

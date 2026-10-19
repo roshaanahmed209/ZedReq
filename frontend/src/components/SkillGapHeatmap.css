@@ -1,0 +1,902 @@
+﻿/* ═══════════════════════════════════════════════════════════
+   Skill-Gap Heatmap — black + blue only
+   Font: inherits page system-font stack
+   Headings: weight 300 · Body: weight 400
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── section container ─────────────────────────────────────── */
+.sgh-section {
+  position: relative;
+  background: transparent;
+  padding: 140px 24px;
+  overflow: hidden;
+}
+
+.sgh-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(21, 133, 161, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 133, 161, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sgh-bg-glow {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 133, 161, 0.14) 0%, transparent 70%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── visibility animation ──────────────────────────────────── */
+.sgh-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sgh-container.sgh-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── two-column layout: heading | graphics ──────────────────── */
+.sgh-layout {
+  display: grid;
+  grid-template-columns: 0.7fr 1.3fr;
+  column-gap: 64px;
+  row-gap: 48px;
+  align-items: center;
+}
+
+/* ── header (left column) ─────────────────────────────────────── */
+.sgh-header {
+  text-align: left;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 0.25em;
+}
+
+.sgh-header h2 {
+  font-size: clamp(2em, 5vw, 3.5em);
+  font-weight: 300;
+  line-height: 1.15;
+  margin: 0 0 16px;
+  color: #ffffff;
+}
+
+.sgh-header p {
+  color: #ffffff;
+  font-size: 1.1em;
+  line-height: 1.8;
+  font-weight: 400;
+  margin: 0;
+}
+
+.sgh-divider {
+  margin: 26px 0 0;
+  width: min(220px, 80%);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(21, 133, 161, 0.7), transparent);
+}
+
+/* ── content grid (right column: radar | panel) — solid + corner gradient ── */
+.sgh-content {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
+  align-items: start;
+  padding: 36px 32px;
+  background-color: #050c18;
+  border: 1px solid rgba(21, 133, 161, 0.18);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.sgh-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: #050c18;
+  background-image: radial-gradient(
+    ellipse 120% 90% at 100% 0%,
+    rgba(21, 133, 161, 0.32) 0%,
+    rgba(21, 133, 161, 0.06) 42%,
+    transparent 68%
+  );
+}
+
+/* Exclude wave canvas — it must stay position:absolute or it becomes a grid item and breaks the 2-col layout */
+.sgh-content > *:not(.wave-bg-canvas-wrap) {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── radar area (left) ─────────────────────────────────────── */
+.sgh-radar-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.sgh-radar-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+}
+
+.sgh-radar-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* grid rings */
+.sgh-grid-ring {
+  fill: none;
+  stroke: rgba(21, 133, 161, 0.18);
+  stroke-width: 0.7;
+}
+
+/* axes */
+.sgh-axis {
+  stroke: rgba(21, 133, 161, 0.14);
+  stroke-width: 0.6;
+}
+
+/* threshold polygon */
+.sgh-threshold-poly {
+  fill: none;
+  stroke: rgba(21, 133, 161, 0.22);
+  stroke-width: 0.8;
+  stroke-dasharray: 4 4;
+}
+
+/* skill polygon */
+.sgh-skill-poly {
+  stroke: #1585A1;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  transform-origin: 200px 200px;
+  transform: scale(0.82);
+  opacity: 0;
+  transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.7s ease;
+}
+
+.sgh-skill-poly.drawn {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* axis labels */
+.sgh-label {
+  font-size: 11px;
+  fill: #999;
+  font-weight: 400;
+  font-family: inherit;
+}
+
+/* data dots */
+.sgh-dot {
+  transition: r 0.2s ease;
+}
+
+.sgh-dot.weak {
+  fill: #1585A1;
+  filter: drop-shadow(0 0 4px rgba(21, 133, 161, 0.7));
+}
+
+.sgh-dot.strong {
+  fill: #1585A1;
+  opacity: 0.7;
+}
+
+/* weak-area pulse */
+.sgh-pulse-ring {
+  fill: none;
+  stroke: rgba(21, 133, 161, 0.5);
+  stroke-width: 1;
+  animation: sghPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── tooltip ───────────────────────────────────────────────── */
+.sgh-tooltip {
+  position: absolute;
+  transform: translate(-50%, -115%);
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid rgba(21, 133, 161, 0.45);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.82em;
+  color: #1585A1;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  animation: sghTooltipIn 0.2s ease;
+}
+
+.sgh-tooltip-name {
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+/* ── AI insight badge ──────────────────────────────────────── */
+.sgh-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 420px;
+  padding: 14px 18px;
+  border: 1px solid rgba(21, 133, 161, 0.22);
+  border-radius: 14px;
+  background: rgba(21, 133, 161, 0.05);
+}
+
+.sgh-insight-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sgh-insight-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: #1585A1;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sgh-insight-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sgh-insight-label {
+  font-size: 0.78em;
+  color: #1585A1;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sgh-insight-text p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #1585A1;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+/* ── panel (right) ─────────────────────────────────────────── */
+.sgh-panel {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(21, 133, 161, 0.2);
+  border-radius: 14px;
+  padding: 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ── score ring ────────────────────────────────────────────── */
+.sgh-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.sgh-ring-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+.sgh-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.sgh-ring-bg {
+  fill: none;
+  stroke: rgba(21, 133, 161, 0.12);
+  stroke-width: 7;
+}
+
+.sgh-ring-fill {
+  fill: none;
+  stroke: #1585A1;
+  stroke-width: 7;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 6px rgba(21, 133, 161, 0.4));
+}
+
+.sgh-ring-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7em;
+  font-weight: 300;
+  color: #ffffff;
+}
+
+.sgh-ring-label {
+  font-size: 0.92em;
+  color: #999;
+  font-weight: 400;
+}
+
+/* ── skill list ────────────────────────────────────────────── */
+.sgh-skill-list h3 {
+  font-size: 0.78em;
+  font-weight: 400;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+}
+
+.sgh-no-weak {
+  font-size: 0.92em;
+  color: #999;
+  margin: 0;
+}
+
+.sgh-skill-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 8px 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease;
+}
+
+.sgh-skill-row:last-child {
+  border-bottom: none;
+}
+
+.sgh-skill-row:hover {
+  background: rgba(21, 133, 161, 0.04);
+}
+
+.sgh-skill-row.static {
+  cursor: default;
+}
+
+.sgh-skill-row.static:hover {
+  background: transparent;
+}
+
+.sgh-skill-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.92em;
+  color: #ccc;
+  font-weight: 400;
+}
+
+.sgh-pct {
+  color: #1585A1;
+  font-weight: 400;
+}
+
+.sgh-pct.strong {
+  color: #1585A1;
+}
+
+/* progress bar */
+.sgh-bar {
+  height: 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.sgh-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sgh-bar-fill.weak {
+  background: linear-gradient(90deg, #1585A1, #1585A1);
+}
+
+.sgh-bar-fill.strong {
+  background: linear-gradient(90deg, #1585A1, #1585A1);
+}
+
+/* ── strong toggle ─────────────────────────────────────────── */
+.sgh-strong-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(21, 133, 161, 0.22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 0.95em;
+  font-family: inherit;
+  font-weight: 400;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.sgh-strong-toggle:hover {
+  border-color: rgba(21, 133, 161, 0.45);
+  background: rgba(21, 133, 161, 0.04);
+}
+
+.sgh-strong-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke: #1585A1;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+
+.sgh-strong-toggle svg.open {
+  transform: rotate(180deg);
+}
+
+.sgh-strong-list {
+  animation: sghFadeDown 0.25s ease;
+}
+
+/* ── CTA button ────────────────────────────────────────────── */
+.sgh-cta {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #1585A1;
+  color: #000000;
+  font-size: 1em;
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.sgh-cta:hover {
+  background: #1585A1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(21, 133, 161, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Course popup
+   ═══════════════════════════════════════════════════════════ */
+.sgh-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9990;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.sgh-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sgh-popup {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  max-width: 100%;
+  height: 100%;
+  background: #0a0a0a;
+  border-left: 1px solid rgba(21, 133, 161, 0.35);
+  z-index: 9991;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow-y: auto;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sgh-popup.show {
+  transform: translateX(0);
+}
+
+.sgh-popup-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.sgh-popup-close:hover {
+  border-color: rgba(21, 133, 161, 0.5);
+  background: rgba(21, 133, 161, 0.08);
+}
+
+.sgh-popup-close svg {
+  width: 18px;
+  height: 18px;
+  stroke: #999;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.sgh-popup h3 {
+  font-size: 1.28em;
+  font-weight: 300;
+  color: #ffffff;
+  line-height: 1.35;
+  margin: 0;
+  padding-right: 44px;
+}
+
+.sgh-popup h3 span {
+  color: #1585A1;
+}
+
+.sgh-popup-sub {
+  color: #999;
+  font-size: 0.95em;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* meta */
+.sgh-popup-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sgh-popup-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sgh-popup-meta svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke: #1585A1;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sgh-popup-meta span {
+  font-size: 0.95em;
+  color: #ccc;
+  font-weight: 400;
+}
+
+/* week accordion */
+.sgh-popup-outline {
+  border-top: 1px solid rgba(21, 133, 161, 0.22);
+  border-bottom: 1px solid rgba(21, 133, 161, 0.22);
+}
+
+.sgh-week-item {
+  border-bottom: 1px solid rgba(21, 133, 161, 0.15);
+}
+
+.sgh-week-item:last-child {
+  border-bottom: none;
+}
+
+.sgh-week-trigger {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #1585A1;
+  text-align: left;
+  padding: 14px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+.sgh-week-trigger:focus-visible {
+  outline: 2px solid #1585A1;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.sgh-week-chev {
+  width: 18px;
+  height: 18px;
+  stroke: #1585A1;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.22s ease;
+}
+
+.sgh-week-item.open .sgh-week-chev {
+  transform: rotate(180deg);
+}
+
+.sgh-week-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+
+.sgh-week-item.open .sgh-week-body {
+  max-height: 140px;
+}
+
+.sgh-week-body p {
+  color: #1585A1;
+  margin: 0 0 14px;
+  line-height: 1.65;
+  padding: 0 4px;
+  font-size: 0.9em;
+  font-weight: 400;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sgh-week-item.open .sgh-week-body p {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* popup actions */
+.sgh-popup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.sgh-btn-primary {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #1585A1;
+  color: #000000;
+  font-size: 0.95em;
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sgh-btn-primary:hover {
+  background: #1585A1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(21, 133, 161, 0.3);
+}
+
+.sgh-btn-secondary {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(21, 133, 161, 0.45);
+  background: transparent;
+  color: #1585A1;
+  font-size: 0.95em;
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sgh-btn-secondary:hover {
+  border-color: #1585A1;
+  background: rgba(21, 133, 161, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(21, 133, 161, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════ */
+@keyframes sghPulse {
+  0% { r: 6; opacity: 0.45; }
+  100% { r: 20; opacity: 0; }
+}
+
+@keyframes sghTooltipIn {
+  from { opacity: 0; transform: translate(-50%, -108%); }
+  to { opacity: 1; transform: translate(-50%, -115%); }
+}
+
+@keyframes sghFadeDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════ */
+
+/* tablet */
+@media (max-width: 968px) {
+  .sgh-section {
+    padding: 92px 20px;
+  }
+
+  .sgh-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .sgh-header {
+    text-align: center;
+  }
+
+  .sgh-divider {
+    margin-left: auto;
+    margin-right: auto;
+    background: linear-gradient(90deg, transparent, rgba(21, 133, 161, 0.9), transparent);
+  }
+
+  .sgh-content {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 20px;
+  }
+
+  .sgh-radar-area {
+    order: 1;
+  }
+
+  .sgh-panel {
+    order: 2;
+  }
+
+  .sgh-radar-wrap {
+    max-width: 360px;
+  }
+}
+
+/* mobile */
+@media (max-width: 600px) {
+  .sgh-section {
+    padding: 70px 16px;
+  }
+
+  .sgh-header h2 {
+    font-size: 2em;
+  }
+
+  .sgh-header p {
+    font-size: 1em;
+  }
+
+  .sgh-radar-wrap {
+    max-width: 300px;
+  }
+
+  .sgh-label {
+    font-size: 9px;
+  }
+
+  .sgh-content {
+    padding: 20px 16px;
+  }
+
+  .sgh-panel {
+    padding: 22px 18px;
+  }
+
+  /* popup full-screen on mobile */
+  .sgh-popup {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(21, 133, 161, 0.35);
+    padding: 28px 20px;
+  }
+
+  .sgh-popup-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .sgh-section {
+    padding: 56px 14px;
+  }
+
+  .sgh-header h2 {
+    font-size: 1.7em;
+  }
+
+  .sgh-radar-wrap {
+    max-width: 280px;
+  }
+
+  .sgh-insight {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+}
+
+/* ── reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .sgh-skill-poly,
+  .sgh-ring-fill,
+  .sgh-bar-fill,
+  .sgh-container {
+    transition-duration: 0.01ms !important;
+  }
+
+  .sgh-pulse-ring {
+    animation: none !important;
+  }
+}

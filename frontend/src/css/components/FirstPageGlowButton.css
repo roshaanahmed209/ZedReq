@@ -1,0 +1,125 @@
+/* From Uiverse.io by Spacious74 — scoped to First Page only */
+.zedreq-root .fp-glow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 20px;
+  border: none;
+  font-family: var(--font-body, var(--font-sans, system-ui, sans-serif));
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  background: linear-gradient(90deg, #38bdf8, #1585a1, #0a5270);
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    box-shadow 0.35s ease,
+    transform 0.25s ease,
+    filter 0.35s ease;
+  box-shadow:
+    inset 0 0 5px #ffffffa9,
+    inset 0 35px 30px #000,
+    0 5px 10px #000000cc;
+  text-shadow: 1px 1px 1px #000;
+  white-space: nowrap;
+}
+
+.zedreq-root .fp-glow-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  margin: auto;
+  border-radius: 14px;
+  filter: blur(0);
+  opacity: 0.85;
+  z-index: -1;
+  box-shadow: none;
+  background: conic-gradient(
+    #00000000 70deg,
+    #38bdf8,
+    #1585a1,
+    #2196f3,
+    #0a5270,
+    #00000000 290deg
+  );
+  transition:
+    filter 0.35s ease,
+    inset 0.35s ease,
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+
+.zedreq-root .fp-glow-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 8px #ffffffcc,
+    inset 0 35px 30px #000,
+    0 0 12px rgba(56, 189, 248, 0.5),
+    0 0 22px rgba(21, 133, 161, 0.45),
+    0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+.zedreq-root .fp-glow-btn:hover::before {
+  inset: -6px;
+  filter: blur(16px);
+  opacity: 1;
+}
+
+.zedreq-root .fp-glow-btn:active::before {
+  filter: blur(5px);
+  transform: translateY(1px);
+}
+
+.zedreq-root .fp-glow-btn:active {
+  box-shadow:
+    inset 0 0 5px #ffffffa9,
+    inset 0 35px 30px #000;
+  margin-top: 3px;
+}
+
+.zedreq-root .fp-glow-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.zedreq-root .fp-glow-btn__icon {
+  flex-shrink: 0;
+}
+
+.zedreq-root .fp-glow-btn__label {
+  position: relative;
+  z-index: 1;
+}
+
+.zedreq-root .fp-glow-btn--full {
+  width: 100%;
+  margin-top: auto;
+}
+
+.zedreq-root .fp-glow-btn--nav {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.zedreq-root .fp-glow-btn--nav .fp-glow-btn__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.zedreq-root .chapter__body .fp-glow-btn {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+}
+
+.zedreq-root .modal__form .fp-glow-btn {
+  width: 100%;
+}

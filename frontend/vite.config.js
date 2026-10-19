@@ -1,15 +1,69 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+import { cpSync, existsSync } from 'fs'
+import { fileURLToPath } from 'url'
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true
+function copyStaticDir() {
+  return {
+    name: 'copy-frontend-static',
+    apply: 'build',
+    closeBundle() {
+      const from = path.resolve(__dirname, 'static')
+      const to = path.resolve(__dirname, 'dist', 'static')
+      if (existsSync(from)) {
+        cpSync(from, to, { recursive: true })
       }
-    }
+    },
+  }
+}
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.resolve(__dirname, '..')
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, rootDir, '')
+  const fromEnv = (env.ZEDREQ_URL || env.VITE_ZEDREQ_URL || '').replace(/\/$/, '')
+  const devFallback = mode === 'development' ? 'http://localhost:3000' : ''
+  const zedreqUrl = fromEnv || devFallback
+
+  const zedreqEmail =
+    (env.ZEDREQ_EMAIL || env.VITE_ZEDREQ_EMAIL || env.VITE_COMPANY_EMAIL || '').trim() ||
+    'zed.req@yahoo.com'
+
+  const STARTUP_TRUTHY = new Set(['true', '1', 'yes'])
+  const startupRaw = (env.STARTUP_STATUS || env.VITE_STARTUP_STATUS || '').trim().toLowerCase()
+  const startupStatus = STARTUP_TRUTHY.has(startupRaw)
+
+  const repoPackageRoot = path.resolve(__dirname, '..')
+
+  return {
+    plugins: [react(), copyStaticDir()],
+    envDir: rootDir,
+    resolve: {
+      alias: {
+        // ZedReq/privacy.txt and terms.txt (sibling of frontend/)
+        '@repoLegal': repoPackageRoot,
+      },
+    },
+    define: {
+      'import.meta.env.VITE_ZEDREQ_URL': JSON.stringify(zedreqUrl),
+      'import.meta.env.VITE_ZEDREQ_EMAIL': JSON.stringify(zedreqEmail),
+      'import.meta.env.VITE_STARTUP_STATUS': JSON.stringify(startupStatus),
+    },
+    server: {
+      // Bind IPv4 + IPv6 so http://localhost:3000 works on Windows (default [::1]-only fails for 127.0.0.1).
+      host: true,
+      port: 3000,
+      fs: {
+        allow: [path.resolve(__dirname), repoPackageRoot],
+      },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+        },
+      },
+    },
   }
 })

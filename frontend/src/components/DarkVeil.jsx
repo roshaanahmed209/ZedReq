@@ -18,6 +18,7 @@ uniform float uNoise;
 uniform float uScan;
 uniform float uScanFreq;
 uniform float uWarp;
+uniform float uLightVeil;
 #define iTime uTime
 #define iResolution uResolution
 
@@ -70,10 +71,28 @@ void main(){
     float scanline_val=sin(gl_FragCoord.y*uScanFreq)*0.5+0.5;
     col.rgb*=1.-(scanline_val*scanline_val)*uScan;
     col.rgb+=(rand(gl_FragCoord.xy+uTime)-0.5)*uNoise;
-    gl_FragColor=vec4(clamp(col.rgb,0.0,1.0),1.0);
+    vec3 rgb=clamp(col.rgb,0.0,1.0);
+    // Light theme: lift dark areas toward white; then selectively deepen blue veil (never touch near-white)
+    if(uLightVeil>0.5){
+      float luma=dot(rgb,vec3(0.299,0.587,0.114));
+      float preSat=max(rgb.r,max(rgb.g,rgb.b))-min(rgb.r,min(rgb.g,rgb.b));
+      float blueHue=smoothstep(0.02,0.14,rgb.b-max(rgb.r,rgb.g));
+      float blueMask=smoothstep(0.04,0.22,preSat)*blueHue;
+      float liftAmt=(1.0-luma)*(1.0-blueMask*0.5);
+      vec3 lifted=mix(rgb,vec3(1.0),liftAmt);
+      float whiteDist=length(lifted-vec3(1.0));
+      float enhanceMask=blueMask*(1.0-smoothstep(0.0,0.04,whiteDist));
+      vec3 enhanced=lifted;
+      enhanced.b=min(lifted.b+0.24*enhanceMask,1.0);
+      enhanced.r=max(lifted.r-0.14*enhanceMask,0.0);
+      enhanced.g=max(lifted.g-0.07*enhanceMask,0.0);
+      rgb=mix(lifted,enhanced,enhanceMask);
+    }
+    gl_FragColor=vec4(rgb,1.0);
 }
 `;
 
+/** When true, inverts final RGB so dark-veil blacks read as lights on the light hero. */
 export default function DarkVeil({
   hueShift = 0,
   noiseIntensity = 0,
@@ -81,7 +100,8 @@ export default function DarkVeil({
   speed = 1,
   scanlineFrequency = 0,
   warpAmount = 3.0,
-  resolutionScale = 1
+  resolutionScale = 1,
+  forLightBackground = false
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -89,7 +109,7 @@ export default function DarkVeil({
     const parent = canvas.parentElement;
 
     const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
+      dpr: Math.min(window.devicePixelRatio, 1),
       canvas
     });
 
@@ -106,7 +126,8 @@ export default function DarkVeil({
         uNoise: { value: noiseIntensity },
         uScan: { value: scanlineIntensity },
         uScanFreq: { value: scanlineFrequency },
-        uWarp: { value: warpAmount }
+        uWarp: { value: warpAmount },
+        uLightVeil: { value: forLightBackground ? 1.0 : 0 }
       }
     });
 
@@ -124,25 +145,54 @@ export default function DarkVeil({
 
     const start = performance.now();
     let frame = 0;
+    let lastFrameTime = 0;
+    let visible = true;
+    const TARGET_FPS = 30;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-    const loop = () => {
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => { visible = entries[0].isIntersecting; },
+      { threshold: 0 }
+    );
+    visibilityObserver.observe(canvas);
+
+    const loop = (now) => {
+      frame = requestAnimationFrame(loop);
+      if (!visible) return;
+      if (now - lastFrameTime < FRAME_INTERVAL) return;
+      lastFrameTime = now;
       program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
       program.uniforms.uHueShift.value = hueShift;
       program.uniforms.uNoise.value = noiseIntensity;
       program.uniforms.uScan.value = scanlineIntensity;
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = warpAmount;
+      program.uniforms.uLightVeil.value = forLightBackground ? 1.0 : 0;
+      if (forLightBackground) {
+        gl.clearColor(0.949, 0.945, 0.933, 1);
+      } else {
+        gl.clearColor(0, 0, 0, 1);
+      }
       renderer.render({ scene: mesh });
-      frame = requestAnimationFrame(loop);
     };
 
-    loop();
+    frame = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
+      visibilityObserver.disconnect();
     };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
+  }, [
+    hueShift,
+    noiseIntensity,
+    scanlineIntensity,
+    speed,
+    scanlineFrequency,
+    warpAmount,
+    resolutionScale,
+    forLightBackground
+  ]);
   return <canvas ref={ref} className="darkveil-canvas" />;
 }
 

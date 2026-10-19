@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gi" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="glowi">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Microphone body -->
+  <rect x="88" y="55" width="24" height="50" rx="12" stroke="url(#gi)" stroke-width="2" opacity="0.8"/>
+  <!-- Microphone stand arc -->
+  <path d="M72 90 C72 115 128 115 128 90" stroke="url(#gi)" stroke-width="2" fill="none" opacity="0.6"/>
+  <line x1="100" y1="115" x2="100" y2="135" stroke="url(#gi)" stroke-width="2" opacity="0.6"/>
+  <line x1="85" y1="135" x2="115" y2="135" stroke="url(#gi)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <!-- Sound waves left -->
+  <path d="M70 70 C62 80 62 90 70 100" stroke="url(#gi)" stroke-width="1.5" fill="none" filter="url(#glowi)" opacity="0.5"/>
+  <path d="M58 63 C46 80 46 90 58 107" stroke="url(#gi)" stroke-width="1.5" fill="none" filter="url(#glowi)" opacity="0.3"/>
+  <!-- Sound waves right -->
+  <path d="M130 70 C138 80 138 90 130 100" stroke="url(#gi)" stroke-width="1.5" fill="none" filter="url(#glowi)" opacity="0.5"/>
+  <path d="M142 63 C154 80 154 90 142 107" stroke="url(#gi)" stroke-width="1.5" fill="none" filter="url(#glowi)" opacity="0.3"/>
+  <!-- Score badge -->
+  <circle cx="150" cy="55" r="18" stroke="url(#gi)" stroke-width="1.5" opacity="0.6"/>
+  <text x="150" y="60" font-family="Inter,sans-serif" font-size="14" font-weight="600" fill="#3b82f6" text-anchor="middle" opacity="0.8">92</text>
+  <!-- Waveform bars at bottom -->
+  <rect x="55" y="150" width="4" height="12" rx="2" fill="#3b82f6" opacity="0.3"/>
+  <rect x="63" y="146" width="4" height="20" rx="2" fill="#3b82f6" opacity="0.4"/>
+  <rect x="71" y="148" width="4" height="16" rx="2" fill="#3b82f6" opacity="0.5"/>
+  <rect x="79" y="144" width="4" height="24" rx="2" fill="#3b82f6" opacity="0.6"/>
+  <rect x="87" y="150" width="4" height="12" rx="2" fill="#06b6d4" opacity="0.5"/>
+  <rect x="95" y="142" width="4" height="28" rx="2" fill="#06b6d4" opacity="0.7"/>
+  <rect x="103" y="147" width="4" height="18" rx="2" fill="#06b6d4" opacity="0.6"/>
+  <rect x="111" y="144" width="4" height="24" rx="2" fill="#3b82f6" opacity="0.5"/>
+  <rect x="119" y="149" width="4" height="14" rx="2" fill="#3b82f6" opacity="0.4"/>
+  <rect x="127" y="146" width="4" height="20" rx="2" fill="#3b82f6" opacity="0.3"/>
+  <rect x="135" y="151" width="4" height="10" rx="2" fill="#3b82f6" opacity="0.2"/>
+</svg>

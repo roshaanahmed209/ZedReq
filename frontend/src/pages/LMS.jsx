@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccessDeniedModal } from '../contexts/AccessDeniedModalContext'
 import { motion, useInView } from 'framer-motion'
+import { lmsAPI } from '../services/api'
+import Navbar from '../components/Navbar'
 import '../css/pages/LMS.css'
+import { trackEvent } from '../utils/analytics'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -15,6 +19,11 @@ const slideUp = keyframes`
   to { transform: translateY(0); opacity: 1; }
 `
 
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
 const Container = styled.div`
   min-height: 100vh;
   width: 100%;
@@ -22,70 +31,6 @@ const Container = styled.div`
   animation: ${fadeIn} 0.6s ease-in;
 `
 
-const Navbar = styled.nav`
-  background: rgba(13, 13, 13, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  width: 100%;
-  padding: 0 20px;
-`
-
-const NavContainer = styled.div`
-  max-width: 100%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  gap: 30px;
-
-  @media (max-width: 600px) {
-    gap: 15px;
-    padding: 10px 0;
-  }
-
-  @media (max-width: 480px) {
-    gap: 10px;
-  }
-`
-
-const NavLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  position: relative;
-`
-
-const Logo = styled.h1`
-  font-size: 1.8em;
-  font-weight: 300;
-  color: var(--primary);
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
-
-  @media (max-width: 600px) {
-    font-size: 1.5em;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 1.3em;
-  }
-`
-
-const NavRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-`
 
 const BackButton = styled.button`
   padding: 10px;
@@ -122,6 +67,12 @@ const MainContainer = styled.div`
   gap: 25px;
   padding: 30px 20px;
   
+  @media (max-width: 1400px) {
+    grid-template-columns: 420px 1fr;
+    gap: 22px;
+    padding: 28px 18px;
+  }
+  
   @media (max-width: 1200px) {
     grid-template-columns: 400px 1fr;
     gap: 20px;
@@ -133,15 +84,31 @@ const MainContainer = styled.div`
     padding: 25px 15px;
   }
   
+  @media (max-width: 900px) {
+    grid-template-columns: 320px 1fr;
+    gap: 18px;
+    padding: 22px 14px;
+  }
+  
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 20px 15px;
   }
+  
+  @media (max-width: 600px) {
+    gap: 18px;
+    padding: 18px 12px;
+  }
 
   @media (max-width: 480px) {
     padding: 15px 12px;
     gap: 15px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 12px 10px;
+    gap: 12px;
   }
 `
 
@@ -160,6 +127,24 @@ const SidePanel = styled.aside`
     position: relative;
     top: 0;
     max-height: none;
+    order: -1; /* Show sidebar first on mobile */
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 600px) {
+    margin-bottom: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    margin-bottom: 14px;
+    border-radius: 8px;
   }
 `
 
@@ -186,6 +171,146 @@ const ScrollableContent = styled.div`
   }
 `
 
+const PanelTitle = styled.h3`
+  font-size: 1.2em;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-weight: 400;
+`
+
+const PanelSubtitle = styled.p`
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin: 0;
+`
+
+const EnrollButton = styled.button`
+  padding: 8px 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`
+
+const EnrollOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+`
+
+const EnrollOverlayRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+`
+
+const EnrollOverlayText = styled.div`
+  font-size: 1.25em;
+  font-weight: 500;
+  color: #ffffff;
+  overflow: hidden;
+  height: 1.6em;
+  display: flex;
+  align-items: center;
+
+  span.msg {
+    display: inline-block;
+    animation: diceRoll 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes diceRoll {
+    0%   { transform: rotateX(90deg) translateY(-14px); opacity: 0; }
+    100% { transform: rotateX(0deg)  translateY(0);     opacity: 1; }
+  }
+`
+
+const EnrollDots = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 2px;
+
+  span {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: dotBounce 1.6s ease-in-out infinite;
+  }
+
+  span:nth-child(1) { animation-delay: 0s; }
+  span:nth-child(2) { animation-delay: 0.3s; }
+  span:nth-child(3) { animation-delay: 0.6s; }
+
+  @keyframes dotBounce {
+    0%, 70%, 100% { transform: translateY(0);    opacity: 0.35; }
+    35%           { transform: translateY(-9px); opacity: 1;    }
+  }
+`
+
+const RefreshRecsButton = styled.button`
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 0.78em;
+  font-weight: 500;
+  color: var(--primary);
+  background: transparent;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  &:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  svg.spinning {
+    animation: spin 1s linear infinite;
+  }
+`
+
+const EmptySubtext = styled.p`
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-top: 8px;
+  text-align: center;
+`
+
 const PanelHeader = styled.div`
   padding: 28px 28px;
   background: var(--bg-white);
@@ -195,6 +320,24 @@ const PanelHeader = styled.div`
   z-index: 10;
   border-radius: 16px 16px 0 0;
   border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 1024px) {
+    padding: 24px 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px 20px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 18px 16px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 16px 14px;
+  }
 `
 
 const PageTitle = styled.h1`
@@ -202,16 +345,67 @@ const PageTitle = styled.h1`
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 300;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.4em;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.2em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1em;
+  }
 `
 
 const PageSubtitle = styled.p`
   font-size: 0.9em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.8em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.75em;
+  }
 `
 
 const PanelContent = styled.div`
   position: relative;
   padding: 24px 28px;
+  
+  @media (max-width: 1024px) {
+    padding: 20px 24px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 18px 20px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px 18px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px 16px;
+  }
 `
 
 const ScrollGradientTop = styled.div`
@@ -243,6 +437,11 @@ const ScrollGradientBottom = styled.div`
 const MainContent = styled.main`
   min-height: 80vh;
   width: 100%;
+  
+  @media (max-width: 768px) {
+    order: 1; /* Show main content after sidebar on mobile */
+    min-height: auto;
+  }
 `
 
 const TopBanner = styled.div`
@@ -252,21 +451,42 @@ const TopBanner = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
+  background: transparent;
+  border: none;
+  margin-bottom: 20px;
+
+  @media (max-width: 1024px) {
+    padding: 22px 28px;
+    gap: 14px;
+    border-radius: 14px;
+  }
 
   @media (max-width: 768px) {
     padding: 20px 24px;
     gap: 12px;
+    border-radius: 12px;
+    margin-bottom: 18px;
   }
 
   @media (max-width: 600px) {
-    padding: 16px 20px;
+    padding: 18px 20px;
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    margin-bottom: 16px;
   }
 
   @media (max-width: 480px) {
     padding: 16px;
+    gap: 10px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 `
 
@@ -279,11 +499,59 @@ const BannerIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   
   svg {
     width: 32px;
     height: 32px;
     color: white;
+  }
+  
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    border-radius: 10px;
+    
+    svg {
+      width: 28px;
+      height: 28px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 10px;
+    
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 8px;
+    
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    
+    svg {
+      width: 22px;
+      height: 22px;
+    }
   }
 `
 
@@ -299,19 +567,37 @@ const BannerTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  word-wrap: break-word;
+
+  @media (max-width: 1024px) {
+    font-size: 1.6em;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
 
   @media (max-width: 768px) {
-    font-size: 1.5em;
-    gap: 10px;
+    font-size: 1.4em;
+    gap: 8px;
+    margin-bottom: 5px;
   }
 
   @media (max-width: 600px) {
     font-size: 1.3em;
     flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
   }
 
   @media (max-width: 480px) {
     font-size: 1.2em;
+    gap: 6px;
+    line-height: 1.3;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.1em;
+    gap: 5px;
   }
 `
 
@@ -331,9 +617,17 @@ const BannerDescription = styled.p`
   color: var(--text-light);
   line-height: 1.6;
   font-weight: 300;
+  word-wrap: break-word;
+  margin: 0;
+
+  @media (max-width: 1024px) {
+    font-size: 1.05em;
+    line-height: 1.55;
+  }
 
   @media (max-width: 768px) {
     font-size: 1em;
+    line-height: 1.5;
   }
 
   @media (max-width: 600px) {
@@ -343,6 +637,12 @@ const BannerDescription = styled.p`
 
   @media (max-width: 480px) {
     font-size: 0.9em;
+    line-height: 1.45;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+    line-height: 1.4;
   }
 `
 
@@ -352,14 +652,42 @@ const DashboardContainer = styled.div`
   gap: 20px;
   width: 100%;
 
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  @media (max-width: 360px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  /* Ensure all direct children (cards) are in separate rows on mobile */
+  & > * {
+    @media (max-width: 900px) {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
   }
 `
 
@@ -370,6 +698,35 @@ const DashboardCard = styled.div`
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   animation: ${slideUp} 0.4s ease-out;
+  
+  @media (max-width: 1024px) {
+    padding: 22px;
+    border-radius: 14px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 600px) {
+    padding: 18px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 14px;
+    border-radius: 8px;
+  }
+
+  &.dashboard-card-span-2 {
+    grid-column: 1 / -1;
+  }
 `
 
 const CardTitle = styled.h3`
@@ -380,12 +737,56 @@ const CardTitle = styled.h3`
   display: flex;
   align-items: center;
   gap: 8px;
+  word-wrap: break-word;
+  
+  @media (max-width: 1024px) {
+    font-size: 1.05em;
+    margin-bottom: 18px;
+    gap: 7px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1em;
+    margin-bottom: 16px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.95em;
+    margin-bottom: 14px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9em;
+    margin-bottom: 12px;
+    gap: 5px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
 `
 
 const StatCard = styled(DashboardCard)`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  
+  @media (max-width: 480px) {
+    min-height: 120px;
+  }
 `
 
 const StatValue = styled.div`
@@ -396,13 +797,31 @@ const StatValue = styled.div`
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 8px;
+  line-height: 1.2;
+  word-wrap: break-word;
+
+  @media (max-width: 1024px) {
+    font-size: 2.3em;
+    margin-bottom: 7px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 2.1em;
+    margin-bottom: 6px;
+  }
 
   @media (max-width: 600px) {
-    font-size: 2.2em;
+    font-size: 2em;
+    margin-bottom: 5px;
   }
 
   @media (max-width: 480px) {
-    font-size: 2em;
+    font-size: 1.8em;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.6em;
   }
 `
 
@@ -411,6 +830,26 @@ const StatLabel = styled.div`
   color: var(--text-light);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85em;
+    letter-spacing: 0.4px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.8em;
+    letter-spacing: 0.3px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75em;
+    letter-spacing: 0.3px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.7em;
+  }
 `
 
 const StatChange = styled.div`
@@ -420,6 +859,38 @@ const StatChange = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    margin-top: 6px;
+    gap: 3px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.75em;
+    margin-top: 5px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    margin-top: 4px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
 `
 
 const ProgressCircle = styled.div`
@@ -428,14 +899,39 @@ const ProgressCircle = styled.div`
   height: 150px;
   margin: 20px auto;
 
-  @media (max-width: 600px) {
+  @media (max-width: 1024px) {
+    width: 140px;
+    height: 140px;
+    margin: 18px auto;
+  }
+  
+  @media (max-width: 768px) {
     width: 130px;
     height: 130px;
+    margin: 16px auto;
+  }
+
+  @media (max-width: 600px) {
+    width: 120px;
+    height: 120px;
+    margin: 14px auto;
   }
 
   @media (max-width: 480px) {
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
+    margin: 12px auto;
+  }
+  
+  @media (max-width: 360px) {
+    width: 100px;
+    height: 100px;
+    margin: 10px auto;
+  }
+  
+  svg {
+    width: 100%;
+    height: 100%;
   }
 `
 
@@ -469,11 +965,39 @@ const CircleValue = styled.div`
   font-size: 2em;
   font-weight: 300;
   color: var(--text);
+  
+  @media (max-width: 768px) {
+    font-size: 1.8em;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 1.6em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.4em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.2em;
+  }
 `
 
 const CircleLabel = styled.div`
   font-size: 0.8em;
   color: var(--text-light);
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+  }
 `
 
 const BarChart = styled.div`
@@ -492,22 +1016,48 @@ const Bar = styled.div`
   width: 100%;
   max-width: 60px;
   min-width: 35px;
-  background: linear-gradient(180deg, #00d4ff 0%, var(--primary) 50%, #004182 100%);
+  background: linear-gradient(180deg, #1585A1 0%, var(--primary) 50%, #0f6a82 100%);
   border-radius: 8px 8px 0 0;
   height: ${props => props.height}%;
   transition: all 0.5s ease;
   position: relative;
   min-height: 30px;
   display: flex;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    max-width: 50px;
+    min-width: 30px;
+    min-height: 25px;
+  }
+  
+  @media (max-width: 600px) {
+    max-width: 45px;
+    min-width: 28px;
+    min-height: 20px;
+  }
+  
+  @media (max-width: 480px) {
+    max-width: 40px;
+    min-width: 25px;
+    min-height: 18px;
+    border-radius: 6px 6px 0 0;
+  }
+  
+  @media (max-width: 360px) {
+    max-width: 35px;
+    min-width: 22px;
+    min-height: 15px;
+  }
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  box-shadow: 0 -2px 8px rgba(10, 102, 194, 0.3), inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -2px 8px rgba(21, 133, 161, 0.3), inset 0 -2px 4px rgba(255, 255, 255, 0.1);
   
   &:hover {
     opacity: 0.9;
     transform: translateY(-2px);
-    box-shadow: 0 -4px 12px rgba(10, 102, 194, 0.5), inset 0 -2px 4px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 -4px 12px rgba(21, 133, 161, 0.5), inset 0 -2px 4px rgba(255, 255, 255, 0.2);
   }
 `
 
@@ -517,10 +1067,35 @@ const BarValue = styled.div`
   font-size: 0.95em;
   font-weight: 500;
   color: #ffffff;
-  background: rgba(10, 102, 194, 0.8);
+  background: rgba(21, 133, 161, 0.8);
   padding: 4px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  
+  @media (max-width: 768px) {
+    top: -28px;
+    font-size: 0.85em;
+    padding: 3px 6px;
+  }
+  
+  @media (max-width: 600px) {
+    top: -26px;
+    font-size: 0.8em;
+    padding: 3px 5px;
+  }
+  
+  @media (max-width: 480px) {
+    top: -24px;
+    font-size: 0.75em;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 360px) {
+    top: -22px;
+    font-size: 0.7em;
+    padding: 2px 3px;
+  }
 `
 
 const BarLabel = styled.div`
@@ -529,6 +1104,79 @@ const BarLabel = styled.div`
   text-align: center;
   margin-top: 10px;
   font-weight: 400;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8em;
+    margin-top: 8px;
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 0.75em;
+    margin-top: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    margin-top: 5px;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    margin-top: 4px;
+  }
+`
+
+const WeeklyPerfHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+`
+
+const WeeklyPerfFilters = styled.div`
+  display: flex;
+  gap: 6px;
+`
+
+const WeeklyPerfFilterBtn = styled.button`
+  font-size: 0.78em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
+  background: ${props => props.active ? 'var(--primary)' : 'transparent'};
+  color: ${props => props.active ? '#fff' : 'var(--text-light)'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 400;
+
+  &:hover {
+    border-color: var(--primary);
+    color: ${props => props.active ? '#fff' : 'var(--primary)'};
+  }
+`
+
+const BarChartScrollWrapper = styled.div`
+  overflow-x: auto;
+  width: 100%;
+
+  /* Custom scrollbar matching theme */
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+    opacity: 0.6;
+  }
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
 `
 
 const DomainList = styled.div`
@@ -585,6 +1233,7 @@ const ActivityItem = styled.div`
   border-radius: 8px;
   background: var(--hover-bg);
   margin-bottom: 12px;
+  align-items: center;
   
   &:last-child {
     margin-bottom: 0;
@@ -620,6 +1269,72 @@ const ActivityTime = styled.div`
   color: var(--text-lighter);
 `
 
+const ActivityScrollContainer = styled.div`
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-top: 8px;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--hover-bg);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-lighter);
+    border-radius: 10px;
+    
+    &:hover {
+      background: var(--text-light);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    max-height: 280px;
+  }
+`
+
+const RecommendationsScrollContainer = styled.div`
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-top: 8px;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--hover-bg);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-lighter);
+    border-radius: 10px;
+    
+    &:hover {
+      background: var(--text-light);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    max-height: 280px;
+  }
+  
+  @media (max-width: 480px) {
+    max-height: 220px;
+  }
+`
+
 const CoursesGrid = styled.div`
   display: flex;
   flex-direction: column;
@@ -636,9 +1351,34 @@ const CourseCard = styled.div`
   display: flex;
   gap: 14px;
   align-items: start;
+  min-height: 80px; /* Better touch target */
+  
+  @media (max-width: 1024px) {
+    padding: 16px;
+    gap: 12px;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 14px;
+    gap: 10px;
+    border-radius: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px;
+    gap: 8px;
+    min-height: 70px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    gap: 6px;
+    min-height: 65px;
+  }
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
   }
 `
@@ -656,6 +1396,31 @@ const CourseIcon = styled.div`
   font-weight: 300;
   color: white;
   letter-spacing: -0.5px;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 8px;
+    font-size: 0.95em;
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 8px;
+    font-size: 0.9em;
+  }
+  
+  @media (max-width: 360px) {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }
 `
 
 const CourseContent = styled.div`
@@ -668,6 +1433,25 @@ const CourseTitle = styled.h3`
   color: var(--text);
   margin-bottom: 6px;
   font-weight: 300;
+  word-wrap: break-word;
+  line-height: 1.3;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    line-height: 1.25;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.8em;
+    margin-bottom: 3px;
+  }
 `
 
 const CourseDescription = styled.p`
@@ -679,6 +1463,26 @@ const CourseDescription = styled.p`
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.75em;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    -webkit-line-clamp: 2;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.7em;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    -webkit-line-clamp: 2;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 0.65em;
+    margin-bottom: 5px;
+  }
 `
 
 const CourseFooter = styled.div`
@@ -686,6 +1490,13 @@ const CourseFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
 `
 
 const CourseInfo = styled.div`
@@ -694,6 +1505,23 @@ const CourseInfo = styled.div`
   gap: 12px;
   font-size: 0.75em;
   color: var(--text-lighter);
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+    font-size: 0.7em;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 8px;
+    font-size: 0.65em;
+    width: 100%;
+  }
+  
+  @media (max-width: 360px) {
+    gap: 6px;
+    font-size: 0.6em;
+  }
 `
 
 const InfoItem = styled.div`
@@ -705,6 +1533,35 @@ const InfoItem = styled.div`
     width: 14px;
     height: 14px;
   }
+`
+
+const CourseMeta = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+`
+
+const CourseCategory = styled.span`
+  font-size: 0.75em;
+  color: var(--text-light);
+  background: var(--hover-bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+`
+
+const CourseDifficulty = styled.span`
+  font-size: 0.75em;
+  color: var(--text-light);
+  background: var(--hover-bg);
+  padding: 4px 8px;
+  border-radius: 4px;
+`
+
+const CourseAction = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
 `
 
 const ProgressBar = styled.div`
@@ -733,7 +1590,7 @@ const TabContainer = styled.div`
 
 const Tab = styled.button`
   padding: 14px 18px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'var(--border)'};
   border-radius: 8px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -742,11 +1599,38 @@ const Tab = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  min-height: 44px; /* Better touch target */
+  word-wrap: break-word;
   
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
+  }
+  
+  @media (max-width: 1024px) {
+    padding: 12px 16px;
+    font-size: 0.85em;
+    min-height: 42px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+    font-size: 0.85em;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px 12px;
+    font-size: 0.8em;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    padding: 10px;
+    font-size: 0.75em;
+    min-height: 38px;
   }
 `
 
@@ -1007,7 +1891,7 @@ const SidePanelTitle = styled.h3`
 const SidePanelItem = styled.div`
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: ${props => props.active ? 'rgba(10, 102, 194, 0.1)' : 'transparent'};
+  background: ${props => props.active ? 'rgba(21, 133, 161, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'var(--primary)' : 'transparent'};
   border-radius: 6px;
   color: ${props => props.active ? 'var(--primary)' : 'var(--text-light)'};
@@ -1016,7 +1900,7 @@ const SidePanelItem = styled.div`
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     border-color: var(--primary);
     color: var(--primary);
   }
@@ -1031,6 +1915,34 @@ const SidePanelItem = styled.div`
     padding: 7px 10px;
     font-size: 0.85em;
   }
+`
+
+const ResourcesScrollContainer = styled.div`
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-lighter);
+  }
+
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 `
 
 const ProgressIndicator = styled.div`
@@ -1064,18 +1976,27 @@ const GenerateQuestionsButton = styled.button`
   justify-content: center;
   gap: 8px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.3);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   svg {
     width: 18px;
     height: 18px;
+    
+    &[style*="animation"] {
+      animation: ${spin} 1s linear infinite;
+    }
   }
 
   @media (max-width: 768px) {
@@ -1149,7 +2070,7 @@ const AnswerInput = styled.textarea`
     outline: none;
     border-color: var(--primary);
     background: var(--bg-white);
-    box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 133, 161, 0.1);
   }
 
   &::placeholder {
@@ -1197,13 +2118,21 @@ const SubmitButton = styled.button`
   cursor: pointer;
   transition: all 0.3s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.3);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--border, #555);
+    box-shadow: none;
+    transform: none;
   }
 
   @media (max-width: 768px) {
@@ -1230,9 +2159,9 @@ const EvaluateButton = styled.button`
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(21, 133, 161, 0.1);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(10, 102, 194, 0.2);
+    box-shadow: 0 8px 20px rgba(21, 133, 161, 0.2);
   }
 
   &:active {
@@ -1250,9 +2179,38 @@ const EvaluateButton = styled.button`
   }
 `
 
+const PortalProgressWrapper = styled.div`
+  margin-bottom: 20px;
+`
+
+const PortalProgressLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85em;
+  color: var(--text-light);
+  margin-bottom: 6px;
+`
+
+const PortalProgressTrack = styled.div`
+  width: 100%;
+  height: 8px;
+  background: var(--hover-bg);
+  border-radius: 10px;
+  overflow: hidden;
+`
+
+const PortalProgressFill = styled.div`
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.4s ease;
+  width: ${props => props.progress || 0}%;
+`
+
 const PortalCourseInfo = styled.div`
-  background: rgba(10, 102, 194, 0.1);
-  border: 1px solid rgba(10, 102, 194, 0.2);
+  background: rgba(21, 133, 161, 0.1);
+  border: 1px solid rgba(21, 133, 161, 0.2);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 28px;
@@ -1319,24 +2277,6 @@ const AnimatedCourseCard = ({ course, index, onCourseClick }) => {
         <CourseContent>
           <CourseTitle>{course.title}</CourseTitle>
           <CourseDescription>{course.description}</CourseDescription>
-          <CourseFooter>
-            <CourseInfo>
-              <InfoItem>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                {course.duration}
-              </InfoItem>
-              <InfoItem>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                {course.lessons}
-              </InfoItem>
-            </CourseInfo>
-          </CourseFooter>
           {course.progress > 0 && (
             <ProgressBar>
               <ProgressFill progress={course.progress} />
@@ -1348,7 +2288,48 @@ const AnimatedCourseCard = ({ course, index, onCourseClick }) => {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Rate-limit constants — module-level so they are never re-declared per render
+// ---------------------------------------------------------------------------
+const MAX_RECS_REFRESHES = 3
+const MAX_GENERATE_QUESTIONS = 3
+
+/**
+ * usePersistentCounter
+ * A small custom hook that keeps a numeric counter in both React state and
+ * localStorage so the value survives page refreshes and logout/login cycles.
+ *
+ * @param {string}  key  - localStorage key (should be user-scoped by the caller)
+ * @param {number}  max  - upper bound; stored value is clamped to [0, max]
+ * @returns {[number, (updater: number | ((prev: number) => number)) => void]}
+ */
+function usePersistentCounter(key, max) {
+  const [count, _setCount] = useState(() => {
+    const raw = parseInt(localStorage.getItem(key) || '0', 10)
+    // Clamp to [0, max] to neutralise any manual localStorage tampering
+    return Math.min(Math.max(0, isNaN(raw) ? 0 : raw), max)
+  })
+
+  const setCount = React.useCallback((updater) => {
+    _setCount(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      const clamped = Math.min(Math.max(0, next), max)
+      localStorage.setItem(key, String(clamped))
+      return clamped
+    })
+  }, [key, max]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [count, setCount]
+}
+
 const LMS = () => {
+  // Feature-level view event. Enrolment and lesson/course completion are
+  // emitted server-side from the LMS router.
+  useEffect(() => {
+    trackEvent('lms_viewed')
+  }, [])
+
+  const { showAccessDeniedModal } = useAccessDeniedModal()
   const [activeTab, setActiveTab] = useState('all')
   const [topGradientOpacity, setTopGradientOpacity] = useState(0)
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1)
@@ -1356,234 +2337,421 @@ const LMS = () => {
   const [isPortalOpen, setIsPortalOpen] = useState(false)
   const scrollRef = useRef(null)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user: authUser } = useAuth()
 
-  const courses = [
-    {
-      id: 1,
-      title: 'Introduction to React',
-      description: 'Learn the fundamentals of React and build modern web applications',
-      icon: 'RC',
-      lessons: 24,
-      duration: '6h 30m',
-      progress: 65
-    },
-    {
-      id: 2,
-      title: 'Advanced JavaScript',
-      description: 'Master advanced JavaScript concepts and ES6+ features',
-      icon: 'JS',
-      lessons: 32,
-      duration: '8h 15m',
-      progress: 40
-    },
-    {
-      id: 3,
-      title: 'Node.js Backend Development',
-      description: 'Build scalable backend applications with Node.js and Express',
-      icon: 'ND',
-      lessons: 28,
-      duration: '7h 45m',
-      progress: 20
-    },
-    {
-      id: 4,
-      title: 'Database Design',
-      description: 'Learn SQL, NoSQL databases and database optimization techniques',
-      icon: 'DB',
-      lessons: 20,
-      duration: '5h 20m',
-      progress: 0
-    },
-    {
-      id: 5,
-      title: 'UI/UX Design Principles',
-      description: 'Create beautiful and user-friendly interfaces',
-      icon: 'UI',
-      lessons: 18,
-      duration: '4h 30m',
-      progress: 100
-    },
-    {
-      id: 6,
-      title: 'Python for Data Science',
-      description: 'Data analysis and visualization with Python libraries',
-      icon: 'PY',
-      lessons: 30,
-      duration: '9h 00m',
-      progress: 15
-    },
-    {
-      id: 7,
-      title: 'TypeScript Fundamentals',
-      description: 'Learn TypeScript and build type-safe applications',
-      icon: 'TS',
-      lessons: 26,
-      duration: '7h 00m',
-      progress: 85
-    },
-    {
-      id: 8,
-      title: 'Docker & Containerization',
-      description: 'Master containerization and deployment with Docker',
-      icon: 'DK',
-      lessons: 22,
-      duration: '6h 15m',
-      progress: 0
-    },
-    {
-      id: 9,
-      title: 'GraphQL API Development',
-      description: 'Build modern APIs with GraphQL and Apollo',
-      icon: 'GQ',
-      lessons: 25,
-      duration: '6h 45m',
-      progress: 50
-    },
-    {
-      id: 10,
-      title: 'AWS Cloud Services',
-      description: 'Deploy and manage applications on Amazon Web Services',
-      icon: 'AWS',
-      lessons: 35,
-      duration: '10h 30m',
-      progress: 0
-    },
-    {
-      id: 11,
-      title: 'Redux State Management',
-      description: 'Manage complex application state with Redux and Redux Toolkit',
-      icon: 'RX',
-      lessons: 20,
-      duration: '5h 45m',
-      progress: 100
-    },
-    {
-      id: 12,
-      title: 'Testing with Jest',
-      description: 'Write comprehensive tests for JavaScript applications',
-      icon: 'JT',
-      lessons: 18,
-      duration: '4h 50m',
-      progress: 75
-    },
-    {
-      id: 13,
-      title: 'Next.js Full Stack',
-      description: 'Build server-side rendered React applications with Next.js',
-      icon: 'NX',
-      lessons: 30,
-      duration: '8h 30m',
-      progress: 30
-    },
-    {
-      id: 14,
-      title: 'MongoDB Mastery',
-      description: 'Master NoSQL database design and operations with MongoDB',
-      icon: 'MG',
-      lessons: 24,
-      duration: '6h 20m',
-      progress: 0
-    },
-    {
-      id: 15,
-      title: 'Git Version Control',
-      description: 'Professional Git workflows and collaboration techniques',
-      icon: 'GT',
-      lessons: 15,
-      duration: '3h 40m',
-      progress: 100
-    },
-    {
-      id: 16,
-      title: 'CSS Grid & Flexbox',
-      description: 'Modern CSS layouts and responsive design techniques',
-      icon: 'CS',
-      lessons: 22,
-      duration: '5h 30m',
-      progress: 95
-    },
-    {
-      id: 17,
-      title: 'REST API Best Practices',
-      description: 'Design and build robust RESTful APIs',
-      icon: 'API',
-      lessons: 20,
-      duration: '5h 15m',
-      progress: 0
-    },
-    {
-      id: 18,
-      title: 'Webpack & Build Tools',
-      description: 'Optimize and bundle modern web applications',
-      icon: 'WP',
-      lessons: 16,
-      duration: '4h 25m',
-      progress: 45
-    },
-    {
-      id: 19,
-      title: 'Web Security Essentials',
-      description: 'Protect applications from common security vulnerabilities',
-      icon: 'SEC',
-      lessons: 28,
-      duration: '7h 50m',
-      progress: 60
-    },
-    {
-      id: 20,
-      title: 'Microservices Architecture',
-      description: 'Design and implement scalable microservices systems',
-      icon: 'MS',
-      lessons: 32,
-      duration: '9h 15m',
-      progress: 0
-    },
-    {
-      id: 21,
-      title: 'Tailwind CSS',
-      description: 'Rapidly build modern websites with utility-first CSS',
-      icon: 'TW',
-      lessons: 18,
-      duration: '4h 35m',
-      progress: 100
-    },
-    {
-      id: 22,
-      title: 'Vue.js Essentials',
-      description: 'Build interactive user interfaces with Vue.js framework',
-      icon: 'VU',
-      lessons: 26,
-      duration: '7h 10m',
-      progress: 25
-    },
-    {
-      id: 23,
-      title: 'PostgreSQL Database',
-      description: 'Advanced relational database management with PostgreSQL',
-      icon: 'PG',
-      lessons: 24,
-      duration: '6h 40m',
-      progress: 0
-    },
-    {
-      id: 24,
-      title: 'Agile & Scrum',
-      description: 'Modern project management and agile methodologies',
-      icon: 'AG',
-      lessons: 12,
-      duration: '3h 20m',
-      progress: 100
+  // State for API data
+  const [courses, setCourses] = useState([])
+  const [dashboard, setDashboard] = useState(null)
+  const [weeklyPerformance, setWeeklyPerformance] = useState([])
+  const [domainPerformance, setDomainPerformance] = useState([])
+  const [activities, setActivities] = useState([])
+  const [recommendations, setRecommendations] = useState([])
+  const [deadlines, setDeadlines] = useState([])
+  const [certificates, setCertificates] = useState([])
+  const [courseQuestions, setCourseQuestions] = useState([])
+  const [courseSections, setCourseSections] = useState([])
+  const [courseResources, setCourseResources] = useState([])
+  const [selectedSectionId, setSelectedSectionId] = useState(null)
+  const [answers, setAnswers] = useState({}) // questionId -> answer text
+  const [sectionPerf, setSectionPerf] = useState([])  // [{section_id, title, questions_answered, accuracy_percentage}]
+  const [currentPage, setCurrentPage] = useState(0)   // 0-based page index, 5 questions per page
+  const [enrollingLoading, setEnrollingLoading] = useState(false)
+  const [enrollingMessage, setEnrollingMessage] = useState('')
+  const [weeklyPerfDays, setWeeklyPerfDays] = useState(7)
+  const [weeklyPerfLoading, setWeeklyPerfLoading] = useState(false)
+
+  // Derived: title of the currently selected section (avoids repeated .find() in JSX)
+  const selectedSectionTitle = (courseSections.find(s => s.id === selectedSectionId)?.title) || ''
+
+  /**
+   * Returns true if the given section is locked (user has not passed the previous level).
+   * Basic (index 0) is always unlocked.
+   * Subsequent levels require >= 20 questions answered AND >= 50% accuracy on the prior level.
+   */
+  const isSectionLocked = (section) => {
+    const idx = courseSections.findIndex(s => s.id === section.id)
+    if (idx <= 0) return false // Basic always open
+    const prevSection = courseSections[idx - 1]
+    const prevPerf = sectionPerf.find(p => p.section_id === prevSection.id)
+    if (!prevPerf) return true
+    return prevPerf.questions_answered < 20 || prevPerf.accuracy_percentage < 50
+  }
+
+  /**
+   * Shared helper — fetches questions for a given course+section and updates state.
+   * With section_id, requests server quiz resume (latest answers + suggested page).
+   * Reused by fetchCourseDetails and handleSectionSelect to avoid duplicating logic.
+   */
+  const QUIZ_PAGE_SIZE = 5
+
+  const fetchSectionQuestions = async (courseId, sectionId) => {
+    try {
+      const opts = sectionId != null ? { includeResume: true } : {}
+      const questionsRes = await lmsAPI.getCourseQuestions(courseId, sectionId, opts)
+      const data = questionsRes.data
+      if (data && Array.isArray(data.questions)) {
+        const qs = data.questions
+        setCourseQuestions(qs)
+        const resume = data.resume
+        if (sectionId != null && resume && qs.length > 0) {
+          const latest = {}
+          for (const [k, v] of Object.entries(resume.latest_answers || {})) {
+            const qid = Number(k)
+            if (Number.isFinite(qid) && v != null && String(v).trim() !== '') {
+              latest[qid] = String(v).trim()
+            }
+          }
+          const totalPages = Math.max(1, Math.ceil(qs.length / QUIZ_PAGE_SIZE))
+          let page = 0
+          if (resume.all_answered) {
+            page = totalPages - 1
+          } else if (typeof resume.first_unanswered_index === 'number' && resume.first_unanswered_index >= 0) {
+            page = Math.floor(resume.first_unanswered_index / QUIZ_PAGE_SIZE)
+            page = Math.min(Math.max(0, page), totalPages - 1)
+          }
+          setCurrentPage(page)
+          setAnswers(latest)
+        } else {
+          setCurrentPage(0)
+          setAnswers({})
+        }
+        return qs.length
+      }
+      setCourseQuestions([])
+      setCurrentPage(0)
+      setAnswers({})
+      return 0
+    } catch (err) {
+      console.error(`[LMS] fetchSectionQuestions: Error for course=${courseId}, section=${sectionId}:`, err)
+      setCourseQuestions([])
+      setCurrentPage(0)
+      setAnswers({})
+      if (err.response?.status === 403) {
+        console.warn('[LMS] fetchSectionQuestions: Not enrolled or forbidden to view questions for this course.')
+      }
+      return 0
     }
-  ]
+  }
+
+  // Loading and error states
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [refreshingRecs, setRefreshingRecs] = useState(false)
+
+  // Persistent rate-limit counters — scoped per user, clamped, tamper-resistant
+  // Keys are memoised so they never change identity mid-session
+  const recsKey = React.useMemo(
+    () => authUser?.id ? `lms_recs_refresh_count_${authUser.id}` : null,
+    [authUser?.id]
+  )
+  const genKey = React.useMemo(
+    () => authUser?.id ? `lms_gen_questions_count_${authUser.id}` : null,
+    [authUser?.id]
+  )
+  const [recsRefreshCount, setRecsRefreshCount] = usePersistentCounter(recsKey ?? '__noop__', MAX_RECS_REFRESHES)
+  const [generateQuestionsCount, setGenerateQuestionsCount] = usePersistentCounter(genKey ?? '__noop__', MAX_GENERATE_QUESTIONS)
+
+  // Fetch all data on component mount
+  useEffect(() => {
+    console.log('[LMS] ===== PAGE LOAD: LMS page mounted, fetching all data =====')
+    fetchAllData()
+  }, [])
+
+  const fetchAllData = async () => {
+    const startTime = performance.now()
+    console.log('[LMS] ===== fetchAllData START: Fetching all LMS data (single combined call) =====')
+    
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Single API call replaces the previous 8 parallel calls
+      const response = await lmsAPI.getDashboardAll()
+      
+      const fetchTime = performance.now() - startTime
+      console.log(`[LMS] fetchAllData: Combined API call completed in ${fetchTime.toFixed(2)}ms`)
+
+      const data = response.data
+      if (!data) {
+        throw new Error('Empty response from dashboard/all endpoint')
+      }
+
+      // Set courses
+      const coursesData = data.courses?.courses || []
+      if (Array.isArray(coursesData) && coursesData.length > 0) {
+        const mappedCourses = coursesData.map(course => {
+          // Backend returns LMSUserCourse with course data in flat structure:
+          // course_title, course_icon, course_description, course_lessons, course_duration
+          // OR nested course object
+          const title = course.course_title || course.title || 'Untitled Course'
+          const icon = course.course_icon || course.icon || (title ? title.substring(0, 2).toUpperCase() : 'CO')
+          const description = course.course_description || course.description || ''
+          const lessons = course.course_lessons !== undefined ? course.course_lessons : (course.lessons || 0)
+          const duration = course.course_duration || course.duration || 'N/A'
+          const category = course.course_category || course.category || 'General'
+          const difficulty = course.course_difficulty || course.difficulty || 'beginner'
+          
+          return {
+            id: course.course_id || course.id,
+            title: title,
+            description: description,
+            icon: icon,
+            lessons: lessons,
+            duration: duration,
+            progress: course.progress || 0,
+            status: course.status || 'not_started',
+            category: category,
+            difficulty: difficulty
+          }
+        })
+        setCourses(mappedCourses)
+        console.log(`[LMS] fetchAllData: SUCCESS - Loaded ${mappedCourses.length} courses`)
+      } else {
+        setCourses([])
+        console.log('[LMS] fetchAllData: No courses found for user (empty array)')
+      }
+
+      // Set dashboard
+      if (data.dashboard) {
+        setDashboard(data.dashboard)
+        console.log('[LMS] fetchAllData: SUCCESS - Dashboard loaded')
+      }
+
+      // Set weekly performance
+      if (data.weekly_performance?.performance) {
+        setWeeklyPerformance(data.weekly_performance.performance)
+        console.log(`[LMS] fetchAllData: SUCCESS - Weekly performance loaded (${data.weekly_performance.performance.length} entries)`)
+      }
+
+      // Set domain performance
+      if (data.domain_performance?.domains) {
+        setDomainPerformance(data.domain_performance.domains)
+        console.log(`[LMS] fetchAllData: SUCCESS - Domain performance loaded (${data.domain_performance.domains.length} entries)`)
+      }
+
+      // Set activities
+      if (data.activities?.activities) {
+        setActivities(data.activities.activities)
+        console.log(`[LMS] fetchAllData: SUCCESS - Activities loaded (${data.activities.activities.length} entries)`)
+      }
+
+      // Set recommendations
+      if (data.recommendations?.recommendations) {
+        setRecommendations(data.recommendations.recommendations)
+        console.log(`[LMS] fetchAllData: SUCCESS - Recommendations loaded (${data.recommendations.recommendations.length} entries)`)
+      }
+
+      // Sync AI action quotas from server (authoritative — avoids stale localStorage vs deployed DB)
+      if (data.rate_limits?.generate_recommendations != null) {
+        const rem = data.rate_limits.generate_recommendations.remaining
+        const used = MAX_RECS_REFRESHES - rem
+        setRecsRefreshCount(Math.max(0, Math.min(MAX_RECS_REFRESHES, used)))
+      }
+      if (data.rate_limits?.generate_questions != null) {
+        const rem = data.rate_limits.generate_questions.remaining
+        const used = MAX_GENERATE_QUESTIONS - rem
+        setGenerateQuestionsCount(Math.max(0, Math.min(MAX_GENERATE_QUESTIONS, used)))
+      }
+
+      // Set deadlines
+      if (data.deadlines?.deadlines) {
+        setDeadlines(data.deadlines.deadlines)
+        console.log(`[LMS] fetchAllData: SUCCESS - Deadlines loaded (${data.deadlines.deadlines.length} entries)`)
+      }
+
+      // Set certificates
+      if (data.certificates?.certificates) {
+        setCertificates(data.certificates.certificates)
+        console.log(`[LMS] fetchAllData: SUCCESS - Certificates loaded (${data.certificates.certificates.length} entries)`)
+      }
+
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== fetchAllData END: Completed in ${totalTime.toFixed(2)}ms =====`)
+
+    } catch (err) {
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== fetchAllData ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to load LMS data'
+      if (errorMsg.includes('timeout')) {
+        setError('Dashboard is taking longer than expected to load. Please refresh the page or try again in a moment.')
+      } else {
+        setError(errorMsg)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Refresh AI recommendations by calling the backend generate-recommendations
+   * endpoint which dismisses stale recs and creates fresh ones based on the
+   * user's latest profile + Zed context.
+   *
+   * @param {boolean} silent - if true, skip the refreshingRecs state (used on page load)
+   */
+  const handleWeeklyPerfFilter = async (days) => {
+    if (days === weeklyPerfDays || weeklyPerfLoading) return
+    setWeeklyPerfDays(days)
+    setWeeklyPerfLoading(true)
+    try {
+      const res = await lmsAPI.getWeeklyPerformance(days)
+      if (res?.data?.performance) {
+        setWeeklyPerformance(res.data.performance)
+      }
+    } catch (err) {
+      console.warn('[LMS] handleWeeklyPerfFilter: Failed to fetch weekly performance', err)
+    } finally {
+      setWeeklyPerfLoading(false)
+    }
+  }
+
+  const handleRefreshRecommendations = async (silent = false) => {
+    if (refreshingRecs) return // prevent double-trigger
+    if (!silent && recsRefreshCount >= MAX_RECS_REFRESHES) return // local guard
+    if (!silent) setRefreshingRecs(true)
+    console.log('[LMS] handleRefreshRecommendations: Generating fresh recommendations...')
+    try {
+      const res = await lmsAPI.generateRecommendations(5)
+      const data = res.data
+      if (data?.recommendations) {
+        setRecommendations(data.recommendations)
+        console.log(`[LMS] handleRefreshRecommendations: SUCCESS - ${data.recommendations.length} recommendations`)
+      }
+      if (data?.rate_limit != null) {
+        const usedOnServer = MAX_RECS_REFRESHES - data.rate_limit.remaining
+        setRecsRefreshCount(Math.max(0, Math.min(MAX_RECS_REFRESHES, usedOnServer)))
+      }
+    } catch (err) {
+      if (err?.response?.status === 429) {
+        // Server says limit exceeded — pin the counter to max so the button disables
+        setRecsRefreshCount(MAX_RECS_REFRESHES)
+        console.warn('[LMS] handleRefreshRecommendations: Rate limit exceeded (server)')
+      } else {
+        console.error('[LMS] handleRefreshRecommendations: Error:', err)
+      }
+      // Don't overwrite the UI — stale recs are better than none
+    } finally {
+      setRefreshingRecs(false)
+    }
+  }
+
+  // Fetch course details when portal opens
+  useEffect(() => {
+    if (selectedCourse && isPortalOpen) {
+      console.log(`[LMS] ===== PORTAL OPEN: Fetching details for course_id=${selectedCourse.id} =====`)
+      fetchCourseDetails(selectedCourse.id)
+    }
+  }, [selectedCourse, isPortalOpen])
+
+  const fetchCourseDetails = async (courseId, showLoading = true, sectionIdOverride = null) => {
+    const startTime = performance.now()
+    console.log(`[LMS] fetchCourseDetails START: course_id=${courseId}, showLoading=${showLoading}, sectionIdOverride=${sectionIdOverride}`)
+    
+    try {
+      if (showLoading) {
+        setQuestionsLoading(true)
+      }
+      
+      // Fetch sections and resources first (sections call also seeds defaults + backfills)
+      console.log(`[LMS] fetchCourseDetails: Making API calls for sections, resources`)
+      const [sectionsRes, resourcesRes] = await Promise.all([
+        lmsAPI.getCourseSections(courseId),
+        lmsAPI.getCourseResources(courseId)
+      ])
+
+      let activeSectionId = sectionIdOverride
+
+      if (sectionsRes.data && sectionsRes.data.sections) {
+        const sections = sectionsRes.data.sections
+        setCourseSections(sections)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${sections.length} sections`)
+        
+        // Auto-select first section if nothing selected yet
+        if (!activeSectionId && sections.length > 0) {
+          activeSectionId = sections[0].id
+          setSelectedSectionId(activeSectionId)
+        }
+      }
+
+      if (resourcesRes.data && resourcesRes.data.resources) {
+        setCourseResources(resourcesRes.data.resources)
+        console.log(`[LMS] fetchCourseDetails: SUCCESS - Loaded ${resourcesRes.data.resources.length} resources`)
+      }
+
+      // Fetch questions scoped to the active section (shared helper)
+      console.log(`[LMS] fetchCourseDetails: Fetching questions for section_id=${activeSectionId}`)
+      const qCount = await fetchSectionQuestions(courseId, activeSectionId)
+      console.log(`[LMS] fetchCourseDetails: Loaded ${qCount} questions for section_id=${activeSectionId}`)
+
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== fetchCourseDetails END: Completed in ${totalTime.toFixed(2)}ms =====`)
+
+    } catch (err) {
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== fetchCourseDetails ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
+    } finally {
+      if (showLoading) {
+        setQuestionsLoading(false)
+      }
+    }
+  }
+  
+  // Handler when user clicks a section in the side panel
+  const handleSectionSelect = async (sectionId) => {
+    if (sectionId === selectedSectionId) return
+    setSelectedSectionId(sectionId)
+    setAnswers({}) // Clear previous answers
+    setCurrentPage(0) // Reset to first page for the new section
+    
+    if (selectedCourse) {
+      try {
+        setQuestionsLoading(true)
+        await fetchSectionQuestions(selectedCourse.id, sectionId)
+      } finally {
+        setQuestionsLoading(false)
+      }
+    }
+  }
 
   const filteredCourses = courses.filter(course => {
     if (activeTab === 'all') return true
     if (activeTab === 'inProgress') return course.progress > 0 && course.progress < 100
-    if (activeTab === 'completed') return course.progress === 100
-    if (activeTab === 'notStarted') return course.progress === 0
+    if (activeTab === 'completed') return course.progress === 100 || course.status === 'completed'
+    if (activeTab === 'notStarted') return course.progress === 0 || course.status === 'not_started'
     return true
   })
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now - date)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return date.toLocaleDateString()
+  }
+
+  // Format deadline date
+  const formatDeadline = (deadlineDate) => {
+    if (!deadlineDate) return ''
+    const date = new Date(deadlineDate)
+    const now = new Date()
+    const diffTime = date - now
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays < 0) return 'Overdue'
+    if (diffDays === 0) return 'Due today'
+    if (diffDays === 1) return 'Due tomorrow'
+    if (diffDays < 7) return `Due in ${diffDays} days`
+    if (diffDays < 30) return `Due in ${Math.floor(diffDays / 7)} weeks`
+    return `Due in ${Math.floor(diffDays / 30)} months`
+  }
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target
@@ -1596,60 +2764,414 @@ const LMS = () => {
     navigate('/feed')
   }
 
-  const handleCourseClick = (course) => {
+  const handleCourseClick = async (course) => {
     setSelectedCourse(course)
+    setSelectedSectionId(null) // Reset section selection for new course
+    setAnswers({}) // Clear previous answers
+    setCurrentPage(0)
+    setGenerateQuestionsCount(0) // Reset generate attempts for new course
     setIsPortalOpen(true)
+
+    // Fetch per-section performance so level-locking and progress bar are accurate
+    try {
+      const perfRes = await lmsAPI.getSectionPerformance(course.id)
+      if (perfRes.data && perfRes.data.sections) {
+        setSectionPerf(perfRes.data.sections)
+      }
+    } catch (err) {
+      console.warn('[LMS] handleCourseClick: Could not fetch section performance:', err)
+      setSectionPerf([])
+    }
+  }
+
+  const handleEnrollCourse = async (courseId) => {
+    if (!courseId) return
+
+    const messages = [
+      'Fetching your profile',
+      'Loading user preferences',
+      'Checking course availability',
+      'Syncing knowledge vectors',
+      'Updating learning profile',
+      'Configuring course sections',
+      'Personalising your curriculum',
+      'Finalising enrollment',
+    ]
+
+    let msgIdx = 0
+    setEnrollingMessage(messages[0])
+    setEnrollingLoading(true)
+
+    const msgTimer = setInterval(() => {
+      msgIdx = (msgIdx + 1) % messages.length
+      setEnrollingMessage(messages[msgIdx])
+    }, 1800)
+
+    try {
+      console.log(`[LMS] handleEnrollCourse: Enrolling in course_id=${courseId}`)
+      await lmsAPI.enrollInCourse(courseId)
+
+      setEnrollingMessage('Enrollment successful! 🎉')
+      await new Promise(r => setTimeout(r, 900))
+
+      await fetchAllData()
+    } catch (err) {
+      console.error(`[LMS] handleEnrollCourse: Failed to enroll:`, err)
+
+      if (err.response?.status === 403) {
+        showAccessDeniedModal(err)
+      } else {
+        // Handle non-403 errors
+        const errorMsg = err.response?.data?.detail || err.message || 'Failed to enroll in course'
+        alert(`Error: ${typeof errorMsg === 'string' ? errorMsg : errorMsg.message || 'Failed to enroll'}`)
+      }
+    } finally {
+      clearInterval(msgTimer)
+      setEnrollingLoading(false)
+      setEnrollingMessage('')
+    }
   }
 
   const handleClosePortal = () => {
     setIsPortalOpen(false)
+
+    // Update the matching course card's progress bar before tearing down portal state
+    if (selectedCourse && sectionPerf.length > 0) {
+      const totalAnswered = sectionPerf.reduce((sum, p) => sum + (p.questions_answered || 0), 0)
+      const newProgress = Math.min(Math.round((totalAnswered / 60) * 100), 100)
+      setCourses(prev => prev.map(c =>
+        c.id === selectedCourse.id ? { ...c, progress: newProgress } : c
+      ))
+    }
+
     setTimeout(() => {
       setSelectedCourse(null)
+      setSelectedSectionId(null)
+      setCourseQuestions([])
+      setCourseSections([])
+      setCourseResources([])
+      setAnswers({})
+      setCurrentPage(0)
+      setSectionPerf([])
     }, 400)
   }
 
-  const handleSubmitAnswers = () => {
-    // Handle answer submission
-    alert('Answers submitted successfully!')
-    handleClosePortal()
+  const handleAnswerChange = (questionId, answerText) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answerText
+    }))
   }
 
-  const courseQuestions = [
-    {
-      id: 1,
-      question: "What are the key concepts you've learned from this course so far?"
-    },
-    {
-      id: 2,
-      question: "Describe a practical application where you can use the skills from this course."
-    },
-    {
-      id: 3,
-      question: "What challenges did you face while learning this topic, and how did you overcome them?"
-    },
-    {
-      id: 4,
-      question: "How would you explain the core concepts of this course to a beginner?"
+  const handleNextQuestions = async () => {
+    if (!selectedCourse) return
+
+    const answeredEntries = Object.entries(answers).filter(([_, a]) => a && a.trim())
+    if (answeredEntries.length === 0) {
+      alert('Please provide at least one answer before continuing.')
+      return
     }
-  ]
+
+    const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
+    const isLastPage = currentPage >= totalPages - 1
+
+    try {
+      console.log(`[LMS] handleNextQuestions: Submitting ${answeredEntries.length} answer(s) for page ${currentPage + 1}...`)
+
+      // Submit current page's answers
+      await Promise.all(
+        answeredEntries.map(([questionId, answerText]) =>
+          lmsAPI.submitAnswer(parseInt(questionId), answerText)
+        )
+      )
+      console.log(`[LMS] handleNextQuestions: Submitted successfully`)
+
+      // Fire-and-forget evaluation so progress stats update in the background
+      lmsAPI.triggerSeezEvaluateCourse(selectedCourse.id)
+        .then(() => console.log('[LMS] handleNextQuestions: Background evaluation completed'))
+        .catch(err => console.warn('[LMS] handleNextQuestions: Background evaluation error:', err))
+
+      // Refresh section performance so progress bar and lock status stay current
+      try {
+        const perfRes = await lmsAPI.getSectionPerformance(selectedCourse.id)
+        if (perfRes.data && perfRes.data.sections) setSectionPerf(perfRes.data.sections)
+      } catch (e) {
+        console.warn('[LMS] handleNextQuestions: Could not refresh section performance:', e)
+      }
+
+      setAnswers({})
+
+      if (isLastPage) {
+        // No more questions — inform user and close portal
+        alert('You have completed all questions for this level! Your answers have been submitted.')
+        handleClosePortal()
+        await fetchAllData()
+      } else {
+        // Advance to next page (pure frontend slice — no API call)
+        setCurrentPage(p => p + 1)
+      }
+    } catch (err) {
+      console.error('[LMS] handleNextQuestions: Error submitting answers:', err)
+      alert('Failed to submit answers. Please try again.')
+    }
+  }
+
+  const handleSubmitAndEvaluate = async () => {
+    if (!selectedCourse) return
+
+    const answeredEntries = Object.entries(answers).filter(([_, a]) => a && a.trim())
+    if (answeredEntries.length === 0) {
+      alert('Please provide at least one answer before submitting.')
+      return
+    }
+
+    const startTime = performance.now()
+    const courseId = selectedCourse.id
+    console.log(`[LMS] ===== SUBMIT & EVALUATE START: course_id=${courseId} =====`)
+
+    try {
+      // Step 1: Submit all answers
+      console.log('[LMS] handleSubmitAndEvaluate: Step 1 - Submitting answers...')
+      await Promise.all(
+        answeredEntries.map(([questionId, answerText]) =>
+          lmsAPI.submitAnswer(parseInt(questionId), answerText)
+        )
+      )
+      console.log(`[LMS] handleSubmitAndEvaluate: Step 1 SUCCESS - Submitted ${answeredEntries.length} answer(s)`)
+
+      // Step 2: Trigger Seez evaluation (await so results are ready on the Evaluation page)
+      console.log('[LMS] handleSubmitAndEvaluate: Step 2 - Triggering Seez agent evaluation...')
+      await lmsAPI.triggerSeezEvaluateCourse(courseId)
+
+      const totalTime = performance.now() - startTime
+      console.log(`[LMS] ===== SUBMIT & EVALUATE END: Completed in ${totalTime.toFixed(2)}ms =====`)
+
+      // Clean up portal state
+      setAnswers({})
+      handleClosePortal()
+
+      // Step 3: Navigate to Evaluation page with the course pre-selected
+      navigate('/evaluation', { state: { courseId } })
+    } catch (err) {
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== SUBMIT & EVALUATE ERROR: Failed after ${totalTime.toFixed(2)}ms:`, err)
+
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to submit and evaluate answers'
+
+      if (err.code === 'ECONNABORTED' || errorMsg.includes('timeout')) {
+        // Answers were likely submitted; navigate anyway so user can check results
+        setAnswers({})
+        handleClosePortal()
+        navigate('/evaluation', { state: { courseId } })
+      } else {
+        alert(`Error: ${errorMsg}`)
+      }
+    }
+  }
+
+  const handleGenerateQuestions = async () => {
+    if (!selectedCourse) {
+      console.warn('[LMS] handleGenerateQuestions: No course selected')
+      return
+    }
+    if (generateQuestionsCount >= MAX_GENERATE_QUESTIONS) {
+      console.warn('[LMS] handleGenerateQuestions: Attempt limit reached')
+      return
+    }
+
+    const sectionId = selectedSectionId
+    const sectionLabel = selectedSectionTitle || 'Basic'
+
+    const startTime = performance.now()
+    console.log(`[LMS] ===== GENERATE QUESTIONS START: course_id=${selectedCourse.id}, section_id=${sectionId} (${sectionLabel}) =====`)
+
+    try {
+      // Show loading state
+      setQuestionsLoading(true)
+      console.log('[LMS] handleGenerateQuestions: Button disabled, loading state set')
+      
+      console.log(`[LMS] handleGenerateQuestions: Queue Azel job section_id=${sectionId}`)
+      const response = await lmsAPI.triggerAzelProcessCourse(selectedCourse.id, sectionId)
+
+      let payload = response.data
+
+      // 202 = background job (poll); 200 = legacy synchronous response
+      if (response.status === 202 && payload?.job_id) {
+        if (payload.rate_limit != null) {
+          const usedOnServer = MAX_GENERATE_QUESTIONS - payload.rate_limit.remaining
+          setGenerateQuestionsCount(usedOnServer)
+        }
+        const jobId = payload.job_id
+        const pollIntervalMs = 2500
+        const maxPolls = 150 // ~6+ minutes
+        let polls = 0
+        let lastStatus = 'queued'
+        while (polls < maxPolls) {
+          await new Promise((r) => setTimeout(r, pollIntervalMs))
+          polls += 1
+          try {
+            const stRes = await lmsAPI.getAzelJobStatus(jobId)
+            const row = stRes.data
+            lastStatus = row?.status || lastStatus
+            console.log(`[LMS] handleGenerateQuestions: poll #${polls} job=${jobId} status=${lastStatus}`)
+            if (row?.status === 'queued' || row?.status === 'running') {
+              continue
+            }
+            payload = row
+            break
+          } catch (pollErr) {
+            if (pollErr.response?.status === 404) {
+              alert(
+                'Could not find this generation job (server may have restarted). Try generating questions again.'
+              )
+              return
+            }
+            const isTimeout =
+              pollErr.code === 'ECONNABORTED' ||
+              (typeof pollErr.message === 'string' && pollErr.message.includes('timeout'))
+            console.warn(
+              `[LMS] handleGenerateQuestions: poll #${polls} ${isTimeout ? 'timed out' : 'failed'}, retrying`,
+              pollErr
+            )
+            continue
+          }
+        }
+        if (payload?.status === 'queued' || payload?.status === 'running') {
+          alert(
+            'Question generation is still running on the server. Wait a minute, refresh this course, and check the questions list.'
+          )
+          const totalTime = performance.now() - startTime
+          console.warn(`[LMS] handleGenerateQuestions: Stopped polling after ${totalTime.toFixed(2)}ms (status=${lastStatus})`)
+          return
+        }
+      }
+
+      const apiTime = performance.now() - startTime
+      console.log(`[LMS] handleGenerateQuestions: Job pipeline finished polling/response in ${apiTime.toFixed(2)}ms`)
+      
+      if (payload) {
+        const result = payload.result || {}
+        const success = payload.success !== false && result.success !== false
+
+        if (payload.rate_limit != null) {
+          const usedOnServer = MAX_GENERATE_QUESTIONS - payload.rate_limit.remaining
+          setGenerateQuestionsCount(usedOnServer)
+        }
+
+        console.log(`[LMS] handleGenerateQuestions: Response received, success=${success}`)
+        console.log(`[LMS] handleGenerateQuestions: Result - topics=${result.topics_extracted?.length || 0}, urls=${result.urls_saved || 0}, questions=${result.questions_saved || 0}`)
+        
+        if (success) {
+          // Show detailed success message
+          const questionsCount = result.questions_saved || 0
+          const topicsCount = result.topics_extracted?.length || 0
+          const urlsCount = result.urls_saved || 0
+          
+          let successMsg = `Successfully generated ${questionsCount} question${questionsCount !== 1 ? 's' : ''}!`
+          if (topicsCount > 0) {
+            successMsg += `\n\nFound ${topicsCount} topic${topicsCount !== 1 ? 's' : ''} of interest`
+          }
+          if (urlsCount > 0) {
+            successMsg += `\nSearched ${urlsCount} educational resource${urlsCount !== 1 ? 's' : ''}`
+          }
+          
+          console.log(`[LMS] handleGenerateQuestions: SUCCESS - Showing success message to user`)
+          alert(successMsg)
+          
+          // Refetch course questions for the selected section to display newly generated ones
+          // Don't show loading state again since we're already in loading state
+          console.log(`[LMS] handleGenerateQuestions: Auto-refreshing questions list for section_id=${sectionId}`)
+          await fetchCourseDetails(selectedCourse.id, false, sectionId)
+          
+          const totalTime = performance.now() - startTime
+          console.log(`[LMS] ===== GENERATE QUESTIONS END (SUCCESS): Completed in ${totalTime.toFixed(2)}ms =====`)
+        } else {
+          // Show detailed error message
+          const errorMsg = result.error || payload.message || 'Failed to generate questions'
+          
+          console.error(`[LMS] handleGenerateQuestions: FAILED - ${errorMsg}`)
+          
+          let errorDetails = `Question generation failed:\n${errorMsg}`
+          
+          // Provide helpful suggestions based on error
+          if (errorMsg.includes('Zed context') || errorMsg.includes('No Zed context')) {
+            errorDetails += '\n\nTip: Make sure you have updated your profile and interests so the system can understand what topics you want to learn about.'
+          } else if (errorMsg.includes('topics')) {
+            errorDetails += '\n\nTip: The system couldn\'t find highlighted topics in your profile. Try updating your interests and preferences.'
+          } else if (errorMsg.includes('Qdrant') || errorMsg.includes('OpenAI')) {
+            errorDetails += '\n\nTip: There may be a configuration issue with the AI services. Please contact support if this persists.'
+          }
+          
+          alert(errorDetails)
+          
+          const totalTime = performance.now() - startTime
+          console.log(`[LMS] ===== GENERATE QUESTIONS END (FAILED): Completed in ${totalTime.toFixed(2)}ms =====`)
+        }
+      } else {
+        console.warn(`[LMS] handleGenerateQuestions: No payload after job`)
+        alert('Question generation completed, but no questions were generated. Please check your Zed context and try again.')
+      }
+    } catch (err) {
+      const totalTime = performance.now() - startTime
+      console.error(`[LMS] ===== GENERATE QUESTIONS ERROR: Exception after ${totalTime.toFixed(2)}ms:`, err)
+      
+      let errorMsg = 'Failed to generate questions. Please try again.'
+      
+      if (err.response) {
+        if (err.response.status === 429) {
+          // Rate limit hit on the server — pin counter to max to disable button
+          setGenerateQuestionsCount(MAX_GENERATE_QUESTIONS)
+          const detail = err.response.data?.detail
+          errorMsg = (typeof detail === 'object' ? detail?.message : detail)
+            || 'Question generation limit reached. Maximum 3 attempts allowed.'
+          console.warn(`[LMS] handleGenerateQuestions: Rate limit exceeded (server)`)
+        } else {
+          // Server responded with error
+          errorMsg = err.response.data?.detail || err.response.data?.message || err.message
+          console.error(`[LMS] handleGenerateQuestions: Server error response:`, err.response.data)
+        }
+      } else if (err.request) {
+        // Request made but no response
+        if (err.code === 'ECONNABORTED') {
+          errorMsg = 'Request timed out. The question generation process takes 30-150 seconds. Please try again.'
+          console.error(`[LMS] handleGenerateQuestions: Request timeout after ${totalTime.toFixed(2)}ms`)
+        } else if (err.code === 'ERR_NETWORK') {
+          errorMsg = 'Network error. Please check your connection and try again.'
+          console.error(`[LMS] handleGenerateQuestions: Network error`)
+        } else {
+          errorMsg = 'Network error. Please try again.'
+          console.error(`[LMS] handleGenerateQuestions: Unknown network error:`, err.code)
+        }
+      } else {
+        errorMsg = err.message || errorMsg
+        console.error(`[LMS] handleGenerateQuestions: Client error:`, err.message)
+      }
+      
+      alert(`Error: ${errorMsg}`)
+    } finally {
+      setQuestionsLoading(false)
+      const finalTime = performance.now() - startTime
+      console.log(`[LMS] ===== GENERATE QUESTIONS FINALLY: Total time ${finalTime.toFixed(2)}ms, loading state cleared =====`)
+    }
+  }
 
   return (
     <Container>
-      <Navbar>
-        <NavContainer>
-          <NavLeft>
-            <Logo onClick={handleBackToFeed}>ZedReq</Logo>
-          </NavLeft>
-          <NavRight>
-            <BackButton onClick={handleBackToFeed}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-            </BackButton>
-          </NavRight>
-        </NavContainer>
-      </Navbar>
+      {/* Full-screen enrollment loading overlay */}
+      {enrollingLoading && (
+        <EnrollOverlay>
+          <EnrollOverlayRow>
+            <EnrollOverlayText key={enrollingMessage}>
+              <span className="msg">{enrollingMessage}</span>
+            </EnrollOverlayText>
+            <EnrollDots>
+              <span /><span /><span />
+            </EnrollDots>
+          </EnrollOverlayRow>
+        </EnrollOverlay>
+      )}
+
+      <Navbar />
 
       <MainContainer>
         <SidePanel>
@@ -1676,12 +3198,67 @@ const LMS = () => {
           <PanelContent>
             <ScrollGradientTop opacity={topGradientOpacity} />
             <ScrollableContent ref={scrollRef} onScroll={handleScroll}>
-              {filteredCourses.length > 0 ? (
+              {loading ? (
+                <EmptyState>
+                  <EmptyText>Loading courses...</EmptyText>
+                </EmptyState>
+              ) : error ? (
+                <EmptyState>
+                  <EmptyText>Error: {error}</EmptyText>
+                </EmptyState>
+              ) : filteredCourses.length > 0 ? (
                 <CoursesGrid>
                   {filteredCourses.map((course, index) => (
                     <AnimatedCourseCard key={course.id} course={course} index={index} onCourseClick={handleCourseClick} />
                   ))}
                 </CoursesGrid>
+              ) : activeTab === 'all' && recommendations.length > 0 ? (
+                // Only show recommended courses on the "All Courses" tab when no enrolled courses exist
+                <>
+                  <PanelHeader>
+                    <PanelTitle>Recommended Courses</PanelTitle>
+                    <PanelSubtitle>Based on your interests and learning goals</PanelSubtitle>
+                  </PanelHeader>
+                  <CoursesGrid>
+                    {recommendations.map((rec) => {
+                      // Backend returns flat structure: course_id, course_title, course_icon, course_description
+                      // OR nested: rec.course (if include_relations returns full course object)
+                      const courseId = rec.course_id || (rec.course && rec.course.id)
+                      const courseTitle = rec.course_title || 'Recommended Course'
+                      const courseIcon = rec.course_icon || (courseTitle ? courseTitle.substring(0, 2).toUpperCase() : 'RC')
+                      const courseDescription = rec.course_description || rec.reason || 'A course recommended for you'
+                      const courseCategory = rec.course_category || 'General'
+                      const courseDifficulty = rec.course_difficulty || 'beginner'
+                      
+                      if (!courseId) {
+                        console.warn('[LMS] Recommendation missing course_id:', rec)
+                        return null
+                      }
+                      
+                      return (
+                        <CourseCard
+                          key={rec.id || courseId}
+                          onClick={() => {
+                            handleEnrollCourse(courseId)
+                          }}
+                        >
+                          <CourseIcon>{courseIcon}</CourseIcon>
+                          <CourseContent>
+                            <CourseTitle>{courseTitle}</CourseTitle>
+                            <CourseDescription>{courseDescription}</CourseDescription>
+                            <CourseMeta>
+                              <CourseCategory>{courseCategory}</CourseCategory>
+                              <CourseDifficulty>{courseDifficulty}</CourseDifficulty>
+                            </CourseMeta>
+                            <CourseAction>
+                              <EnrollButton>Enroll</EnrollButton>
+                            </CourseAction>
+                          </CourseContent>
+                        </CourseCard>
+                      )
+                    }).filter(Boolean)}
+                  </CoursesGrid>
+                </>
               ) : (
                 <EmptyState>
                   <EmptyIcon>
@@ -1690,7 +3267,17 @@ const LMS = () => {
                       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
                   </EmptyIcon>
-                  <EmptyText>No courses found</EmptyText>
+                  <EmptyText>
+                    {activeTab === 'inProgress' && 'No courses in progress'}
+                    {activeTab === 'completed' && 'No completed courses yet'}
+                    {activeTab === 'notStarted' && 'No unstarted courses'}
+                    {activeTab === 'all' && 'No courses found'}
+                  </EmptyText>
+                  <EmptySubtext>
+                    {activeTab === 'all'
+                      ? 'Course recommendations will appear here based on your interests'
+                      : 'Enroll in a course to get started'}
+                  </EmptySubtext>
                 </EmptyState>
               )}
             </ScrollableContent>
@@ -1727,47 +3314,37 @@ const LMS = () => {
             </TopBanner>
             
             {/* Stats Overview */}
-            <StatCard>
-              <div>
-                <StatValue>847</StatValue>
-                <StatLabel>Total Questions</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-                +12% from last week
-              </StatChange>
-            </StatCard>
+            {loading ? (
+              <StatCard>
+                <div>
+                  <StatValue>...</StatValue>
+                  <StatLabel>Loading...</StatLabel>
+                </div>
+              </StatCard>
+            ) : dashboard ? (
+              <>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.total_questions || 0}</StatValue>
+                    <StatLabel>Total Questions</StatLabel>
+                  </div>
+                </StatCard>
 
-            <StatCard>
-              <div>
-                <StatValue>682</StatValue>
-                <StatLabel>Correct Answers</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-                +8% improvement
-              </StatChange>
-            </StatCard>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.correct_answers || 0}</StatValue>
+                    <StatLabel>Correct Answers</StatLabel>
+                  </div>
+                </StatCard>
 
-            <StatCard>
-              <div>
-                <StatValue>165</StatValue>
-                <StatLabel>Wrong Answers</StatLabel>
-              </div>
-              <StatChange>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                  <polyline points="17 18 23 18 23 12"></polyline>
-                </svg>
-                -5% from last week
-              </StatChange>
-            </StatCard>
+                <StatCard>
+                  <div>
+                    <StatValue>{dashboard.wrong_answers || 0}</StatValue>
+                    <StatLabel>Wrong Answers</StatLabel>
+                  </div>
+                </StatCard>
+              </>
+            ) : null}
 
             {/* Overall Accuracy Circle */}
             <DashboardCard>
@@ -1778,185 +3355,62 @@ const LMS = () => {
                 </svg>
                 Overall Accuracy
               </CardTitle>
-              <ProgressCircle>
-                <svg width="150" height="150">
-                  <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="var(--primary)" />
-                      <stop offset="100%" stopColor="var(--secondary)" />
-                    </linearGradient>
-                  </defs>
-                  <CircleBackground cx="75" cy="75" r="60" />
-                  <CircleProgress 
-                    cx="75" 
-                    cy="75" 
-                    r="60" 
-                    circumference={2 * Math.PI * 60}
-                    offset={2 * Math.PI * 60 * (1 - 0.805)}
-                  />
-                </svg>
-                <CircleText>
-                  <CircleValue>80.5%</CircleValue>
-                  <CircleLabel>Accuracy</CircleLabel>
-                </CircleText>
-              </ProgressCircle>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : dashboard ? (() => {
+                const totalQ = dashboard.total_questions || 0
+                const correctA = dashboard.correct_answers || 0
+                // Use backend's pre-computed value first; fall back to frontend calculation
+                const accuracy = dashboard.overall_accuracy != null
+                  ? parseFloat(dashboard.overall_accuracy)
+                  : totalQ > 0 ? (correctA / totalQ) * 100 : 0
+                return (
+                  <ProgressCircle>
+                    <svg width="150" height="150">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="var(--primary)" />
+                          <stop offset="100%" stopColor="var(--secondary)" />
+                        </linearGradient>
+                      </defs>
+                      <CircleBackground cx="75" cy="75" r="60" />
+                      <CircleProgress
+                        cx="75"
+                        cy="75"
+                        r="60"
+                        circumference={2 * Math.PI * 60}
+                        offset={2 * Math.PI * 60 * (1 - accuracy / 100)}
+                      />
+                    </svg>
+                    <CircleText>
+                      <CircleValue>{accuracy.toFixed(1)}%</CircleValue>
+                      <CircleLabel>Accuracy</CircleLabel>
+                    </CircleText>
+                  </ProgressCircle>
+                )
+              })() : null}
             </DashboardCard>
 
-            {/* Weekly Performance */}
-            <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="20" x2="18" y2="10"></line>
-                  <line x1="12" y1="20" x2="12" y2="4"></line>
-                  <line x1="6" y1="20" x2="6" y2="14"></line>
-                </svg>
-                Weekly Performance
-              </CardTitle>
-              <BarChart>
-                <div className="trend-bar-wrapper">
-                  <Bar height={68}>
-                    <BarValue>52</BarValue>
-                  </Bar>
-                  <BarLabel>Mon</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={84}>
-                    <BarValue>64</BarValue>
-                  </Bar>
-                  <BarLabel>Tue</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={95}>
-                    <BarValue>72</BarValue>
-                  </Bar>
-                  <BarLabel>Wed</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={79}>
-                    <BarValue>60</BarValue>
-                  </Bar>
-                  <BarLabel>Thu</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={100}>
-                    <BarValue>76</BarValue>
-                  </Bar>
-                  <BarLabel>Fri</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={58}>
-                    <BarValue>44</BarValue>
-                  </Bar>
-                  <BarLabel>Sat</BarLabel>
-                </div>
-                <div className="trend-bar-wrapper">
-                  <Bar height={74}>
-                    <BarValue>56</BarValue>
-                  </Bar>
-                  <BarLabel>Sun</BarLabel>
-                </div>
-              </BarChart>
-            </DashboardCard>
+            {/* Learning Streak */}
+            <StatCard>
+              <div>
+                <StatValue>{dashboard?.day_streak || 0}</StatValue>
+                <StatLabel>Day Streak</StatLabel>
+              </div>
+              {(dashboard?.day_streak || 0) > 0 && (
+                <StatChange positive>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Keep it up!
+                </StatChange>
+              )}
+            </StatCard>
 
-            {/* Domain-Specific Performance */}
-            <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                Domain-Specific Performance
-              </CardTitle>
-              <DomainList>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>React & Frontend</DomainName>
-                    <DomainPercentage>87%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={87} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>JavaScript ES6+</DomainName>
-                    <DomainPercentage>92%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={92} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>Node.js & Backend</DomainName>
-                    <DomainPercentage>75%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={75} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>Database & SQL</DomainName>
-                    <DomainPercentage>68%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={68} />
-                  </DomainProgressBar>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>UI/UX Design</DomainName>
-                    <DomainPercentage>95%</DomainPercentage>
-                  </DomainHeader>
-                  <DomainProgressBar>
-                    <DomainProgressFill width={95} />
-                  </DomainProgressBar>
-                </DomainItem>
-              </DomainList>
-            </DashboardCard>
 
-            {/* Recent Learning Activity */}
-            <DashboardCard>
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                Recent Activity
-              </CardTitle>
-              <ActivityItem>
-                <ActivityIcon>RC</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Completed React Hooks Module</ActivityTitle>
-                  <ActivityTime>2 hours ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>JS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Mastered Async/Await Patterns</ActivityTitle>
-                  <ActivityTime>5 hours ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>ND</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Started Express.js Basics</ActivityTitle>
-                  <ActivityTime>Yesterday</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>DB</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>SQL Joins Practice</ActivityTitle>
-                  <ActivityTime>2 days ago</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-            </DashboardCard>
 
             {/* AI Recommendations */}
-            <DashboardCard>
+            <DashboardCard className="dashboard-card-span-2">
               <CardTitle>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 3v3"></path>
@@ -1970,90 +3424,130 @@ const LMS = () => {
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
                 AI Recommendations
+                <RefreshRecsButton
+                  onClick={() => handleRefreshRecommendations(false)}
+                  disabled={refreshingRecs || recsRefreshCount >= MAX_RECS_REFRESHES}
+                  title={recsRefreshCount >= MAX_RECS_REFRESHES ? 'Refresh limit reached (3/3)' : `Refresh recommendations (${MAX_RECS_REFRESHES - recsRefreshCount} attempts left)`}
+                >
+                  <svg
+                    className={refreshingRecs ? 'spinning' : ''}
+                    width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                  </svg>
+                  {refreshingRecs ? 'Refreshing...' : recsRefreshCount >= MAX_RECS_REFRESHES ? 'Limit Reached' : `Refresh (${MAX_RECS_REFRESHES - recsRefreshCount} left)`}
+                </RefreshRecsButton>
               </CardTitle>
-              <ActivityItem>
-                <ActivityIcon>TS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Complete TypeScript Fundamentals</ActivityTitle>
-                  <ActivityTime>85% progress - almost done!</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>DK</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>Start Docker & Containerization</ActivityTitle>
-                  <ActivityTime>Based on your backend skills</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
-              <ActivityItem>
-                <ActivityIcon>AWS</ActivityIcon>
-                <ActivityContent>
-                  <ActivityTitle>AWS Cloud Services</ActivityTitle>
-                  <ActivityTime>Recommended for your career path</ActivityTime>
-                </ActivityContent>
-              </ActivityItem>
+              <RecommendationsScrollContainer>
+{(loading || refreshingRecs) ? (
+                  <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+                ) : recommendations.length > 0 ? (
+                  recommendations.map((rec) => {
+                    const courseId = rec.course_id || (rec.course && rec.course.id)
+                    const canEnroll = courses.length < 5
+                    
+                    return (
+                      <ActivityItem key={rec.id} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', width: '100%', alignItems: 'center', gap: '12px' }}>
+                          <ActivityIcon>
+                            {rec.course_icon || rec.course_title?.substring(0, 2).toUpperCase() || 'RC'}
+                          </ActivityIcon>
+                          <ActivityContent style={{ flex: 1 }}>
+                            <ActivityTitle>{rec.course_title || 'Recommended Course'}</ActivityTitle>
+                            <ActivityTime>{rec.reason || 'Based on your learning history'}</ActivityTime>
+                          </ActivityContent>
+                        </div>
+                        {courseId && (
+                          <div style={{ width: '100%', marginTop: '8px', paddingLeft: '52px' }}>
+                            {canEnroll ? (
+                              <EnrollButton
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEnrollCourse(courseId)
+                                }}
+                                style={{ padding: '6px 12px', fontSize: '0.85em' }}
+                              >
+                                Enroll
+                              </EnrollButton>
+                            ) : (
+                              <span style={{ fontSize: '0.8em', color: 'var(--text-light)', padding: '6px 12px' }}>
+                                Limit Reached
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </ActivityItem>
+                    )
+                  })
+                ) : (
+                  <EmptyState>
+                    <EmptyText>No recommendations available</EmptyText>
+                  </EmptyState>
+                )}
+              </RecommendationsScrollContainer>
             </DashboardCard>
 
-            {/* Learning Streak */}
-            <StatCard>
-              <div>
-                <StatValue>15</StatValue>
-                <StatLabel>Day Streak</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                Keep it up!
-              </StatChange>
-            </StatCard>
-
-            {/* Certificates Earned */}
-            <StatCard>
-              <div>
-                <StatValue>8</StatValue>
-                <StatLabel>Certificates</StatLabel>
-              </div>
-              <StatChange positive>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                2 new this month
-              </StatChange>
-            </StatCard>
-
-            {/* Upcoming Deadlines */}
+            {/* Weekly Performance */}
             <DashboardCard className="dashboard-card-span-2">
-              <CardTitle>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                Upcoming Deadlines
-              </CardTitle>
-              <DomainList>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>TypeScript Final Project</DomainName>
-                    <DomainPercentage className="domain-percentage-due-soon">Due in 2 days</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>React Quiz - Advanced Concepts</DomainName>
-                    <DomainPercentage className="domain-percentage-due-medium">Due in 5 days</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-                <DomainItem>
-                  <DomainHeader>
-                    <DomainName>GraphQL Assignment Submission</DomainName>
-                    <DomainPercentage className="domain-percentage-due-far">Due in 1 week</DomainPercentage>
-                  </DomainHeader>
-                </DomainItem>
-              </DomainList>
+              <WeeklyPerfHeader>
+                <CardTitle style={{ marginBottom: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                  Performance
+                </CardTitle>
+                <WeeklyPerfFilters>
+                  <WeeklyPerfFilterBtn
+                    active={weeklyPerfDays === 7}
+                    onClick={() => handleWeeklyPerfFilter(7)}
+                  >
+                    Last 7 Days
+                  </WeeklyPerfFilterBtn>
+                  <WeeklyPerfFilterBtn
+                    active={weeklyPerfDays === 30}
+                    onClick={() => handleWeeklyPerfFilter(30)}
+                  >
+                    Last 30 Days
+                  </WeeklyPerfFilterBtn>
+                </WeeklyPerfFilters>
+              </WeeklyPerfHeader>
+              {(loading || weeklyPerfLoading) ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+              ) : weeklyPerformance.length > 0 ? (
+                <BarChartScrollWrapper>
+                  <BarChart>
+                    {weeklyPerformance.map((day, index) => {
+                      const maxValue = Math.max(...weeklyPerformance.map(d => d.questions_answered || 0), 1)
+                      const height = ((day.questions_answered || 0) / maxValue) * 100
+                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                      const dateObj = new Date(day.date)
+                      const label = weeklyPerfDays <= 7
+                        ? (dayNames[dateObj.getDay()] || `Day ${index + 1}`)
+                        : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+                      return (
+                        <div key={day.date || index} className="trend-bar-wrapper">
+                          <Bar height={height}>
+                            <BarValue>{day.questions_answered || 0}</BarValue>
+                          </Bar>
+                          <BarLabel>{label}</BarLabel>
+                        </div>
+                      )
+                    })}
+                  </BarChart>
+                </BarChartScrollWrapper>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                  No performance data available
+                </div>
+              )}
             </DashboardCard>
           </DashboardContainer>
         </MainContent>
@@ -2077,124 +3571,221 @@ const LMS = () => {
             <>
               <PortalSidePanel>
                 <SidePanelSection>
-                  <SidePanelTitle>Course Info</SidePanelTitle>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    {selectedCourse.duration}
-                  </PortalCourseInfoText>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    {selectedCourse.lessons} lessons
-                  </PortalCourseInfoText>
-                  <PortalCourseInfoText>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="12" x2="2" y2="12"></line>
-                      <polyline points="12 2 2 12 12 22"></polyline>
-                    </svg>
-                    {selectedCourse.progress}% complete
-                  </PortalCourseInfoText>
+                  <SidePanelTitle>Level / Section</SidePanelTitle>
+                  {courseSections.length > 0 ? (
+                    courseSections.map((section) => {
+                      const locked = isSectionLocked(section)
+                      const perf = sectionPerf.find(p => p.section_id === section.id)
+                      return (
+                        <SidePanelItem
+                          key={section.id}
+                          active={section.id === selectedSectionId}
+                          onClick={() => !locked && handleSectionSelect(section.id)}
+                          style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            opacity: locked ? 0.45 : 1,
+                            cursor: locked ? 'not-allowed' : 'pointer',
+                          }}
+                          title={locked ? 'Complete the previous level with ≥20 answers and ≥50% accuracy to unlock' : ''}
+                        >
+                          <span>{section.title || `Section ${section.order_index + 1}`}</span>
+                          <span style={{ fontSize: '0.75em', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {locked
+                              ? '🔒'
+                              : section.id === selectedSectionId
+                                ? '● selected'
+                                : perf && perf.questions_answered > 0
+                                  ? `${perf.questions_answered}/20`
+                                  : null}
+                          </span>
+                        </SidePanelItem>
+                      )
+                    })
+                  ) : (
+                    <SidePanelItem>No sections available</SidePanelItem>
+                  )}
                 </SidePanelSection>
 
-                <SidePanelSection>
-                  <SidePanelTitle>Sections</SidePanelTitle>
-                  <SidePanelItem active>
-                    Introduction
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Core Concepts
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot completed />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Advanced Topics
-                    <ProgressIndicator>
-                      <ProgressDot completed />
-                      <ProgressDot />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    Practice & Projects
-                    <ProgressIndicator>
-                      <ProgressDot />
-                      <ProgressDot />
-                      <ProgressDot />
-                    </ProgressIndicator>
-                  </SidePanelItem>
-                </SidePanelSection>
-
-                <SidePanelSection>
+                <SidePanelSection style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                   <SidePanelTitle>Resources</SidePanelTitle>
-                  <SidePanelItem>
-                    📚 Course Materials
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    💻 Code Examples
-                  </SidePanelItem>
-                  <SidePanelItem>
-                    🎥 Video Lectures
-                  </SidePanelItem>
+                  {courseResources.length > 0 ? (
+                    <ResourcesScrollContainer>
+                    {courseResources.map((resource) => {
+                      const icon = resource.resource_type === 'material' ? '📚'
+                        : resource.resource_type === 'code' ? '💻'
+                        : resource.resource_type === 'document' ? '📄'
+                        : '🔗'
+                      return resource.url ? (
+                        <SidePanelItem
+                          key={resource.id}
+                          as="a"
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                        >
+                          <span>{icon}</span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {resource.title || resource.resource_type}
+                          </span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                          </svg>
+                        </SidePanelItem>
+                      ) : (
+                        <SidePanelItem key={resource.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{icon}</span>
+                          <span>{resource.title || resource.resource_type}</span>
+                        </SidePanelItem>
+                      )
+                    })}
+                    </ResourcesScrollContainer>
+                  ) : (
+                    <SidePanelItem style={{ cursor: 'default' }}>No resources available</SidePanelItem>
+                  )}
                 </SidePanelSection>
 
-                <GenerateQuestionsButton onClick={() => alert('Generating AI questions...')}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3v3"></path>
-                    <path d="M12 18v3"></path>
-                    <path d="M5.5 5.5l2.1 2.1"></path>
-                    <path d="M16.4 16.4l2.1 2.1"></path>
-                    <path d="M3 12h3"></path>
-                    <path d="M18 12h3"></path>
-                    <path d="M5.5 18.5l2.1-2.1"></path>
-                    <path d="M16.4 7.6l2.1-2.1"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                  Generate Questions
+                <GenerateQuestionsButton 
+                  onClick={handleGenerateQuestions}
+                  disabled={questionsLoading || !selectedSectionId || generateQuestionsCount >= MAX_GENERATE_QUESTIONS}
+                  title={
+                    !selectedSectionId ? 'Select a section first'
+                    : generateQuestionsCount >= MAX_GENERATE_QUESTIONS ? 'Generation limit reached (3/3)'
+                    : `Generate questions for ${selectedSectionTitle || 'selected section'} (${MAX_GENERATE_QUESTIONS - generateQuestionsCount} attempts left)`
+                  }
+                >
+                  {questionsLoading ? (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                      </svg>
+                      Generating Questions...
+                    </>
+                  ) : generateQuestionsCount >= MAX_GENERATE_QUESTIONS ? (
+                    <>
+                      Limit Reached (3/3)
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3v3"></path>
+                        <path d="M12 18v3"></path>
+                        <path d="M5.5 5.5l2.1 2.1"></path>
+                        <path d="M16.4 16.4l2.1 2.1"></path>
+                        <path d="M3 12h3"></path>
+                        <path d="M18 12h3"></path>
+                        <path d="M5.5 18.5l2.1-2.1"></path>
+                        <path d="M16.4 7.6l2.1-2.1"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      Generate Questions
+                      {selectedSectionId && courseSections.length > 0 && (
+                        <span style={{ fontSize: '0.8em', opacity: 0.85, marginLeft: '4px' }}>
+                          ({selectedSectionTitle}) · {MAX_GENERATE_QUESTIONS - generateQuestionsCount} left
+                        </span>
+                      )}
+                    </>
+                  )}
                 </GenerateQuestionsButton>
               </PortalSidePanel>
 
               <PortalMainContent>
+                {/* Overall progress bar — answers across all levels, target 60 */}
+                {(() => {
+                  const totalAnswered = sectionPerf.reduce((sum, p) => sum + (p.questions_answered || 0), 0)
+                  const progressPct = Math.min(Math.round((totalAnswered / 60) * 100), 100)
+                  return (
+                    <PortalProgressWrapper>
+                      <PortalProgressLabel>
+                        <span>Overall Progress</span>
+                        <span>{totalAnswered} / 60 questions answered ({progressPct}%)</span>
+                      </PortalProgressLabel>
+                      <PortalProgressTrack>
+                        <PortalProgressFill progress={progressPct} />
+                      </PortalProgressTrack>
+                    </PortalProgressWrapper>
+                  )
+                })()}
+
                 <PortalCourseInfo>
                   <PortalCourseInfoText className="portal-course-info-text-large">
-                    📝 Course Questions & Assessment
+                    📝 {selectedSectionId && courseSections.length > 0
+                      ? `${selectedSectionTitle} — Questions & Assessment`
+                      : 'Course Questions & Assessment'}
                   </PortalCourseInfoText>
                   <PortalCourseInfoText>
-                    Complete the following questions to assess your understanding of the course material.
+                    {selectedSectionId && courseSections.length > 0
+                      ? `Showing questions for the "${selectedSectionTitle}" level. Select a different section on the left to switch.`
+                      : 'Complete the following questions to assess your understanding of the course material.'}
                   </PortalCourseInfoText>
                 </PortalCourseInfo>
 
-                {courseQuestions.map((q) => (
-                  <QuestionSection key={q.id}>
-                    <QuestionLabel>
-                      <QuestionNumber>Question {q.id}:</QuestionNumber>
-                      {q.question}
-                    </QuestionLabel>
-                    <AnswerInput 
-                      placeholder="Type your answer here..."
-                      rows="4"
-                    />
-                  </QuestionSection>
-                ))}
+                {questionsLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px' }}>Loading questions...</div>
+                ) : courseQuestions.length > 0 ? (() => {
+                  const pageQuestions = courseQuestions.slice(currentPage * QUIZ_PAGE_SIZE, (currentPage + 1) * QUIZ_PAGE_SIZE)
+                  const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
+                  return (
+                    <>
+                      {/* Page indicator */}
+                      <div style={{ fontSize: '0.85em', color: 'var(--text-light)', marginBottom: '12px' }}>
+                        Page {currentPage + 1} of {totalPages} &nbsp;·&nbsp; Questions {currentPage * QUIZ_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * QUIZ_PAGE_SIZE, courseQuestions.length)} of {courseQuestions.length}
+                      </div>
+                      {pageQuestions.map((q, idx) => (
+                        <QuestionSection key={q.id}>
+                          <QuestionLabel>
+                            <QuestionNumber>Question {currentPage * QUIZ_PAGE_SIZE + idx + 1}:</QuestionNumber>
+                            {q.question_text || q.question || 'No question text available'}
+                          </QuestionLabel>
+                          {q.question_type === 'multiple_choice' && q.options ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                              {Object.entries(q.options).map(([key, value]) => (
+                                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                  <input
+                                    type="radio"
+                                    name={`question-${q.id}`}
+                                    value={key}
+                                    checked={(answers[q.id] || '') === key}
+                                    onChange={() => handleAnswerChange(q.id, key)}
+                                  />
+                                  <span>{key}: {value}</span>
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <AnswerInput
+                              placeholder="Type your answer here..."
+                              rows="4"
+                              value={answers[q.id] || ''}
+                              onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                            />
+                          )}
+                        </QuestionSection>
+                      ))}
+                    </>
+                  )
+                })() : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
+                    No questions available for this course
+                  </div>
+                )}
 
                 <ButtonContainer>
-                  <SubmitButton onClick={handleSubmitAnswers}>
-                    Submit Answers
-                  </SubmitButton>
-                  <EvaluateButton onClick={() => navigate('/evaluation')}>
-                    Evaluate
+                  {(() => {
+                    const pageQuestions = courseQuestions.slice(currentPage * QUIZ_PAGE_SIZE, (currentPage + 1) * QUIZ_PAGE_SIZE)
+                    const totalPages = Math.ceil(courseQuestions.length / QUIZ_PAGE_SIZE)
+                    const isLastPage = currentPage >= totalPages - 1
+                    const allAnswered = pageQuestions.length > 0 && pageQuestions.every(q => answers[q.id] && answers[q.id].trim())
+                    return (
+                      <SubmitButton onClick={handleNextQuestions} disabled={!allAnswered}>
+                        {isLastPage ? 'Next Page' : 'Next Questions'}
+                      </SubmitButton>
+                    )
+                  })()}
+                  <EvaluateButton onClick={handleSubmitAndEvaluate} disabled={Object.keys(answers).length === 0}>
+                    Submit & Evaluate
                   </EvaluateButton>
                 </ButtonContainer>
               </PortalMainContent>

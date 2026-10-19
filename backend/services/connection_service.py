@@ -1,56 +1,78 @@
-"""Connection Service - Connection request management"""
+"""Connection Service - Connection request management using ORM"""
 from typing import List, Dict, Any, Optional
 import asyncio
+from sqlalchemy import and_, or_, desc
+from sqlalchemy.orm import Session
 
-from models.user import User
-from models.connection import Connection
-from models.connection_request import ConnectionRequest
-from models.notification import Notification
+from models.orm import User, Connection, ConnectionRequest
+from services.notification_service import NotificationService
+from services.feed_cache import invalidate_feed_for_users
 from websocket.manager import connection_manager
 
 
 class ConnectionService:
-    """Connection request management service"""
+    """Connection request management service using ORM"""
     
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
-        self.user_model = User(db)
-        self.connection_model = Connection(db)
-        self.request_model = ConnectionRequest(db)
-        self.notification_model = Notification(db)
+        self.notification_service = NotificationService(db)
     
     def send_request(self, sender_id: int, receiver_id: int, message: str = None) -> Dict[str, Any]:
         """Send a connection request"""
         # Check if receiver exists
-        receiver = self.user_model.find_by_id(receiver_id)
+        receiver = self.db.query(User).filter(User.uid == receiver_id).first()
         if not receiver:
             raise LookupError("User not found")
         
         # Check if already connected
-        if self.connection_model.are_connected(sender_id, receiver_id):
+        if self._are_connected(sender_id, receiver_id):
             raise ValueError("Already connected with this user")
         
         # Check for existing pending request
-        existing = self.request_model.find_pending_between_users(sender_id, receiver_id)
+        existing = (
+            self.db.query(ConnectionRequest)
+            .filter(
+                and_(
+                    ConnectionRequest.status == 'pending',
+                    or_(
+                        and_(
+                            ConnectionRequest.sender_id == sender_id,
+                            ConnectionRequest.receiver_id == receiver_id
+                        ),
+                        and_(
+                            ConnectionRequest.sender_id == receiver_id,
+                            ConnectionRequest.receiver_id == sender_id
+                        )
+                    )
+                )
+            )
+            .first()
+        )
         if existing:
             raise ValueError("A pending connection request already exists")
         
         # Create the request
-        request = self.request_model.create(sender_id, receiver_id, message)
-        if not request:
-            raise Exception("Failed to create connection request")
+        request = ConnectionRequest(
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            message=message,
+            status='pending'
+        )
+        self.db.add(request)
+        self.db.commit()
+        self.db.refresh(request)
         
-        # Get sender info for notification
-        sender = self.user_model.find_by_id(sender_id)
+        # Get sender info
+        sender = self.db.query(User).filter(User.uid == sender_id).first()
         
         # Create notification for receiver
-        self.notification_model.create(
+        self.notification_service.create_notification(
             user_id=receiver_id,
             notification_type="connection_request",
             title="New Connection Request",
-            message=f"{sender['name']} wants to connect with you",
+            message=f"{sender.name} wants to connect with you",
             related_user_id=sender_id,
-            related_request_id=request['id']
+            related_request_id=request.id
         )
         
         # Send real-time notification via WebSocket
@@ -58,14 +80,14 @@ class ConnectionService:
             user_id=receiver_id,
             notification_type="connection_request",
             title="New Connection Request",
-            message=f"{sender['name']} wants to connect with you",
+            message=f"{sender.name} wants to connect with you",
             data={
-                "request_id": request['id'],
+                "request_id": request.id,
                 "sender": {
-                    "id": sender['id'],
-                    "username": sender['username'],
-                    "name": sender['name'],
-                    "profile_pic": sender.get('profile_pic')
+                    "id": sender.uid,
+                    "username": sender.username,
+                    "name": sender.name,
+                    "profile_pic": None  # Would need description join
                 }
             }
         )
@@ -75,35 +97,37 @@ class ConnectionService:
     def accept_request(self, request_id: int, receiver_id: int) -> Dict[str, Any]:
         """Accept a connection request"""
         # Get the request
-        request = self.request_model.find_by_id(request_id)
+        request = self.db.query(ConnectionRequest).filter(ConnectionRequest.id == request_id).first()
         if not request:
             raise LookupError("Connection request not found")
         
         # Verify the receiver is correct
-        if request['receiver_id'] != receiver_id:
+        if request.receiver_id != receiver_id:
             raise PermissionError("You cannot accept this request")
         
         # Check if already accepted
-        if request['status'] != 'pending':
-            raise ValueError(f"Request is already {request['status']}")
+        if request.status != 'pending':
+            raise ValueError(f"Request is already {request.status}")
         
         # Update request status
-        self.request_model.update_status(request_id, 'accepted')
+        request.status = 'accepted'
+        self.db.commit()
         
         # Create bidirectional connection
-        sender_id = request['sender_id']
-        self.connection_model.create_bidirectional(sender_id, receiver_id)
-        
+        sender_id = request.sender_id
+        self._create_bidirectional_connection(sender_id, receiver_id)
+        invalidate_feed_for_users(self.db, sender_id, receiver_id)
+
         # Get user info
-        sender = self.user_model.find_by_id(sender_id)
-        receiver = self.user_model.find_by_id(receiver_id)
+        sender = self.db.query(User).filter(User.uid == sender_id).first()
+        receiver = self.db.query(User).filter(User.uid == receiver_id).first()
         
         # Create notification for sender
-        self.notification_model.create(
+        self.notification_service.create_notification(
             user_id=sender_id,
             notification_type="connection_accepted",
             title="Connection Accepted",
-            message=f"{receiver['name']} accepted your connection request",
+            message=f"{receiver.name} accepted your connection request",
             related_user_id=receiver_id
         )
         
@@ -112,145 +136,227 @@ class ConnectionService:
             user_id=sender_id,
             notification_type="connection_accepted",
             title="Connection Accepted",
-            message=f"{receiver['name']} accepted your connection request",
+            message=f"{receiver.name} accepted your connection request",
             data={
                 "user": {
-                    "id": receiver['id'],
-                    "username": receiver['username'],
-                    "name": receiver['name'],
-                    "profile_pic": receiver.get('profile_pic')
+                    "id": receiver.uid,
+                    "username": receiver.username,
+                    "name": receiver.name,
+                    "profile_pic": None
                 }
             }
         )
         
         # Return the new connection
-        connections = self.connection_model.get_user_connections(receiver_id)
-        for conn in connections:
-            if conn['user_id'] == sender_id:
-                return {
-                    "id": conn['id'],
-                    "user_id": receiver_id,
-                    "connected_user_id": sender_id,
-                    "connected_user": {
-                        "id": sender['id'],
-                        "username": sender['username'],
-                        "name": sender['name'],
-                        "profile_pic": sender.get('profile_pic')
-                    },
-                    "connected_at": conn['connected_at']
-                }
+        connection = (
+            self.db.query(Connection)
+            .filter(
+                and_(
+                    Connection.follower_uid == receiver_id,
+                    Connection.followed_uid == sender_id
+                )
+            )
+            .first()
+        )
+        
+        if connection:
+            return {
+                "id": connection.connection_id,
+                "user_id": receiver_id,
+                "connected_user_id": sender_id,
+                "connected_user": {
+                    "id": sender.uid,
+                    "username": sender.username,
+                    "name": sender.name,
+                    "profile_pic": None
+                },
+                "connected_at": connection.connected_at.isoformat() if connection.connected_at else None
+            }
         
         raise Exception("Failed to create connection")
     
     def reject_request(self, request_id: int, receiver_id: int) -> None:
         """Reject a connection request"""
         # Get the request
-        request = self.request_model.find_by_id(request_id)
+        request = self.db.query(ConnectionRequest).filter(ConnectionRequest.id == request_id).first()
         if not request:
             raise LookupError("Connection request not found")
         
         # Verify the receiver is correct
-        if request['receiver_id'] != receiver_id:
+        if request.receiver_id != receiver_id:
             raise PermissionError("You cannot reject this request")
         
         # Check if already processed
-        if request['status'] != 'pending':
-            raise ValueError(f"Request is already {request['status']}")
+        if request.status != 'pending':
+            raise ValueError(f"Request is already {request.status}")
         
         # Update request status
-        self.request_model.update_status(request_id, 'rejected')
+        request.status = 'rejected'
+        self.db.commit()
     
     def remove_connection(self, connection_id: int, user_id: int) -> None:
         """Remove an existing connection"""
-        connection = self.connection_model.find_by_id(connection_id)
+        connection = self.db.query(Connection).filter(Connection.connection_id == connection_id).first()
         if not connection:
             raise LookupError("Connection not found")
         
         # Verify user is part of this connection
-        if connection['follower_uid'] != user_id:
+        if connection.follower_uid != user_id:
             raise PermissionError("You cannot remove this connection")
         
         # Remove bidirectional connection
-        other_user_id = connection['followed_uid']
-        success = self.connection_model.remove_connection(user_id, other_user_id)
-        
-        if not success:
-            raise Exception("Failed to remove connection")
-    
+        other_user_id = connection.followed_uid
+        self._remove_bidirectional_connection(user_id, other_user_id)
+        invalidate_feed_for_users(self.db, user_id, other_user_id)
+
     def get_pending_requests(self, user_id: int) -> List[Dict[str, Any]]:
         """Get pending requests received by user"""
-        requests = self.request_model.get_pending_received(user_id)
+        requests = (
+            self.db.query(ConnectionRequest)
+            .join(User, ConnectionRequest.sender_id == User.uid)
+            .filter(
+                and_(
+                    ConnectionRequest.receiver_id == user_id,
+                    ConnectionRequest.status == 'pending'
+                )
+            )
+            .order_by(desc(ConnectionRequest.created_at))
+            .all()
+        )
+        
         return [self._format_received_request(req) for req in requests]
     
     def get_sent_requests(self, user_id: int) -> List[Dict[str, Any]]:
         """Get requests sent by user"""
-        requests = self.request_model.get_pending_sent(user_id)
+        requests = (
+            self.db.query(ConnectionRequest)
+            .join(User, ConnectionRequest.receiver_id == User.uid)
+            .filter(
+                and_(
+                    ConnectionRequest.sender_id == user_id,
+                    ConnectionRequest.status == 'pending'
+                )
+            )
+            .order_by(desc(ConnectionRequest.created_at))
+            .all()
+        )
+        
         return [self._format_sent_request(req) for req in requests]
     
-    def _format_request(self, request: Dict[str, Any], sender: Dict = None, receiver: Dict = None) -> Dict[str, Any]:
+    def _are_connected(self, user1_id: int, user2_id: int) -> bool:
+        """Check if two users are connected"""
+        connection = (
+            self.db.query(Connection)
+            .filter(
+                or_(
+                    and_(
+                        Connection.follower_uid == user1_id,
+                        Connection.followed_uid == user2_id
+                    ),
+                    and_(
+                        Connection.follower_uid == user2_id,
+                        Connection.followed_uid == user1_id
+                    )
+                )
+            )
+            .first()
+        )
+        return connection is not None
+    
+    def _create_bidirectional_connection(self, user1_id: int, user2_id: int) -> None:
+        """Create connections in both directions"""
+        # Create connection 1 -> 2
+        conn1 = Connection(follower_uid=user1_id, followed_uid=user2_id)
+        self.db.add(conn1)
+        
+        # Create connection 2 -> 1
+        conn2 = Connection(follower_uid=user2_id, followed_uid=user1_id)
+        self.db.add(conn2)
+        
+        self.db.commit()
+    
+    def _remove_bidirectional_connection(self, user1_id: int, user2_id: int) -> None:
+        """Remove connections in both directions"""
+        self.db.query(Connection).filter(
+            or_(
+                and_(
+                    Connection.follower_uid == user1_id,
+                    Connection.followed_uid == user2_id
+                ),
+                and_(
+                    Connection.follower_uid == user2_id,
+                    Connection.followed_uid == user1_id
+                )
+            )
+        ).delete()
+        self.db.commit()
+    
+    def _format_request(self, request: ConnectionRequest, sender: User = None, receiver: User = None) -> Dict[str, Any]:
         """Format request for response"""
         result = {
-            "id": request['id'],
-            "sender_id": request['sender_id'],
-            "receiver_id": request['receiver_id'],
-            "status": request['status'],
-            "message": request.get('message'),
-            "created_at": request['created_at'],
-            "updated_at": request.get('updated_at')
+            "id": request.id,
+            "sender_id": request.sender_id,
+            "receiver_id": request.receiver_id,
+            "status": request.status,
+            "message": request.message,
+            "created_at": request.created_at.isoformat() if request.created_at else None,
+            "updated_at": request.updated_at.isoformat() if request.updated_at else None
         }
         
         if sender:
             result["sender"] = {
-                "id": sender['id'],
-                "username": sender['username'],
-                "name": sender['name'],
-                "profile_pic": sender.get('profile_pic')
+                "id": sender.uid,
+                "username": sender.username,
+                "name": sender.name,
+                "profile_pic": None
             }
         
         if receiver:
             result["receiver"] = {
-                "id": receiver['id'],
-                "username": receiver['username'],
-                "name": receiver['name'],
-                "profile_pic": receiver.get('profile_pic')
+                "id": receiver.uid,
+                "username": receiver.username,
+                "name": receiver.name,
+                "profile_pic": None
             }
         
         return result
     
-    def _format_received_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_received_request(self, request: ConnectionRequest) -> Dict[str, Any]:
         """Format received request with sender info"""
+        sender = request.sender
         return {
-            "id": request['id'],
-            "sender_id": request['sender_id'],
-            "receiver_id": request['receiver_id'],
-            "status": request['status'],
-            "message": request.get('message'),
+            "id": request.id,
+            "sender_id": request.sender_id,
+            "receiver_id": request.receiver_id,
+            "status": request.status,
+            "message": request.message,
             "sender": {
-                "id": request['sender_user_id'],
-                "username": request['sender_username'],
-                "name": request['sender_name'],
-                "profile_pic": request.get('sender_profile_pic')
+                "id": sender.uid,
+                "username": sender.username,
+                "name": sender.name,
+                "profile_pic": None
             },
-            "created_at": request['created_at'],
-            "updated_at": request.get('updated_at')
+            "created_at": request.created_at.isoformat() if request.created_at else None,
+            "updated_at": request.updated_at.isoformat() if request.updated_at else None
         }
     
-    def _format_sent_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_sent_request(self, request: ConnectionRequest) -> Dict[str, Any]:
         """Format sent request with receiver info"""
+        receiver = request.receiver
         return {
-            "id": request['id'],
-            "sender_id": request['sender_id'],
-            "receiver_id": request['receiver_id'],
-            "status": request['status'],
-            "message": request.get('message'),
+            "id": request.id,
+            "sender_id": request.sender_id,
+            "receiver_id": request.receiver_id,
+            "status": request.status,
+            "message": request.message,
             "receiver": {
-                "id": request['receiver_user_id'],
-                "username": request['receiver_username'],
-                "name": request['receiver_name'],
-                "profile_pic": request.get('receiver_profile_pic')
+                "id": receiver.uid,
+                "username": receiver.username,
+                "name": receiver.name,
+                "profile_pic": None
             },
-            "created_at": request['created_at'],
-            "updated_at": request.get('updated_at')
+            "created_at": request.created_at.isoformat() if request.created_at else None,
+            "updated_at": request.updated_at.isoformat() if request.updated_at else None
         }
     
     def _send_websocket_notification(

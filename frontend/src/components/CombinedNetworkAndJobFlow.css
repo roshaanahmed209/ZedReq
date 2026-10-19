@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Combined Network & Job Flow Sections with Full Background
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.combined-sections-wrapper {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    background: #000000;
+}
+
+.combined-sections-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/static/background_wave.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.7;
+}
+
+.combined-sections-wrapper > * {
+    position: relative;
+    z-index: 1;
+}

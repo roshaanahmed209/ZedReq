@@ -6,6 +6,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -22,6 +25,35 @@ wheels/
 .installed.cfg
 *.egg
 
+# Environment
+.env
+.venv
+
+# Seed script mirrors (optional local copies of remote images)
+backend/seed_data/assets/
+
+# Database
+*.db
+*.db-journal
+sessions.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+
 # Virtual environments
 venv/
 ENV/
@@ -31,13 +63,18 @@ env/
 
 firebase/
 firebase_config.txt
+# Firebase credentials (keep these secure!)
+**/credentials.json
+**/firebase-credentials.json
+**/*-firebase-adminsdk-*.json
 
 
 flask_session/
 
 
 env.example
-
+env_from_cluade.txt
+env_for_zedreq.txt
 
 creds.txt
 # PyInstaller
@@ -96,6 +133,8 @@ dist/
 # Environment & Secrets
 # =========================
 .env
+.env.prod
+backend/.env.prod
 .env.local
 .env.development.local
 .env.test.local
@@ -153,3 +192,38 @@ npm-debug.log*
 uploads/
 media/
 
+
+zedrec_documentation.html
+zedrec_documentation.css
+
+
+
+prompt_in_chat.txt
+
+
+env_for_zedreq.txt
+
+env.example
+
+
+plannnnnnnnnnnn.txt
+agents.md
+
+firebase_auth_config.txt
+
+# =========================
+# Local workspace / sibling projects (not part of main repo)
+# =========================
+.claude/
+remotion-videos/
+security_audits/
+testing UI/
+zedreq saas/
+zedreq_backoffice/
+ZEDREC sahi wala/
+Capture.PNG
+jobs_seed.sql
+price cards.txt
+todo.txt
+VIDEO_STYLE_PROMPT.md
+zedreq_summary.txt

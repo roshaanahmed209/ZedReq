@@ -1,0 +1,311 @@
+/* Static login template (Flask/Jinja). Vite SPA auth: /login + src/pages/Login.jsx */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --primary: #0a66c2;
+    --primary-dark: #1585A1;
+    --secondary: #00a0dc;
+    --text: #ffffff;
+    --text-light: #999;
+    --border: #2a2a2a;
+    --bg-light: #1a1a1a;
+    --bg-white: #0d0d0d;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--text);
+    background: #0d0d0d;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.left-panel {
+    background: #1a1a1a;
+    color: var(--text);
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-right: 1px solid var(--border);
+}
+
+.logo {
+    font-size: 3em;
+    font-weight: 300;
+    margin-bottom: 20px;
+    letter-spacing: -2px;
+    color: #ffffff;
+}
+
+.tagline {
+    font-size: 1.2em;
+    opacity: 0.95;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+.features {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 1.1em;
+}
+
+.icon {
+    font-size: 2em;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+}
+
+.right-panel {
+    background: #0d0d0d;
+    color: white;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.right-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><path fill="%23000" fill-opacity="0.1" d="M0,0v800h1200V0H0z M100,100h400v50H100V100z M100,200h500v50H100V200z M100,300h450v50H100V300z M100,400h350v50H100V400z M100,500h420v50H100V500z M100,600h380v50H100V600z M700,100h400v50H700V100z M750,200h350v50H750V200z M720,300h380v50H720V300z M730,400h370v50H730V400z M710,500h390v50H710V500z M740,600h360v50H740V600z"/></svg>');
+    background-size: cover;
+    opacity: 0.3;
+}
+
+.right-panel-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.welcome-title {
+    font-size: 3em;
+    font-weight: 300;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.welcome-message {
+    font-size: 1.2em;
+    opacity: 0.9;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: 2em;
+    font-weight: 300;
+    margin-bottom: 30px;
+    color: #ffffff;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+    overflow: hidden;
+}
+
+.input-wrapper {
+    margin-bottom: 20px;
+}
+
+.input-wrapper label {
+    display: block;
+    font-size: 0.95em;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--border);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 16px;
+    font-size: 1.1em;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.3s;
+    position: relative;
+}
+
+.tab-btn.active {
+    color: var(--primary);
+    font-weight: 400;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary);
+}
+
+.tab-content {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease-in-out;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+}
+
+.tab-content.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    position: relative;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 1em;
+    transition: all 0.3s;
+    margin-bottom: 16px;
+    background: #252525;
+    color: #ffffff;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.2);
+    background: #2a2a2a;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);
+}
+
+.message {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.9em;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.message.show {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 100px;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+@media (max-width: 968px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+    
+    .left-panel {
+        display: none;
+    }
+}

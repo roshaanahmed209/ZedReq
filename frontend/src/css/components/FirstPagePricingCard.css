@@ -1,0 +1,312 @@
+/* From Uiverse.io by iconicchandu — scoped to First Page pricing cards */
+.zedreq-root .pricing__grid {
+  gap: 1.5rem;
+  background: transparent;
+  align-items: stretch;
+}
+
+.zedreq-root .pricing__grid > .reveal {
+  display: flex;
+  min-height: 0;
+}
+
+.zedreq-root .pricing__grid--1 {
+  max-width: 22rem;
+}
+
+.zedreq-root .fp-pricing-card.card {
+  --white: hsl(0, 0%, 100%);
+  --black: hsl(240, 15%, 9%);
+  --paragraph: hsl(0, 0%, 83%);
+  --line: hsl(240, 9%, 17%);
+  --primary: hsl(189, 92%, 58%);
+
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+
+  padding: 1.25rem;
+  width: 100%;
+  max-width: none;
+  height: 720px;
+  min-height: 720px;
+  max-height: 720px;
+  margin-inline: auto;
+  background-color: hsla(240, 15%, 9%, 1);
+  background-image: radial-gradient(
+      at 88% 40%,
+      hsla(240, 15%, 9%, 1) 0px,
+      transparent 85%
+    ),
+    radial-gradient(at 49% 30%, hsla(240, 15%, 9%, 1) 0px, transparent 85%),
+    radial-gradient(at 14% 26%, hsla(240, 15%, 9%, 1) 0px, transparent 85%),
+    radial-gradient(at 0% 64%, hsl(189, 99%, 26%) 0px, transparent 85%),
+    radial-gradient(at 41% 94%, hsl(189, 97%, 36%) 0px, transparent 85%),
+    radial-gradient(at 100% 99%, hsl(188, 94%, 13%) 0px, transparent 85%);
+
+  border-radius: 1rem;
+  box-shadow: 0px -16px 24px 0px rgba(255, 255, 255, 0.25) inset;
+}
+
+.zedreq-root .fp-pricing-card.card--featured {
+  box-shadow:
+    0px -16px 24px 0px rgba(255, 255, 255, 0.25) inset,
+    0 0 0 1px hsla(189, 92%, 58%, 0.45);
+}
+
+.zedreq-root .fp-pricing-card.card .card__border {
+  overflow: hidden;
+  pointer-events: none;
+
+  position: absolute;
+  z-index: -10;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  background-image: linear-gradient(
+    0deg,
+    hsl(0, 0%, 100%) -50%,
+    hsl(0, 0%, 40%) 100%
+  );
+
+  border-radius: 1rem;
+}
+
+.zedreq-root .fp-pricing-card.card .card__border::before {
+  content: "";
+  pointer-events: none;
+
+  position: fixed;
+  z-index: 200;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: left;
+
+  width: 200%;
+  height: 10rem;
+  background-image: linear-gradient(
+    0deg,
+    hsla(0, 0%, 100%, 0) 0%,
+    hsl(189, 100%, 50%) 40%,
+    hsl(189, 100%, 50%) 60%,
+    hsla(0, 0%, 40%, 0) 100%
+  );
+
+  animation: fp-pricing-card-rotate 8s linear infinite;
+}
+
+@keyframes fp-pricing-card-rotate {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.zedreq-root .fp-pricing-card.card .card_title__container {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.zedreq-root .fp-pricing-card.card .card_badge-slot {
+  min-height: 1.65rem;
+  margin-bottom: 0.15rem;
+}
+
+.zedreq-root .fp-pricing-card.card .card_badge {
+  display: inline-block;
+  padding: 0.3rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: hsla(189, 92%, 58%, 0.2);
+  border: 1px solid hsla(189, 92%, 58%, 0.45);
+  border-radius: 9999px;
+}
+
+.zedreq-root .fp-pricing-card.card .card_title__container .card_title {
+  display: block;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--white);
+}
+
+.zedreq-root .fp-pricing-card.card .card_price-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.6rem;
+}
+
+.zedreq-root .fp-pricing-card.card .card_price {
+  font-size: clamp(1.75rem, 4.5vw, 2.125rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--primary);
+  text-shadow: 0 0 28px hsla(189, 92%, 58%, 0.35);
+}
+
+.zedreq-root .fp-pricing-card.card .card_price-period {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: hsla(0, 0%, 100%, 0.62);
+}
+
+.zedreq-root .fp-pricing-card.card .card_price-period::before {
+  content: '·';
+  margin-right: 0.45rem;
+  color: hsla(189, 92%, 58%, 0.75);
+}
+
+.zedreq-root .fp-pricing-card.card .card_title__container .card_paragraph {
+  margin-top: 0.55rem;
+  width: 100%;
+
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--paragraph);
+}
+
+.zedreq-root .fp-pricing-card.card .line {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 0.1rem;
+  background-color: var(--line);
+
+  border: none;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  list-style: none;
+  padding: 0 0.35rem 0 0;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) hsla(240, 9%, 17%, 0.9);
+}
+
+.zedreq-root .fp-pricing-card.card .card__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list::-webkit-scrollbar-track {
+  background: hsla(240, 9%, 17%, 0.85);
+  border-radius: 999px;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(189, 92%, 58%), hsl(189, 99%, 26%));
+  border-radius: 999px;
+  border: 1px solid hsla(189, 92%, 58%, 0.35);
+}
+
+.zedreq-root .fp-pricing-card.card .card__list::-webkit-scrollbar-thumb:hover {
+  background: hsl(189, 92%, 58%);
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item--label {
+  margin-top: 0.25rem;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item--label .list_text {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsla(0, 0%, 100%, 0.45);
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item--emph .list_text {
+  font-weight: 600;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item .check {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  background-color: var(--primary);
+
+  border-radius: 50%;
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item .check .check_svg {
+  width: 0.8125rem;
+  height: 0.8125rem;
+
+  fill: var(--black);
+}
+
+.zedreq-root .fp-pricing-card.card .card__list .card__list_item .list_text {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--white);
+}
+
+.zedreq-root .fp-pricing-card.card .button {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  text-align: center;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  padding: 0.65rem;
+  width: 100%;
+  background-image: linear-gradient(
+    0deg,
+    hsl(189, 92%, 58%),
+    hsl(189, 99%, 26%) 100%
+  );
+
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--white);
+
+  border: 0;
+  border-radius: 9999px;
+  box-shadow: inset 0 -2px 25px -4px var(--white);
+}
+
+.zedreq-root .fp-pricing-card.card .button:hover {
+  filter: brightness(1.06);
+}
+
+@media (max-width: 640px) {
+  .zedreq-root .fp-pricing-card.card {
+    height: 680px;
+    min-height: 680px;
+    max-height: 680px;
+  }
+}

@@ -1,1 +1,2 @@
-the env is all setup for database using postgress  there is a env example file as well you can check it out as well i want you to create a file in model dir which creates a table in zedreq schema the table will be users
+
+for seed realistic user update both of them to be like real users and the users in both of them should have realistic posts, you can move the seeding files to a new dir name it seed_data 

@@ -1,4 +1,5 @@
 """Authentication Dependencies - JWT Token Validation"""
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -8,6 +9,7 @@ from config.settings import settings
 from config.database import get_database
 from models.user import User
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 optional_security = HTTPBearer(auto_error=False)
 
@@ -35,13 +37,28 @@ def verify_token(token: str) -> dict:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type"
             )
-        
+
+        # Reject revoked tokens
+        jti = payload.get("jti")
+        try:
+            from utils.token_denylist import is_revoked
+            if is_revoked(jti):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked"
+                )
+        except HTTPException:
+            raise
+        except Exception as dl_err:
+            logger.warning("Denylist check failed (allowing token): %s", dl_err)
+
         return payload
         
     except JWTError as e:
+        logger.debug("JWT validation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}"
+            detail="Invalid or expired token"
         )
 
 
@@ -76,7 +93,8 @@ async def get_current_user(
         "profile_pic": user.get("profile_pic"),
         "short_desc": user.get("short_desc"),
         "about": user.get("about"),
-        "created_at": user.get("created_at")
+        "created_at": user.get("created_at"),
+        "auth_provider": user.get("auth_provider", "email"),
     }
 
 

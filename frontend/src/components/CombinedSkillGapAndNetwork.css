@@ -1,0 +1,18 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Combined Skill Gap & Network Expansion Sections with Background
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.combined-skill-network-wrapper {
+    width: 100%;
+    position: relative;
+    overflow-x: clip;
+    background: #000000;
+}
+
+/* Wave background: WaveBackgroundCanvas (section layer) */
+
+/* Don’t override the full-bleed wave layer (it must stay position: absolute) */
+.combined-skill-network-wrapper > *:not(.wave-bg-canvas-wrap) {
+    position: relative;
+    z-index: 1;
+}

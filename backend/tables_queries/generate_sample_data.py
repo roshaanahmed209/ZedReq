@@ -1,5 +1,5 @@
 """
-Generate Sample Data for ZedRec Database
+Generate Sample Data for ZedReq Database
 A comprehensive sample data generator for testing and development
 """
 
@@ -724,7 +724,7 @@ def generate_certificates(db, user_ids: List[int], course_ids: List[int]):
 def generate_all(user_count: int = 20, post_count: int = 30):
     """Generate all sample data"""
     print("=" * 60)
-    print("Generating sample data for ZedRec database")
+    print("Generating sample data for ZedReq database")
     print("=" * 60)
     
     db = get_db()
@@ -777,7 +777,7 @@ def generate_all(user_count: int = 20, post_count: int = 30):
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Generate sample data for ZedRec database')
+    parser = argparse.ArgumentParser(description='Generate sample data for ZedReq database')
     parser.add_argument('--users', type=int, default=20, help='Number of users to generate')
     parser.add_argument('--posts', type=int, default=30, help='Number of posts to generate')
     parser.add_argument('--all', action='store_true', help='Generate all data (default)')

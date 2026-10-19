@@ -1,10 +1,30 @@
 """FastAPI Application Entry Point"""
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
+import asyncio
+import traceback
+import subprocess
+import sys
+from pathlib import Path
 
-from config.settings import settings
+# Import settings with error handling
+try:
+    from config.settings import settings
+    _settings_loaded = True
+except Exception as e:
+    print(f"Warning: Could not load settings: {e}")
+    print("Using default configuration...")
+    _settings_loaded = False
+    settings = None
+
 from config.database import init_database, get_database
+import os
+from utils.scheduler import start_scheduler, stop_scheduler
 from routers import (
     auth_router,
     network_router,
@@ -13,8 +33,94 @@ from routers import (
     websocket_router,
     user_router,
     feed_router,
-    posts_router
+    posts_router,
+    jobs_router,
+    messaging_router,
+    lms_router,
+    nemz_router,
+    vec_router,
+    interviews_router,
+    profile_features_router,
+    context_router
 )
+from routers.reserved_seats import router as reserved_seats_router
+from routers.monitoring import router as monitoring_router
+from routers.prelaunch_public import router as prelaunch_public_router
+from routers.blog_public import router as blog_public_router
+from routers.paddle_webhook import router as paddle_billing_router
+from routers.system_purge import router as system_purge_router
+from routers.contact_submissions import router as contact_submissions_router
+from routers.analytics import router as analytics_router
+from middleware.monitoring_middleware import MonitoringMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
+from middleware.body_limit import BodySizeLimitMiddleware
+
+
+def build_frontend():
+    """Build the React frontend application"""
+    # Get the project root directory (parent of backend)
+    project_root = Path(__file__).parent.parent
+    frontend_dir = project_root / "frontend"
+    dist_dir = frontend_dir / "dist"
+    
+    # Check if frontend directory exists
+    if not frontend_dir.exists():
+        print(f"Warning: Frontend directory not found at {frontend_dir}")
+        return False
+    
+    # Check if dist directory already exists and contains index.html
+    if dist_dir.exists() and (dist_dir / "index.html").exists():
+        print(f"Frontend build already exists at {dist_dir}. Skipping build.")
+        return True
+    
+    print("Building React frontend...")
+    try:
+        # Check if node_modules exists, if not, install dependencies first
+        node_modules = frontend_dir / "node_modules"
+        if not node_modules.exists():
+            print("Installing frontend dependencies...")
+            install_result = subprocess.run(
+                ["npm", "install"],
+                cwd=str(frontend_dir),
+                capture_output=True,
+                text=True,
+                shell=True if sys.platform == "win32" else False
+            )
+            if install_result.returncode != 0:
+                print(f"Error installing dependencies:")
+                print(f"STDOUT: {install_result.stdout}")
+                print(f"STDERR: {install_result.stderr}")
+                return False
+            print("Dependencies installed successfully")
+        
+        # Build the frontend
+        print(f"Running 'npm run build' in {frontend_dir}...")
+        build_result = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+            shell=True if sys.platform == "win32" else False
+        )
+        
+        if build_result.returncode != 0:
+            print(f"Error building frontend:")
+            print(f"STDOUT: {build_result.stdout}")
+            print(f"STDERR: {build_result.stderr}")
+            return False
+        
+        # Verify dist directory was created
+        if not dist_dir.exists():
+            print(f"Warning: Build completed but dist directory not found at {dist_dir}")
+            return False
+        
+        print(f"Frontend built successfully! Dist directory: {dist_dir}")
+        return True
+    except Exception as e:
+        print(f"Error building frontend: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
 @asynccontextmanager
@@ -22,11 +128,241 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown events"""
     # Startup
     print("Starting up FastAPI application...")
-    init_database()
-    print("Database initialized")
+    
+    # Build frontend before starting
+    build_success = build_frontend()
+
+    # Setup frontend routes after build
+    if build_success:
+        setup_frontend_routes()
+        print("Frontend routes configured")
+    else:
+        print("Warning: Frontend build failed or skipped. Frontend routes may not work.")
+    
+    def _init_db():
+        try:
+            init_database()
+            print("Database initialized")
+        except Exception as e:
+            print(f"[WARN] Database init failed: {e}")
+
+    def _init_orm():
+        try:
+            from config.database_orm import init_orm_tables, SessionLocal
+            init_orm_tables()
+            print("ORM tables initialized")
+            from services.subscription_service import SubscriptionService
+            seed_db = SessionLocal()
+            try:
+                SubscriptionService.seed_plans(seed_db)
+                print("Subscription plans seeded successfully")
+            finally:
+                seed_db.close()
+            try:
+                from services.prelaunch_notice_service import ensure_prelaunch_row_seeded
+
+                seed2 = SessionLocal()
+                try:
+                    ensure_prelaunch_row_seeded(seed2)
+                finally:
+                    seed2.close()
+            except Exception as e:
+                print(f"[WARN] Prelaunch notice seed failed: {e}")
+        except Exception as e:
+            print(f"[WARN] ORM/seed failed: {e}")
+
+    def _init_firebase():
+        try:
+            from utils.firebase_client import initialize_firebase, get_firebase_db
+            firebase_app = initialize_firebase()
+            if firebase_app:
+                db_ref = get_firebase_db()
+                if db_ref:
+                    print("[OK] Firebase initialized")
+                else:
+                    print("[WARN] Firebase app created but DB ref unavailable")
+            else:
+                print("[WARN] Firebase Admin SDK not available — using REST fallback")
+        except Exception as e:
+            print(f"[WARN] Firebase init failed: {e}")
+
+    def _init_azel_jobs_table():
+        try:
+            from db.migrations.add_azel_jobs_table import CREATE_AZEL_JOBS_TABLE, CREATE_AZEL_JOBS_INDEXES
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            db.execute(CREATE_AZEL_JOBS_TABLE)
+            db.execute(CREATE_AZEL_JOBS_INDEXES)
+            db.close()
+            print("[OK] azel_jobs table ready")
+        except Exception as e:
+            print(f"[WARN] azel_jobs table init failed: {e}")
+
+    def _init_paddle_billing_columns():
+        try:
+            from db.migrations.add_paddle_billing_columns import run_migration
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            try:
+                run_migration(db)
+            finally:
+                db.close()
+            print("[OK] Paddle billing DB objects ready")
+        except Exception as e:
+            print(f"[WARN] Paddle billing migration failed: {e}")
+
+    def _init_auth_provider_column():
+        try:
+            from db.migrations.add_auth_provider_column import run_migration
+            run_migration()
+            print("[OK] auth_provider column ready")
+        except Exception as e:
+            print(f"[WARN] auth_provider column migration failed: {e}")
+
+    def _init_login_count_columns():
+        try:
+            from db.migrations.add_login_count_and_synthetic_views import run_migration
+            run_migration()
+            print("[OK] login_count + synthetic_profile_views columns ready")
+        except Exception as e:
+            print(f"[WARN] login_count migration failed: {e}")
+
+    def _init_user_deletion_tables():
+        try:
+            from config.database import get_connection_params, Database
+            from db.migrations.add_deleted_user_archive_table import (
+                CREATE_DELETED_USER_ARCHIVE,
+                CREATE_DELETED_USER_ARCHIVE_INDEXES,
+            )
+            from db.migrations.alter_deleted_user_archive_add_ip_ua import ALTER_SQL
+            from db.migrations.add_firebase_purge_retry_table import (
+                CREATE_TABLE as CREATE_FIREBASE_RETRY,
+                CREATE_INDEXES as CREATE_FIREBASE_RETRY_INDEXES,
+            )
+            db = Database(get_connection_params())
+            db.execute(CREATE_DELETED_USER_ARCHIVE)
+            db.execute(CREATE_DELETED_USER_ARCHIVE_INDEXES)
+            db.execute(ALTER_SQL)
+            db.execute(CREATE_FIREBASE_RETRY)
+            db.execute(CREATE_FIREBASE_RETRY_INDEXES)
+            db.close()
+            print("[OK] User deletion archive + Firebase retry tables ready")
+        except Exception as e:
+            print(f"[WARN] User deletion tables init failed: {e}")
+
+    def _init_production_schema():
+        """Reconcile ORM/subscription columns before other startup tasks."""
+        try:
+            from db.migrations.ensure_production_schema import run_migration
+            run_migration()
+            print("[OK] Production schema reconciled")
+        except Exception as e:
+            print(f"[WARN] ensure_production_schema failed: {e}")
+
+    def _init_redis():
+        try:
+            from config.cache import ping_redis
+
+            status = ping_redis()
+            if status.get("available"):
+                print(f"[OK] Redis connected (latency_ms={status.get('latency_ms')})")
+            else:
+                print(f"[WARN] Redis unavailable: {status.get('error')}")
+        except RuntimeError as e:
+            print(f"[FATAL] {e}")
+            raise
+
+    def _init_description_columns():
+        """Ensure all columns in the description table exist.
+
+        The base CREATE TABLE in init_database.py only has a minimal schema.
+        Columns like profile_version, city, country, role, company, location,
+        and industry were added later and are required by the ORM model.
+        Running ADD COLUMN IF NOT EXISTS is idempotent and safe to repeat.
+        """
+        try:
+            from config.database import get_connection_params, Database
+            db = Database(get_connection_params())
+            _cols = [
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS role VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS company VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS location VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS industry VARCHAR(100)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS profile_version INTEGER DEFAULT 1",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS city VARCHAR(150)",
+                "ALTER TABLE description ADD COLUMN IF NOT EXISTS country VARCHAR(150)",
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_profile_version "
+                    "ON description(profile_version) WHERE profile_version IS NOT NULL"
+                ),
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_city "
+                    "ON description(city) WHERE city IS NOT NULL"
+                ),
+                (
+                    "CREATE INDEX IF NOT EXISTS idx_description_country "
+                    "ON description(country) WHERE country IS NOT NULL"
+                ),
+            ]
+            for sql in _cols:
+                try:
+                    db.execute(sql)
+                except Exception as col_err:
+                    print(f"  [WARN] description column step failed (non-fatal): {col_err}")
+            db.close()
+            print("[OK] description table columns ready")
+        except Exception as e:
+            print(f"[WARN] description columns migration failed: {e}")
+
+    # Run all blocking startup tasks in threads with a 20s timeout each
+    for name, fn in [
+        ("production_schema", _init_production_schema),
+        ("redis", _init_redis),
+        ("db", _init_db),
+        ("orm", _init_orm),
+        ("firebase", _init_firebase),
+        ("azel_jobs", _init_azel_jobs_table),
+        ("paddle_billing", _init_paddle_billing_columns),
+        ("auth_provider_column", _init_auth_provider_column),
+        ("login_count_columns", _init_login_count_columns),
+        ("user_deletion_tables", _init_user_deletion_tables),
+        ("description_columns", _init_description_columns),
+    ]:
+        try:
+            await asyncio.wait_for(asyncio.to_thread(fn), timeout=20)
+        except asyncio.TimeoutError:
+            print(f"[WARN] {name} init timed out — continuing startup")
+        except Exception as e:
+            print(f"[WARN] {name} init error: {e}")
+
+    # Warn if user purge key is absent
+    if _settings_loaded and settings is not None:
+        purge_key = getattr(settings, "BACKOFFICE_USER_PURGE_KEY", None)
+        if not purge_key:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "BACKOFFICE_USER_PURGE_KEY is not set — admin-triggered user purge is disabled. "
+                "Set this to a random 32+ character secret shared with the backoffice."
+            )
+
+    # Start Vec agent scheduler
+    try:
+        start_scheduler()
+        print("Vec agent scheduler started")
+    except Exception as e:
+        print(f"Warning: Failed to start Vec agent scheduler: {e}")
+    
     yield
     # Shutdown
     print("Shutting down FastAPI application...")
+    
+    # Stop Vec agent scheduler
+    try:
+        stop_scheduler()
+        print("Vec agent scheduler stopped")
+    except Exception as e:
+        print(f"Warning: Failed to stop Vec agent scheduler: {e}")
+    
     db = get_database()
     if db:
         db.close()
@@ -40,14 +376,124 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS from environment variables
+cors_origins = None
+
+# Try to get from settings first
+if _settings_loaded and settings:
+    try:
+        cors_origins = settings.get_cors_origins()
+    except Exception as e:
+        print(f"Warning: Could not get CORS origins from settings: {e}")
+
+# Fallback: Try reading directly from environment variable
+if not cors_origins:
+    cors_origins_str = os.environ.get("CORS_ORIGINS")
+    if cors_origins_str:
+        cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+
+# Final fallback: Use defaults
+if not cors_origins:
+    cors_origins = ["http://localhost:3000", "http://localhost:5173"]
+    print("Warning: Using default CORS origins. Set CORS_ORIGINS in .env file to configure.")
+
+print(f"CORS configured with origins: {cors_origins}")
+print("Note: Make sure CORS_ORIGINS in .env includes the server's own origin (e.g., http://localhost:5000) if frontend is served from the same server")
+
+# Add monitoring middleware (before CORS to track all requests)
+app.add_middleware(
+    MonitoringMiddleware,
+    collector_url=os.getenv("BACKOFFICE_COLLECTOR_URL", "http://localhost:5001/api/collect"),
+    api_key=os.getenv("COLLECTOR_API_KEY", "")
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "X-API-Key", "X-ZedReq-Anon-Id"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"],
+    max_age=3600,
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
+
+# Global exception handlers to ensure CORS headers are always included
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle HTTP exceptions with CORS headers"""
+    origin = request.headers.get("origin")
+    # Check if origin is in allowed origins
+    if origin in cors_origins:
+        cors_origin = origin
+    else:
+        cors_origin = cors_origins[0] if cors_origins else "*"
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": exc.detail,
+            "status_code": exc.status_code
+        },
+        headers={
+            "Access-Control-Allow-Origin": cors_origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors with CORS headers"""
+    origin = request.headers.get("origin")
+    # Check if origin is in allowed origins
+    if origin in cors_origins:
+        cors_origin = origin
+    else:
+        cors_origin = cors_origins[0] if cors_origins else "*"
+    
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "message": "Validation error",
+            "errors": exc.errors(),
+            "status_code": 422
+        },
+        headers={
+            "Access-Control-Allow-Origin": cors_origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle all uncaught exceptions with CORS headers"""
+    print(f"Unhandled exception: {exc}")
+    print(traceback.format_exc())
+    
+    origin = request.headers.get("origin")
+    # Check if origin is in allowed origins
+    if origin in cors_origins:
+        cors_origin = origin
+    else:
+        cors_origin = cors_origins[0] if cors_origins else "*"
+    
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "message": "Internal server error",
+            "status_code": 500
+        },
+        headers={
+            "Access-Control-Allow-Origin": cors_origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 # Register routers
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
@@ -58,18 +504,30 @@ app.include_router(websocket_router, prefix="/ws", tags=["WebSocket"])
 app.include_router(user_router, prefix="/api/user", tags=["User"])
 app.include_router(feed_router, prefix="/api/feed", tags=["Feed"])
 app.include_router(posts_router, prefix="/api/posts", tags=["Posts"])
+app.include_router(jobs_router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(messaging_router, prefix="/api/messaging", tags=["Messaging"])
+app.include_router(lms_router, prefix="/api/lms", tags=["LMS"])
+app.include_router(nemz_router, prefix="/api/nemz", tags=["Nemz Agent"])
+app.include_router(vec_router, prefix="/api/vec", tags=["Vec Agent"])
+app.include_router(interviews_router, prefix="/api/interviews", tags=["Interviews"])
+app.include_router(profile_features_router, prefix="/api/profile", tags=["Profile Features"])
+app.include_router(context_router, prefix="/api/context", tags=["Context"])
+app.include_router(reserved_seats_router)
+app.include_router(monitoring_router)
+app.include_router(prelaunch_public_router, prefix="/api")
+app.include_router(blog_public_router, prefix="/api")
+app.include_router(paddle_billing_router, prefix="/api")
+app.include_router(system_purge_router, prefix="/api/system")
+app.include_router(contact_submissions_router, prefix="/api/contact", tags=["Contact"])
+app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"])
 
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "message": "ZedReq API Server",
-        "version": "2.0.0",
-        "status": "running"
-    }
+# Get paths for static files
+project_root = Path(__file__).parent.parent
+frontend_dist = project_root / "frontend" / "dist"
+frontend_static = project_root / "frontend" / "static"
 
-
+# Health check endpoint (must be before catch-all)
 @app.get("/health")
 async def health_check():
     """Detailed health check"""
@@ -79,12 +537,128 @@ async def health_check():
         "version": "2.0.0"
     }
 
+# Track if assets are mounted
+_assets_mounted = False
+_static_mounted = False
+
+# Mount static directory (for videos, images, etc. from frontend/static/)
+if frontend_static.exists():
+    try:
+        app.mount("/static", StaticFiles(directory=str(frontend_static)), name="static")
+        _static_mounted = True
+        print(f"Static files mounted from {frontend_static}")
+    except Exception as e:
+        print(f"Warning: Could not mount static files at startup: {e}")
+
+# Mount assets directory if it exists at startup (mounts take precedence over routes)
+if frontend_dist.exists() and (frontend_dist / "assets").exists():
+    try:
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+        _assets_mounted = True
+        print(f"Assets mounted from {frontend_dist / 'assets'}")
+    except Exception as e:
+        print(f"Warning: Could not mount assets at startup: {e}")
+
+# Function to setup frontend serving routes (called after build)
+def setup_frontend_routes():
+    """Setup routes for serving the frontend after build"""
+    global _assets_mounted, _static_mounted
+    
+    if not frontend_dist.exists():
+        return False
+    
+    # Mount static directory if not already mounted
+    if frontend_static.exists() and not _static_mounted:
+        try:
+            app.mount("/static", StaticFiles(directory=str(frontend_static)), name="static")
+            _static_mounted = True
+            print(f"Static files mounted from {frontend_static}")
+        except Exception as e:
+            print(f"Warning: Could not mount static files: {e}")
+    
+    # Mount assets directory for JS, CSS, and other assets if not already mounted
+    if (frontend_dist / "assets").exists() and not _assets_mounted:
+        try:
+            app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+            _assets_mounted = True
+            print(f"Assets mounted from {frontend_dist / 'assets'}")
+        except Exception as e:
+            print(f"Warning: Could not mount assets: {e}")
+    
+    return True
+
+# Serve root path - dynamically checks if frontend is built
+@app.get("/")
+async def serve_root():
+    """Serve React app index.html for root path or fallback message"""
+    if frontend_dist.exists():
+        index_file = frontend_dist / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+    
+    # Fallback if frontend not built
+    return {
+        "message": "ZedReq API Server",
+        "version": "2.0.0",
+        "status": "running",
+        "note": "Frontend not built. Building now or check build logs."
+    }
+
+# Serve static files from dist root and handle React Router client-side routes
+@app.get("/{file_path:path}")
+async def serve_frontend(request: Request, file_path: str):
+    """Serve frontend files or index.html for React Router"""
+    # Exclude API routes, WebSocket routes, health endpoint, assets, and static
+    # Assets and static are handled by mounts, but if mounts don't exist yet, we'll handle them here
+    if (file_path.startswith("api/") or 
+        file_path.startswith("ws/") or 
+        file_path == "health"):
+        raise StarletteHTTPException(status_code=404, detail="Not found")
+    
+    # Only serve if dist exists
+    if not frontend_dist.exists():
+        raise StarletteHTTPException(status_code=404, detail="Frontend not built")
+    
+    # Handle static files if mount doesn't exist (fallback)
+    if file_path.startswith("static/"):
+        static_file = frontend_static / file_path.replace("static/", "", 1)
+        if static_file.exists() and static_file.is_file():
+            return FileResponse(str(static_file))
+        raise StarletteHTTPException(status_code=404, detail="Static file not found")
+    
+    # Handle assets if mount doesn't exist (fallback)
+    if file_path.startswith("assets/"):
+        assets_file = frontend_dist / file_path
+        if assets_file.exists() and assets_file.is_file():
+            return FileResponse(str(assets_file))
+        raise StarletteHTTPException(status_code=404, detail="Asset not found")
+    
+    # Check if it's a static file request (like logo.svg, favicon, etc.) from dist root
+    file_path_obj = frontend_dist / file_path
+    if file_path_obj.exists() and file_path_obj.is_file():
+        return FileResponse(str(file_path_obj))
+    
+    # For all other routes (React Router client-side routes), serve index.html
+    index_file = frontend_dist / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    
+    raise StarletteHTTPException(status_code=404, detail="Not found")
+
 
 if __name__ == "__main__":
     import uvicorn
+    if _settings_loaded and settings:
+        try:
+            debug_mode = settings.DEBUG
+        except:
+            debug_mode = True
+    else:
+        debug_mode = True  # Default to debug mode if settings can't be loaded
+    
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
-        port=5000,
-        reload=settings.DEBUG
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        reload=debug_mode
     )

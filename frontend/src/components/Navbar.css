@@ -1,0 +1,128 @@
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    z-index: 1;
+    max-width: 250px;
+    flex-shrink: 0;
+    display: none;
+}
+
+.search-wrapper.active {
+    z-index: 20;
+    display: flex;
+}
+
+.search-button {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 22;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.search-button:hover {
+    background: color-mix(in srgb, var(--hover-bg) 50%, transparent);
+    color: var(--primary);
+}
+
+.search-input-wide {
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    border: none;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.search-wrapper.active .search-input-wide {
+    width: 280px;
+    padding: 10px 16px 10px 40px;
+    /* Space for icon */
+    opacity: 1;
+    pointer-events: auto;
+    background: color-mix(in srgb, var(--bg-white) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    border-radius: 20px;
+    color: var(--text);
+}
+
+
+.search-results-positioned {
+    left: 0;
+    top: calc(100% + 8px);
+    width: 100%;
+    min-width: 280px;
+}
+
+.search-username {
+    font-size: 0.85em;
+    color: var(--text-light);
+}
+
+/* Responsive Design for Navbar */
+
+/* Large Desktop (1400px and above) */
+@media (min-width: 1400px) {
+    .search-wrapper.active .search-input-wide {
+        width: 300px;
+    }
+}
+
+/* Desktop (1200px - 1399px) */
+@media (max-width: 1399px) and (min-width: 1200px) {
+    .search-wrapper.active .search-input-wide {
+        width: 230px;
+    }
+}
+
+/* Large Tablet and Small Desktop (1024px - 1199px) */
+@media (max-width: 1199px) and (min-width: 1024px) {
+    .search-wrapper.active .search-input-wide {
+        width: 200px;
+    }
+}
+
+/* Tablet (768px - 1023px) */
+@media (max-width: 1023px) and (min-width: 769px) {
+    .search-wrapper.active .search-input-wide {
+        width: 200px;
+    }
+}
+
+/* Mobile Landscape and Small Tablet (601px - 768px) */
+@media (max-width: 768px) and (min-width: 601px) {
+    .search-wrapper.active .search-input-wide {
+        width: 180px;
+    }
+}
+
+/* Mobile Portrait (480px - 600px) */
+@media (max-width: 600px) and (min-width: 481px) {
+    .search-wrapper.active .search-input-wide {
+        width: 150px;
+    }
+}
+
+/* Small Mobile (360px - 480px) */
+@media (max-width: 480px) and (min-width: 361px) {
+    .search-wrapper.active .search-input-wide {
+        width: 120px;
+    }
+}
+
+/* Extra Small Mobile (360px and below) */
+@media (max-width: 360px) {
+    .search-wrapper.active .search-input-wide {
+        width: 100px;
+    }
+}

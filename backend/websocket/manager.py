@@ -3,6 +3,9 @@ from fastapi import WebSocket
 from typing import Dict, List
 import json
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -17,15 +20,13 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
     
     async def connect(self, websocket: WebSocket, user_id: int):
-        """Accept and register a new WebSocket connection"""
-        await websocket.accept()
-        
+        """Register a WebSocket that the route has already accepted (do not call accept() here)."""
         async with self._lock:
             if user_id not in self.active_connections:
                 self.active_connections[user_id] = []
             self.active_connections[user_id].append(websocket)
         
-        print(f"WebSocket connected: User {user_id} (total connections: {len(self.active_connections[user_id])})")
+        logger.info("WebSocket connected: User %s (total connections: %d)", user_id, len(self.active_connections[user_id]))
     
     def disconnect(self, user_id: int, websocket: WebSocket = None):
         """Remove a WebSocket connection"""
@@ -44,7 +45,7 @@ class ConnectionManager:
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
             
-            print(f"WebSocket disconnected: User {user_id}")
+            logger.info("WebSocket disconnected: User %s", user_id)
     
     async def send_to_user(self, user_id: int, message: dict):
         """Send a message to all connections for a specific user"""
@@ -58,7 +59,7 @@ class ConnectionManager:
             try:
                 await websocket.send_text(message_json)
             except Exception as e:
-                print(f"Failed to send to user {user_id}: {e}")
+                logger.error("Failed to send notification to user %s: %s", user_id, e)
                 disconnected.append(websocket)
         
         # Clean up disconnected sockets
@@ -84,6 +85,7 @@ class ConnectionManager:
             "data": data or {}
         }
         
+        logger.info("Dispatching notification to user %s: type=%s title=%r", user_id, notification_type, title)
         return await self.send_to_user(user_id, notification)
     
     async def broadcast(self, message: dict, exclude_user: int = None):

@@ -1,0 +1,57 @@
+.stacked-cards--static {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.stacked-cards__card--static {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.15rem 1.25rem;
+  background: var(--fp-surface);
+  border: 1px solid var(--fp-card-border);
+  border-radius: 12px;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.stacked-cards__num {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--fp-text-muted);
+}
+
+.stacked-cards__title {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+.stacked-cards__desc {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fp-text-muted);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .stacked-cards--static {
+    grid-template-columns: 1fr;
+  }
+
+  .stacked-cards__card--static {
+    padding: 1rem 1.1rem;
+  }
+}

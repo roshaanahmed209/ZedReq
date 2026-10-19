@@ -1,0 +1,701 @@
+/*
+  ZedReq — Landing V1 · LMS walkthrough
+  ─────────────────────────────────────────────────────────────────────
+  Replaces the single LMS dashboard mock with four views advanced by scroll:
+  topic + web search, answering, evaluation, then the full dashboard.
+  The section is four viewports tall; an inner sticky layer pins the layout
+  while that scroll runs, so the steps on the left and the stage on the right
+  stay put and only the view changes.
+
+  Views are built from the same tokens LMSDashboard uses — #0f1113 panels with a
+  white-10 edge, #16181b tiles with a white-5 edge — so the walkthrough and the
+  dashboard at step 4 read as one product rather than two designs. There is no
+  wrapping chrome: each block is a card in its own right.
+  ─────────────────────────────────────────────────────────────────────
+*/
+
+/* ═══════════════════════════════════════════════════════════
+   1. PINNED SHELL
+════════════════════════════════════════════════════════════ */
+.v1-lms {
+  position: relative;
+  /* One viewport of scroll per step. The number here and LMS_STEPS.length in
+     the page must agree, or the last step gets a short or long dwell.
+     4 steps → 400vh. */
+  height: 400vh;
+  background: var(--fp-canvas);
+  border-top: 1px solid var(--fp-line-hair);
+  /* Gutter reserved inside the stage so shell box-shadow is never clipped. */
+  --lms-gutter: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.v1-lms__sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  padding: clamp(1.25rem, 2.5vw, 2rem) var(--pad-x) clamp(1.5rem, 3vw, 2.5rem);
+  overflow: visible;
+}
+
+.v1-lms__inner {
+  width: 100%;
+  max-width: min(1720px, 100%);
+  margin: 0 auto;
+  overflow: visible;
+}
+
+@media (min-width: 1400px) {
+  .v1-lms__sticky { padding-left: 2.5rem; padding-right: 2.5rem; }
+}
+@media (min-width: 1800px) {
+  .v1-lms__sticky { padding-left: 2rem; padding-right: 2rem; }
+}
+
+/* ── Header ── */
+.v1-lms__eyebrow {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 1.15px;
+  text-transform: uppercase;
+  color: var(--fp-text-muted);
+}
+
+.v1-lms__title {
+  margin-top: 0.75rem;
+  font-family: var(--font-body);
+  font-size: clamp(1.55rem, 2.2vw, 2.1rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--fp-text);
+}
+.v1-lms__title em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.v1-lms__desc {
+  margin-top: 0.55rem;
+  max-width: 44rem;
+  font-family: var(--font-body);
+  font-size: clamp(0.88rem, 1vw, 0.96rem);
+  line-height: 1.6;
+  color: var(--fp-text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. LAYOUT — steps left, stage right
+════════════════════════════════════════════════════════════ */
+.v1-lms__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr);
+  align-items: start;
+  gap: clamp(1.5rem, 3vw, 3rem);
+  margin-top: clamp(1.25rem, 2.5vw, 2rem);
+  overflow: visible;
+}
+
+.v1-lms__list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.1rem, 1.8vw, 1.6rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+/* ── A step ── */
+.v1-lms__step {
+  position: relative;
+  padding-left: 1.35rem;
+  min-width: 0;
+  /* Inactive steps recede rather than disappear — the whole list stays readable
+     so the visitor can see where they are in the sequence. */
+  opacity: 0.42;
+  transition: opacity 0.45s ease;
+}
+.v1-lms__step.is-active {
+  opacity: 1;
+}
+
+/* Progress rail down the left edge of each step */
+.v1-lms__step::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--fp-line);
+  transition: background-color 0.45s ease;
+}
+.v1-lms__step.is-active::before {
+  background: var(--accent);
+}
+
+.v1-lms__step-n {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.1px;
+  color: var(--fp-text-muted);
+}
+.v1-lms__step.is-active .v1-lms__step-n {
+  color: var(--accent);
+}
+
+.v1-lms__step-title {
+  margin-top: 0.3rem;
+  font-family: var(--font-body);
+  font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--fp-text);
+}
+
+.v1-lms__step-desc {
+  margin-top: 0.4rem;
+  max-width: 30rem;
+  font-family: var(--font-body);
+  font-size: clamp(0.84rem, 0.92vw, 0.92rem);
+  line-height: 1.6;
+  color: var(--fp-text-muted);
+}
+
+.zedreq-root .v1-lms__cta {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. STAGE — viewport height with shadow gutter (never clip glow)
+════════════════════════════════════════════════════════════ */
+.v1-lms__stage {
+  --lms-stage-h: calc(100vh - clamp(11.5rem, 26vh, 19rem));
+  min-width: 0;
+  width: 100%;
+  height: var(--lms-stage-h);
+  max-height: var(--lms-stage-h);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* Padding is inside the fixed height — shadow renders in this gutter. */
+  padding: var(--lms-gutter);
+  overflow: visible;
+  margin-inline: auto;
+}
+
+.v1-lms__view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  overflow: visible;
+  animation: v1-panel-swap 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.v1-lms__view[hidden] {
+  display: none;
+}
+
+/* The dashboard is the one view that takes the whole stage. Selected by what it
+   contains rather than an extra class, so the JSX stays as it is. */
+.v1-lms__view:has(> .v1-lms__dash) {
+  max-width: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4. CARD — matches LMSDashboard's panels
+   Dashboard panels are #0f1113 / white-10 / rounded-2xl; its inner tiles are
+   #16181b / white-5 / rounded-xl. Both come from the shared --v1-panel-*
+   tokens so step 4 does not arrive in a different design.
+════════════════════════════════════════════════════════════ */
+.v1-lms__card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 1.05rem;
+  border: 1px solid var(--v1-panel-border);
+  border-radius: 16px;
+  background: var(--v1-panel-bg);
+}
+
+.v1-lms__card--grow {
+  flex: 1;
+  overflow: hidden;
+}
+
+.v1-lms__card-title {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--v1-panel-text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. VIEW 1 — TOPIC + WEB SEARCH
+════════════════════════════════════════════════════════════ */
+.v1-lms__topic-val {
+  margin-top: 0.45rem;
+  font-family: var(--font-body);
+  font-size: clamp(0.92rem, 1.05vw, 1.05rem);
+  font-weight: 600;
+  color: var(--v1-panel-text);
+}
+
+.v1-lms__status {
+  margin-top: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-lms__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Source rows are the dashboard's inner tile */
+.v1-lms__source {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--v1-panel-hairline);
+  border-radius: 12px;
+  background: var(--v1-panel-bg-soft);
+}
+
+.v1-lms__source-mark {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--v1-score-track);
+}
+
+/* Read — drawn tick */
+.v1-lms__source.is-done .v1-lms__source-mark {
+  border-color: transparent;
+}
+.v1-lms__source.is-done .v1-lms__source-mark::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 3px;
+  width: 8px;
+  height: 4px;
+  border-left: 1.6px solid var(--v1-score);
+  border-bottom: 1.6px solid var(--v1-score);
+  transform: rotate(-45deg);
+}
+
+/* Reading now — a spinning arc, the one place motion belongs in this view */
+.v1-lms__source.is-live .v1-lms__source-mark {
+  border-color: var(--v1-score-track);
+  border-top-color: var(--v1-badge-text);
+  animation: v1-lms-spin 0.9s linear infinite;
+}
+
+@keyframes v1-lms-spin {
+  to { transform: rotate(360deg); }
+}
+
+.v1-lms__source.is-queued {
+  opacity: 0.5;
+}
+
+.v1-lms__source-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.v1-lms__source-host {
+  font-family: var(--font-body);
+  font-size: clamp(0.78rem, 0.86vw, 0.86rem);
+  font-weight: 600;
+  color: var(--v1-panel-text);
+}
+
+.v1-lms__source-note {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--v1-panel-text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. VIEW 2 — ANSWERING
+════════════════════════════════════════════════════════════ */
+.v1-lms__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-lms__progress {
+  display: block;
+  height: 4px;
+  margin: 0.7rem 0 0.95rem;
+  border-radius: 9999px;
+  background: var(--v1-score-track);
+  overflow: hidden;
+}
+.v1-lms__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.v1-lms__question {
+  font-family: var(--font-body);
+  font-size: clamp(0.9rem, 1.05vw, 1.02rem);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--v1-panel-text);
+}
+
+.v1-lms__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v1-lms__option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--v1-panel-hairline);
+  border-radius: 12px;
+  background: var(--v1-panel-bg-soft);
+  font-family: var(--font-body);
+  font-size: clamp(0.78rem, 0.86vw, 0.86rem);
+  color: var(--v1-panel-text-dim);
+}
+
+/* Selected uses the dashboard's own active treatment: accent at low alpha behind
+   an accent edge, with its lighter accent ink. */
+.v1-lms__option.is-chosen {
+  border-color: var(--v1-badge-border);
+  background: var(--v1-badge-bg);
+  color: var(--v1-badge-text);
+  font-weight: 600;
+}
+
+.v1-lms__option-dot {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--v1-score-track);
+}
+.v1-lms__option.is-chosen .v1-lms__option-dot {
+  border-color: var(--v1-badge-text);
+  background: radial-gradient(circle, var(--v1-badge-text) 0 40%, transparent 41%);
+}
+
+/* Decorative submit — label from CSS, never an operable control */
+.v1-lms__submit {
+  align-self: flex-end;
+  margin-top: auto;
+  padding-top: 0.9rem;
+}
+.v1-lms__submit::before {
+  content: 'Submit';
+  display: inline-block;
+  padding: 0.45rem 1.6rem;
+  border-radius: 10px;
+  background: var(--accent);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6b. VIEW 3 — EVALUATION
+════════════════════════════════════════════════════════════ */
+.v1-lms__score {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.v1-lms__score-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.v1-lms__score-val {
+  font-family: var(--font-body);
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--v1-panel-text);
+}
+.v1-lms__score-val span {
+  font-size: 0.55em;
+  font-weight: 400;
+  color: var(--v1-panel-text-dim);
+}
+
+/* Three tiles, exactly the dashboard's stat row */
+.v1-lms__tally {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.v1-lms__tally li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.4rem;
+  border: 1px solid var(--v1-panel-hairline);
+  border-radius: 12px;
+  background: var(--v1-panel-bg-soft);
+}
+
+.v1-lms__tally-val {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v1-panel-text);
+}
+
+.v1-lms__tally-label {
+  font-family: var(--font-body);
+  font-size: 0.64rem;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-lms__domains {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v1-lms__domain {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.v1-lms__domain-label {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--v1-panel-text-dim);
+}
+
+.v1-lms__domain-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--v1-score-track);
+  overflow: hidden;
+}
+
+.v1-lms__domain-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform-origin: left;
+  animation: v1-signal-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.v1-lms__domain-val {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+  color: var(--v1-panel-text);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6c. VIEW 4 — FULL DASHBOARD
+   No card around it: the dashboard is shown directly, its own panels being the
+   only surfaces. LMSDashboard is authored at app width and does not reflow
+   below it, so it is rendered wider than the stage and scaled down. The wrapper
+   width and the scale are reciprocal (1 / 0.78 ≈ 128%), so the scaled result is
+   exactly the width of the stage.
+════════════════════════════════════════════════════════════ */
+.v1-lms__dash {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  padding: 0;
+}
+
+.v1-lms__dash-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: visible;
+  transform: none;
+  transform-origin: top left;
+}
+
+/* The dashboard paints the page canvas as its own ground; inside a panel that
+   reads as a hole, so it inherits the panel instead. */
+.v1-lms__dash-inner > div {
+  background: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. STATIC FALLBACK
+   Small screens and reduced motion: no pinning, no scroll driving.
+   Every step shows its own view inline, in order.
+════════════════════════════════════════════════════════════ */
+.v1-lms--static {
+  height: auto;
+}
+
+.v1-lms--static .v1-lms__sticky {
+  position: static;
+  min-height: 0;
+  display: block;
+  padding-top: clamp(3rem, 6vw, 4.5rem);
+  padding-bottom: clamp(3rem, 6vw, 4.5rem);
+  overflow: visible;
+}
+
+.v1-lms--static .v1-lms__layout {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: none;
+}
+
+.v1-lms--static .v1-lms__list {
+  gap: clamp(2.5rem, 6vw, 3.5rem);
+}
+
+/* Every step reads at full strength when there is no active one */
+.v1-lms--static .v1-lms__step {
+  opacity: 1;
+}
+.v1-lms--static .v1-lms__step::before {
+  background: var(--accent);
+}
+.v1-lms--static .v1-lms__step-n {
+  color: var(--accent);
+}
+
+.v1-lms__stacked-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+  min-height: 28rem;
+  padding: var(--lms-gutter);
+  overflow: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8. VIEWPORT RESPONSIVE — keep mocks inside the pin
+════════════════════════════════════════════════════════════ */
+@media (max-height: 860px) {
+  .v1-lms__title {
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+  }
+
+  .v1-lms__desc {
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  .v1-lms__layout {
+    margin-top: 1rem;
+    gap: 1.25rem;
+  }
+
+  .v1-lms__stage {
+    --lms-stage-h: calc(100vh - clamp(10rem, 22vh, 16rem));
+  }
+}
+
+@media (max-height: 720px) {
+  .v1-lms__sticky {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .v1-lms__head {
+    margin-bottom: 0;
+  }
+
+  .v1-lms__stage {
+    --lms-stage-h: calc(100vh - clamp(8.5rem, 20vh, 13rem));
+  }
+
+  .v1-lms__step-desc {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .v1-lms__stage {
+    --lms-stage-h: min(38rem, calc(100vh - 11rem));
+    height: auto;
+    min-height: min(32rem, calc(100vh - 11rem));
+    max-height: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   9. REDUCED MOTION
+════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .v1-lms__source.is-live .v1-lms__source-mark,
+  .v1-lms__view,
+  .v1-lms__domain-fill {
+    animation: none;
+  }
+  .v1-lms__step {
+    transition: none;
+  }
+}

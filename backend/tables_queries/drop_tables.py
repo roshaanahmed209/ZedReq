@@ -1,5 +1,5 @@
 """
-Drop All Tables for ZedRec Database
+Drop All Tables for ZedReq Database
 Generates SQL for dropping all tables in the correct order (child tables first)
 """
 
@@ -227,7 +227,7 @@ def get_drop_sql(cascade: bool = True):
     """Get all DROP TABLE SQL as a single string"""
     cascade_sql = " CASCADE" if cascade else ""
     sql_parts = [
-        "-- ZedRec Database Cleanup",
+        "-- ZedReq Database Cleanup",
         "-- Generated table drop script",
         "-- WARNING: This will delete ALL tables and data!\n"
     ]
@@ -242,7 +242,7 @@ def get_truncate_sql(cascade: bool = True):
     """Get all TRUNCATE TABLE SQL as a single string"""
     cascade_sql = " CASCADE" if cascade else ""
     sql_parts = [
-        "-- ZedRec Database Data Cleanup",
+        "-- ZedReq Database Data Cleanup",
         "-- Generated table truncation script",
         "-- WARNING: This will delete ALL data but keep table structures!\n"
     ]

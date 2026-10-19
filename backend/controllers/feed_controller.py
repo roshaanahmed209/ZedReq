@@ -1,6 +1,7 @@
 """Feed Controller - Handles feed HTTP requests"""
 from flask import request
-from services.feed_service import FeedService, PostServiceWithCache
+from services.feed_service import FeedService
+from services.post_service import PostService
 from middleware.auth_middleware import get_current_user_id
 from utils.response import success_response, error_response
 from utils.logger import setup_logger
@@ -13,7 +14,7 @@ class FeedController:
     
     def __init__(self, db):
         self.feed_service = FeedService(db)
-        self.post_service = PostServiceWithCache(db)
+        self.post_service = PostService(db)
     
     def get_feed(self):
         """

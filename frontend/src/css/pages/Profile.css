@@ -1,0 +1,21 @@
+/* Profile Page — Additional Styles */
+
+/* Smooth box-sizing */
+* {
+  box-sizing: border-box;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1024px) {
+  .profile-wrapper {
+    padding: 0 16px;
+  }
+}
+
+/* Print styles */
+@media print {
+  nav,
+  button {
+    display: none !important;
+  }
+}

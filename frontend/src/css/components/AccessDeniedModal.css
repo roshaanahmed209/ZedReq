@@ -1,0 +1,242 @@
+.access-denied-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: access-denied-fade-in 0.22s ease;
+}
+
+@keyframes access-denied-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.access-denied-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+  background: var(--bg-white);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 28px 26px 22px;
+  animation: access-denied-slide 0.26s ease;
+}
+
+@keyframes access-denied-slide {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.access-denied-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-light);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.access-denied-close:hover {
+  background: var(--bg-light);
+  color: var(--text);
+}
+
+.access-denied-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: rgba(21, 133, 161, 0.12);
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-bottom: 14px;
+}
+
+.access-denied-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 10px;
+  color: var(--text);
+  padding-right: 28px;
+}
+
+.access-denied-message {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-light);
+  margin: 0 0 12px;
+}
+
+.access-denied-plan {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.access-denied-plan strong {
+  color: var(--text);
+}
+
+.access-denied-usage {
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--bg-light);
+  border: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+
+.access-denied-usage__title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.access-denied-usage__note {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+
+.access-denied-usage__loading {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.access-denied-meter {
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.access-denied-meter:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.access-denied-meter--highlight {
+  padding: 10px;
+  margin: 0 -10px;
+  border-radius: 8px;
+  background: rgba(21, 133, 161, 0.08);
+  border: 1px solid rgba(21, 133, 161, 0.22);
+}
+
+.access-denied-meter__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.access-denied-meter__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.access-denied-meter__value {
+  font-size: 0.8125rem;
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.access-denied-meter__value--exhausted {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.access-denied-meter__track {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.access-denied-meter__fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.access-denied-meter__fill--exhausted {
+  background: #e74c3c;
+}
+
+.access-denied-meter__hint {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+
+.access-denied-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.access-denied-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.access-denied-btn-secondary {
+  background: var(--bg-light);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.access-denied-btn-secondary:hover {
+  background: color-mix(in srgb, var(--bg-light) 70%, var(--border));
+}
+
+.access-denied-btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.access-denied-btn-primary:hover {
+  filter: brightness(1.06);
+}
