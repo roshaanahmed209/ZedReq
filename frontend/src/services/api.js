@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { getAnonymousId } from '../utils/analyticsIdentity'
 import { trackEvent } from '../utils/analytics'
+import { getApiBaseUrl, getWebSocketBaseUrl } from '../config/apiBase'
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'access_token'
@@ -8,7 +9,7 @@ const REFRESH_TOKEN_KEY = 'refresh_token'
 
 // Create axios instance with default configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -763,11 +764,7 @@ export class NotificationWebSocket {
       return
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-    const wsUrl = apiUrl
-      .replace('http://', 'ws://')
-      .replace('https://', 'wss://')
-    const fullWsUrl = `${wsUrl}/ws/notifications`
+    const fullWsUrl = `${getWebSocketBaseUrl()}/ws/notifications`
 
     try {
       this.ws = new WebSocket(fullWsUrl)
@@ -846,11 +843,7 @@ export class MessagingWebSocket {
       return
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-    const wsUrl = apiUrl
-      .replace('http://', 'ws://')
-      .replace('https://', 'wss://')
-    const fullWsUrl = `${wsUrl}/api/messaging/messages`
+    const fullWsUrl = `${getWebSocketBaseUrl()}/api/messaging/messages`
 
     try {
       this.ws = new WebSocket(fullWsUrl)

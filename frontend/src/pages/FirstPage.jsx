@@ -8,6 +8,7 @@ import '../css/pages/LandingV1Lms.css';
 import { attachFirstPageEffects } from '../utils/firstPageEffects.js';
 import { isStartupMode } from '../utils/startupMode';
 import { sendReservationEmail } from '../services/emailjs';
+import { getApiBaseUrl } from '../config/apiBase';
 import DarkVeil from '../components/DarkVeil';
 import interviewMockImg from '../../static/interviewwww.png';
 import { Target, Mic, ClipboardCheck, TrendingUp } from 'lucide-react';
@@ -784,7 +785,7 @@ export default function FirstPage() {
     setReserveEmailFailed(false);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/api/reserved-seats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

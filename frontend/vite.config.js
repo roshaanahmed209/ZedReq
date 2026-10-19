@@ -1,7 +1,22 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { cpSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
+
+function copyStaticDir() {
+  return {
+    name: 'copy-frontend-static',
+    apply: 'build',
+    closeBundle() {
+      const from = path.resolve(__dirname, 'static')
+      const to = path.resolve(__dirname, 'dist', 'static')
+      if (existsSync(from)) {
+        cpSync(from, to, { recursive: true })
+      }
+    },
+  }
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -23,7 +38,7 @@ export default defineConfig(({ mode }) => {
   const repoPackageRoot = path.resolve(__dirname, '..')
 
   return {
-    plugins: [react()],
+    plugins: [react(), copyStaticDir()],
     envDir: rootDir,
     resolve: {
       alias: {

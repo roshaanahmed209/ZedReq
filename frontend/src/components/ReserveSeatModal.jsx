@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import '../css/components/ReserveSeatModal.css'
 import { sendReservationEmail, validateEmail } from '../services/emailjs'
+import { getApiBaseUrl } from '../config/apiBase'
 
 const ReserveSeatModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('')
@@ -25,7 +26,7 @@ const ReserveSeatModal = ({ isOpen, onClose }) => {
 
     try {
       // Step 1: Reserve seat in backend (stores in database and generates promo code)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const apiUrl = getApiBaseUrl()
       const response = await fetch(`${apiUrl}/api/reserved-seats`, {
         method: 'POST',
         headers: {
